@@ -1,0 +1,11 @@
+schema: ../graphql/**/*.graphqls
+generates:
+    ./src/graphql/types.ts:
+        plugins:
+            - typescript
+        config:
+            sort: false
+            namingConvention: keep
+            maybeValue: T | null | undefined
+            scalars:
+                Time: number

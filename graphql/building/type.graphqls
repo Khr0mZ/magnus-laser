@@ -1,0 +1,15 @@
+type Building {
+    type: BuildingType!
+    elevators: DifficultyValue
+    parking: DifficultyValue
+    gatehouseFrontDesk: DifficultyValue
+    emergencyExit: DifficultyValue
+    backupLights: DifficultyValue
+    landingPad: DifficultyValue
+    secretOrAltEntrance: DifficultyValue
+    ownership: Ownership!
+    securityPersonnel: SecurityPersonnel!
+    style: Style!
+    event: Event!
+    secret: Secret!
+}

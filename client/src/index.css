@@ -1,0 +1,341 @@
+@import '/fonts.css';
+
+/* Cyberpunk Theme */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --neon-cyan: #00ffff;
+    --neon-pink: #ff00ff;
+    --neon-green: #00ff8b;
+    --neon-blue: #0099ff;
+    --neon-purple: #9900ff;
+    --neon-yellow: #ffff00;
+    --neon-red: #ff0055;
+    --dark-bg: #050718;
+    --matrix-bg: #0c1b19;
+    --panel-bg: rgba(20, 20, 30, 0.8);
+}
+
+body {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin: 0;
+
+    position: relative;
+    font-family: 'Rajdhani', 'Lexend', sans-serif;
+    background-color: var(--dark-bg);
+    color: #eeeeee;
+}
+
+/* Scanline effect overlay */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.15;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, var(--neon-cyan), var(--neon-green));
+    border-radius: 4px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, var(--neon-pink), var(--neon-purple));
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        opacity: 0.15;
+        filter: drop-shadow(0 0 20px rgba(0, 255, 139, 0.3));
+    }
+    100% {
+        opacity: 0.25;
+        filter: drop-shadow(0 0 30px rgba(0, 255, 139, 0.5));
+    }
+}
+
+/* Text selection */
+::selection {
+    background: var(--neon-cyan);
+    color: var(--dark-bg);
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+/* Glitch effect class for important elements */
+.glitch-text {
+    position: relative;
+    display: inline-block;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 5px var(--neon-cyan), 0 0 10px rgba(0, 255, 255, 0.5);
+    animation: text-flicker 3s linear infinite;
+}
+
+@keyframes text-flicker {
+    0%,
+    19.999%,
+    22%,
+    62.999%,
+    64%,
+    64.999%,
+    70%,
+    100% {
+        opacity: 1;
+    }
+    20%,
+    21.999%,
+    63%,
+    63.999%,
+    65%,
+    69.999% {
+        opacity: 0.8;
+    }
+}
+
+.glitch-text::before,
+.glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.6;
+}
+
+.glitch-text::before {
+    left: 2px;
+    animation: glitch-animation-1 4s infinite linear alternate-reverse;
+}
+
+.glitch-text::after {
+    left: -2px;
+    animation: glitch-animation-2 5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-animation-1 {
+    0% {
+        clip-path: inset(80% 0 0 0);
+        text-shadow: -2px 0 var(--neon-red);
+        transform: translateX(-1px);
+    }
+    20% {
+        clip-path: inset(20% 0 40% 0);
+        text-shadow: -2px 0 var(--neon-cyan);
+        transform: translateX(1px);
+    }
+    40% {
+        clip-path: inset(60% 0 20% 0);
+        text-shadow: -2px 0 var(--neon-purple);
+        transform: translateX(-1px);
+    }
+    60% {
+        clip-path: inset(10% 0 70% 0);
+        text-shadow: -2px 0 var(--neon-green);
+        transform: translateX(1px);
+    }
+    80% {
+        clip-path: inset(50% 0 30% 0);
+        text-shadow: -2px 0 var(--neon-yellow);
+        transform: translateX(-1px);
+    }
+    100% {
+        clip-path: inset(0 0 90% 0);
+        text-shadow: -2px 0 var(--neon-pink);
+        transform: translateX(1px);
+    }
+}
+
+@keyframes glitch-animation-2 {
+    0% {
+        clip-path: inset(20% 0 60% 0);
+        text-shadow: 2px 0 var(--neon-blue);
+        transform: translateX(1px);
+    }
+    20% {
+        clip-path: inset(60% 0 10% 0);
+        text-shadow: 2px 0 var(--neon-green);
+        transform: translateX(-1px);
+    }
+    40% {
+        clip-path: inset(40% 0 40% 0);
+        text-shadow: 2px 0 var(--neon-yellow);
+        transform: translateX(1px);
+    }
+    60% {
+        clip-path: inset(70% 0 10% 0);
+        text-shadow: 2px 0 var(--neon-cyan);
+        transform: translateX(-1px);
+    }
+    80% {
+        clip-path: inset(10% 0 70% 0);
+        text-shadow: 2px 0 var(--neon-purple);
+        transform: translateX(1px);
+    }
+    100% {
+        clip-path: inset(30% 0 50% 0);
+        text-shadow: 2px 0 var(--neon-pink);
+        transform: translateX(-1px);
+    }
+}
+
+/* Neon border box */
+.neon-border {
+    border: 1px solid var(--neon-cyan);
+    box-shadow: 0 0 10px var(--neon-cyan), inset 0 0 5px var(--neon-cyan);
+    background-color: rgba(0, 255, 255, 0.05);
+}
+
+/* Neo-Tokyo style grid background */
+.grid-bg {
+    background-image: linear-gradient(to right, rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+/* Reader Mode Styles */
+body.reader-mode {
+    background-color: #f8f9fa !important;
+    color: #242424 !important;
+    font-family: 'Rajdhani', 'Lexend', sans-serif !important;
+    line-height: 1.6 !important;
+}
+
+body.reader-mode::after {
+    content: none !important;
+}
+
+body.reader-mode .cyber-power-line2,
+body.reader-mode .cyber-power-line3,
+body.reader-mode .cyber-power-line4,
+body.reader-mode .cyber-data-stream,
+body.reader-mode .cyber-data-stream2,
+body.reader-mode .cyber-glitch,
+body.reader-mode .cyber-glitch-block,
+body.reader-mode .cyber-glitch-small,
+body.reader-mode .cyber-noise,
+body.reader-mode .cyber-flicker,
+body.reader-mode .cyber-flicker2 {
+    display: none !important;
+}
+
+/* Custom reader-friendly scrollbar */
+body.reader-mode::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+body.reader-mode::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+body.reader-mode::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Text selection for reader mode */
+body.reader-mode ::selection {
+    background: #007bff;
+    color: white;
+    text-shadow: none;
+}
+
+/* Typography in reader mode */
+body.reader-mode * {
+    font-family: 'Orbitron', 'Rajdhani', 'Lexend', sans-serif !important;
+}
+
+/* MUI component overrides for reader mode */
+body.reader-mode .MuiPaper-root {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    background-color: white !important;
+    color: #242424 !important;
+    background-image: none !important;
+    border: none !important;
+}
+
+body.reader-mode .MuiButton-root {
+    text-transform: inherit !important;
+}
+
+body.reader-mode .MuiTypography-root {
+    color: #242424 !important;
+    text-shadow: none !important;
+}
+
+/* Dashboard specific text colors for reader mode */
+body.reader-mode .MuiCardHeader-title,
+body.reader-mode .MuiCardHeader-subheader,
+body.reader-mode .MuiCardContent-root .MuiTypography-root {
+    color: white !important;
+}
+
+/* Card styling for reader mode */
+body.reader-mode .MuiCard-root {
+    background-color: #3a3f44 !important;
+    background-image: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+    color: white !important;
+}
+
+body.reader-mode .MuiCard-root:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    background-color: #414649 !important;
+}
+
+body.reader-mode .MuiCard-root::after {
+    content: none !important;
+}
+
+body.reader-mode .MuiCardHeader-root {
+    border-bottom: 1px solid #4d5256 !important;
+    padding-bottom: 8px !important;
+}
+
+body.reader-mode .MuiCardHeader-title {
+    font-weight: 600 !important;
+    color: white !important;
+}
+
+body.reader-mode .MuiCardHeader-subheader {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+body.reader-mode .MuiCardContent-root {
+    padding: 16px !important;
+}
+
+body.reader-mode .MuiCardContent-root:last-child {
+    padding-bottom: 16px !important;
+}
+
+/* Dashboard card icons in reader mode */
+body.reader-mode .MuiCard-root svg,
+body.reader-mode .MuiCard-root .MuiSvgIcon-root {
+    color: white !important;
+}

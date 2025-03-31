@@ -1,0 +1,13 @@
+type DifficultyValue {
+    value: Int!
+}
+
+type Dices {
+    d4: Int
+    d6: Int
+    d8: Int
+    d10: Int
+    d12: Int
+    d20: Int
+    d100: Int
+}

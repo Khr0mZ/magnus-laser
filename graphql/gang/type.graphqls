@@ -1,0 +1,26 @@
+type Gang {
+  type: GangType!
+  quality: Quality!
+  skill: Int!
+  weapons: Dices!
+  armor: Armor!
+  secretive: Int!
+  status: GangStatus!
+  color: GangColor!
+  name: GangName!
+  sin: Sin
+  knownFor: KnownFor!
+  flaw: Flaw
+  currentAttitude: Attitude
+  newsTheLeaderIsReceiving: GangNews
+}
+
+type Armor {
+  spb: Int!
+  h: Int!
+}
+
+type KnownFor {
+  knownForPart1: KnownForPart1!
+  knownForPart2: KnownForPart2!
+}

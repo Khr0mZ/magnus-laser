@@ -1,0 +1,43 @@
+@font-face {
+    font-family: 'Lexend';
+    src: url('/fonts/Lexend-VariableFont_wght.ttf') format('truetype');
+    font-display: swap;
+}
+
+/* Cyberpunk Fonts */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+/* Default fonts */
+body {
+    font-family: 'Rajdhani', 'Lexend', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.heading-font {
+    font-family: 'Orbitron', 'Rajdhani', 'Lexend', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+button,
+.button-text {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+code,
+pre,
+.monospace {
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    letter-spacing: 0.03em;
+}
+
+/* You can add more specific font styles here */
