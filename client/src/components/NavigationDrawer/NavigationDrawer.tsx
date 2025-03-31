@@ -1,5 +1,6 @@
-import { Avatar, Box, Button, Drawer, FormControlLabel, keyframes, Stack, SvgIcon, Typography } from '@mui/material'
-import { useContext } from 'react'
+import { Elderly } from '@mui/icons-material'
+import { Avatar, Box, Button, Drawer, FormControlLabel, keyframes, Stack, Typography } from '@mui/material'
+import { useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
@@ -233,69 +234,12 @@ const neonColorCycle = keyframes`
   }
 `
 
-// Old Man with Glasses SVG Component
-const OldManIcon = () => (
-    <SvgIcon viewBox="0 0 24 24" sx={{ width: 35, height: 35 }}>
-        {/* Head */}
-        <circle cx="12" cy="9" r="4.5" fill="none" stroke="currentColor" strokeWidth="1" />
-
-        {/* Glasses */}
-        <circle cx="10" cy="8.5" r="2" fill="none" stroke="currentColor" strokeWidth="0.75" />
-        <circle cx="14" cy="8.5" r="2" fill="none" stroke="currentColor" strokeWidth="0.75" />
-        <line x1="12" y1="8.5" x2="12" y2="8.5" stroke="currentColor" strokeWidth="0.75" />
-        <line x1="8" y1="8.5" x2="7" y2="8" stroke="currentColor" strokeWidth="0.75" />
-        <line x1="16" y1="8.5" x2="17" y2="8" stroke="currentColor" strokeWidth="0.75" />
-
-        {/* Hair */}
-        <path d="M8,6.5 C9,3.5 15,3.5 16,6.5" fill="none" stroke="currentColor" strokeWidth="0.75" />
-        <path d="M7.5,9 C7,7 7,6 8,6" fill="none" stroke="currentColor" strokeWidth="0.75" />
-        <path d="M16.5,9 C17,7 17,6 16,6" fill="none" stroke="currentColor" strokeWidth="0.75" />
-
-        {/* Ears */}
-        <path d="M7.5,9 C7,9 6.5,8.5 6.5,8 C6.5,7.5 7,7 7.5,7" fill="none" stroke="currentColor" strokeWidth="0.75" />
-        <path
-            d="M16.5,9 C17,9 17.5,8.5 17.5,8 C17.5,7.5 17,7 16.5,7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.75"
-        />
-
-        {/* Wrinkles */}
-        <path d="M9,11 C10,11.5 14,11.5 15,11" fill="none" stroke="currentColor" strokeWidth="0.5" />
-        <path d="M8.5,7 C9,6.8 9.5,6.7 10,6.7" fill="none" stroke="currentColor" strokeWidth="0.5" />
-        <path d="M15.5,7 C15,6.8 14.5,6.7 14,6.7" fill="none" stroke="currentColor" strokeWidth="0.5" />
-
-        {/* Nose and mouth */}
-        <path d="M12,8.5 L12,10" fill="none" stroke="currentColor" strokeWidth="0.5" />
-        <path d="M10.5,10.5 C11.5,11 12.5,11 13.5,10.5" fill="none" stroke="currentColor" strokeWidth="0.5" />
-
-        {/* Beard/Mustache */}
-        <path
-            d="M9,10.5 C9.5,12 10.5,13 12,13 C13.5,13 14.5,12 15,10.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.5"
-        />
-        <path d="M9,11 C9,12.5 9.5,14 10,14.5" fill="none" stroke="currentColor" strokeWidth="0.5" />
-        <path d="M15,11 C15,12.5 14.5,14 14,14.5" fill="none" stroke="currentColor" strokeWidth="0.5" />
-        <path
-            d="M10,14.5 C10.5,15 11.5,15 12,15 C12.5,15 13.5,15 14,14.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.5"
-        />
-
-        {/* Body/Shoulders outline */}
-        <path d="M8,13 C7,15 6,18 6,20" fill="none" stroke="currentColor" strokeWidth="0.75" />
-        <path d="M16,13 C17,15 18,18 18,20" fill="none" stroke="currentColor" strokeWidth="0.75" />
-    </SvgIcon>
-)
-
 const NavigationDrawer = (): JSX.Element => {
     const navigate = useNavigate()
     const { pathname } = useLocation()
     const { t } = useTranslation()
     const { readerMode, toggleReaderMode } = useContext(ReaderModeContext)
+    const [isHovered, setIsHovered] = useState(false)
 
     const pickColor = (navigationPath: NavigationPaths) => {
         return pathname.startsWith(navigationPath) ? colors.neons.cyan.default : colors.grays.gray700
@@ -767,7 +711,7 @@ const NavigationDrawer = (): JSX.Element => {
                     disableRipple
                     disableFocusRipple
                     onClick={toggleReaderMode}
-                    title={readerMode ? 'Switch to Cyberpunk Mode' : 'Switch to Reader-friendly Mode'}
+                    title={readerMode ? 'Switch to Chrome Mode' : 'Switch to Flesh Mode'}
                     sx={{
                         padding: '12px 16px',
                         minWidth: '70px',
@@ -789,8 +733,8 @@ const NavigationDrawer = (): JSX.Element => {
                                   },
                                   '& svg': {
                                       transition: 'transform 0.2s',
-                                      width: 24,
-                                      height: 24,
+                                      width: 36,
+                                      height: 36,
                                   },
                               }
                             : {
@@ -809,8 +753,8 @@ const NavigationDrawer = (): JSX.Element => {
                                   },
                                   '& svg': {
                                       filter: `drop-shadow(0 0 2px ${colors.neons.yellow.dark})`,
-                                      width: 24,
-                                      height: 24,
+                                      width: 36,
+                                      height: 36,
                                   },
                                   transition: 'all 0.3s',
                                   position: 'relative',
@@ -828,8 +772,18 @@ const NavigationDrawer = (): JSX.Element => {
                                   },
                               }),
                     }}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
                 >
-                    <OldManIcon />
+                    {!readerMode ? (
+                        <Elderly fontSize={'large'} />
+                    ) : (
+                        <Avatar
+                            variant={'square'}
+                            src={isHovered ? '/logoBlackTransparentEyes.png' : '/logoBlackTransparent.png'}
+                            sx={{ width: 36, height: 36, opacity: isHovered ? 1 : 0.5, transition: 'all 0.3s' }}
+                        />
+                    )}
                     <Typography
                         variant="caption"
                         sx={{
@@ -842,7 +796,7 @@ const NavigationDrawer = (): JSX.Element => {
                                 : {}),
                         }}
                     >
-                        {readerMode ? 'Cyberpunk' : 'Reader'}
+                        {readerMode ? 'Chrome' : 'Flesh'}
                     </Typography>
                 </Button>
             </Stack>

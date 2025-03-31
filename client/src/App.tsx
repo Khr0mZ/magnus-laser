@@ -108,11 +108,6 @@ const App = (): JSX.Element => {
         dataStream2.className = 'cyber-data-stream2'
         document.body.appendChild(dataStream2)
 
-        // Create glitch elements
-        const glitchElement = document.createElement('div')
-        glitchElement.className = 'cyber-glitch'
-        document.body.appendChild(glitchElement)
-
         // Create additional elements
         const glitchBlock = document.createElement('div')
         glitchBlock.className = 'cyber-glitch-block'
@@ -142,7 +137,6 @@ const App = (): JSX.Element => {
             document.head.removeChild(styleElement)
             document.body.removeChild(dataStream1)
             document.body.removeChild(dataStream2)
-            document.body.removeChild(glitchElement)
             document.body.removeChild(glitchBlock)
             document.body.removeChild(smallGlitch)
             document.body.removeChild(noiseOverlay)

@@ -335,91 +335,75 @@ export const getDesignTokens = (mode: PaletteMode) => {
     const muiTheme = createTheme({
         ...breakpointTheme,
         typography: {
-            fontFamily:
-                mode === 'light'
-                    ? '"Orbitron", "Rajdhani", "Blender Pro", "Lexend", sans-serif'
-                    : '"Orbitron", "Rajdhani", "Blender Pro", "Lexend", sans-serif',
+            fontFamily: '"Orbitron", "Rajdhani", "Blender Pro", "Lexend", sans-serif',
 
             h1: {
                 fontSize: '4rem',
-                fontWeight: mode === 'light' ? 600 : 700,
+                fontWeight: 700,
                 lineHeight: '1.2',
-                letterSpacing: mode === 'light' ? '0.01em' : '0.05em',
+                letterSpacing: '0.05em',
                 textTransform: 'uppercase',
                 color: mode === 'light' ? '#242424' : undefined,
-                fontFamily: mode === 'light' ? undefined : undefined,
             },
             h2: {
                 fontSize: '3rem',
-                fontWeight: mode === 'light' ? 500 : 600,
+                fontWeight: 600,
                 lineHeight: '1.2',
-                letterSpacing: mode === 'light' ? '0.01em' : '0.04em',
+                letterSpacing: '0.04em',
                 textTransform: 'uppercase',
                 color: mode === 'light' ? '#242424' : colors.neons.cyan.default,
-                fontFamily: mode === 'light' ? undefined : undefined,
             },
             h3: {
                 fontSize: '2rem',
-                fontWeight: mode === 'light' ? 500 : 600,
+                fontWeight: 600,
                 lineHeight: '1.2',
-                letterSpacing: mode === 'light' ? '0.01em' : '0.03em',
+                letterSpacing: '0.03em',
                 color: mode === 'light' ? '#242424' : undefined,
-                fontFamily: mode === 'light' ? undefined : undefined,
             },
             h4: {
                 fontSize: '1.5rem',
-                fontWeight: mode === 'light' ? 500 : 600,
+                fontWeight: 600,
                 lineHeight: '1.2',
-                letterSpacing: mode === 'light' ? '0.01em' : '0.02em',
+                letterSpacing: '0.02em',
                 color: mode === 'light' ? '#242424' : undefined,
-                fontFamily: mode === 'light' ? undefined : undefined,
             },
             h5: {
                 fontSize: '1.25rem',
                 fontWeight: 500,
                 lineHeight: '1.2',
-                letterSpacing: mode === 'light' ? '0' : '0.02em',
+                letterSpacing: '0.02em',
                 color: mode === 'light' ? '#242424' : undefined,
-                fontFamily: mode === 'light' ? undefined : undefined,
             },
             h6: {
                 fontSize: '1.0rem',
                 fontWeight: 500,
                 lineHeight: '1.2',
-                letterSpacing: mode === 'light' ? '0' : '0.01em',
+                letterSpacing: '0.01em',
                 color: mode === 'light' ? '#242424' : undefined,
-                fontFamily: mode === 'light' ? undefined : undefined,
             },
             body1: {
-                fontFamily: mode === 'light' ? '"Rajdhani", "Lexend", sans-serif' : '"Rajdhani", "Lexend", sans-serif',
+                fontFamily: '"Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.015em',
                 color: mode === 'light' ? '#242424' : undefined,
             },
             body2: {
-                fontFamily: mode === 'light' ? '"Rajdhani", "Lexend", sans-serif' : '"Rajdhani", "Lexend", sans-serif',
+                fontFamily: '"Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.01em',
                 color: mode === 'light' ? '#242424' : undefined,
             },
             button: {
-                fontFamily:
-                    mode === 'light'
-                        ? '"Orbitron", "Rajdhani", "Lexend", sans-serif'
-                        : '"Orbitron", "Rajdhani", "Lexend", sans-serif',
+                fontFamily: '"Orbitron", "Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.05em',
                 fontWeight: 600,
                 textTransform: 'uppercase',
             },
             caption: {
-                fontFamily: mode === 'light' ? undefined : undefined,
-                letterSpacing: mode === 'light' ? '0' : undefined,
                 color: mode === 'light' ? '#242424' : undefined,
             },
             subtitle1: {
-                fontFamily: mode === 'light' ? undefined : undefined,
                 color: mode === 'light' ? '#242424' : undefined,
             },
             subtitle2: {
-                fontFamily: mode === 'light' ? undefined : undefined,
                 color: mode === 'light' ? '#242424' : undefined,
             },
         },
@@ -730,7 +714,7 @@ export const getDesignTokens = (mode: PaletteMode) => {
                         ...(mode === 'light'
                             ? {
                                   // Reader mode button
-                                  textTransform: 'none',
+                                  textTransform: 'uppercase',
                                   borderRadius: '4px',
                                   position: 'relative',
                                   overflow: 'hidden',

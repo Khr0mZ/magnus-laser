@@ -491,15 +491,15 @@ const Gang = () => {
     // Get color based on gang color enum
     const getGangColorValue = (gangColor: string): string => {
         const colorMap: Record<string, string> = {
-            BLACK: colors.grays.gray900,
+            BLACK: colors.grays.gray400,
             BLUE: colors.blues.default,
-            BRIGHTS: colors.yellows.light,
+            BRIGHTS: colors.neons.cyan.default,
             BROWNS: '#8B4513', // Saddle brown
             GREEN: colors.greens.default,
             ORANGE: colors.oranges.default,
             RED: colors.reds.default,
             VIOLET: colors.purples.default,
-            WHITE: colors.grays.gray100,
+            WHITE: colors.grays.gray800,
             YELLOW: colors.yellows.default,
         }
 
@@ -588,7 +588,6 @@ const Gang = () => {
                                 top: readerMode ? 0 : -56,
                                 left: 0,
                                 bgcolor: 'rgba(25, 28, 58, 0.9)',
-                                color: '#fff',
                                 py: 0.8,
                                 px: 1.5,
                                 width: '100%',
@@ -609,10 +608,6 @@ const Gang = () => {
                                         fontWeight: 'bold',
                                         color: getGangColorValue(gang.color),
                                         fontFamily: 'Orbitron, sans-serif',
-                                        ...(readerMode && {
-                                            color: '#333 !important',
-                                            textShadow: 'none !important',
-                                        }),
                                     }}
                                 >
                                     {localizedName}
@@ -625,9 +620,6 @@ const Gang = () => {
                                         color: '#aaa',
                                         textTransform: 'uppercase',
                                         letterSpacing: '1px',
-                                        ...(readerMode && {
-                                            color: '#555 !important',
-                                        }),
                                     }}
                                 >
                                     {processValueForDisplay('type', gang.type).toUpperCase()}
@@ -758,7 +750,6 @@ const Gang = () => {
                         {/* Data Table */}
                         <TableContainer
                             sx={{
-                                p: 2,
                                 bgcolor: 'rgba(10, 15, 30, 0.8)',
                                 backdropFilter: 'blur(3px)',
                                 position: 'relative',
@@ -1136,34 +1127,12 @@ const Gang = () => {
                                                       textShadow: 'none !important',
                                                       borderBottom: '1px solid #ddd !important',
                                                       fontWeight: 'bold',
-                                                      '&::before': {
-                                                          content: '""',
-                                                          display: 'inline-block',
-                                                          width: '12px',
-                                                          height: '12px',
-                                                          marginRight: '8px',
-                                                          background: getGangColorValue(gang.color),
-                                                          boxShadow: `0 0 3px ${getGangColorValue(gang.color)}`,
-                                                          borderRadius: '2px',
-                                                          verticalAlign: 'middle',
-                                                      },
                                                   }
                                                 : {
                                                       color: getGangColorValue(gang.color),
                                                       fontWeight: 'bold',
                                                       borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
                                                       textShadow: `0 0 5px ${getGangColorValue(gang.color)}`,
-                                                      '&::before': {
-                                                          content: '""',
-                                                          display: 'inline-block',
-                                                          width: '12px',
-                                                          height: '12px',
-                                                          marginRight: '8px',
-                                                          background: getGangColorValue(gang.color),
-                                                          boxShadow: `0 0 5px ${getGangColorValue(gang.color)}`,
-                                                          borderRadius: '2px',
-                                                          verticalAlign: 'middle',
-                                                      },
                                                   }),
                                         }}
                                         className="cell-content"
@@ -1456,7 +1425,7 @@ const Gang = () => {
                             },
                         }}
                     >
-                        <span className="generate-text">{t('gangs.generateButton')}</span>
+                        <span className="generate-text">{t('gangs.generateButton').toUpperCase()}</span>
                     </Button>
 
                     {/* View Toggle Buttons - Moved next to generate button and styled more cyberpunk */}
@@ -1738,7 +1707,7 @@ const Gang = () => {
                         },
                     }}
                 >
-                    <span className="button-text">{t('common.clear')}</span>
+                    <span className="button-text">{t('common.clear').toUpperCase()}</span>
                 </Button>
             </Stack>
 
