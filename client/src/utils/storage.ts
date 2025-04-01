@@ -1,3 +1,6 @@
+import { DisplayBuilding as DisplayBuildingType } from '../components/buildings/BuildingTypes'
+import { DisplayGang as DisplayGangType } from '../components/gangs/GangTypes'
+
 /**
  * Utility functions for local storage operations
  */
@@ -6,26 +9,13 @@
 const GANGS_STORAGE_KEY = 'cyber-manager-gangs'
 const BUILDINGS_STORAGE_KEY = 'cyber-manager-buildings'
 
-/**
- * Types for the stored data
- */
-interface DisplayGang {
-    displayName: string
-    description: string
-    [key: string]: string | number | boolean | object | null | undefined
-}
-
-interface DisplayBuilding {
-    displayName: string
-    description: string
-    [key: string]: string | number | boolean | object | null | undefined
-}
+// Gangs Storage Functions
 
 /**
  * Save gangs to local storage
  * @param gangs Array of gangs to save
  */
-export const saveGangs = (gangs: DisplayGang[]): void => {
+export const saveGangs = (gangs: DisplayGangType[]): void => {
     try {
         localStorage.setItem(GANGS_STORAGE_KEY, JSON.stringify(gangs))
     } catch (error) {
@@ -37,38 +27,12 @@ export const saveGangs = (gangs: DisplayGang[]): void => {
  * Load gangs from local storage
  * @returns Array of gangs or empty array if none found
  */
-export const loadGangs = (): DisplayGang[] => {
+export const loadGangs = (): DisplayGangType[] => {
     try {
         const gangsJson = localStorage.getItem(GANGS_STORAGE_KEY)
         return gangsJson ? JSON.parse(gangsJson) : []
     } catch (error) {
         console.error('Error loading gangs from local storage:', error)
-        return []
-    }
-}
-
-/**
- * Save buildings to local storage
- * @param buildings Array of buildings to save
- */
-export const saveBuildings = (buildings: DisplayBuilding[]): void => {
-    try {
-        localStorage.setItem(BUILDINGS_STORAGE_KEY, JSON.stringify(buildings))
-    } catch (error) {
-        console.error('Error saving buildings to local storage:', error)
-    }
-}
-
-/**
- * Load buildings from local storage
- * @returns Array of buildings or empty array if none found
- */
-export const loadBuildings = (): DisplayBuilding[] => {
-    try {
-        const buildingsJson = localStorage.getItem(BUILDINGS_STORAGE_KEY)
-        return buildingsJson ? JSON.parse(buildingsJson) : []
-    } catch (error) {
-        console.error('Error loading buildings from local storage:', error)
         return []
     }
 }
@@ -81,6 +45,34 @@ export const clearGangs = (): void => {
         localStorage.removeItem(GANGS_STORAGE_KEY)
     } catch (error) {
         console.error('Error clearing gangs from local storage:', error)
+    }
+}
+
+// Buildings Storage Functions
+
+/**
+ * Save buildings to local storage
+ * @param buildings Array of buildings to save
+ */
+export const saveBuildings = (buildings: DisplayBuildingType[]): void => {
+    try {
+        localStorage.setItem(BUILDINGS_STORAGE_KEY, JSON.stringify(buildings))
+    } catch (error) {
+        console.error('Error saving buildings to local storage:', error)
+    }
+}
+
+/**
+ * Load buildings from local storage
+ * @returns Array of buildings or empty array if none found
+ */
+export const loadBuildings = (): DisplayBuildingType[] => {
+    try {
+        const buildingsJson = localStorage.getItem(BUILDINGS_STORAGE_KEY)
+        return buildingsJson ? JSON.parse(buildingsJson) : []
+    } catch (error) {
+        console.error('Error loading buildings from local storage:', error)
+        return []
     }
 }
 

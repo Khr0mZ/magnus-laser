@@ -1,10 +1,10 @@
 // Random name components
+import { DisplayGang } from '../components/gangs/GangTypes'
+import { generateGangNameParts } from '../components/gangs/GangUtils'
 import {
-    Armor,
     Attitude,
     Building,
     BuildingType,
-    Dices,
     DifficultyValue,
     Event,
     Flaw,
@@ -14,7 +14,6 @@ import {
     GangNews,
     GangStatus,
     GangType,
-    KnownFor,
     KnownForPart1,
     KnownForPart2,
     Ownership,
@@ -37,14 +36,6 @@ const getRandomElement = <T>(array: T[]): T => {
 }
 
 /**
- * Get a random enum value
- */
-const getRandomEnum = <T>(enumObj: Record<string, string | number>): T => {
-    const values = Object.values(enumObj).filter((v) => typeof v === 'string') as string[]
-    return values[Math.floor(Math.random() * values.length)] as unknown as T
-}
-
-/**
  * Get a random integer in range (inclusive)
  */
 const getRandomInt = (min: number, max: number): number => {
@@ -56,94 +47,97 @@ const getRandomInt = (min: number, max: number): number => {
 // ==========================================
 
 /**
- * Generate display name for a gang
+ * Generate a random Gang based on GraphQL types
+ * @returns A randomly generated Gang with display properties
  */
-const generateGangDisplayName = (name: GangName, color: GangColor, type: GangType): string => {
-    // Create a display name based on the gang properties
-    const adjectives: Record<GangName, string[]> = {
-        [GangName.ADJECTIVE]: ['Wild', 'Fierce', 'Deadly', 'Savage', 'Brutal', 'Lethal', 'Ruthless', 'Merciless'],
-        [GangName.ANIMAL]: ['Wolf', 'Lion', 'Tiger', 'Snake', 'Dragon', 'Scorpion', 'Shark', 'Panther'],
-        [GangName.BODY_PART]: ['Skull', 'Fist', 'Eye', 'Brain', 'Heart', 'Hand', 'Blood', 'Bone'],
-        [GangName.COLOR]: [color.toLowerCase().charAt(0).toUpperCase() + color.toLowerCase().slice(1)],
-        [GangName.NEIGHBORHOOD]: ['Downtown', 'Eastside', 'Westside', 'Northside', 'Southside', 'Central', 'Outskirts'],
-        [GangName.NUMBER]: ['13', '7', '101', '666', '777', '187', '911', '420'],
-        [GangName.PLACE]: ['Street', 'Alley', 'Avenue', 'Highway', 'Boulevard', 'District', 'Zone', 'Block'],
-        [GangName.PROFESSION]: ['Techie', 'Runner', 'Fixer', 'Solo', 'Nomad', 'Medic', 'Corporate', 'Cop'],
-        [GangName.WEAPON]: ['Blade', 'Gun', 'Rifle', 'Pistol', 'Shotgun', 'Knife', 'Sword', 'Katana'],
-        [GangName.WEATHER_PHENOMENA]: [
-            'Thunder',
-            'Lightning',
-            'Storm',
-            'Cyclone',
-            'Typhoon',
-            'Hurricane',
-            'Tornado',
-            'Tsunami',
-        ],
+export const generateRandomGang = (): DisplayGang => {
+    // Generate random values for the gang
+    const type = getRandomElement(Object.values(GangType))
+    const color = getRandomElement(Object.values(GangColor))
+    const quality = getRandomElement(Object.values(Quality))
+    const status = getRandomElement(Object.values(GangStatus))
+    const gangName = getRandomElement(Object.values(GangName))
+    const sin = getRandomElement([...Object.values(Sin), null])
+    const flaw = getRandomElement([...Object.values(Flaw), null])
+    const attitude = getRandomElement([...Object.values(Attitude), null])
+    const gangNews = getRandomElement([...Object.values(GangNews), null])
+
+    // Generate random numeric values
+    const skill = getRandomInt(8, 16)
+    const secretive = getRandomInt(9, 24)
+
+    // Generate weapons and armor
+    const weapons = {
+        __typename: 'Dices' as const,
+        d6: getRandomInt(1, 8),
     }
 
-    const suffixes: Record<GangType, string[]> = {
-        [GangType.BOOSTER]: ['Demons', 'Devils', 'Killers', 'Savages', 'Warriors', 'Thugs', 'Destroyers', 'Reapers'],
-        [GangType.EDGERUNNER]: ['Runners', 'Edges', 'Shadows', 'Ghosts', 'Phantoms', 'Spectres', 'Wraiths', 'Vectors'],
-        [GangType.FREELANCER]: [
-            'Freelancers',
-            'Mercs',
-            'Guns',
-            'Soldiers',
-            'Contractors',
-            'Agents',
-            'Operatives',
-            'Professionals',
-        ],
-        [GangType.GUARDIAN_VIGILANTE]: [
-            'Guardians',
-            'Protectors',
-            'Shields',
-            'Watchers',
-            'Sentinels',
-            'Wardens',
-            'Keepers',
-            'Defenders',
-        ],
-        [GangType.MILITARY]: ['Command', 'Battalion', 'Squad', 'Platoon', 'Corps', 'Force', 'Division', 'Regiment'],
-        [GangType.POSER]: [
-            'Posers',
-            'Wannabes',
-            'Fakers',
-            'Pretenders',
-            'Imitators',
-            'Copycats',
-            'Followers',
-            'Imposters',
-        ],
-        [GangType.PRANKSTER]: [
-            'Jokers',
-            'Tricksters',
-            'Jesters',
-            'Fools',
-            'Clowns',
-            'Pranksters',
-            'Comedians',
-            'Mimes',
-        ],
-        [GangType.RELIGIOUS]: [
-            'Disciples',
-            'Believers',
-            'Faithful',
-            'Devotees',
-            'Followers',
-            'Prophets',
-            'Saints',
-            'Angels',
-        ],
-        [GangType.SYNDICATE]: ['Syndicate', 'Family', 'Mob', 'Clan', 'Cartel', 'Outfit', 'Organization', 'Network'],
-        [GangType.YO]: ['Boys', 'Girls', 'Crew', 'Squad', 'Homies', 'Gang', 'Posse', 'Team'],
+    const armor = {
+        __typename: 'Armor' as const,
+        spb: getRandomInt(0, 16),
+        h: getRandomInt(0, 16),
     }
 
-    const adjective = getRandomElement(adjectives[name])
-    const suffix = getRandomElement(suffixes[type])
+    // Generate known for values
+    const knownFor = {
+        __typename: 'KnownFor' as const,
+        knownForPart1: getRandomElement(Object.values(KnownForPart1)),
+        knownForPart2: getRandomElement(Object.values(KnownForPart2)),
+    }
 
-    return `The ${adjective} ${suffix}`
+    // Generate name components using the utility function
+    const { name, adjective } = generateGangNameParts()
+
+    // Create the gang object
+    const gang: Gang = {
+        __typename: 'Gang',
+        type,
+        color,
+        quality,
+        skill,
+        weapons,
+        armor,
+        secretive,
+        status,
+        name: gangName,
+        sin,
+        knownFor,
+        flaw,
+        currentAttitude: attitude,
+        newsTheLeaderIsReceiving: gangNews,
+    }
+
+    // Generate display properties
+    const displayName = `The ${adjective} ${name}`
+    const colorText = color.toLowerCase().charAt(0).toUpperCase() + color.toLowerCase().slice(1)
+    const typeText = type.toLowerCase().charAt(0).toUpperCase() + type.toLowerCase().slice(1)
+    const description = `A ${colorText} ${typeText} gang. They are known for their ${knownFor.knownForPart1.toLowerCase()} ${knownFor.knownForPart2.toLowerCase()}.`
+
+    // Return the complete gang with display properties
+    return {
+        ...gang,
+        id: Date.now().toString(),
+        displayName,
+        description,
+        nameData: {
+            name: displayName,
+            adjective,
+        },
+        descriptionData: {
+            type,
+            color,
+            knownFor: knownFor,
+            currentAttitude: attitude,
+            flaw,
+            status,
+            sin,
+            skill,
+            secretive,
+            weapons,
+            armor,
+            newsTheLeaderIsReceiving: gangNews,
+        },
+    } as unknown as DisplayGang
 }
 
 // ==========================================
@@ -280,99 +274,6 @@ const generateBuildingDisplayName = (buildingType: BuildingType, style: Style, o
         default:
             // For all other types, use a generic format
             return `${styleAdj} ${getRandomElement(generalPrefixes)}-${getRandomElement(generalSuffixes)}`
-    }
-}
-
-// ==========================================
-// Public Generator Functions
-// ==========================================
-
-/**
- * Generate a random Gang based on GraphQL types
- * @returns A randomly generated Gang with display properties
- */
-export const generateRandomGang = (): Gang & { displayName: string; description: string } => {
-    // Required fields
-    const armor: Armor = {
-        __typename: 'Armor',
-        h: getRandomInt(1, 10),
-        spb: getRandomInt(1, 10),
-    }
-
-    const color = getRandomEnum<GangColor>(GangColor)
-
-    const knownFor: KnownFor = {
-        __typename: 'KnownFor',
-        knownForPart1: getRandomEnum<KnownForPart1>(KnownForPart1),
-        knownForPart2: getRandomEnum<KnownForPart2>(KnownForPart2),
-    }
-
-    const name = getRandomEnum<GangName>(GangName)
-    const quality = getRandomEnum<Quality>(Quality)
-    const secretive = getRandomInt(1, 10)
-    const skill = getRandomInt(1, 10)
-    const status = getRandomEnum<GangStatus>(GangStatus)
-    const type = getRandomEnum<GangType>(GangType)
-
-    const weapons: Dices = {
-        __typename: 'Dices',
-        d4: getRandomInt(1, 4),
-        d6: getRandomInt(1, 6),
-        d8: getRandomInt(1, 8),
-        d10: getRandomInt(1, 10),
-        d12: getRandomInt(1, 12),
-        d20: getRandomInt(1, 20),
-        d100: getRandomInt(1, 100),
-    }
-
-    // Optional fields (may be null)
-    const currentAttitude = Math.random() > 0.2 ? getRandomEnum<Attitude>(Attitude) : null
-    const flaw = Math.random() > 0.2 ? getRandomEnum<Flaw>(Flaw) : null
-    const newsTheLeaderIsReceiving = Math.random() > 0.3 ? getRandomEnum<GangNews>(GangNews) : null
-    const sin = Math.random() > 0.4 ? getRandomEnum<Sin>(Sin) : null
-
-    // Generate gang object
-    const gang: Gang = {
-        __typename: 'Gang',
-        armor,
-        color,
-        currentAttitude,
-        flaw,
-        knownFor,
-        name,
-        newsTheLeaderIsReceiving,
-        quality,
-        secretive,
-        sin,
-        skill,
-        status,
-        type,
-        weapons,
-    }
-
-    // Simply store the raw display name components and suffix
-    const nameComponents = {
-        name,
-        color,
-        type,
-    }
-
-    // Store raw values for description
-    const descriptionData = {
-        gang,
-        nameComponents,
-    }
-
-    return {
-        ...gang,
-        displayName: generateGangDisplayName(name, color, type),
-        description: '',
-        _nameComponents: nameComponents, // Add this for rendering components to use
-        _descriptionData: descriptionData, // Add this for rendering components to use
-    } as Gang & {
-        displayName: string
-        description: string
-        _nameComponents: { name: GangName; color: GangColor; type: GangType }
     }
 }
 

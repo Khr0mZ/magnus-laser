@@ -152,6 +152,7 @@ const CompactBuildingView = ({ buildings, onDelete }: CompactBuildingViewProps) 
                                               '&:nth-of-type(even)': { bgcolor: '#fff' },
                                               '&:hover': {
                                                   bgcolor: '#f0f0f0',
+                                                  transform: 'none !important',
                                               },
                                           }
                                         : {
@@ -170,16 +171,42 @@ const CompactBuildingView = ({ buildings, onDelete }: CompactBuildingViewProps) 
                             >
                                 <TableCell
                                     sx={{
-                                        color: colors.neons.green.default,
+                                        color: readerMode ? '#1a237e' : colors.neons.green.default,
+                                        fontWeight: 'bold',
+                                        fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                                        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                        letterSpacing: '0.5px',
+                                        textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}50`,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        maxWidth: { xs: '100px', sm: '150px', md: '200px' },
                                         position: 'sticky',
                                         left: 0,
-                                        bgcolor: index % 2 === 0 ? 'rgba(0, 15, 30, 0.4)' : 'rgba(0, 20, 40, 0.2)',
+                                        bgcolor:
+                                            index % 2 === 0
+                                                ? readerMode
+                                                    ? '#f9f9f9'
+                                                    : 'rgba(0, 15, 30, 0.4)'
+                                                : readerMode
+                                                ? '#fff'
+                                                : 'rgba(0, 20, 40, 0.2)',
                                         zIndex: 1,
                                         borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
-                                        textShadow: `0 0 5px ${colors.neons.green.dark}`,
+                                        '&::after': !readerMode
+                                            ? {
+                                                  content: '""',
+                                                  position: 'absolute',
+                                                  bottom: 0,
+                                                  left: 0,
+                                                  width: '100%',
+                                                  height: '1px',
+                                                  background: `linear-gradient(90deg, ${colors.neons.green.default}40, transparent 80%)`,
+                                              }
+                                            : {},
                                         ...(readerMode
                                             ? {
-                                                  color: '#333 !important',
+                                                  color: colors.blues.dark,
                                                   textShadow: 'none !important',
                                                   backgroundColor:
                                                       index % 2 === 0 ? '#f9f9f9 !important' : '#fff !important',
@@ -454,7 +481,6 @@ const CompactBuildingView = ({ buildings, onDelete }: CompactBuildingViewProps) 
                                                 : {
                                                       bgcolor: 'rgba(60, 0, 0, 0.6)',
                                                       color: colors.neons.red.light,
-                                                      transform: 'scale(1.05)',
                                                       boxShadow: `0 0 8px ${colors.neons.red.default}80`,
                                                       '&::after': {
                                                           opacity: 0.8,

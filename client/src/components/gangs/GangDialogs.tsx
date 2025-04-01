@@ -4,13 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
 
-type DeleteBuildingDialogProps = {
+type DeleteGangDialogProps = {
     open: boolean
     onClose: () => void
     onConfirm: () => void
 }
 
-export const DeleteBuildingDialog = ({ open, onClose, onConfirm }: DeleteBuildingDialogProps) => {
+export const DeleteGangDialog = ({ open, onClose, onConfirm }: DeleteGangDialogProps) => {
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
 
@@ -73,7 +73,7 @@ export const DeleteBuildingDialog = ({ open, onClose, onConfirm }: DeleteBuildin
                           }
                 }
             >
-                {t('buildings.deleteConfirmation.title', 'Confirm Deletion')}
+                {t('gangs.deleteConfirmTitle', 'Delete Gang?')}
             </DialogTitle>
             <DialogContent>
                 <DialogContentText
@@ -91,8 +91,8 @@ export const DeleteBuildingDialog = ({ open, onClose, onConfirm }: DeleteBuildin
                     }
                 >
                     {t(
-                        'buildings.deleteConfirmation.message',
-                        'Are you sure you want to delete this building? This action cannot be undone.'
+                        'gangs.deleteConfirmMessage',
+                        'Are you sure you want to delete this gang? This action cannot be undone.'
                     )}
                 </DialogContentText>
             </DialogContent>
@@ -146,13 +146,13 @@ export const DeleteBuildingDialog = ({ open, onClose, onConfirm }: DeleteBuildin
     )
 }
 
-type ClearAllBuildingsDialogProps = {
+type ClearAllGangsDialogProps = {
     open: boolean
     onClose: () => void
     onConfirm: () => void
 }
 
-export const ClearAllBuildingsDialog = ({ open, onClose, onConfirm }: ClearAllBuildingsDialogProps) => {
+export const ClearAllGangsDialog = ({ open, onClose, onConfirm }: ClearAllGangsDialogProps) => {
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
 
@@ -215,7 +215,7 @@ export const ClearAllBuildingsDialog = ({ open, onClose, onConfirm }: ClearAllBu
                           }
                 }
             >
-                {t('buildings.clearConfirmation.title', 'Confirm Clear All')}
+                {t('gangs.clearAllConfirmTitle', 'Clear All Gangs?')}
             </DialogTitle>
             <DialogContent>
                 <DialogContentText
@@ -233,8 +233,8 @@ export const ClearAllBuildingsDialog = ({ open, onClose, onConfirm }: ClearAllBu
                     }
                 >
                     {t(
-                        'buildings.clearConfirmation.message',
-                        'Are you sure you want to clear all buildings? This action cannot be undone.'
+                        'gangs.clearAllConfirmMessage',
+                        'Are you sure you want to delete all gangs? This action cannot be undone.'
                     )}
                 </DialogContentText>
             </DialogContent>

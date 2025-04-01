@@ -284,6 +284,11 @@ body.reader-mode .MuiTypography-root {
     text-shadow: none !important;
 }
 
+/* Exception for gang name typography */
+body.reader-mode .gang-name-typography.MuiTypography-root {
+    color: inherit !important;
+}
+
 /* Dashboard specific text colors for reader mode */
 body.reader-mode .MuiCardHeader-title,
 body.reader-mode .MuiCardHeader-subheader,

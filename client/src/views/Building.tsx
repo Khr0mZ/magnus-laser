@@ -16,9 +16,17 @@ import colors from '../utils/colors'
 import { generateRandomBuilding } from '../utils/generators'
 import { clearBuildings, loadBuildings, saveBuildings } from '../utils/storage'
 
+// Add window interface augmentation
+declare global {
+    interface Window {
+        buildingsDataLoaded?: boolean
+    }
+}
+
 const Building = () => {
     const { t } = useTranslation()
     useDocumentTitle(`RNG Manager - ${t('modules.BUILDING')}`)
+    const { readerMode } = useContext(ReaderModeContext)
     const [buildings, setBuildings] = useState<DisplayBuilding[]>([])
     const [compactView, setCompactView] = useState(false)
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
@@ -26,10 +34,8 @@ const Building = () => {
     const [buildingToDelete, setBuildingToDelete] = useState<number | null>(null)
     const [jobType, setJobType] = useState<JobType>(JobType.TYPICAL)
     const prevBuildingsRef = useRef<number>(0)
-    const [isLoading, setIsLoading] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
-    const { readerMode } = useContext(ReaderModeContext)
 
     // Load buildings from local storage on component mount
     useEffect(() => {
@@ -39,12 +45,6 @@ const Building = () => {
         // Set the initial data without triggering a save
         if (savedBuildings.length > 0) {
             setBuildings(savedBuildings as unknown as DisplayBuilding[])
-
-            // Only show the load notification on the first load of the app session
-            if (!window.buildingsDataLoaded && savedBuildings.length > 0) {
-                window.buildingsDataLoaded = true
-                setIsLoading(true)
-            }
         }
 
         // Save the initial length to avoid triggering save notification for unchanged data
@@ -120,12 +120,7 @@ const Building = () => {
 
     return (
         <Container maxWidth={false}>
-            <StorageBanner
-                isLoading={isLoading}
-                isSaving={isSaving}
-                onLoadingDone={() => setIsLoading(false)}
-                onSavingDone={() => setIsSaving(false)}
-            />
+            <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
             <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
                 <Typography
                     variant="h1"
@@ -149,60 +144,74 @@ const Building = () => {
                         variant="contained"
                         color="primary"
                         onClick={handleGenerateBuilding}
-                        disabled={isLoading || isSaving}
                         sx={{
                             position: 'relative',
-                            bgcolor: 'rgba(20, 40, 30, 0.8)',
-                            borderColor: colors.neons.green.default,
-                            color: colors.neons.green.default,
-                            textShadow: `0 0 5px ${colors.neons.green.default}`,
-                            fontFamily: '"Orbitron", monospace',
-                            letterSpacing: '0.05em',
+                            bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',
+                            borderColor: readerMode ? '#2e7d32' : colors.neons.green.default,
+                            color: readerMode ? '#1b7d2e' : colors.neons.green.default,
+                            textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}`,
+                            fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                            letterSpacing: readerMode ? 'normal' : '0.05em',
                             overflow: 'hidden',
                             padding: '6px 16px',
-                            border: `1px solid ${colors.neons.green.default}80`,
+                            border: readerMode ? '1px solid #2e7d32' : `1px solid ${colors.neons.green.default}80`,
                             transition: 'all 0.3s',
-                            animation: `${pulseGlow} 3s infinite`,
-                            '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                opacity: 0.2,
-                                zIndex: -1,
-                                background: `linear-gradient(135deg, transparent 0%, ${colors.neons.green.default}50 50%, transparent 100%)`,
-                                backgroundSize: '200% 200%',
-                                animation: `${scanlineFlow} 3s ease infinite`,
-                            },
-                            '&::after': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                background: 'rgba(0, 255, 0, 0.1)',
-                                opacity: 0,
-                                transition: 'all 0.3s',
-                            },
-                            '&:hover': {
-                                backgroundColor: 'rgba(0, 60, 0, 0.6)',
-                                transform: 'translateY(-2px) scale(1.05)',
-                                boxShadow: `0 0 15px ${colors.neons.green.default}, inset 0 0 15px ${colors.neons.green.default}30`,
-                                color: colors.neons.green.light,
-                                textShadow: `0 0 8px ${colors.neons.green.light}`,
-                                '&::after': {
-                                    opacity: 0.2,
-                                },
-                                '.generate-text': {
-                                    animation: `${buttonGlitch} 0.3s ease both`,
-                                },
-                            },
+                            animation: readerMode ? 'none' : `${pulseGlow} 3s infinite`,
+                            boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
+                            ...(readerMode
+                                ? {
+                                      '&:hover': {
+                                          bgcolor: '#d7edd7',
+                                          boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)',
+                                      },
+                                      '&.Mui-disabled': {
+                                          bgcolor: '#f5f5f5',
+                                          color: 'rgba(0, 0, 0, 0.38)',
+                                          border: '1px solid rgba(0, 0, 0, 0.12)',
+                                      },
+                                  }
+                                : {
+                                      '&::before': {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: 0,
+                                          left: 0,
+                                          width: '100%',
+                                          height: '100%',
+                                          opacity: 0.2,
+                                          zIndex: -1,
+                                          background: `linear-gradient(135deg, transparent 0%, ${colors.neons.green.default}50 50%, transparent 100%)`,
+                                          backgroundSize: '200% 200%',
+                                          animation: `${scanlineFlow} 3s ease infinite`,
+                                      },
+                                      '&::after': {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: 0,
+                                          left: 0,
+                                          width: '100%',
+                                          height: '100%',
+                                          background: 'rgba(0, 255, 0, 0.1)',
+                                          opacity: 0,
+                                          transition: 'all 0.3s',
+                                      },
+                                      '&:hover': {
+                                          backgroundColor: 'rgba(0, 60, 0, 0.6)',
+                                          transform: 'translateY(-2px) scale(1.05)',
+                                          boxShadow: `0 0 15px ${colors.neons.green.default}, inset 0 0 15px ${colors.neons.green.default}30`,
+                                          color: colors.neons.green.light,
+                                          textShadow: `0 0 8px ${colors.neons.green.light}`,
+                                          '&::after': {
+                                              opacity: 0.2,
+                                          },
+                                          '.generate-text': {
+                                              animation: `${buttonGlitch} 0.3s ease both`,
+                                          },
+                                      },
+                                  }),
                         }}
                     >
-                        <span className="generate-text">{t('buildings.generateButton', 'GENERATE')}</span>
+                        <span className="generate-text">{t('buildings.generateButton', 'GENERATE').toUpperCase()}</span>
                     </Button>
 
                     {/* View Toggle Buttons */}
@@ -220,78 +229,93 @@ const Building = () => {
                     disabled={buildings.length === 0}
                     sx={{
                         position: 'relative',
-                        bgcolor: 'rgba(40, 0, 0, 0.8)',
-                        borderColor: colors.neons.red.default,
-                        color: colors.neons.red.default,
-                        textShadow: `0 0 5px ${colors.neons.red.default}`,
-                        fontFamily: '"Orbitron", monospace',
-                        letterSpacing: '0.05em',
+                        bgcolor: readerMode ? '#ffebee' : 'rgba(40, 0, 0, 0.8)',
+                        borderColor: readerMode ? '#c2161a' : colors.neons.red.default,
+                        color: readerMode ? '#a01017' : colors.neons.red.default,
+                        textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.red.default}`,
+                        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                        letterSpacing: readerMode ? 'normal' : '0.05em',
                         overflow: 'hidden',
                         padding: '6px 16px',
-                        border: `1px solid ${colors.neons.red.default}80`,
+                        border: readerMode ? '1px solid #c2161a' : `1px solid ${colors.neons.red.default}80`,
                         transition: 'all 0.3s',
-                        animation: `${pulseGlowRed} 3s infinite`,
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            opacity: 0.2,
-                            zIndex: -1,
-                            background: `linear-gradient(135deg, transparent 0%, ${colors.neons.red.default}50 50%, transparent 100%)`,
-                            backgroundSize: '200% 200%',
-                            animation: `${scanlineFlow} 3s ease infinite`,
-                        },
-                        '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            background: 'rgba(255, 0, 0, 0.1)',
-                            opacity: 0,
-                            transition: 'all 0.3s',
-                        },
-                        '&.Mui-disabled': {
-                            borderColor: 'rgba(255, 0, 0, 0.3)',
-                            color: 'rgba(255, 0, 0, 0.5)',
-                            bgcolor: 'rgba(40, 10, 10, 0.4)',
-                            animation: `${pulseGlowRed} 4s infinite`,
-                            boxShadow: '0 0 8px rgba(255, 0, 0, 0.2)',
-                            textShadow: `0 0 3px rgba(255, 0, 0, 0.3)`,
-                            opacity: 0.8,
-                            '&::before': {
-                                opacity: 0.1,
-                                animation: `${scanlineFlow} 6s ease infinite`,
-                            },
-                            '&::after': {
-                                opacity: 0.05,
-                            },
-                            '.button-text': {
-                                opacity: 0.8,
-                                textShadow: `0 0 5px rgba(255, 0, 0, 0.4)`,
-                            },
-                        },
-                        '&:hover': {
-                            borderColor: colors.neons.red.light,
-                            color: colors.neons.red.light,
-                            backgroundColor: 'rgba(60, 0, 0, 0.6)',
-                            animation: `${buttonGlitch} 0.3s cubic-bezier(.25,.46,.45,.94) both infinite`,
-                            boxShadow: `0 0 15px ${colors.neons.red.default}, inset 0 0 15px ${colors.neons.red.default}30`,
-                            transform: 'translateY(-2px) scale(1.05)',
-                            '&::after': {
-                                opacity: 0.2,
-                            },
-                            '.button-text': {
-                                animation: `${buttonGlitch} 0.3s ease infinite`,
-                            },
-                        },
+                        animation: readerMode ? 'none' : `${pulseGlowRed} 3s infinite`,
+                        boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
+                        ...(readerMode
+                            ? {
+                                  '&:hover': {
+                                      bgcolor: '#fde2e4',
+                                      boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)',
+                                  },
+                                  '&.Mui-disabled': {
+                                      bgcolor: '#f5f5f5',
+                                      color: 'rgba(0, 0, 0, 0.38)',
+                                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                                  },
+                              }
+                            : {
+                                  '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      opacity: 0.2,
+                                      zIndex: -1,
+                                      background: `linear-gradient(135deg, transparent 0%, ${colors.neons.red.default}50 50%, transparent 100%)`,
+                                      backgroundSize: '200% 200%',
+                                      animation: `${scanlineFlow} 3s ease infinite`,
+                                  },
+                                  '&::after': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      background: 'rgba(255, 0, 0, 0.1)',
+                                      opacity: 0,
+                                      transition: 'all 0.3s',
+                                  },
+                                  '&.Mui-disabled': {
+                                      borderColor: 'rgba(255, 0, 0, 0.3)',
+                                      color: 'rgba(255, 0, 0, 0.5)',
+                                      bgcolor: 'rgba(40, 10, 10, 0.4)',
+                                      animation: `${pulseGlowRed} 4s infinite`,
+                                      boxShadow: '0 0 8px rgba(255, 0, 0, 0.2)',
+                                      textShadow: `0 0 3px rgba(255, 0, 0, 0.3)`,
+                                      opacity: 0.8,
+                                      '&::before': {
+                                          opacity: 0.1,
+                                          animation: `${scanlineFlow} 6s ease infinite`,
+                                      },
+                                      '&::after': {
+                                          opacity: 0.05,
+                                      },
+                                      '.button-text': {
+                                          opacity: 0.8,
+                                          textShadow: `0 0 5px rgba(255, 0, 0, 0.4)`,
+                                      },
+                                  },
+                                  '&:hover': {
+                                      borderColor: colors.neons.red.light,
+                                      color: colors.neons.red.light,
+                                      backgroundColor: 'rgba(60, 0, 0, 0.6)',
+                                      animation: `${buttonGlitch} 0.3s cubic-bezier(.25,.46,.45,.94) both infinite`,
+                                      boxShadow: `0 0 15px ${colors.neons.red.default}, inset 0 0 15px ${colors.neons.red.default}30`,
+                                      transform: 'translateY(-2px) scale(1.05)',
+                                      '&::after': {
+                                          opacity: 0.2,
+                                      },
+                                      '.button-text': {
+                                          animation: `${buttonGlitch} 0.3s ease infinite`,
+                                      },
+                                  },
+                              }),
                     }}
                 >
-                    <span className="button-text">{t('common.clear', 'CLEAR ALL')}</span>
+                    <span className="button-text">{t('common.clear', 'CLEAR ALL').toUpperCase()}</span>
                 </Button>
             </Stack>
 

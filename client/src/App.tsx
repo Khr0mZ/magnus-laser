@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import NavigationDrawer from './components/NavigationDrawer/NavigationDrawer'
 import { ReaderModeContext } from './contexts/ReaderModeContext'
+import UserProvider from './contexts/UserContext'
 import './i18n' // Import i18n configuration
 import './index.css'
 import NavigationPaths from './navigation'
@@ -146,26 +147,28 @@ const App = (): JSX.Element => {
     }, [readerMode])
 
     return (
-        <ReaderModeContext.Provider value={{ readerMode, toggleReaderMode }}>
-            <ThemeProvider theme={createTheme(getDesignTokens(readerMode ? 'light' : 'dark'))}>
-                <CssBaseline />
-                <SnackbarProvider maxSnack={5}>
-                    <BrowserRouter>
-                        <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
-                            <NavigationDrawer />
-                            <Routes>
-                                <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
-                                <Route path={NavigationPaths.GANG} element={<Gang />} />
-                                <Route path={NavigationPaths.CORPORATION} element={<Corporation />} />
-                                <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
-                                <Route path={NavigationPaths.NPC} element={<NPC />} />
-                                <Route path={NavigationPaths.BUILDING} element={<Building />} />
-                            </Routes>
-                        </Suspense>
-                    </BrowserRouter>
-                </SnackbarProvider>
-            </ThemeProvider>
-        </ReaderModeContext.Provider>
+        <UserProvider>
+            <ReaderModeContext.Provider value={{ readerMode, toggleReaderMode }}>
+                <ThemeProvider theme={createTheme(getDesignTokens(readerMode ? 'light' : 'dark'))}>
+                    <CssBaseline />
+                    <SnackbarProvider maxSnack={5}>
+                        <BrowserRouter>
+                            <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
+                                <NavigationDrawer />
+                                <Routes>
+                                    <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
+                                    <Route path={NavigationPaths.GANG} element={<Gang />} />
+                                    <Route path={NavigationPaths.CORPORATION} element={<Corporation />} />
+                                    <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
+                                    <Route path={NavigationPaths.NPC} element={<NPC />} />
+                                    <Route path={NavigationPaths.BUILDING} element={<Building />} />
+                                </Routes>
+                            </Suspense>
+                        </BrowserRouter>
+                    </SnackbarProvider>
+                </ThemeProvider>
+            </ReaderModeContext.Provider>
+        </UserProvider>
     )
 }
 

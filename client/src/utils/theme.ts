@@ -343,7 +343,6 @@ export const getDesignTokens = (mode: PaletteMode) => {
                 lineHeight: '1.2',
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase',
-                color: mode === 'light' ? '#242424' : undefined,
             },
             h2: {
                 fontSize: '3rem',
@@ -351,45 +350,38 @@ export const getDesignTokens = (mode: PaletteMode) => {
                 lineHeight: '1.2',
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
-                color: mode === 'light' ? '#242424' : colors.neons.cyan.default,
             },
             h3: {
                 fontSize: '2rem',
                 fontWeight: 600,
                 lineHeight: '1.2',
                 letterSpacing: '0.03em',
-                color: mode === 'light' ? '#242424' : undefined,
             },
             h4: {
                 fontSize: '1.5rem',
                 fontWeight: 600,
                 lineHeight: '1.2',
                 letterSpacing: '0.02em',
-                color: mode === 'light' ? '#242424' : undefined,
             },
             h5: {
                 fontSize: '1.25rem',
                 fontWeight: 500,
                 lineHeight: '1.2',
                 letterSpacing: '0.02em',
-                color: mode === 'light' ? '#242424' : undefined,
             },
             h6: {
                 fontSize: '1.0rem',
                 fontWeight: 500,
                 lineHeight: '1.2',
                 letterSpacing: '0.01em',
-                color: mode === 'light' ? '#242424' : undefined,
             },
             body1: {
                 fontFamily: '"Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.015em',
-                color: mode === 'light' ? '#242424' : undefined,
             },
             body2: {
                 fontFamily: '"Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.01em',
-                color: mode === 'light' ? '#242424' : undefined,
             },
             button: {
                 fontFamily: '"Orbitron", "Rajdhani", "Lexend", sans-serif',
@@ -397,26 +389,13 @@ export const getDesignTokens = (mode: PaletteMode) => {
                 fontWeight: 600,
                 textTransform: 'uppercase',
             },
-            caption: {
-                color: mode === 'light' ? '#242424' : undefined,
-            },
-            subtitle1: {
-                color: mode === 'light' ? '#242424' : undefined,
-            },
-            subtitle2: {
-                color: mode === 'light' ? '#242424' : undefined,
-            },
+            caption: {},
+            subtitle1: {},
+            subtitle2: {},
         },
         components: {
             MuiCssBaseline: {
                 styleOverrides: {
-                    '@global': {
-                        ...(mode === 'light' && {
-                            '*': {
-                                fontFamily: '"Orbitron", "Rajdhani", "Blender Pro", "Lexend", sans-serif',
-                            },
-                        }),
-                    },
                     body: {
                         ...(mode === 'dark' && {
                             // Cyberpunk theme styles
@@ -486,7 +465,6 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                 content: 'none',
                             },
                             // Custom reader-friendly styles
-                            color: '#242424',
                             lineHeight: 1.6,
                         }),
                     },
@@ -673,11 +651,11 @@ export const getDesignTokens = (mode: PaletteMode) => {
                         background: 'rgba(0, 0, 0, 0.4)',
                     },
                     '::-webkit-scrollbar-thumb': {
-                        background: `linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.green.default})`,
+                        background: `linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default})`,
                         borderRadius: '4px',
                     },
                     '::-webkit-scrollbar-thumb:hover': {
-                        background: `linear-gradient(to bottom, ${colors.neons.pink.default}, ${colors.neons.purple.default})`,
+                        background: `linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.pink.default})`,
                     },
                 },
             },
@@ -694,6 +672,11 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                   border: 'none',
                                   position: 'relative',
                                   zIndex: 10,
+                                  transform: 'none !important',
+                                  transition: 'box-shadow 0.2s, background-color 0.2s',
+                                  '&:hover': {
+                                      transform: 'none !important',
+                                  },
                               }
                             : {
                                   // Cyberpunk paper
@@ -719,7 +702,11 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                   position: 'relative',
                                   overflow: 'hidden',
                                   zIndex: 10,
-                                  transition: 'background-color 0.3s',
+                                  transition: 'background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s',
+                                  transform: 'none !important',
+                                  '&:hover': {
+                                      transform: 'none !important',
+                                  },
                               }
                             : {
                                   // Cyberpunk button
@@ -824,13 +811,13 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                   border: 'none',
                                   position: 'relative',
                                   zIndex: 10,
-                                  transition: 'transform 0.2s, box-shadow 0.2s',
+                                  transition: 'box-shadow 0.2s, background-color 0.2s',
+                                  transform: 'none !important',
                                   overflow: 'hidden',
-                                  color: 'white',
                                   '&:hover': {
-                                      transform: 'translateY(-2px)',
                                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
                                       backgroundColor: '#414649',
+                                      transform: 'none !important',
                                   },
                                   '&::after': {
                                       content: 'none',
@@ -866,9 +853,6 @@ export const getDesignTokens = (mode: PaletteMode) => {
                             '&:last-child': {
                                 paddingBottom: '16px',
                             },
-                            '& .MuiTypography-root': {
-                                color: 'white',
-                            },
                         }),
                     },
                 },
@@ -884,23 +868,6 @@ export const getDesignTokens = (mode: PaletteMode) => {
                     title: {
                         ...(mode === 'light' && {
                             fontWeight: 600,
-                            color: 'white',
-                        }),
-                    },
-                    subheader: {
-                        ...(mode === 'light' && {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                        }),
-                    },
-                },
-            },
-            MuiSvgIcon: {
-                styleOverrides: {
-                    root: {
-                        ...(mode === 'light' && {
-                            '&.MuiCard-root &': {
-                                color: 'white',
-                            },
                         }),
                     },
                 },
@@ -926,6 +893,32 @@ export const getDesignTokens = (mode: PaletteMode) => {
                     root: {
                         position: 'relative',
                         zIndex: 5,
+                    },
+                },
+            },
+            MuiTableRow: {
+                styleOverrides: {
+                    root: {
+                        ...(mode === 'light' && {
+                            transform: 'none !important',
+                            transition: 'background-color 0.2s',
+                            '&:hover': {
+                                transform: 'none !important',
+                            },
+                        }),
+                    },
+                },
+            },
+            MuiTableCell: {
+                styleOverrides: {
+                    root: {
+                        ...(mode === 'light' && {
+                            transform: 'none !important',
+                            transition: 'background-color 0.2s, color 0.2s',
+                            '&:hover': {
+                                transform: 'none !important',
+                            },
+                        }),
                     },
                 },
             },

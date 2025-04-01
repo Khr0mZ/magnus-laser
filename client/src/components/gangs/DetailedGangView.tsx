@@ -15,69 +15,33 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
-import { translateLabel } from '../../utils/i18nUtils'
-import { buttonGlitch } from './BuildingAnimations'
-import { DisplayBuilding } from './BuildingTypes'
+import { buttonGlitch } from './GangAnimations'
+import { DisplayGang } from './GangTypes'
 import {
-    generateLocalizedBuildingDescription,
-    generateLocalizedBuildingName,
+    generateLocalizedGangDescription,
+    generateLocalizedGangName,
+    getGangColorValue,
+    getOrderedGangData,
     processValueForDisplay,
-} from './BuildingUtils'
+} from './GangUtils'
 
-type DetailedBuildingViewProps = {
-    building: DisplayBuilding
+type DetailedGangViewProps = {
+    gang: DisplayGang
     index: number
     onDelete: (index: number) => void
 }
 
-const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingViewProps) => {
+const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
 
-    // Priority order for display in the table, matching the reference
-    const getOrderedBuildingData = (building: DisplayBuilding) => {
-        return [
-            { key: 'type', label: translateLabel(t, 'type', 'buildings'), value: building.type },
-            { key: 'elevators', label: translateLabel(t, 'elevators', 'buildings'), value: building.elevators },
-            { key: 'parking', label: translateLabel(t, 'parking', 'buildings'), value: building.parking },
-            {
-                key: 'gatehouseFrontDesk',
-                label: translateLabel(t, 'gatehouseFrontDesk', 'buildings'),
-                value: building.gatehouseFrontDesk,
-            },
-            {
-                key: 'emergencyExit',
-                label: translateLabel(t, 'emergencyExit', 'buildings'),
-                value: building.emergencyExit,
-            },
-            {
-                key: 'backupLights',
-                label: translateLabel(t, 'backupLights', 'buildings'),
-                value: building.backupLights,
-            },
-            { key: 'landingPad', label: translateLabel(t, 'landingPad', 'buildings'), value: building.landingPad },
-            {
-                key: 'secretOrAltEntrance',
-                label: translateLabel(t, 'secretOrAltEntrance', 'buildings'),
-                value: building.secretOrAltEntrance,
-            },
-            { key: 'ownership', label: translateLabel(t, 'ownership', 'buildings'), value: building.ownership },
-            {
-                key: 'securityPersonnel',
-                label: translateLabel(t, 'securityPersonnel', 'buildings'),
-                value: building.securityPersonnel,
-            },
-            { key: 'style', label: translateLabel(t, 'style', 'buildings'), value: building.style },
-            { key: 'event', label: translateLabel(t, 'event', 'buildings'), value: building.event },
-            { key: 'secret', label: translateLabel(t, 'secret', 'buildings'), value: building.secret },
-        ]
-    }
+    // Generate localized content
+    const localizedName = generateLocalizedGangName(gang, t)
+    const localizedDescription = generateLocalizedGangDescription(gang, t)
+    const gangColor = getGangColorValue(gang.color as string)
 
-    const buildingData = getOrderedBuildingData(building)
-
-    // Generate localized name and description
-    const localizedName = generateLocalizedBuildingName(building, t)
-    const localizedDescription = generateLocalizedBuildingDescription(building, t)
+    // Get ordered gang data for display
+    const gangData = getOrderedGangData(gang, t)
 
     return (
         <Grid item xs={12} md={6} xl={4}>
@@ -90,12 +54,6 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                     boxShadow: '0 10px 20px rgba(0,0,0,0.5)',
                     position: 'relative',
                     transition: 'all 0.2s ease',
-                    ...(readerMode && {
-                        transform: 'none !important',
-                        '&:hover': {
-                            transform: 'none !important',
-                        },
-                    }),
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -116,8 +74,8 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                         left: 0,
                         right: 0,
                         height: '2px',
-                        background: `linear-gradient(90deg, transparent, ${colors.neons.cyan.default}, transparent)`,
-                        boxShadow: `0 0 15px ${colors.neons.cyan.default}`,
+                        background: `linear-gradient(90deg, transparent, ${gangColor}, transparent)`,
+                        boxShadow: `0 0 15px ${gangColor}`,
                         zIndex: 2,
                     },
                 }}
@@ -129,7 +87,7 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                             position: 'absolute',
                             top: readerMode ? 0 : -56,
                             left: 0,
-                            bgcolor: readerMode ? colors.blues.dark : 'rgba(14, 22, 48, 0.9)',
+                            bgcolor: readerMode ? colors.blues.default : 'rgba(14, 22, 48, 0.9)',
                             py: 0.8,
                             px: 1.5,
                             width: '100%',
@@ -152,9 +110,7 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                                 }}
                             >
                                 {readerMode ? (
-                                    <span style={{ color: colors.grays.gray000, fontWeight: 'bold' }}>
-                                        {localizedName}
-                                    </span>
+                                    <span style={{ color: gangColor, fontWeight: 'bold' }}>{localizedName}</span>
                                 ) : (
                                     localizedName
                                 )}
@@ -170,13 +126,13 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                             >
                                 {readerMode ? (
                                     <span style={{ color: colors.grays.gray000, fontWeight: 'bold' }}>
-                                        {processValueForDisplay('type', building.type, t)} -{' '}
-                                        {processValueForDisplay('style', building.style, t)}
+                                        {processValueForDisplay('type', gang.type, t)} -{' '}
+                                        {processValueForDisplay('quality', gang.quality, t)}
                                     </span>
                                 ) : (
                                     <>
-                                        {processValueForDisplay('type', building.type, t)} -{' '}
-                                        {processValueForDisplay('style', building.style, t)}
+                                        {processValueForDisplay('type', gang.type, t)} -{' '}
+                                        {processValueForDisplay('quality', gang.quality, t)}
                                     </>
                                 )}
                             </Typography>
@@ -221,6 +177,7 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                                     : {
                                           bgcolor: 'rgba(60, 0, 0, 0.6)',
                                           color: colors.neons.red.light,
+                                          boxShadow: `0 0 8px ${colors.neons.red.default}80`,
                                           '&::after': {
                                               opacity: 0.8,
                                               height: '100%',
@@ -267,10 +224,10 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                         <Typography
                             variant="body1"
                             sx={{
-                                textShadow: '0 0 2px rgba(0,0,0,0.8)',
+                                fontStyle: readerMode ? 'normal' : 'italic',
+                                textShadow: readerMode ? 'none' : '0 0 2px rgba(0,0,0,0.8)',
                                 position: 'relative',
                                 zIndex: 2,
-                                color: readerMode ? colors.grays.gray000 : colors.grays.gray900,
                             }}
                         >
                             {readerMode ? (
@@ -294,7 +251,7 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
                     >
                         <Table size="small">
                             <TableBody>
-                                {buildingData.map((item) => {
+                                {gangData.map((item) => {
                                     const displayValue = processValueForDisplay(item.key, item.value, t)
 
                                     return (
@@ -371,4 +328,4 @@ const DetailedBuildingView = ({ building, index, onDelete }: DetailedBuildingVie
     )
 }
 
-export default DetailedBuildingView
+export default DetailedGangView
