@@ -39,9 +39,9 @@ export const generateLocalizedGangDescription = (gang: DisplayGang, t: TFunction
     let description = ''
 
     // Start with basic info: type, color, members and quality
-    const typeText = processValueForDisplay('type', gang.type, t)
-    const colorText = processValueForDisplay('color', gang.color, t)
-    const qualityText = processValueForDisplay('quality', gang.quality, t)
+    const typeText = processGangValueForDisplay('type', gang.type, t)
+    const colorText = processGangValueForDisplay('color', gang.color, t)
+    const qualityText = processGangValueForDisplay('quality', gang.quality, t)
 
     description += `${t('gangs.descriptions.a')} ${colorText} ${typeText} ${t('gangs.descriptions.gangWith')} ${t(
         'gangs.descriptions.several'
@@ -68,37 +68,37 @@ export const generateLocalizedGangDescription = (gang: DisplayGang, t: TFunction
 
     // Add information about what they're known for
     if (gang.knownFor) {
-        const knownForValue = processValueForDisplay('knownFor', gang.knownFor, t)
+        const knownForValue = processGangValueForDisplay('knownFor', gang.knownFor, t)
         description += `${t('gangs.descriptions.theyAreKnownFor')} ${knownForValue}. `
     }
 
     // Add information about their current status
     if (gang.status) {
-        const statusText = processValueForDisplay('status', gang.status, t)
+        const statusText = processGangValueForDisplay('status', gang.status, t)
         description += `${t('gangs.descriptions.powerStructure')} ${statusText}. `
     }
 
     // Add their current attitude if available
     if (gang.currentAttitude) {
-        const attitudeText = processValueForDisplay('currentAttitude', gang.currentAttitude, t)
+        const attitudeText = processGangValueForDisplay('currentAttitude', gang.currentAttitude, t)
         description += `${t('gangs.descriptions.currentAttitude')} ${attitudeText}. `
     }
 
     // Add info about their sin if available
     if (gang.sin) {
-        const sinText = processValueForDisplay('sin', gang.sin, t)
+        const sinText = processGangValueForDisplay('sin', gang.sin, t)
         description += `${t('gangs.descriptions.theirMainSin')} ${sinText}. `
     }
 
     // Add info about their flaw if available
     if (gang.flaw) {
-        const flawText = processValueForDisplay('flaw', gang.flaw, t)
+        const flawText = processGangValueForDisplay('flaw', gang.flaw, t)
         description += `${t('gangs.descriptions.mainWeakness')} ${flawText}. `
     }
 
     // Add latest news the leader is receiving if available
     if (gang.newsTheLeaderIsReceiving) {
-        const newsText = processValueForDisplay('newsTheLeaderIsReceiving', gang.newsTheLeaderIsReceiving, t)
+        const newsText = processGangValueForDisplay('newsTheLeaderIsReceiving', gang.newsTheLeaderIsReceiving, t)
         description += `${t('gangs.descriptions.latestNews')} ${newsText}.`
     }
 
@@ -120,13 +120,33 @@ export const generateGangNameParts = (): { name: string; adjective: string } => 
         { name: 'Blades', adjective: 'Chrome' },
         { name: 'Jackals', adjective: 'Dire' },
         { name: 'Scorpions', adjective: 'Toxic' },
+        { name: 'Ravens', adjective: 'Obsidian' },
+        { name: 'Hounds', adjective: 'Brutal' },
+        { name: 'Banshees', adjective: 'Wailing' },
+        { name: 'Cobras', adjective: 'Slithering' },
+        { name: 'Crows', adjective: 'Silent' },
+        { name: 'Reapers', adjective: 'Crimson' },
+        { name: 'Sirens', adjective: 'Lethal' },
+        { name: 'Hornets', adjective: 'Stinging' },
+        { name: 'Widows', adjective: 'Black' },
+        { name: 'Gargoyles', adjective: 'Grim' },
+        { name: 'Rats', adjective: 'Filthy' },
+        { name: 'Falcons', adjective: 'Sharp' },
+        { name: 'Bulls', adjective: 'Iron' },
+        { name: 'Basilisks', adjective: 'Petrifying' },
+        { name: 'Howlers', adjective: 'Mad' },
     ]
 
-    return gangNames[Math.floor(Math.random() * gangNames.length)]
+    const gangName = {
+        name: gangNames[Math.floor(Math.random() * gangNames.length)].name,
+        adjective: gangNames[Math.floor(Math.random() * gangNames.length)].adjective,
+    }
+
+    return gangName
 }
 
 // Process complex nested objects for display
-export const processValueForDisplay = (key: string, value: unknown, t: TFunction): string => {
+export const processGangValueForDisplay = (key: string, value: unknown, t: TFunction): string => {
     if (value === null || value === undefined) {
         return 'N/A'
     }
@@ -223,19 +243,14 @@ export const getOrderedGangData = (
     t: TFunction
 ): { key: string; label: string; value: unknown }[] => {
     return [
-        // Basic information
         { key: 'name', label: translateLabel(t, 'name', 'gangs'), value: gang.name },
         { key: 'type', label: translateLabel(t, 'type', 'gangs'), value: gang.type },
         { key: 'color', label: translateLabel(t, 'color', 'gangs'), value: gang.color },
         { key: 'quality', label: translateLabel(t, 'quality', 'gangs'), value: gang.quality },
         { key: 'skill', label: translateLabel(t, 'skill', 'gangs'), value: gang.skill },
         { key: 'secretive', label: translateLabel(t, 'secretive', 'gangs'), value: gang.secretive },
-
-        // Combat capabilities
         { key: 'weapons', label: translateLabel(t, 'weapons', 'gangs'), value: gang.weapons },
         { key: 'armor', label: translateLabel(t, 'armor', 'gangs'), value: gang.armor },
-
-        // Character traits
         { key: 'status', label: translateLabel(t, 'status', 'gangs'), value: gang.status },
         { key: 'knownFor', label: translateLabel(t, 'knownFor', 'gangs'), value: gang.knownFor },
         { key: 'sin', label: translateLabel(t, 'sin', 'gangs'), value: gang.sin },
@@ -246,5 +261,5 @@ export const getOrderedGangData = (
             label: translateLabel(t, 'newsTheLeaderIsReceiving', 'gangs'),
             value: gang.newsTheLeaderIsReceiving,
         },
-    ].filter((item) => item.value !== null && item.value !== undefined)
+    ]
 }

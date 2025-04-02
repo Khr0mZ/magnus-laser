@@ -2,17 +2,18 @@ import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import CompactGangView from '../components/gangs/CompactGangView'
-import DetailedGangView from '../components/gangs/DetailedGangView'
-import { buttonGlitch, pulseGlow, pulseGlowRed, scanlineFlow } from '../components/gangs/GangAnimations'
-import { ClearAllGangsDialog, DeleteGangDialog } from '../components/gangs/GangDialogs'
-import { DisplayGang } from '../components/gangs/GangTypes'
-import GangViewToggle from '../components/gangs/GangViewToggle'
-import StorageBanner from '../components/StorageBanner'
-import { ReaderModeContext } from '../contexts/ReaderModeContext'
-import colors from '../utils/colors'
-import { generateRandomGang } from '../utils/generators'
-import { clearGangs, loadGangs, saveGangs } from '../utils/storage'
+import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
+import CompactView from '../../components/common/CompactView'
+import { DeleteDialog } from '../../components/common/DeleteDialog'
+import DetailedView from '../../components/common/DetailedView'
+import ViewToggle from '../../components/common/ViewToggle'
+import { DisplayGang } from '../../components/gangs/GangTypes'
+import StorageBanner from '../../components/StorageBanner'
+import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import colors from '../../utils/colors'
+import { generateRandomGang } from '../../utils/generators'
+import { clearGangs, loadGangs, saveGangs } from '../../utils/storage'
+import { ModuleTypes } from '../../utils/types'
 
 // Add window.gangsDataLoaded declaration
 declare global {
@@ -21,7 +22,7 @@ declare global {
     }
 }
 
-const Gang = () => {
+const GangView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`RNG Manager - ${t('modules.GANG')}`)
     const { readerMode } = useContext(ReaderModeContext)
@@ -125,6 +126,8 @@ const Gang = () => {
                 >
                     {t('gangs.title', 'Gang Generator')}
                 </Typography>
+                {/* View Toggle Buttons */}
+                <ViewToggle compactView={compactView} onViewChange={handleViewChange} />
             </Stack>
 
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
@@ -145,7 +148,7 @@ const Gang = () => {
                             padding: '6px 16px',
                             border: readerMode ? '1px solid #2e7d32' : `1px solid ${colors.neons.green.default}80`,
                             transition: 'all 0.3s',
-                            animation: readerMode ? 'none' : `${pulseGlow} 3s infinite`,
+                            animation: readerMode ? 'none' : `${pulseGlowGreen} 3s infinite`,
                             boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
                             ...(readerMode
                                 ? {
@@ -201,15 +204,8 @@ const Gang = () => {
                                   }),
                         }}
                     >
-                        <span className="generate-text">{t('gangs.generateButton', 'GENERATE').toUpperCase()}</span>
+                        <span className="generate-text">{t('common.generate')}</span>
                     </Button>
-
-                    {/* View Toggle Buttons */}
-                    <GangViewToggle
-                        compactView={compactView}
-                        onViewChange={handleViewChange}
-                        disabled={gangs.length === 0}
-                    />
                 </Box>
 
                 <Button
@@ -306,7 +302,7 @@ const Gang = () => {
                               }),
                     }}
                 >
-                    <span className="button-text">{t('common.clear', 'CLEAR ALL').toUpperCase()}</span>
+                    <span className="button-text">{t('common.clear')}</span>
                 </Button>
             </Stack>
 
@@ -347,21 +343,38 @@ const Gang = () => {
                     {t('common.noItems', { type: t('modules.GANG').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
-                <CompactGangView gangs={gangs} onDelete={handleDeleteClick} />
+                <CompactView items={gangs} onDelete={handleDeleteClick} moduleType={ModuleTypes.GANG} />
             ) : (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     {gangs.map((gang, index) => (
-                        <DetailedGangView key={index} gang={gang} index={index} onDelete={handleDeleteClick} />
+                        <DetailedView
+                            key={index}
+                            item={gang}
+                            index={index}
+                            onDelete={handleDeleteClick}
+                            moduleType={ModuleTypes.GANG}
+                        />
                     ))}
                 </Grid>
             )}
 
             {/* Confirmation dialogs */}
-            <DeleteGangDialog open={deleteDialogOpen} onClose={handleDeleteCancel} onConfirm={handleDeleteConfirm} />
-
-            <ClearAllGangsDialog open={clearAllDialogOpen} onClose={handleClearCancel} onConfirm={handleClearConfirm} />
+            <DeleteDialog
+                open={deleteDialogOpen}
+                onClose={handleDeleteCancel}
+                onConfirm={handleDeleteConfirm}
+                moduleType={ModuleTypes.GANG}
+                isClearAll={false}
+            />
+            <DeleteDialog
+                open={clearAllDialogOpen}
+                onClose={handleClearCancel}
+                onConfirm={handleClearConfirm}
+                moduleType={ModuleTypes.GANG}
+                isClearAll={true}
+            />
         </Container>
     )
 }
 
-export default Gang
+export default GangView

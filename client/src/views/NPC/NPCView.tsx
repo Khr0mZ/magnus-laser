@@ -1,8 +1,8 @@
 import { Container, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 
-const FixerJob = () => {
-    useDocumentTitle(`RNG Manager - Fixer Job`)
+const NPCView = () => {
+    useDocumentTitle(`RNG Manager - NPC`)
 
     return (
         <Container maxWidth={'xxl'}>
@@ -11,4 +11,4 @@ const FixerJob = () => {
     )
 }
 
-export default FixerJob
+export default NPCView

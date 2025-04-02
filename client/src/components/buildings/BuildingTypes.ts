@@ -18,4 +18,8 @@ export type DisplayBuilding = BuildingType & {
         }
     }
     _jobType: string
+    _forceRegenerate?: boolean
+    _nameAdjectiveIndex?: number
+    _corpoIndex?: number
+    _randomNumber?: number
 }

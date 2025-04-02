@@ -1,4 +1,6 @@
 type Gang {
+  ID: ID!
+  generatedName: String!
   type: GangType!
   quality: Quality!
   skill: Int!
@@ -8,11 +10,11 @@ type Gang {
   status: GangStatus!
   color: GangColor!
   name: GangName!
-  sin: Sin
+  sin: Sin!
   knownFor: KnownFor!
-  flaw: Flaw
-  currentAttitude: Attitude
-  newsTheLeaderIsReceiving: GangNews
+  flaw: Flaw!
+  currentAttitude: Attitude!
+  newsTheLeaderIsReceiving: GangNews!
 }
 
 type Armor {

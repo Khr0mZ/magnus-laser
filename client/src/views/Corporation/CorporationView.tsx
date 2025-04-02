@@ -1,8 +1,8 @@
 import { Container, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 
-const NPC = () => {
-    useDocumentTitle(`RNG Manager - NPC`)
+const CorporationView = () => {
+    useDocumentTitle(`RNG Manager - Corporation`)
 
     return (
         <Container maxWidth={'xxl'}>
@@ -11,4 +11,4 @@ const NPC = () => {
     )
 }
 
-export default NPC
+export default CorporationView

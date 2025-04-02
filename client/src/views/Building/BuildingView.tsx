@@ -2,19 +2,20 @@ import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { buttonGlitch, pulseGlow, pulseGlowRed, scanlineFlow } from '../components/buildings/BuildingAnimations'
-import { ViewToggle } from '../components/buildings/BuildingControls'
-import { ClearAllBuildingsDialog, DeleteBuildingDialog } from '../components/buildings/BuildingDialogs'
-import { DisplayBuilding } from '../components/buildings/BuildingTypes'
-import CompactBuildingView from '../components/buildings/CompactBuildingView'
-import DetailedBuildingView from '../components/buildings/DetailedBuildingView'
-import JobTypeSelector from '../components/buildings/JobTypeSelectorComponent'
-import StorageBanner from '../components/StorageBanner'
-import { ReaderModeContext } from '../contexts/ReaderModeContext'
-import { JobType, getJobTypeModifier } from '../types/jobType'
-import colors from '../utils/colors'
-import { generateRandomBuilding } from '../utils/generators'
-import { clearBuildings, loadBuildings, saveBuildings } from '../utils/storage'
+import { DisplayBuilding } from '../../components/buildings/BuildingTypes'
+import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
+import CompactView from '../../components/common/CompactView'
+import { DeleteDialog } from '../../components/common/DeleteDialog'
+import DetailedView from '../../components/common/DetailedView'
+import JobDifficultySelector from '../../components/common/JobDifficultySelector'
+import ViewToggle from '../../components/common/ViewToggle'
+import StorageBanner from '../../components/StorageBanner'
+import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import colors from '../../utils/colors'
+import { getJobDifficultyModifier } from '../../utils/functions'
+import { generateRandomBuilding } from '../../utils/generators'
+import { clearBuildings, loadBuildings, saveBuildings } from '../../utils/storage'
+import { JobDifficulty, ModuleTypes } from '../../utils/types'
 
 // Add window interface augmentation
 declare global {
@@ -23,7 +24,7 @@ declare global {
     }
 }
 
-const Building = () => {
+const BuildingView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`RNG Manager - ${t('modules.BUILDING')}`)
     const { readerMode } = useContext(ReaderModeContext)
@@ -32,7 +33,7 @@ const Building = () => {
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [buildingToDelete, setBuildingToDelete] = useState<number | null>(null)
-    const [jobType, setJobType] = useState<JobType>(JobType.TYPICAL)
+    const [jobDifficulty, setJobDifficulty] = useState<JobDifficulty>(JobDifficulty.TYPICAL)
     const prevBuildingsRef = useRef<number>(0)
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
@@ -67,14 +68,15 @@ const Building = () => {
         prevBuildingsRef.current = buildings.length
     }, [buildings])
 
-    const handleJobTypeChange = (_: React.MouseEvent<HTMLElement>, newJobType: JobType | null) => {
-        if (newJobType !== null) {
-            setJobType(newJobType)
-        }
+    const handleJobDifficultyChange = (_: React.MouseEvent<HTMLElement>, newJobType: JobDifficulty) => {
+        if (newJobType !== null) setJobDifficulty(newJobType)
     }
 
     const handleGenerateBuilding = () => {
-        setBuildings((prevBuildings) => [...prevBuildings, generateRandomBuilding(getJobTypeModifier(jobType))])
+        setBuildings((prevBuildings) => [
+            ...prevBuildings,
+            generateRandomBuilding(getJobDifficultyModifier(jobDifficulty)),
+        ])
         setIsSaving(true)
     }
 
@@ -112,10 +114,8 @@ const Building = () => {
         setBuildingToDelete(null)
     }
 
-    const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
-        if (newView !== null) {
-            setCompactView(newView === 'table')
-        }
+    const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string) => {
+        setCompactView(newView === 'table')
     }
 
     return (
@@ -134,8 +134,12 @@ const Building = () => {
                 >
                     {t('buildings.title', 'Building Generator')}
                 </Typography>
-
-                <JobTypeSelector jobType={jobType} onJobTypeChange={handleJobTypeChange} />
+                <JobDifficultySelector
+                    jobDifficulty={jobDifficulty}
+                    onJobDifficultyChange={handleJobDifficultyChange}
+                />
+                {/* View Toggle Buttons */}
+                <ViewToggle compactView={compactView} onViewChange={handleViewChange} />
             </Stack>
 
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
@@ -156,7 +160,7 @@ const Building = () => {
                             padding: '6px 16px',
                             border: readerMode ? '1px solid #2e7d32' : `1px solid ${colors.neons.green.default}80`,
                             transition: 'all 0.3s',
-                            animation: readerMode ? 'none' : `${pulseGlow} 3s infinite`,
+                            animation: readerMode ? 'none' : `${pulseGlowGreen} 3s infinite`,
                             boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
                             ...(readerMode
                                 ? {
@@ -211,15 +215,8 @@ const Building = () => {
                                   }),
                         }}
                     >
-                        <span className="generate-text">{t('buildings.generateButton', 'GENERATE').toUpperCase()}</span>
+                        <span className="generate-text">{t('common.generate')}</span>
                     </Button>
-
-                    {/* View Toggle Buttons */}
-                    <ViewToggle
-                        compactView={compactView}
-                        onViewChange={handleViewChange}
-                        disabled={buildings.length === 0}
-                    />
                 </Box>
 
                 <Button
@@ -315,7 +312,7 @@ const Building = () => {
                               }),
                     }}
                 >
-                    <span className="button-text">{t('common.clear', 'CLEAR ALL').toUpperCase()}</span>
+                    <span className="button-text">{t('common.clear')}</span>
                 </Button>
             </Stack>
 
@@ -356,34 +353,39 @@ const Building = () => {
                     {t('common.noItems', { type: t('modules.BUILDING').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
-                <CompactBuildingView buildings={buildings} onDelete={handleDeleteClick} />
+                <CompactView items={buildings} onDelete={handleDeleteClick} moduleType={ModuleTypes.BUILDING} />
             ) : (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     {buildings.map((building, index) => (
-                        <DetailedBuildingView
+                        <DetailedView
                             key={index}
-                            building={building}
+                            item={building}
                             index={index}
                             onDelete={handleDeleteClick}
+                            moduleType={ModuleTypes.BUILDING}
                         />
                     ))}
                 </Grid>
             )}
 
             {/* Confirmation dialogs */}
-            <DeleteBuildingDialog
+            <DeleteDialog
                 open={deleteDialogOpen}
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
+                moduleType={ModuleTypes.BUILDING}
+                isClearAll={false}
             />
 
-            <ClearAllBuildingsDialog
+            <DeleteDialog
                 open={clearAllDialogOpen}
                 onClose={handleClearCancel}
                 onConfirm={handleClearConfirm}
+                moduleType={ModuleTypes.BUILDING}
+                isClearAll={true}
             />
         </Container>
     )
 }
 
-export default Building
+export default BuildingView

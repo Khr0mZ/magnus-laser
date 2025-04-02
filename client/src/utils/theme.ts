@@ -1,148 +1,5 @@
-import { PaletteMode, createTheme, keyframes } from '@mui/material'
+import { createTheme, PaletteMode } from '@mui/material'
 import colors from './colors'
-
-const dataStream = keyframes`
-  0% {
-    background-position: 0% 0%;
-  }
-  100% {
-    background-position: 0% 100%;
-  }
-`
-
-const randomGlitch = keyframes`
-  0%, 100% {
-    opacity: 0;
-  }
-  10%, 15% {
-    opacity: 1;
-    transform: translate(10px, -5px) skew(-10deg);
-  }
-  20% {
-    opacity: 0;
-  }
-  30%, 33% {
-    opacity: 1;
-    transform: translate(-5px, 3px) skew(5deg);
-  }
-  35% {
-    opacity: 0;
-  }
-  70%, 72% {
-    opacity: 1;
-    transform: translate(7px, -10px) skew(-5deg);
-  }
-  75% {
-    opacity: 0;
-  }
-  85%, 88% {
-    opacity: 1;
-    transform: translate(-3px, 8px) skew(10deg);
-  }
-  90% {
-    opacity: 0;
-  }
-`
-
-const powerLines = keyframes`
-  0% {
-    opacity: 0.5;
-    box-shadow: 0 0 5px ${colors.neons.green.default}, 0 0 10px ${colors.neons.green.default}50;
-  }
-  50% {
-    opacity: 0.7;
-    box-shadow: 0 0 10px ${colors.neons.cyan.default}, 0 0 20px ${colors.neons.cyan.default}50;
-  }
-  100% {
-    opacity: 0.5;
-    box-shadow: 0 0 5px ${colors.neons.green.default}, 0 0 10px ${colors.neons.green.default}50;
-  }
-`
-
-const digitalNoise = keyframes`
-  0%, 100% {
-    background-position: 0 0;
-    filter: hue-rotate(0deg);
-  }
-  10% {
-    background-position: -5% -10%;
-    filter: hue-rotate(45deg);
-  }
-  20% {
-    background-position: -15% 5%;
-    filter: hue-rotate(90deg);
-  }
-  30% {
-    background-position: 7% -25%;
-    filter: hue-rotate(180deg);
-  }
-  40% {
-    background-position: 20% 25%;
-    filter: hue-rotate(120deg);
-  }
-  50% {
-    background-position: -25% 10%; 
-    filter: hue-rotate(0deg);
-  }
-  60% {
-    background-position: 15% 5%;
-    filter: hue-rotate(30deg);
-  }
-  70% {
-    background-position: 5% -15%;
-    filter: hue-rotate(285deg);
-  }
-  80% {
-    background-position: -10% -10%;
-    filter: hue-rotate(185deg);
-  }
-  90% {
-    background-position: 10% 15%;
-    filter: hue-rotate(125deg);
-  }
-`
-
-const flicker = keyframes`
-  0% {
-    opacity: 1;
-  }
-  4% {
-    opacity: 0.8;
-  }
-  6% {
-    opacity: 0.4;
-  }
-  8% {
-    opacity: 0.9;
-  }
-  10% {
-    opacity: 0.7;
-  }
-  12% {
-    opacity: 1;
-  }
-  14% {
-    opacity: 0.3;
-  }
-  16% {
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  72% {
-    opacity: 0.2;
-  }
-  74% {
-    opacity: 0.5;
-  }
-  76% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-  }
-`
 
 declare module '@mui/material/styles' {
     interface BreakpointOverrides {
@@ -376,15 +233,12 @@ export const getDesignTokens = (mode: PaletteMode) => {
                 letterSpacing: '0.01em',
             },
             body1: {
-                fontFamily: '"Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.015em',
             },
             body2: {
-                fontFamily: '"Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.01em',
             },
             button: {
-                fontFamily: '"Orbitron", "Rajdhani", "Lexend", sans-serif',
                 letterSpacing: '0.05em',
                 fontWeight: 600,
                 textTransform: 'uppercase',
@@ -440,10 +294,6 @@ export const getDesignTokens = (mode: PaletteMode) => {
                         }),
                         ...(mode === 'light' && {
                             // Reader-friendly theme styles
-                            backgroundImage: 'none',
-                            backgroundColor: '#f8f9fa',
-                            backgroundAttachment: 'fixed',
-                            position: 'relative',
                             // Keep the Magnus Laser Logo in reader mode
                             '&::before': {
                                 content: '""',
@@ -458,204 +308,10 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                 backgroundRepeat: 'no-repeat',
                                 opacity: 0.25, // Lower opacity for reader mode
                                 zIndex: -1,
-                                backgroundColor: 'transparent',
-                                filter: 'saturate(90%) brightness(105%)', // Adjust filter for light mode
-                            },
-                            '&::after': {
-                                content: 'none',
                             },
                             // Custom reader-friendly styles
                             lineHeight: 1.6,
                         }),
-                    },
-                    // Scanlines overlay
-                    '#root': {
-                        position: 'relative',
-                        minHeight: '100vh',
-                        zIndex: 1,
-                        ...(mode === 'dark' && {
-                            '&::before': {
-                                content: '""',
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                background: `repeating-linear-gradient(180deg, 
-                                    ${colors.cyberpunk.scanline}, 
-                                    ${colors.cyberpunk.scanline} 1px, 
-                                    transparent 1px, 
-                                    transparent 2px)`,
-                                pointerEvents: 'none',
-                                zIndex: 3,
-                                opacity: 0.2,
-                            },
-                        }),
-                        ...(mode === 'light' && {
-                            '&::before': {
-                                content: 'none',
-                            },
-                        }),
-                    },
-                    // Additional animated elements
-                    'body > .cyber-power-line1': {
-                        content: '""',
-                        position: 'fixed',
-                        top: '20%',
-                        left: 0,
-                        width: '100%',
-                        height: '1px',
-                        backgroundColor: colors.neons.green.default,
-                        opacity: 0.3,
-                        animation: `${powerLines} 4s ease-in-out infinite`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-power-line2': {
-                        content: '""',
-                        position: 'fixed',
-                        top: '60%',
-                        left: 0,
-                        width: '100%',
-                        height: '1px',
-                        backgroundColor: colors.neons.cyan.default,
-                        opacity: 0.3,
-                        animation: `${powerLines} 6s ease-in-out infinite`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-data-stream': {
-                        content: '""',
-                        position: 'fixed',
-                        top: 0,
-                        right: '15%',
-                        width: '1px',
-                        height: '100%',
-                        opacity: 0.15,
-                        backgroundImage: `linear-gradient(0deg, transparent 20%, 
-                            ${colors.neons.cyan.default} 40%, 
-                            ${colors.neons.cyan.default} 60%, 
-                            transparent 80%)`,
-                        backgroundSize: '1px 30px',
-                        animation: `${dataStream} 8s linear infinite`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-data-stream2': {
-                        content: '""',
-                        position: 'fixed',
-                        top: 0,
-                        left: '25%',
-                        width: '1px',
-                        height: '100%',
-                        opacity: 0.15,
-                        backgroundImage: `linear-gradient(0deg, transparent 10%, 
-                            ${colors.neons.green.default} 30%, 
-                            ${colors.neons.green.default} 70%, 
-                            transparent 90%)`,
-                        backgroundSize: '1px 50px',
-                        animation: `${dataStream} 12s linear infinite`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-glitch': {
-                        content: '""',
-                        position: 'fixed',
-                        bottom: '30%',
-                        right: '20%',
-                        width: '20px',
-                        height: '100px',
-                        backgroundColor: colors.neons.pink.default,
-                        opacity: 0,
-                        animation: `${randomGlitch} 8s infinite 1s`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-glitch-block': {
-                        content: '""',
-                        position: 'fixed',
-                        top: '55%',
-                        left: '45%',
-                        width: '80px',
-                        height: '40px',
-                        backgroundColor: `${colors.neons.cyan.default}20`,
-                        borderLeft: `1px solid ${colors.neons.cyan.default}`,
-                        opacity: 0,
-                        animation: `${randomGlitch} 15s infinite 3s`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                        boxShadow: `0 0 10px ${colors.neons.cyan.default}40`,
-                    },
-                    'body > .cyber-glitch-small': {
-                        content: '""',
-                        position: 'fixed',
-                        top: '15%',
-                        right: '35%',
-                        width: '3px',
-                        height: '6px',
-                        backgroundColor: colors.neons.green.default,
-                        opacity: 0,
-                        animation: `${randomGlitch} 5s infinite 0.5s`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-noise': {
-                        content: '""',
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        backgroundImage: `
-                            radial-gradient(${colors.neons.pink.default}50 0.5px, transparent 0.5px),
-                            radial-gradient(${colors.neons.green.default}50 0.3px, transparent 0.3px)
-                        `,
-                        backgroundSize: '40px 40px, 30px 30px',
-                        backgroundPosition: '0 0, 20px 20px',
-                        opacity: 0.03,
-                        animation: `${digitalNoise} 20s linear infinite`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-flicker': {
-                        content: '""',
-                        position: 'fixed',
-                        bottom: '80%',
-                        left: '10%',
-                        width: '2px',
-                        height: '2px',
-                        backgroundColor: colors.neons.cyan.default,
-                        boxShadow: `0 0 10px ${colors.neons.cyan.default}, 0 0 20px ${colors.neons.cyan.default}`,
-                        animation: `${flicker} 6s infinite`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    'body > .cyber-flicker2': {
-                        content: '""',
-                        position: 'fixed',
-                        bottom: '20%',
-                        left: '80%',
-                        width: '3px',
-                        height: '3px',
-                        backgroundColor: colors.neons.green.default,
-                        boxShadow: `0 0 10px ${colors.neons.green.default}, 0 0 20px ${colors.neons.green.default}`,
-                        animation: `${flicker} 8s infinite 2s`,
-                        zIndex: -10,
-                        pointerEvents: 'none',
-                    },
-                    '::-webkit-scrollbar': {
-                        width: '8px',
-                        height: '8px',
-                    },
-                    '::-webkit-scrollbar-track': {
-                        background: 'rgba(0, 0, 0, 0.4)',
-                    },
-                    '::-webkit-scrollbar-thumb': {
-                        background: `linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default})`,
-                        borderRadius: '4px',
-                    },
-                    '::-webkit-scrollbar-thumb:hover': {
-                        background: `linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.pink.default})`,
                     },
                 },
             },
@@ -899,26 +555,14 @@ export const getDesignTokens = (mode: PaletteMode) => {
             MuiTableRow: {
                 styleOverrides: {
                     root: {
-                        ...(mode === 'light' && {
-                            transform: 'none !important',
-                            transition: 'background-color 0.2s',
-                            '&:hover': {
-                                transform: 'none !important',
-                            },
-                        }),
+                        transition: 'all 0.2s',
                     },
                 },
             },
             MuiTableCell: {
                 styleOverrides: {
                     root: {
-                        ...(mode === 'light' && {
-                            transform: 'none !important',
-                            transition: 'background-color 0.2s, color 0.2s',
-                            '&:hover': {
-                                transform: 'none !important',
-                            },
-                        }),
+                        transition: 'all 0.2s',
                     },
                 },
             },

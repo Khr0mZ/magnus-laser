@@ -34,16 +34,18 @@ export enum Attitude {
 
 export type Building = {
   __typename?: 'Building';
-  backupLights?: Maybe<DifficultyValue>;
-  elevators?: Maybe<DifficultyValue>;
-  emergencyExit?: Maybe<DifficultyValue>;
+  ID: Scalars['ID']['output'];
+  backupLights: Scalars['Boolean']['output'];
+  elevators: Scalars['Boolean']['output'];
+  emergencyExit: Scalars['Boolean']['output'];
   event: Event;
-  gatehouseFrontDesk?: Maybe<DifficultyValue>;
-  landingPad?: Maybe<DifficultyValue>;
+  gatehouseFrontDesk: Scalars['Boolean']['output'];
+  generatedName: Scalars['String']['output'];
+  landingPad: Scalars['Boolean']['output'];
   ownership: Ownership;
-  parking?: Maybe<DifficultyValue>;
+  parking: Scalars['Boolean']['output'];
   secret: Secret;
-  secretOrAltEntrance?: Maybe<DifficultyValue>;
+  secretOrAltEntrance: Scalars['Boolean']['output'];
   securityPersonnel: SecurityPersonnel;
   style: Style;
   type: BuildingType;
@@ -75,11 +77,6 @@ export type Dices = {
   d100?: Maybe<Scalars['Int']['output']>;
 };
 
-export type DifficultyValue = {
-  __typename?: 'DifficultyValue';
-  value: Scalars['Int']['output'];
-};
-
 export enum Event {
   CRUMBLING_DEMOLITION = 'CRUMBLING_DEMOLITION',
   EDGERUNNERS_GOING_SAME_PLACE = 'EDGERUNNERS_GOING_SAME_PLACE',
@@ -108,16 +105,18 @@ export enum Flaw {
 
 export type Gang = {
   __typename?: 'Gang';
+  ID: Scalars['ID']['output'];
   armor: Armor;
   color: GangColor;
-  currentAttitude?: Maybe<Attitude>;
-  flaw?: Maybe<Flaw>;
+  currentAttitude: Attitude;
+  flaw: Flaw;
+  generatedName: Scalars['String']['output'];
   knownFor: KnownFor;
   name: GangName;
-  newsTheLeaderIsReceiving?: Maybe<GangNews>;
+  newsTheLeaderIsReceiving: GangNews;
   quality: Quality;
   secretive: Scalars['Int']['output'];
-  sin?: Maybe<Sin>;
+  sin: Sin;
   skill: Scalars['Int']['output'];
   status: GangStatus;
   type: GangType;

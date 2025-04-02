@@ -1,3 +1,5 @@
+import { JobDifficulty } from './types.ts'
+
 /**
  * Converts an enum value to a human-readable category name
  * @param key The property key from the object
@@ -50,3 +52,17 @@ export const getCategoryName = (key: string): string => {
  * This avoids import conflicts
  */
 export { getModuleIcon } from './functions.tsx'
+
+// Get modifier value based on job type
+export const getJobDifficultyModifier = (jobDifficulty: JobDifficulty): number => {
+    switch (jobDifficulty) {
+        case JobDifficulty.EASY:
+            return 0
+        case JobDifficulty.TYPICAL:
+            return 1
+        case JobDifficulty.DANGEROUS:
+            return 2
+        default:
+            return 1
+    }
+}

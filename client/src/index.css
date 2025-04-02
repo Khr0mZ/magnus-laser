@@ -17,51 +17,7 @@
 }
 
 body {
-    padding-top: 0px;
-    padding-bottom: 0px;
     margin: 0;
-
-    position: relative;
-    font-family: 'Rajdhani', 'Lexend', sans-serif;
-    background-color: var(--dark-bg);
-    color: #eeeeee;
-}
-
-/* Scanline effect overlay */
-body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-    background-size: 100% 4px;
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.15;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.4);
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, var(--neon-cyan), var(--neon-green));
-    border-radius: 4px;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(to bottom, var(--neon-pink), var(--neon-purple));
 }
 
 /* Animations */
@@ -218,40 +174,7 @@ body::after {
 body.reader-mode {
     background-color: #f8f9fa !important;
     color: #242424 !important;
-    font-family: 'Rajdhani', 'Lexend', sans-serif !important;
     line-height: 1.6 !important;
-}
-
-body.reader-mode::after {
-    content: none !important;
-}
-
-body.reader-mode .cyber-power-line2,
-body.reader-mode .cyber-power-line3,
-body.reader-mode .cyber-power-line4,
-body.reader-mode .cyber-data-stream,
-body.reader-mode .cyber-data-stream2,
-body.reader-mode .cyber-glitch,
-body.reader-mode .cyber-glitch-block,
-body.reader-mode .cyber-glitch-small,
-body.reader-mode .cyber-noise,
-body.reader-mode .cyber-flicker,
-body.reader-mode .cyber-flicker2 {
-    display: none !important;
-}
-
-/* Custom reader-friendly scrollbar */
-body.reader-mode::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-body.reader-mode::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-body.reader-mode::-webkit-scrollbar-thumb:hover {
-    background: #555;
 }
 
 /* Text selection for reader mode */
@@ -259,11 +182,6 @@ body.reader-mode ::selection {
     background: #007bff;
     color: white;
     text-shadow: none;
-}
-
-/* Typography in reader mode */
-body.reader-mode * {
-    font-family: 'Orbitron', 'Rajdhani', 'Lexend', sans-serif !important;
 }
 
 /* MUI component overrides for reader mode */

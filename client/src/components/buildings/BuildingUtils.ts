@@ -1,6 +1,7 @@
 import { TFunction } from 'i18next'
-import { BuildingType as BuildingTypeEnum, Ownership, Style } from '../../graphql/types'
-import { translateEnum } from '../../utils/i18nUtils'
+import { BuildingType as BuildingTypeEnum, Ownership } from '../../graphql/types'
+import { corpoPrefixes, styleAdjectives } from '../../utils/generators'
+import { translateEnum, translateLabel } from '../../utils/i18nUtils'
 import { DisplayBuilding } from './BuildingTypes'
 
 // Function to generate name for the current language
@@ -11,47 +12,24 @@ export const generateLocalizedBuildingName = (building: DisplayBuilding, t: TFun
 
     const { type, style, ownership } = building._nameComponents
 
-    // Create display name based on building properties (these are mostly proper names and don't need translation)
-    // Just a simplified version of the original generator
-    const corpoPrefixes = [
-        'Arasaka',
-        'Militech',
-        'Biotechnica',
-        'Petrochem',
-        'Kang Tao',
-        'Zetatech',
-        'Night Corp',
-        'Budget Arms',
-        'Trauma Team',
-        'Dynalar',
-    ]
+    // Use stored indices for consistency instead of generating new random values
+    // If indices don't exist on the building, fallback to 0
+    const styleIndex = building._nameAdjectiveIndex ?? 0
+    const corpoIndex = building._corpoIndex ?? 0
+    const randomNumber = building._randomNumber ?? Math.floor(Math.random() * 100)
 
-    const styleAdjectives: Record<Style, string[]> = {
-        [Style.AUSTERE]: ['Austere', 'Sparse', 'Minimalist', 'Plain'],
-        [Style.CORPORATE]: ['Corporate', 'Enterprise', 'Executive', 'Business'],
-        [Style.EUROPEAN]: ['European', 'Continental', 'Classic', 'Old-World'],
-        [Style.EXOTIC]: ['Exotic', 'Unusual', 'Rare', 'Foreign'],
-        [Style.LUXURIOUS]: ['Luxurious', 'Opulent', 'Lavish', 'Extravagant'],
-        [Style.MILITARISTIC]: ['Militaristic', 'Fortress', 'Bunker', 'Defense'],
-        [Style.MODERN]: ['Modern', 'Contemporary', 'Current', 'Progressive'],
-        [Style.NEON_FEST]: ['Neon', 'Glow', 'Electric', 'Luminous'],
-        [Style.ORIENTAL]: ['Oriental', 'Eastern', 'Zen', 'Dynasty'],
-        [Style.SOVIETIC]: ['Soviet', 'United', 'Red', 'Communist'],
-        [Style.TRIBAL]: ['Tribal', 'Native', 'Indigenous', 'Ancestral'],
-        [Style.URBAN_GRAFFITI]: ['Graffiti', 'Street', 'Urban', 'Tagged'],
-    }
+    // Use stored index for consistency
+    const styleAdj = styleAdjectives[style][styleIndex]
 
-    // Use first option from arrays for consistency
-    const styleAdj = styleAdjectives[style][0]
+    // Use stored index for consistency
+    const corpo = corpoPrefixes[corpoIndex]
 
-    // Generate a name based on building type - simplified from original
     switch (type) {
         case BuildingTypeEnum.SKYSCRAPER_MEGABUILDING:
-            return `${styleAdj} Megabuilding H10`
+            return `${styleAdj} Megabuilding H${randomNumber}`
 
         case BuildingTypeEnum.MEGACORPO_HQ:
         case BuildingTypeEnum.CORPO_BUILDING: {
-            const corpo = corpoPrefixes[0]
             return ownership === Ownership.MEGA_CORPO || ownership === Ownership.CORPO
                 ? `${corpo} ${styleAdj} Tower`
                 : `${t('buildings.former', 'Former')} ${corpo} ${styleAdj} ${t('buildings.building', 'Building')}`
@@ -67,7 +45,7 @@ export const generateLocalizedBuildingName = (building: DisplayBuilding, t: TFun
             )}`
 
         case BuildingTypeEnum.CUBE_HOTEL_MOTEL_CARGO_CONTAINER:
-            return `${styleAdj} ${t('buildings.cubeHotel', 'Cube Hotel')} 12`
+            return `${styleAdj} ${t('buildings.cubeHotel', 'Cube Hotel')} ${randomNumber}`
 
         case BuildingTypeEnum.LUXURY_PENTHOUSE_MCMANSION:
             return `${styleAdj} ${t('buildings.luxury', 'Luxury')} ${t('buildings.heights', 'Heights')} 5`
@@ -76,7 +54,16 @@ export const generateLocalizedBuildingName = (building: DisplayBuilding, t: TFun
             return `${t('buildings.abandoned', 'Abandoned')} ${styleAdj} Neo-Plaza`
 
         case BuildingTypeEnum.VACANT_LOT_CONSTRUCTION_SITE:
-            return `${styleAdj} ${t('buildings.constructionSite', 'Construction Site')} 101`
+            return `${styleAdj} ${t('buildings.constructionSite', 'Construction Site')} ${randomNumber}`
+
+        case BuildingTypeEnum.GOV_BUILDING:
+            return `${styleAdj} ${t('buildings.govBuilding', 'Gov Building')}`
+
+        case BuildingTypeEnum.MULTI_STORY_BUILDING:
+            return `${styleAdj} ${t('buildings.multiStory', 'Hive Building')}`
+
+        case BuildingTypeEnum.PUBLIC_SPACE:
+            return `${styleAdj} ${t('buildings.publicSpace', 'Neo-Plaza')}`
 
         default:
             return `${styleAdj} Neo-Plaza`
@@ -162,7 +149,7 @@ export const generateLocalizedBuildingDescription = (building: DisplayBuilding, 
 }
 
 // Process complex nested objects for display
-export const processValueForDisplay = (key: string, value: unknown, t: TFunction): string => {
+export const processBuildingValueForDisplay = (key: string, value: unknown, t: TFunction): string => {
     if (value === null || value === undefined) {
         return 'N/A'
     }
@@ -211,4 +198,51 @@ export const processValueForDisplay = (key: string, value: unknown, t: TFunction
     }
 
     return String(value)
+}
+
+/**
+ * Get ordered building data for display
+ * @param building The building data
+ * @param t Translation function
+ * @returns Array of data items ordered for display
+ */
+export const getOrderedBuildingData = (
+    building: DisplayBuilding,
+    t: TFunction
+): { key: string; label: string; value: unknown }[] => {
+    return [
+        { key: 'type', label: translateLabel(t, 'type', 'buildings'), value: building.type },
+        { key: 'elevators', label: translateLabel(t, 'elevators', 'buildings'), value: building.elevators },
+        { key: 'parking', label: translateLabel(t, 'parking', 'buildings'), value: building.parking },
+        {
+            key: 'gatehouseFrontDesk',
+            label: translateLabel(t, 'gatehouseFrontDesk', 'buildings'),
+            value: building.gatehouseFrontDesk,
+        },
+        {
+            key: 'emergencyExit',
+            label: translateLabel(t, 'emergencyExit', 'buildings'),
+            value: building.emergencyExit,
+        },
+        {
+            key: 'backupLights',
+            label: translateLabel(t, 'backupLights', 'buildings'),
+            value: building.backupLights,
+        },
+        { key: 'landingPad', label: translateLabel(t, 'landingPad', 'buildings'), value: building.landingPad },
+        {
+            key: 'secretOrAltEntrance',
+            label: translateLabel(t, 'secretOrAltEntrance', 'buildings'),
+            value: building.secretOrAltEntrance,
+        },
+        { key: 'ownership', label: translateLabel(t, 'ownership', 'buildings'), value: building.ownership },
+        {
+            key: 'securityPersonnel',
+            label: translateLabel(t, 'securityPersonnel', 'buildings'),
+            value: building.securityPersonnel,
+        },
+        { key: 'style', label: translateLabel(t, 'style', 'buildings'), value: building.style },
+        { key: 'event', label: translateLabel(t, 'event', 'buildings'), value: building.event },
+        { key: 'secret', label: translateLabel(t, 'secret', 'buildings'), value: building.secret },
+    ]
 }

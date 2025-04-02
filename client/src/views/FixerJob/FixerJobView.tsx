@@ -1,8 +1,8 @@
 import { Container, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 
-const Corporation = () => {
-    useDocumentTitle(`RNG Manager - Corporation`)
+const FixerJobView = () => {
+    useDocumentTitle(`RNG Manager - Fixer Job`)
 
     return (
         <Container maxWidth={'xxl'}>
@@ -11,4 +11,4 @@ const Corporation = () => {
     )
 }
 
-export default Corporation
+export default FixerJobView

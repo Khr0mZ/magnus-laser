@@ -15,33 +15,55 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
-import { buttonGlitch } from './GangAnimations'
-import { DisplayGang } from './GangTypes'
+import { ModuleTypes } from '../../utils/types'
+import { DisplayBuilding } from '../buildings/BuildingTypes'
+import {
+    generateLocalizedBuildingDescription,
+    generateLocalizedBuildingName,
+    getOrderedBuildingData,
+    processBuildingValueForDisplay,
+} from '../buildings/BuildingUtils'
+import { DisplayGang } from '../gangs/GangTypes'
 import {
     generateLocalizedGangDescription,
     generateLocalizedGangName,
     getGangColorValue,
     getOrderedGangData,
-    processValueForDisplay,
-} from './GangUtils'
+    processGangValueForDisplay,
+} from '../gangs/GangUtils'
+import { buttonGlitch } from './Animations'
 
-type DetailedGangViewProps = {
-    gang: DisplayGang
+type DetailedViewProps = {
+    item: DisplayGang | DisplayBuilding
     index: number
     onDelete: (index: number) => void
+    moduleType: ModuleTypes
 }
 
-const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
+const DetailedView = (props: DetailedViewProps) => {
+    const { item, index, onDelete, moduleType } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
 
-    // Generate localized content
-    const localizedName = generateLocalizedGangName(gang, t)
-    const localizedDescription = generateLocalizedGangDescription(gang, t)
-    const gangColor = getGangColorValue(gang.color as string)
-
     // Get ordered gang data for display
-    const gangData = getOrderedGangData(gang, t)
+    let itemData: { key: string; label: string; value: unknown }[] = []
+    let localizedName: string = ''
+    let localizedDescription: string = ''
+    let color: string = ''
+    switch (moduleType) {
+        case ModuleTypes.GANG:
+            itemData = getOrderedGangData(item as DisplayGang, t)
+            localizedName = generateLocalizedGangName(item as DisplayGang, t)
+            localizedDescription = generateLocalizedGangDescription(item as DisplayGang, t)
+            color = getGangColorValue((item as DisplayGang).color as string)
+            break
+        case ModuleTypes.BUILDING:
+            itemData = getOrderedBuildingData(item as DisplayBuilding, t)
+            localizedName = generateLocalizedBuildingName(item as DisplayBuilding, t)
+            localizedDescription = generateLocalizedBuildingDescription(item as DisplayBuilding, t)
+            color = colors.neons.cyan.default
+            break
+    }
 
     return (
         <Grid item xs={12} md={6} xl={4}>
@@ -74,8 +96,8 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                         left: 0,
                         right: 0,
                         height: '2px',
-                        background: `linear-gradient(90deg, transparent, ${gangColor}, transparent)`,
-                        boxShadow: `0 0 15px ${gangColor}`,
+                        background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+                        boxShadow: `0 0 15px ${color}`,
                         zIndex: 2,
                     },
                 }}
@@ -84,19 +106,18 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                     {/* Index number and type indicator */}
                     <Box
                         sx={{
-                            position: 'absolute',
-                            top: readerMode ? 0 : -56,
-                            left: 0,
-                            bgcolor: readerMode ? colors.blues.default : 'rgba(14, 22, 48, 0.9)',
+                            bgcolor: readerMode ? color : 'rgba(14, 22, 48, 0.9)',
                             py: 0.8,
                             px: 1.5,
-                            width: '100%',
+                            width: readerMode ? 'calc(100% + 32px)' : '100%',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             borderBottom: '1px solid rgba(255,255,255,0.1)',
                             zIndex: 5,
                             backdropFilter: 'blur(2px)',
+                            mt: readerMode ? -2 : 0.5,
+                            mx: readerMode ? -2 : 0,
                         }}
                     >
                         <Box>
@@ -107,10 +128,19 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                                     fontSize: '1rem',
                                     fontWeight: 'bold',
                                     fontFamily: 'Orbitron, sans-serif',
+                                    color: color,
                                 }}
                             >
                                 {readerMode ? (
-                                    <span style={{ color: gangColor, fontWeight: 'bold' }}>{localizedName}</span>
+                                    <span
+                                        style={{
+                                            color: colors.grays.gray000,
+                                            fontWeight: 'bold',
+                                            textShadow: `0 0 5px ${colors.grays.gray900}`,
+                                        }}
+                                    >
+                                        {localizedName}
+                                    </span>
                                 ) : (
                                     localizedName
                                 )}
@@ -125,14 +155,24 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                                 }}
                             >
                                 {readerMode ? (
-                                    <span style={{ color: colors.grays.gray000, fontWeight: 'bold' }}>
-                                        {processValueForDisplay('type', gang.type, t)} -{' '}
-                                        {processValueForDisplay('quality', gang.quality, t)}
+                                    <span
+                                        style={{
+                                            color: colors.grays.gray000,
+                                            fontWeight: 'bold',
+                                            textShadow: `0 0 5px ${colors.grays.gray900}`,
+                                        }}
+                                    >
+                                        {moduleType === ModuleTypes.GANG &&
+                                            processGangValueForDisplay('type', item.type, t)}
+                                        {moduleType === ModuleTypes.BUILDING &&
+                                            processBuildingValueForDisplay('type', item.type, t)}
                                     </span>
                                 ) : (
                                     <>
-                                        {processValueForDisplay('type', gang.type, t)} -{' '}
-                                        {processValueForDisplay('quality', gang.quality, t)}
+                                        {moduleType === ModuleTypes.GANG &&
+                                            processGangValueForDisplay('type', item.type, t)}
+                                        {moduleType === ModuleTypes.BUILDING &&
+                                            processBuildingValueForDisplay('type', item.type, t)}
                                     </>
                                 )}
                             </Typography>
@@ -213,10 +253,10 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                     {/* Header Section */}
                     <Box
                         sx={{
-                            bgcolor: readerMode ? colors.blues.light : 'rgba(14, 22, 48, 0.9)',
+                            bgcolor: readerMode ? colors.grays.gray900 : 'rgba(14, 22, 48, 0.9)',
                             mx: readerMode ? -2 : 0,
                             p: 2,
-                            mt: readerMode ? 4 : 8,
+                            mt: 0,
                             position: 'relative',
                             overflow: 'hidden',
                         }}
@@ -224,14 +264,16 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                         <Typography
                             variant="body1"
                             sx={{
-                                fontStyle: readerMode ? 'normal' : 'italic',
                                 textShadow: readerMode ? 'none' : '0 0 2px rgba(0,0,0,0.8)',
                                 position: 'relative',
                                 zIndex: 2,
+                                fontWeight: 500,
                             }}
                         >
                             {readerMode ? (
-                                <span style={{ color: colors.grays.gray000 }}>{localizedDescription}</span>
+                                <span style={{ color: colors.grays.gray000, fontWeight: 500 }}>
+                                    {localizedDescription}
+                                </span>
                             ) : (
                                 localizedDescription
                             )}
@@ -251,8 +293,13 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                     >
                         <Table size="small">
                             <TableBody>
-                                {gangData.map((item) => {
-                                    const displayValue = processValueForDisplay(item.key, item.value, t)
+                                {itemData.map((item) => {
+                                    let displayValue = ''
+                                    if (moduleType === ModuleTypes.GANG) {
+                                        displayValue = processGangValueForDisplay(item.key, item.value, t)
+                                    } else if (moduleType === ModuleTypes.BUILDING) {
+                                        displayValue = processBuildingValueForDisplay(item.key, item.value, t)
+                                    }
 
                                     return (
                                         <TableRow
@@ -309,6 +356,7 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
                                                               color: '#333 !important',
                                                               textShadow: 'none !important',
                                                               borderBottom: '1px solid #ddd !important',
+                                                              fontWeight: 500,
                                                           }
                                                         : {}),
                                                 }}
@@ -328,4 +376,4 @@ const DetailedGangView = ({ gang, index, onDelete }: DetailedGangViewProps) => {
     )
 }
 
-export default DetailedGangView
+export default DetailedView

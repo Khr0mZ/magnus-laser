@@ -2,46 +2,53 @@ import { Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/materia
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { JobType, getJobTypeModifier } from '../../types/jobType'
 import colors from '../../utils/colors'
-import { pulseGlow, pulseGlowRed, pulseGlowYellow } from './BuildingAnimations'
+import { getJobDifficultyModifier } from '../../utils/functions'
+import { JobDifficulty } from '../../utils/types'
+import { pulseGlowGreen, pulseGlowRed, pulseGlowYellow } from './Animations'
 
-type JobTypeSelectorProps = {
-    jobType: JobType
-    onJobTypeChange: (event: React.MouseEvent<HTMLElement>, value: JobType | null) => void
+type JobDifficultySelectorProps = {
+    jobDifficulty: JobDifficulty
+    onJobDifficultyChange: (event: React.MouseEvent<HTMLElement>, value: JobDifficulty) => void
 }
 
-const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => {
+const JobDifficultySelector = (props: JobDifficultySelectorProps) => {
+    const { jobDifficulty, onJobDifficultyChange } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
-
     return (
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" alignItems="center" gap={1}>
             <Typography
                 sx={{
                     fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                    color: readerMode ? '#333333' : colors.neons.cyan.default,
+                    color: colors.neons.cyan.default,
                     textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
+                    fontWeight: readerMode ? 600 : 400,
                     fontSize: '0.85rem',
                 }}
             >
-                {t('buildings.jobType')}
+                {t('common.jobDifficultySelector.title')}
             </Typography>
             <ToggleButtonGroup
-                value={jobType}
+                value={jobDifficulty}
                 exclusive
-                onChange={onJobTypeChange}
-                aria-label="job difficulty"
+                onChange={onJobDifficultyChange}
                 sx={{
                     gap: '0px',
-                    background: readerMode ? 'transparent' : 'rgba(0, 20, 40, 0.7)',
+                    background: readerMode ? '#f5f5f5' : 'rgba(0, 20, 40, 0.7)',
                     p: '2px',
                     border: readerMode
-                        ? '1px solid #cccccc'
+                        ? `1px solid ${
+                              jobDifficulty === JobDifficulty.EASY
+                                  ? 'rgb(0, 200, 0)'
+                                  : jobDifficulty === JobDifficulty.DANGEROUS
+                                  ? 'rgb(200, 0, 0)'
+                                  : 'rgb(200, 200, 0)'
+                          }`
                         : `1px solid ${
-                              jobType === JobType.EASY
+                              jobDifficulty === JobDifficulty.EASY
                                   ? 'rgba(0, 255, 0, 0.3)'
-                                  : jobType === JobType.DANGEROUS
+                                  : jobDifficulty === JobDifficulty.DANGEROUS
                                   ? 'rgba(255, 0, 0, 0.3)'
                                   : 'rgba(255, 255, 0, 0.3)'
                           }`,
@@ -49,15 +56,15 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                     boxShadow: readerMode
                         ? 'none'
                         : `0 0 10px ${
-                              jobType === JobType.EASY
+                              jobDifficulty === JobDifficulty.EASY
                                   ? 'rgba(0, 255, 0, 0.2)'
-                                  : jobType === JobType.DANGEROUS
+                                  : jobDifficulty === JobDifficulty.DANGEROUS
                                   ? 'rgba(255, 0, 0, 0.2)'
                                   : 'rgba(255, 255, 0, 0.2)'
                           }, inset 0 0 5px ${
-                              jobType === JobType.EASY
+                              jobDifficulty === JobDifficulty.EASY
                                   ? 'rgba(0, 255, 0, 0.2)'
-                                  : jobType === JobType.DANGEROUS
+                                  : jobDifficulty === JobDifficulty.DANGEROUS
                                   ? 'rgba(255, 0, 0, 0.2)'
                                   : 'rgba(255, 255, 0, 0.2)'
                           }`,
@@ -65,9 +72,9 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                     animation: readerMode
                         ? 'none'
                         : `${
-                              jobType === JobType.EASY
-                                  ? pulseGlow
-                                  : jobType === JobType.DANGEROUS
+                              jobDifficulty === JobDifficulty.EASY
+                                  ? pulseGlowGreen
+                                  : jobDifficulty === JobDifficulty.DANGEROUS
                                   ? pulseGlowRed
                                   : pulseGlowYellow
                           } 4s infinite`,
@@ -80,9 +87,9 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                               right: 0,
                               height: '1px',
                               background:
-                                  jobType === JobType.EASY
+                                  jobDifficulty === JobDifficulty.EASY
                                       ? 'linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.5), transparent)'
-                                      : jobType === JobType.DANGEROUS
+                                      : jobDifficulty === JobDifficulty.DANGEROUS
                                       ? 'linear-gradient(90deg, transparent, rgba(255, 0, 0, 0.5), transparent)'
                                       : 'linear-gradient(90deg, transparent, rgba(255, 255, 0, 0.5), transparent)',
                               zIndex: 2,
@@ -97,9 +104,9 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                               right: 0,
                               height: '1px',
                               background:
-                                  jobType === JobType.EASY
+                                  jobDifficulty === JobDifficulty.EASY
                                       ? 'linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.3), transparent)'
-                                      : jobType === JobType.DANGEROUS
+                                      : jobDifficulty === JobDifficulty.DANGEROUS
                                       ? 'linear-gradient(90deg, transparent, rgba(255, 0, 0, 0.3), transparent)'
                                       : 'linear-gradient(90deg, transparent, rgba(255, 255, 0, 0.3), transparent)',
                               zIndex: 2,
@@ -128,8 +135,7 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                 }}
             >
                 <ToggleButton
-                    value={JobType.EASY}
-                    aria-label="easy job"
+                    value={JobDifficulty.EASY}
                     sx={{
                         color: colors.difficulty.easy.dark,
                         bgcolor: 'transparent',
@@ -137,8 +143,7 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                         borderColor: 'transparent',
                         px: 2,
                         py: 1,
-                        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                        letterSpacing: readerMode ? 'normal' : '1px',
+                        letterSpacing: '1px',
                         fontSize: '0.8rem',
                         textShadow: readerMode ? 'none' : `0 0 5px ${colors.difficulty.easy.dark}`,
                         position: 'relative',
@@ -158,7 +163,7 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                             : {},
                         '&:hover': readerMode
                             ? {
-                                  bgcolor: '#f0f0f0',
+                                  bgcolor: colors.neons.green.light,
                                   color: colors.difficulty.easy.dark,
                               }
                             : {
@@ -194,7 +199,7 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                                       background: `linear-gradient(90deg, transparent, ${colors.difficulty.easy.default}, transparent)`,
                                       boxShadow: `0 0 10px ${colors.difficulty.easy.default}`,
                                       zIndex: 2,
-                                      animation: `${pulseGlow} 2s infinite`,
+                                      animation: `${pulseGlowGreen} 2s infinite`,
                                   },
                                   '&::after': {
                                       content: '""',
@@ -208,17 +213,13 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                                       boxShadow: `0 0 8px ${colors.difficulty.easy.default}`,
                                   },
                               },
-                        '&.Mui-disabled': {
-                            color: readerMode ? 'rgba(0, 255, 0, 0.5)' : 'rgba(0, 255, 0, 0.3)',
-                        },
                         height: 32,
                     }}
                 >
-                    {t('buildings.jobTypes.easy')} +{getJobTypeModifier(JobType.EASY)}
+                    {t('common.jobDifficultySelector.easy')} +{getJobDifficultyModifier(JobDifficulty.EASY)}
                 </ToggleButton>
                 <ToggleButton
-                    value={JobType.TYPICAL}
-                    aria-label="typical job"
+                    value={JobDifficulty.TYPICAL}
                     sx={{
                         color: colors.difficulty.typical.dark,
                         bgcolor: 'transparent',
@@ -226,8 +227,7 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                         borderColor: 'transparent',
                         px: 2,
                         py: 1,
-                        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                        letterSpacing: readerMode ? 'normal' : '1px',
+                        letterSpacing: '1px',
                         fontSize: '0.8rem',
                         textShadow: readerMode ? 'none' : `0 0 5px ${colors.difficulty.typical.dark}`,
                         position: 'relative',
@@ -297,17 +297,13 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                                       boxShadow: `0 0 8px ${colors.difficulty.typical.default}`,
                                   },
                               },
-                        '&.Mui-disabled': {
-                            color: readerMode ? 'rgba(255, 255, 0, 0.5)' : 'rgba(255, 255, 0, 0.3)',
-                        },
                         height: 32,
                     }}
                 >
-                    {t('buildings.jobTypes.typical')} +{getJobTypeModifier(JobType.TYPICAL)}
+                    {t('common.jobDifficultySelector.typical')} +{getJobDifficultyModifier(JobDifficulty.TYPICAL)}
                 </ToggleButton>
                 <ToggleButton
-                    value={JobType.DANGEROUS}
-                    aria-label="dangerous job"
+                    value={JobDifficulty.DANGEROUS}
                     sx={{
                         color: colors.difficulty.dangerous.default,
                         bgcolor: 'transparent',
@@ -315,8 +311,7 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                         borderColor: 'transparent',
                         px: 2,
                         py: 1,
-                        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                        letterSpacing: readerMode ? 'normal' : '1px',
+                        letterSpacing: '1px',
                         fontSize: '0.8rem',
                         textShadow: readerMode ? 'none' : `0 0 5px ${colors.difficulty.dangerous.dark}`,
                         position: 'relative',
@@ -386,17 +381,14 @@ const JobTypeSelector = ({ jobType, onJobTypeChange }: JobTypeSelectorProps) => 
                                       boxShadow: `0 0 8px ${colors.difficulty.dangerous.default}`,
                                   },
                               },
-                        '&.Mui-disabled': {
-                            color: readerMode ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)',
-                        },
                         height: 32,
                     }}
                 >
-                    {t('buildings.jobTypes.dangerous')} +{getJobTypeModifier(JobType.DANGEROUS)}
+                    {t('common.jobDifficultySelector.dangerous')} +{getJobDifficultyModifier(JobDifficulty.DANGEROUS)}
                 </ToggleButton>
             </ToggleButtonGroup>
         </Stack>
     )
 }
 
-export default JobTypeSelector
+export default JobDifficultySelector
