@@ -14,8 +14,8 @@ import {
 import { ReaderModeContext } from '../../contexts/ReaderModeContext.tsx'
 import NavigationPaths from '../../navigation.ts'
 import colors from '../../utils/colors.ts'
+import { ModuleTypes } from '../../utils/constants'
 import { getModuleIcon } from '../../utils/functions.tsx'
-import { ModuleTypes } from '../../utils/types.ts'
 
 const Dashboard = () => {
     const navigate = useNavigate()

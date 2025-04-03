@@ -3,8 +3,8 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
+import { JobDifficulty } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
-import { JobDifficulty } from '../../utils/types'
 import { pulseGlowGreen, pulseGlowRed, pulseGlowYellow } from './Animations'
 
 type JobDifficultySelectorProps = {

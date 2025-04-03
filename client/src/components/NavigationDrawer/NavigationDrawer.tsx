@@ -6,8 +6,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import NavigationPaths from '../../navigation'
 import colors from '../../utils/colors'
+import { ModuleTypes } from '../../utils/constants'
 import { getModuleIcon } from '../../utils/functions.tsx'
-import { ModuleTypes } from '../../utils/types'
 import { flicker, glitch, neonColorCycle, severeGlitch } from '../common/Animations.tsx'
 
 const NavigationDrawer = (): JSX.Element => {

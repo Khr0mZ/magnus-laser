@@ -11,9 +11,9 @@ import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
+import { ModuleTypes } from '../../utils/constants'
 import { generateRandomGang } from '../../utils/generatorGang'
 import { clearGangs, loadGangs, saveGangs } from '../../utils/storage'
-import { ModuleTypes } from '../../utils/types'
 
 // Add window.gangsDataLoaded declaration
 declare global {

@@ -296,7 +296,7 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
             className={`smooth-scrollbar-container ${className || ''}`}
             style={{
                 width: '100%',
-                height: '100vh',
+                height: 'calc(100vh - 92px)',
                 overflow: 'hidden',
                 position: 'relative',
                 paddingRight: paddingRight,

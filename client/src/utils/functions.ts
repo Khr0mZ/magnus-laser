@@ -1,10 +1,8 @@
 import { TFunction } from 'i18next'
 import { Gang, GangColor } from '../graphql/types.ts'
 import colors from './colors.ts'
+import { JobDifficulty } from './constants.ts'
 import { translateLabel } from './i18nUtils.ts'
-import { JobDifficulty } from './types.ts'
-
-// Import the icons module
 
 /**
  * Re-export getModuleIcon from functions.tsx

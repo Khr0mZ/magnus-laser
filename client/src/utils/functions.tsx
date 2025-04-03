@@ -1,5 +1,5 @@
 import { Apartment, Badge, BusinessCenter, Groups3, LiveHelp } from '@mui/icons-material'
-import { ModuleTypes } from './types'
+import { ModuleTypes } from './constants'
 
 /**
  * Get the icon for a module

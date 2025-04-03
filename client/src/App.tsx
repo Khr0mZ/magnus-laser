@@ -39,9 +39,9 @@ const App = (): JSX.Element => {
                     <CssBaseline />
                     <SnackbarProvider maxSnack={5}>
                         <BrowserRouter>
+                            <NavigationDrawer />
                             <CustomScrollbar>
                                 <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
-                                    <NavigationDrawer />
                                     <Routes>
                                         <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
                                         <Route path={NavigationPaths.GANG} element={<GangView />} />

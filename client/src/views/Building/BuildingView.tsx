@@ -12,8 +12,8 @@ import ViewToggle from '../../components/common/ViewToggle'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
+import { JobDifficulty, ModuleTypes } from '../../utils/constants'
 import { clearBuildings, loadBuildings, saveBuildings } from '../../utils/storage'
-import { JobDifficulty, ModuleTypes } from '../../utils/types'
 
 // Add window interface augmentation
 declare global {
