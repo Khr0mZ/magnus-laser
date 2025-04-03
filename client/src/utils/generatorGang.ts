@@ -147,7 +147,7 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
     // - Current Attitude
     // - News The Leader Is Receiving
     // - Name
-    // TODO: - Description
+    // - Description
 
     // Generate Gang Type
     const type = getRandomElement(Object.values(GangType))
@@ -528,13 +528,11 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
     // Generate Gang Name using the new generator
     const name = generateGangName(t, type, color)
 
-    // TODO: Generate Description
-    const description = 'Description goes here!'
-    // Create the gang object
-    const newGang: Gang = {
+    // Create the gang object with base properties
+    const baseGang: Gang = {
         ID: uuidv4(),
         name,
-        description,
+        description: '',
         type,
         cyberwareQuality,
         skill,
@@ -551,7 +549,132 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
         flaw,
         currentAttitude,
         newsTheLeaderIsReceiving,
+    }
+
+    // Generate the description using our new function
+    const description = generateGangDescription(t, baseGang)
+
+    // Create the final gang object, allowing for overrides
+    const newGang: Gang = {
+        ...baseGang,
+        description,
         ...gang, // Override with any provided properties
     }
+
     return newGang
+}
+
+/**
+ * Generate a description for a gang based on its properties
+ * @param t - The translation function
+ * @param gang - The gang object
+ * @returns A natural language description of the gang
+ */
+export const generateGangDescription = (t: TFunction, gang: Gang): string => {
+    const {
+        type,
+        cyberwareQuality,
+        skill,
+        armor,
+        status,
+        color,
+        sin,
+        knownFor,
+        flaw,
+        currentAttitude,
+        newsTheLeaderIsReceiving,
+    } = gang
+
+    // Initialize description sections
+    let identity = ''
+    let appearance = ''
+    let reputation = ''
+    let currentState = ''
+
+    // Build identity section
+    switch (type) {
+        case GangType.BOOSTER:
+            identity = `${gang.name} ${t('gangs.description.boosterIdentity')}`
+            break
+        case GangType.POSER:
+            identity = `${gang.name} ${t('gangs.description.poserIdentity')}`
+            break
+        case GangType.SYNDICATE:
+            identity = `${gang.name} ${t('gangs.description.syndicateIdentity')}`
+            break
+        case GangType.FREELANCER:
+            identity = `${gang.name} ${t('gangs.description.freelancerIdentity')}`
+            break
+        case GangType.MILITARY:
+            identity = `${gang.name} ${t('gangs.description.militaryIdentity')}`
+            break
+        default:
+            identity = `${gang.name} ${t('gangs.description.defaultIdentity')}`
+    }
+
+    // Build appearance section
+    let cyberwareDesc = ''
+    switch (cyberwareQuality) {
+        case CyberwareQuality.POOR:
+            cyberwareDesc = t('gangs.description.poorCyberware')
+            break
+        case CyberwareQuality.STANDARD:
+            cyberwareDesc = t('gangs.description.standardCyberware')
+            break
+        case CyberwareQuality.EXCELLENT:
+            cyberwareDesc = t('gangs.description.excellentCyberware')
+            break
+    }
+
+    const skillDesc =
+        skill <= 10
+            ? t('gangs.description.inexperiencedSkill')
+            : skill <= 14
+            ? t('gangs.description.capableSkill')
+            : t('gangs.description.highlySkillSkill')
+
+    const armorDesc =
+        armor.spb <= 4 && armor.h <= 4
+            ? t('gangs.description.minimalArmor')
+            : armor.spb >= 13 || armor.h >= 13
+            ? t('gangs.description.heavyArmor')
+            : t('gangs.description.moderateArmor')
+
+    appearance = t('gangs.description.appearance', { skillDesc, cyberwareDesc, armorDesc })
+
+    if (color) {
+        appearance += t('gangs.description.color', { color: t(`gangs.color.${color}`) })
+    }
+
+    // Build reputation section
+    reputation = t('gangs.description.reputation', { status: t(`gangs.status.${status}`).toLowerCase() })
+
+    if (knownFor.knownForPart1 && knownFor.knownForPart2) {
+        reputation += t('gangs.description.knownFor', {
+            knownForPart1: t(`gangs.knownForPart1.${knownFor.knownForPart1}`).toLowerCase(),
+            knownForPart2: t(`gangs.knownForPart2.${knownFor.knownForPart2}`).toLowerCase(),
+        })
+    }
+
+    if (sin && sin !== Sin.NONE) {
+        reputation += t('gangs.description.sin', { sin: t(`gangs.sin.${sin}`).toLowerCase() })
+    }
+
+    if (flaw && flaw !== Flaw.NONE) {
+        reputation += t('gangs.description.flaw', { flaw: t(`gangs.flaw.${flaw}`).toLowerCase() })
+    }
+
+    // Build current state section
+    if (currentAttitude && currentAttitude !== Attitude.NONE) {
+        currentState = t('gangs.description.currentAttitude', {
+            attitude: t(`gangs.attitude.${currentAttitude}`).toLowerCase(),
+        })
+    }
+
+    if (newsTheLeaderIsReceiving && newsTheLeaderIsReceiving !== GangNews.NONE) {
+        currentState += t('gangs.description.news', { news: t(`gangs.news.${newsTheLeaderIsReceiving}`).toLowerCase() })
+    }
+
+    // Combine all sections into a cohesive description
+    return `${identity} ${appearance} ${reputation}. ${currentState}`.trim()
 }

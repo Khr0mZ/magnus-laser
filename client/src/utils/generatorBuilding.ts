@@ -1,4 +1,5 @@
 // Random name components
+import { TFunction } from 'i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { Building, BuildingType, Event, Ownership, Secret, SecurityPersonnel, Style } from '../graphql/types'
 import { buildingNameData, commonNameElements } from './constants'
@@ -126,11 +127,16 @@ function generateBuildingName(type: BuildingType, style: Style, ownership: Owner
 
 /**
  * Generate a random building
+ * @param t - The translation function
  * @param jobDifficultyModifier - The job difficulty modifier
  * @param building - The building object with the desired properties
  * @returns A building
  */
-export const generateRandomBuilding = (jobDifficultyModifier: number, building?: Partial<Building>): Building => {
+export const generateRandomBuilding = (
+    t: TFunction,
+    jobDifficultyModifier: number,
+    building?: Partial<Building>
+): Building => {
     // jobDifficultyModifier is a number between 0 and 2 that is used to modify all the rolls for the building properties
     // Things to generate
     // - Type
@@ -147,7 +153,7 @@ export const generateRandomBuilding = (jobDifficultyModifier: number, building?:
     // - Event
     // - Secret
     // - Name
-    // TODO: - Description
+    // - Description
 
     // Generate Building Type
     // If buildingTypeRoll + jobDifficultyModifier is 1, we need to roll again
@@ -604,17 +610,14 @@ export const generateRandomBuilding = (jobDifficultyModifier: number, building?:
             secret = Secret.PARTY
             break
     }
-
     // Generate building name
     const name = generateBuildingName(type, style, ownership, isAbandoned)
 
-    // TODO: Generate Description
-    const description = 'Description goes here'
-    // Create the building object
-    const newBuilding: Building = {
+    // Create base building object with all properties
+    const baseBuilding: Building = {
         ID: uuidv4(),
         name,
-        description,
+        description: '',
         type,
         isAbandoned,
         elevators,
@@ -629,8 +632,182 @@ export const generateRandomBuilding = (jobDifficultyModifier: number, building?:
         style,
         event,
         secret,
+    }
+
+    const description = generateBuildingDescription(t, baseBuilding)
+
+    // Create the final building object, allowing for overrides
+    const newBuilding: Building = {
+        ...baseBuilding,
+        description,
         ...building, // Override with any provided properties
     }
 
     return newBuilding
+}
+
+/**
+ * Generate a description for a building based on its properties
+ * @param t - The translation function
+ * @param building - The building object
+ * @returns A natural language description of the building
+ */
+export const generateBuildingDescription = (t: TFunction, building: Building): string => {
+    const {
+        type,
+        isAbandoned,
+        elevators,
+        parking,
+        gatehouseFrontDesk,
+        emergencyExit,
+        backupLights,
+        landingPad,
+        secretOrAltEntrance,
+        ownership,
+        securityPersonnel,
+        style,
+        event,
+        secret,
+    } = building
+
+    // Initialize description sections
+    let overview = ''
+    let physical = ''
+    let security = ''
+    let currentHappenings = ''
+
+    // Build overview section based on type, style, and ownership
+    if (isAbandoned) {
+        overview = t('buildings.description.abandonedOverview', {
+            name: building.name,
+            type: t(`buildings.type.${type}`).toLowerCase(),
+            style: t(`buildings.style.${style}`).toLowerCase(),
+        })
+    } else {
+        overview = t('buildings.description.normalOverview', {
+            name: building.name,
+            style: t(`buildings.style.${style}`).toLowerCase(),
+            type: t(`buildings.type.${type}`).toLowerCase(),
+        })
+
+        // Add ownership information
+        switch (ownership) {
+            case Ownership.NO_ONE_SCAVS:
+                overview += t('buildings.description.ownership.noOneScavs')
+                break
+            case Ownership.LOW_LEVEL_GONKS:
+                overview += t('buildings.description.ownership.lowLevelGonks')
+                break
+            case Ownership.GANG_MAFIA:
+                overview += t('buildings.description.ownership.gangMafia')
+                break
+            case Ownership.POSERGANG:
+                overview += t('buildings.description.ownership.posergang')
+                break
+            case Ownership.BYSTANDER:
+                overview += t('buildings.description.ownership.bystander')
+                break
+            case Ownership.FIXER:
+                overview += t('buildings.description.ownership.fixer')
+                break
+            case Ownership.SMALL_BUSINESS:
+                overview += t('buildings.description.ownership.smallBusiness')
+                break
+            case Ownership.LOCAL_GOV:
+                overview += t('buildings.description.ownership.localGov')
+                break
+            case Ownership.CORPO:
+                overview += t('buildings.description.ownership.corpo')
+                break
+            case Ownership.MILITARISTIC_GANG:
+                overview += t('buildings.description.ownership.militaristicGang')
+                break
+            case Ownership.GOVERNMENT:
+                overview += t('buildings.description.ownership.government')
+                break
+            case Ownership.MEGA_CORPO:
+                overview += t('buildings.description.ownership.megaCorpo')
+                break
+            default:
+                overview += t('buildings.description.ownership.default')
+        }
+    }
+
+    // Build physical features section
+    let features = []
+
+    if (elevators) features.push(t('buildings.description.features.elevators'))
+    if (parking) features.push(t('buildings.description.features.parking'))
+    if (emergencyExit) features.push(t('buildings.description.features.emergencyExit'))
+    if (backupLights) features.push(t('buildings.description.features.backupLights'))
+    if (landingPad) features.push(t('buildings.description.features.landingPad'))
+
+    if (features.length > 0) {
+        physical = t('buildings.description.featuresSection', { features: features.join(', ') })
+    }
+
+    if (secretOrAltEntrance) {
+        physical += t('buildings.description.secretEntrance')
+    }
+
+    // Build security section
+    security = t('buildings.description.securityIntro')
+    switch (securityPersonnel) {
+        case SecurityPersonnel.NONE:
+            security += t('buildings.description.security.none')
+            break
+        case SecurityPersonnel.LOCALS_TENNANTS:
+            security += t('buildings.description.security.localsTenants')
+            break
+        case SecurityPersonnel.LOCAL_SEC_GANG:
+            security += t('buildings.description.security.localSecGang')
+            break
+        case SecurityPersonnel.VEHICLES:
+            security += t('buildings.description.security.vehicles')
+            break
+        case SecurityPersonnel.CITY_SEC:
+            security += t('buildings.description.security.citySec')
+            break
+        case SecurityPersonnel.CORPO_SEC:
+            security += t('buildings.description.security.corpoSec')
+            break
+        case SecurityPersonnel.RESPONSE_BACKUP:
+            security += t('buildings.description.security.responseBackup')
+            break
+        case SecurityPersonnel.HEAVY_WEAPONS:
+            security += t('buildings.description.security.heavyWeapons')
+            break
+        case SecurityPersonnel.HEAVY_VEHICLES:
+            security += t('buildings.description.security.heavyVehicles')
+            break
+        case SecurityPersonnel.FAST_RESPONSE_BACKUP:
+            security += t('buildings.description.security.fastResponseBackup')
+            break
+        case SecurityPersonnel.ELITE_TROOPS:
+            security += t('buildings.description.security.eliteTroops')
+            break
+        case SecurityPersonnel.BORG:
+            security += t('buildings.description.security.borg')
+            break
+        default:
+            security += t('buildings.description.security.default')
+    }
+
+    if (gatehouseFrontDesk) {
+        security += t('buildings.description.gatehouse')
+    }
+
+    // Build current happenings section
+    if (event) {
+        currentHappenings = t('buildings.description.event', { event: t(`buildings.event.${event}`).toLowerCase() })
+    }
+
+    if (secret) {
+        currentHappenings += t('buildings.description.secret', {
+            secret: t(`buildings.secret.${secret}`).toLowerCase(),
+        })
+    }
+
+    // Combine all sections into a cohesive description
+    return `${overview}${physical}${security} ${currentHappenings}`.trim()
 }

@@ -74,7 +74,7 @@ const BuildingView = () => {
 
     const handleGenerateBuilding = () => {
         setBuildings((prevBuildings) => [
-            generateRandomBuilding(getJobDifficultyModifier(jobDifficulty)),
+            generateRandomBuilding(t, getJobDifficultyModifier(jobDifficulty)),
             ...prevBuildings,
         ])
         setIsSaving(true)
