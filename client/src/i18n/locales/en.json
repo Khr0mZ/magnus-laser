@@ -70,7 +70,7 @@
             "largeNumber": "a large number of",
             "several": "several",
             "few": "few",
-            "withMembers": "With {{quality}} members and a skill level of {{skill}}/10,",
+            "withMembers": "With {{cyberwareQuality}} members and a skill level of {{skill}}/10,",
             "powerStructure": "In the local power structure, they are in a state of",
             "currentAttitude": "They're currently",
             "mainWeakness": "Their main weakness is their"
@@ -87,7 +87,7 @@
             "SYNDICATE": "Syndicate",
             "YO": "Yo Gang"
         },
-        "quality": {
+        "cyberwareQuality": {
             "EXCELLENT": "Excellent",
             "POOR": "Poor",
             "STANDARD": "Standard"
@@ -135,7 +135,8 @@
             "LUST": "Lust",
             "PRIDE": "Pride",
             "SLOTH": "Sloth",
-            "WRATH": "Wrath"
+            "WRATH": "Wrath",
+            "NONE": "None"
         },
         "knownForPart1": {
             "CHEAP": "Cheap",
@@ -169,7 +170,8 @@
             "INEXPERIENCED_NEGOTIATORS": "Inexperienced negotiators",
             "LACKLUSTER_LEADERSHIP": "Lackluster leadership",
             "LACK_OF_RECRUITS": "Lack of recruits",
-            "NAIVE": "Naive"
+            "NAIVE": "Naive",
+            "NONE": "None"
         },
         "attitude": {
             "AGGRESSIVE": "Aggressive",
@@ -180,7 +182,8 @@
             "PARTING": "Parting",
             "PLANNING": "Planning",
             "PROVISIONING": "Provisioning",
-            "ROBBING_ASSAULTING": "Robbing/Assaulting"
+            "ROBBING_ASSAULTING": "Robbing/Assaulting",
+            "NONE": "None"
         },
         "news": {
             "BEING_SABOTAGED": "They are getting sabotaged",
@@ -190,7 +193,8 @@
             "LAB_STASH_ROBBED": "A lab/stash got robbed",
             "NEW_ENEMY": "A new enemy is going for them",
             "POLICE_COMING": "Police is coming their way",
-            "TEAM_RELEASED": "A team just got released"
+            "TEAM_RELEASED": "A team just got released",
+            "NONE": "None"
         },
         "secretive": {
             "high": "High ({{value}})",
@@ -198,7 +202,7 @@
         },
         "labels": {
             "type": "Type",
-            "quality": "Quality",
+            "cyberwareQuality": "Cyberware Quality",
             "skill": "Skill",
             "weapons": "Weapons",
             "armor": "Armor (SPB/H)",

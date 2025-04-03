@@ -3,15 +3,15 @@ import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
-import CompactView from '../../components/common/CompactView'
 import { DeleteDialog } from '../../components/common/DeleteDialog'
-import DetailedView from '../../components/common/DetailedView'
+import GridView from '../../components/common/GridView'
+import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
-import { DisplayGang } from '../../components/gangs/GangTypes'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
-import { generateRandomGang } from '../../utils/generators'
+import { generateRandomGang } from '../../utils/generatorGang'
 import { clearGangs, loadGangs, saveGangs } from '../../utils/storage'
 import { ModuleTypes } from '../../utils/types'
 
@@ -26,7 +26,7 @@ const GangView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`RNG Manager - ${t('modules.GANG')}`)
     const { readerMode } = useContext(ReaderModeContext)
-    const [gangs, setGangs] = useState<DisplayGang[]>([])
+    const [gangs, setGangs] = useState<Gang[]>([])
     const [compactView, setCompactView] = useState(false)
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -42,7 +42,7 @@ const GangView = () => {
 
         // Set the initial data without triggering a save
         if (savedGangs.length > 0) {
-            setGangs(savedGangs as unknown as DisplayGang[])
+            setGangs(savedGangs as unknown as Gang[])
         }
 
         // Save the initial length to avoid triggering save notification for unchanged data
@@ -58,7 +58,7 @@ const GangView = () => {
 
         // Always save the data when it exists
         if (gangs.length > 0) {
-            saveGangs(gangs as DisplayGang[])
+            saveGangs(gangs as Gang[])
         }
 
         // Update length reference
@@ -343,11 +343,11 @@ const GangView = () => {
                     {t('common.noItems', { type: t('modules.GANG').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
-                <CompactView items={gangs} onDelete={handleDeleteClick} moduleType={ModuleTypes.GANG} />
+                <TableView items={gangs} onDelete={handleDeleteClick} moduleType={ModuleTypes.GANG} />
             ) : (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     {gangs.map((gang, index) => (
-                        <DetailedView
+                        <GridView
                             key={index}
                             item={gang}
                             index={index}

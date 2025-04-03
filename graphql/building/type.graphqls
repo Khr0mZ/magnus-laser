@@ -1,6 +1,7 @@
 type Building {
   ID: ID!
-  generatedName: String!
+  name: String!
+  description: String!
   type: BuildingType!
   elevators: Boolean!
   parking: Boolean!

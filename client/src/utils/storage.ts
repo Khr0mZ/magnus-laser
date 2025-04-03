@@ -1,5 +1,4 @@
-import { DisplayBuilding as DisplayBuildingType } from '../components/buildings/BuildingTypes'
-import { DisplayGang as DisplayGangType } from '../components/gangs/GangTypes'
+import { Building, Gang } from '../graphql/types'
 
 /**
  * Utility functions for local storage operations
@@ -15,7 +14,7 @@ const BUILDINGS_STORAGE_KEY = 'cyber-manager-buildings'
  * Save gangs to local storage
  * @param gangs Array of gangs to save
  */
-export const saveGangs = (gangs: DisplayGangType[]): void => {
+export const saveGangs = (gangs: Gang[]): void => {
     try {
         localStorage.setItem(GANGS_STORAGE_KEY, JSON.stringify(gangs))
     } catch (error) {
@@ -27,7 +26,7 @@ export const saveGangs = (gangs: DisplayGangType[]): void => {
  * Load gangs from local storage
  * @returns Array of gangs or empty array if none found
  */
-export const loadGangs = (): DisplayGangType[] => {
+export const loadGangs = (): Gang[] => {
     try {
         const gangsJson = localStorage.getItem(GANGS_STORAGE_KEY)
         return gangsJson ? JSON.parse(gangsJson) : []
@@ -54,7 +53,7 @@ export const clearGangs = (): void => {
  * Save buildings to local storage
  * @param buildings Array of buildings to save
  */
-export const saveBuildings = (buildings: DisplayBuildingType[]): void => {
+export const saveBuildings = (buildings: Building[]): void => {
     try {
         localStorage.setItem(BUILDINGS_STORAGE_KEY, JSON.stringify(buildings))
     } catch (error) {
@@ -66,7 +65,7 @@ export const saveBuildings = (buildings: DisplayBuildingType[]): void => {
  * Load buildings from local storage
  * @returns Array of buildings or empty array if none found
  */
-export const loadBuildings = (): DisplayBuildingType[] => {
+export const loadBuildings = (): Building[] => {
     try {
         const buildingsJson = localStorage.getItem(BUILDINGS_STORAGE_KEY)
         return buildingsJson ? JSON.parse(buildingsJson) : []

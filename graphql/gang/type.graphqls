@@ -1,15 +1,15 @@
 type Gang {
   ID: ID!
-  generatedName: String!
+  name: String!
+  description: String!
   type: GangType!
-  quality: Quality!
+  cyberwareQuality: CyberwareQuality!
   skill: Int!
   weapons: Dices!
   armor: Armor!
   secretive: Int!
   status: GangStatus!
   color: GangColor!
-  name: GangName!
   sin: Sin!
   knownFor: KnownFor!
   flaw: Flaw!

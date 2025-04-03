@@ -26,6 +26,7 @@ export enum Attitude {
   FEARFUL = 'FEARFUL',
   FOCUSED_ON_SOMETHING_ELSE = 'FOCUSED_ON_SOMETHING_ELSE',
   INFIGHTING = 'INFIGHTING',
+  NONE = 'NONE',
   PARTING = 'PARTING',
   PLANNING = 'PLANNING',
   PROVISIONING = 'PROVISIONING',
@@ -36,12 +37,13 @@ export type Building = {
   __typename?: 'Building';
   ID: Scalars['ID']['output'];
   backupLights: Scalars['Boolean']['output'];
+  description: Scalars['String']['output'];
   elevators: Scalars['Boolean']['output'];
   emergencyExit: Scalars['Boolean']['output'];
   event: Event;
   gatehouseFrontDesk: Scalars['Boolean']['output'];
-  generatedName: Scalars['String']['output'];
   landingPad: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
   ownership: Ownership;
   parking: Scalars['Boolean']['output'];
   secret: Secret;
@@ -64,6 +66,12 @@ export enum BuildingType {
   PUBLIC_SPACE = 'PUBLIC_SPACE',
   SKYSCRAPER_MEGABUILDING = 'SKYSCRAPER_MEGABUILDING',
   VACANT_LOT_CONSTRUCTION_SITE = 'VACANT_LOT_CONSTRUCTION_SITE'
+}
+
+export enum CyberwareQuality {
+  EXCELLENT = 'EXCELLENT',
+  POOR = 'POOR',
+  STANDARD = 'STANDARD'
 }
 
 export type Dices = {
@@ -100,7 +108,8 @@ export enum Flaw {
   INEXPERIENCED_NEGOTIATORS = 'INEXPERIENCED_NEGOTIATORS',
   LACKLUSTER_LEADERSHIP = 'LACKLUSTER_LEADERSHIP',
   LACK_OF_RECRUITS = 'LACK_OF_RECRUITS',
-  NAIVE = 'NAIVE'
+  NAIVE = 'NAIVE',
+  NONE = 'NONE'
 }
 
 export type Gang = {
@@ -109,12 +118,12 @@ export type Gang = {
   armor: Armor;
   color: GangColor;
   currentAttitude: Attitude;
+  cyberwareQuality: CyberwareQuality;
+  description: Scalars['String']['output'];
   flaw: Flaw;
-  generatedName: Scalars['String']['output'];
   knownFor: KnownFor;
-  name: GangName;
+  name: Scalars['String']['output'];
   newsTheLeaderIsReceiving: GangNews;
-  quality: Quality;
   secretive: Scalars['Int']['output'];
   sin: Sin;
   skill: Scalars['Int']['output'];
@@ -136,7 +145,7 @@ export enum GangColor {
   YELLOW = 'YELLOW'
 }
 
-export enum GangName {
+export enum GangNameType {
   ADJECTIVE = 'ADJECTIVE',
   ANIMAL = 'ANIMAL',
   BODY_PART = 'BODY_PART',
@@ -156,6 +165,7 @@ export enum GangNews {
   JOB_BLEW_UP = 'JOB_BLEW_UP',
   LAB_STASH_ROBBED = 'LAB_STASH_ROBBED',
   NEW_ENEMY = 'NEW_ENEMY',
+  NONE = 'NONE',
   POLICE_COMING = 'POLICE_COMING',
   TEAM_RELEASED = 'TEAM_RELEASED'
 }
@@ -233,12 +243,6 @@ export enum Ownership {
   SMALL_BUSINESS = 'SMALL_BUSINESS'
 }
 
-export enum Quality {
-  EXCELLENT = 'EXCELLENT',
-  POOR = 'POOR',
-  STANDARD = 'STANDARD'
-}
-
 export enum Secret {
   ACTIVIST_SABOTAGE = 'ACTIVIST_SABOTAGE',
   COVERT_OP_MEETING_POINT = 'COVERT_OP_MEETING_POINT',
@@ -274,6 +278,7 @@ export enum Sin {
   GLUTTONY = 'GLUTTONY',
   GREED = 'GREED',
   LUST = 'LUST',
+  NONE = 'NONE',
   PRIDE = 'PRIDE',
   SLOTH = 'SLOTH',
   WRATH = 'WRATH'

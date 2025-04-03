@@ -1,6 +1,6 @@
 import { TFunction } from 'i18next'
 import { BuildingType as BuildingTypeEnum, Ownership } from '../../graphql/types'
-import { corpoPrefixes, styleAdjectives } from '../../utils/generators'
+import { corpoPrefixes, styleAdjectives } from '../../utils/generatorBuilding'
 import { translateEnum, translateLabel } from '../../utils/i18nUtils'
 import { DisplayBuilding } from './BuildingTypes'
 

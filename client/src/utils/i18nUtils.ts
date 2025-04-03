@@ -71,13 +71,13 @@ export const translateGangType = (t: TFunction, type: string): string => {
 }
 
 /**
- * Translates a gang quality enum value
+ * Translates a gang cyberwarequality enum value
  * @param t Translation function
- * @param quality The quality enum value
+ * @param cyberwareQuality The cyberware quality enum value
  * @returns Translated string
  */
-export const translateGangQuality = (t: TFunction, quality: string): string => {
-    return t(`gangs.quality.${quality}`)
+export const translateGangCyberwareQuality = (t: TFunction, cyberwareQuality: string): string => {
+    return t(`gangs.cyberwareQuality.${cyberwareQuality}`)
 }
 
 /**

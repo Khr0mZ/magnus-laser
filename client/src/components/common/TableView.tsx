@@ -1,23 +1,22 @@
-import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material'
+import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
+import { processGangValueForDisplay } from '../../utils/functions'
 import { translateLabel } from '../../utils/i18nUtils'
 import { buildingColumns, gangColumns, ModuleTypes } from '../../utils/types'
-import { DisplayBuilding } from '../buildings/BuildingTypes'
-import { generateLocalizedBuildingName, processBuildingValueForDisplay } from '../buildings/BuildingUtils'
-import { DisplayGang } from '../gangs/GangTypes'
-import { generateLocalizedGangName, getGangColorValue, processGangValueForDisplay } from '../gangs/GangUtils'
+import { processBuildingValueForDisplay } from '../buildings/BuildingUtils'
 import { buttonGlitch } from './Animations'
 
-type CompactViewProps = {
-    items: DisplayGang[] | DisplayBuilding[]
+type TableViewProps = {
+    items: Gang[] | Building[]
     onDelete: (index: number) => void
     moduleType: ModuleTypes
 }
 
-const CompactView = (props: CompactViewProps) => {
+const TableView = (props: TableViewProps) => {
     const { items, onDelete, moduleType } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
@@ -106,15 +105,15 @@ const CompactView = (props: CompactViewProps) => {
                 <TableBody>
                     {items.map((item, index) => {
                         // Generate localized name
-                        let displayName = ''
+                        let name = ''
                         let color = ''
                         switch (moduleType) {
                             case ModuleTypes.GANG:
-                                displayName = generateLocalizedGangName(item as DisplayGang, t)
-                                color = getGangColorValue((item as DisplayGang).color)
+                                name = item.name
+                                color = (item as Gang).color
                                 break
                             case ModuleTypes.BUILDING:
-                                displayName = generateLocalizedBuildingName(item as DisplayBuilding, t)
+                                name = item.name
                                 color = colors.neons.cyan.default
                                 break
                         }
@@ -142,22 +141,21 @@ const CompactView = (props: CompactViewProps) => {
                                 {/* Name Cell */}
                                 <TableCell
                                     className="cell-content"
+                                    align="center"
                                     sx={{
-                                        color: readerMode ? colors.grays.gray000 : color,
-                                        fontWeight: 'bold',
-                                        letterSpacing: '0.5px',
-                                        textShadow: readerMode ? 'none' : `0 0 5px ${color}50`,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        maxWidth: { xs: '100px', sm: '150px', md: '200px' },
-                                        position: 'sticky',
-                                        left: 0,
-                                        zIndex: 1,
                                         borderBottom: `1px solid ${colors.neons.cyan.dark}`,
                                     }}
                                 >
-                                    {displayName}
+                                    <Typography
+                                        className={readerMode ? 'gang-name-typography' : 'glitch-text'}
+                                        data-text={name}
+                                        sx={{
+                                            fontWeight: 500,
+                                            color: color,
+                                        }}
+                                    >
+                                        {name}
+                                    </Typography>
                                 </TableCell>
 
                                 {/* All other data cells */}
@@ -261,4 +259,4 @@ const CompactView = (props: CompactViewProps) => {
     )
 }
 
-export default CompactView
+export default TableView

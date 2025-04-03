@@ -3,7 +3,14 @@ import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { flicker, glitch, neonColorCycle, neonPulse, severeGlitch } from '../../components/common/Animations.tsx'
+import {
+    flicker,
+    glitch,
+    neonColorCycle,
+    neonPulse,
+    pulseGlowCyan,
+    severeGlitch,
+} from '../../components/common/Animations.tsx'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext.tsx'
 import NavigationPaths from '../../navigation.ts'
 import colors from '../../utils/colors.ts'
@@ -29,8 +36,6 @@ const Dashboard = () => {
                         left: 0,
                         width: '100%',
                         height: '1px',
-                        background: `linear-gradient(to right, transparent, ${colors.neons.cyan.default}, transparent)`,
-                        boxShadow: `0 0 10px ${colors.neons.cyan.default}`,
                     },
                 }}
             >
@@ -78,6 +83,7 @@ const Dashboard = () => {
                                 overflow: 'hidden',
                                 transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                                 height: '100%',
+                                animation: readerMode ? 'none' : `${pulseGlowCyan} 2s infinite`,
                                 border: readerMode
                                     ? '1px solid rgba(0, 180, 180, 0.2)'
                                     : '1px solid rgba(0, 255, 255, 0.2)',
@@ -167,9 +173,9 @@ const Dashboard = () => {
                                     className="card-title"
                                     data-text={t(`modules.${module}`)}
                                     sx={{
-                                        color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
+                                        color: colors.neons.cyan.default,
                                         transition: 'all 0.3s',
-                                        textShadow: `0 0 5px ${colors.neons.green.dark}, 0 0 10px rgba(0,0,0,0.8)`,
+                                        textShadow: `0 0 5px ${colors.neons.cyan.dark}, 0 0 10px rgba(0,0,0,0.8)`,
                                         mb: 3,
                                         textAlign: 'center',
                                         fontSize: '1.7rem',
@@ -183,12 +189,8 @@ const Dashboard = () => {
                                             left: '25%',
                                             width: '50%',
                                             height: '1px',
-                                            background: `linear-gradient(to right, transparent, ${
-                                                readerMode ? colors.grays.gray900 : colors.neons.green.default
-                                            }, transparent)`,
-                                            boxShadow: `0 0 5px ${
-                                                readerMode ? colors.grays.gray900 : colors.neons.green.default
-                                            }`,
+                                            background: `linear-gradient(to right, transparent, ${colors.neons.yellow.default}, transparent)`,
+                                            boxShadow: `0 0 5px ${colors.neons.yellow.default}`,
                                         },
                                         '&::before': {
                                             content: 'attr(data-text)',
@@ -197,7 +199,7 @@ const Dashboard = () => {
                                             top: 0,
                                             width: '100%',
                                             height: '100%',
-                                            color: readerMode ? colors.grays.gray900 : colors.neons.green.default,
+                                            color: readerMode ? colors.grays.gray900 : colors.neons.blue.default,
                                             opacity: readerMode ? 1 : 0.5,
                                             filter: readerMode ? 'none' : 'blur(1px)',
                                             animation: readerMode ? 'none' : `${severeGlitch} 5s infinite`,
@@ -227,9 +229,7 @@ const Dashboard = () => {
                                         py: 1,
                                         mx: 'auto',
                                         width: '90%',
-                                        border: readerMode
-                                            ? `1px solid rgba(0, 150, 150, 0.2)`
-                                            : `1px solid ${colors.neons.green.default}20`,
+                                        border: `1px solid ${colors.neons.cyan.default}50`,
                                     }}
                                 >
                                     {t('dashboard.createRandom', { module: t(`modules.${module}`).toLowerCase() })}
@@ -248,7 +248,7 @@ const Dashboard = () => {
                                         letterSpacing: '0.03em',
                                         py: 1,
                                         backdropFilter: 'blur(3px)',
-                                        background: readerMode ? colors.neons.blue.dark : 'transparent',
+                                        border: `1px solid ${colors.neons.cyan.default}50`,
                                     }}
                                 >
                                     {module === ModuleTypes.GANG && t('dashboard.gangDescription')}

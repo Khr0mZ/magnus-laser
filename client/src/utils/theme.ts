@@ -265,13 +265,13 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                 right: 0,
                                 bottom: 0,
                                 backgroundImage: 'url("/magnusLaserLogo.png")',
+                                filter: `drop-shadow(0 0 5px ${colors.neons.pink.default})`,
                                 backgroundPosition: 'center',
                                 backgroundSize: '100vh',
                                 backgroundRepeat: 'no-repeat',
                                 opacity: 0.25,
                                 zIndex: -1,
                                 backgroundColor: 'transparent',
-                                filter: 'drop-shadow(0 0 15px rgba(0, 255, 139, 0.3))',
                             },
                             // Main background grid
                             '&::after': {

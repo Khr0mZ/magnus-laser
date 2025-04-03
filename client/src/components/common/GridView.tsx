@@ -14,53 +14,37 @@ import {
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
+import { getGangColorValue, getOrderedGangData, processGangValueForDisplay } from '../../utils/functions'
 import { ModuleTypes } from '../../utils/types'
 import { DisplayBuilding } from '../buildings/BuildingTypes'
-import {
-    generateLocalizedBuildingDescription,
-    generateLocalizedBuildingName,
-    getOrderedBuildingData,
-    processBuildingValueForDisplay,
-} from '../buildings/BuildingUtils'
-import { DisplayGang } from '../gangs/GangTypes'
-import {
-    generateLocalizedGangDescription,
-    generateLocalizedGangName,
-    getGangColorValue,
-    getOrderedGangData,
-    processGangValueForDisplay,
-} from '../gangs/GangUtils'
+import { getOrderedBuildingData, processBuildingValueForDisplay } from '../buildings/BuildingUtils'
+
 import { buttonGlitch } from './Animations'
 
-type DetailedViewProps = {
-    item: DisplayGang | DisplayBuilding
+type GridViewProps = {
+    item: Gang | Building
     index: number
     onDelete: (index: number) => void
     moduleType: ModuleTypes
 }
 
-const DetailedView = (props: DetailedViewProps) => {
+const GridView = (props: GridViewProps) => {
     const { item, index, onDelete, moduleType } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
 
     // Get ordered gang data for display
     let itemData: { key: string; label: string; value: unknown }[] = []
-    let localizedName: string = ''
-    let localizedDescription: string = ''
     let color: string = ''
     switch (moduleType) {
         case ModuleTypes.GANG:
-            itemData = getOrderedGangData(item as DisplayGang, t)
-            localizedName = generateLocalizedGangName(item as DisplayGang, t)
-            localizedDescription = generateLocalizedGangDescription(item as DisplayGang, t)
-            color = getGangColorValue((item as DisplayGang).color as string)
+            itemData = getOrderedGangData(item as Gang, t)
+            color = getGangColorValue((item as Gang).color)
             break
         case ModuleTypes.BUILDING:
             itemData = getOrderedBuildingData(item as DisplayBuilding, t)
-            localizedName = generateLocalizedBuildingName(item as DisplayBuilding, t)
-            localizedDescription = generateLocalizedBuildingDescription(item as DisplayBuilding, t)
             color = colors.neons.cyan.default
             break
     }
@@ -123,7 +107,7 @@ const DetailedView = (props: DetailedViewProps) => {
                         <Box>
                             <Typography
                                 className={readerMode ? 'gang-name-typography' : 'glitch-text'}
-                                data-text={localizedName}
+                                data-text={item.name}
                                 sx={{
                                     fontSize: '1rem',
                                     fontWeight: 'bold',
@@ -139,10 +123,10 @@ const DetailedView = (props: DetailedViewProps) => {
                                             textShadow: `0 0 5px ${colors.grays.gray900}`,
                                         }}
                                     >
-                                        {localizedName}
+                                        {item.name}
                                     </span>
                                 ) : (
-                                    localizedName
+                                    item.name
                                 )}
                             </Typography>
                             <Typography
@@ -271,11 +255,9 @@ const DetailedView = (props: DetailedViewProps) => {
                             }}
                         >
                             {readerMode ? (
-                                <span style={{ color: colors.grays.gray000, fontWeight: 500 }}>
-                                    {localizedDescription}
-                                </span>
+                                <span style={{ color: colors.grays.gray000, fontWeight: 500 }}>{item.description}</span>
                             ) : (
-                                localizedDescription
+                                item.description
                             )}
                         </Typography>
                     </Box>
@@ -376,4 +358,4 @@ const DetailedView = (props: DetailedViewProps) => {
     )
 }
 
-export default DetailedView
+export default GridView

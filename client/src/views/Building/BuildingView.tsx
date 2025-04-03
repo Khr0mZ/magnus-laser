@@ -4,16 +4,14 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DisplayBuilding } from '../../components/buildings/BuildingTypes'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
-import CompactView from '../../components/common/CompactView'
 import { DeleteDialog } from '../../components/common/DeleteDialog'
-import DetailedView from '../../components/common/DetailedView'
+import GridView from '../../components/common/GridView'
 import JobDifficultySelector from '../../components/common/JobDifficultySelector'
+import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
-import { getJobDifficultyModifier } from '../../utils/functions'
-import { generateRandomBuilding } from '../../utils/generators'
 import { clearBuildings, loadBuildings, saveBuildings } from '../../utils/storage'
 import { JobDifficulty, ModuleTypes } from '../../utils/types'
 
@@ -73,10 +71,10 @@ const BuildingView = () => {
     }
 
     const handleGenerateBuilding = () => {
-        setBuildings((prevBuildings) => [
-            ...prevBuildings,
-            generateRandomBuilding(getJobDifficultyModifier(jobDifficulty)),
-        ])
+        // setBuildings((prevBuildings) => [
+        //     ...prevBuildings,
+        //     generateRandomBuilding(getJobDifficultyModifier(jobDifficulty)),
+        // ])
         setIsSaving(true)
     }
 
@@ -353,11 +351,11 @@ const BuildingView = () => {
                     {t('common.noItems', { type: t('modules.BUILDING').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
-                <CompactView items={buildings} onDelete={handleDeleteClick} moduleType={ModuleTypes.BUILDING} />
+                <TableView items={buildings} onDelete={handleDeleteClick} moduleType={ModuleTypes.BUILDING} />
             ) : (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     {buildings.map((building, index) => (
-                        <DetailedView
+                        <GridView
                             key={index}
                             item={building}
                             index={index}
