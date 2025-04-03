@@ -23,7 +23,7 @@
         }
     },
     "modules": {
-        "DASHBOARD": "Dashboard",
+        "DASHBOARD": "Services",
         "GANG": "Gang",
         "BUILDING": "Building",
         "CORPORATION": "Corpo",
@@ -31,8 +31,8 @@
         "NPC": "NPC"
     },
     "dashboard": {
-        "welcome": "Welcome to the RNG Manager",
-        "description": "This is the dashboard for the RNG Manager. Here you can see the status of the RNG Manager and the different modules that are available.",
+        "welcome": "Welcome to Magnus Laser HQ",
+        "description": "This is the access point for Magnus Laser Services. Here you can see the status of the different modules that are available.",
         "createRandom": "Here you can create random {{module}}s.",
         "gangDescription": "Gangs are groups of people that can be interacted with by the players.",
         "buildingDescription": "Buildings are structures that can be explored by the players.",
@@ -42,39 +42,6 @@
     },
     "gangs": {
         "title": "Gang Generator",
-        "descriptions": {
-            "is": "is",
-            "a": "a",
-            "gangWith": "gang with",
-            "members": "members",
-            "theyAre": "They are",
-            "inQuality": "in quality",
-            "withSkillLevel": "with a skill level of",
-            "theyWield": "They wield",
-            "weapons": "weapons",
-            "theyWear": "They wear",
-            "armor": "armor protection",
-            "verySecretive": "very secretive",
-            "notSecretive": "not secretive",
-            "inOperations": "in their operations",
-            "theyAreKnownFor": "They are known for",
-            "their": "their",
-            "colors": "colors",
-            "theyHaveReputation": "They have a reputation for being",
-            "currentlyTheyAre": "Currently, they are in a state of",
-            "theirCurrentAttitude": "Their current attitude is",
-            "theirMainSin": "Their defining sin is",
-            "theirBiggestWeakness": "Their biggest weakness is",
-            "latestNews": "Latest news: ",
-            "knownForColors": "gang known for their",
-            "largeNumber": "a large number of",
-            "several": "several",
-            "few": "few",
-            "withMembers": "With {{cyberwareQuality}} members and a skill level of {{skill}}/10,",
-            "powerStructure": "In the local power structure, they are in a state of",
-            "currentAttitude": "They're currently",
-            "mainWeakness": "Their main weakness is their"
-        },
         "type": {
             "BOOSTER": "Booster gang",
             "EDGERUNNER": "Edgerunner team",
@@ -196,10 +163,6 @@
             "TEAM_RELEASED": "A team just got released",
             "NONE": "None"
         },
-        "secretive": {
-            "high": "High ({{value}})",
-            "low": "Low ({{value}})"
-        },
         "labels": {
             "type": "Type",
             "cyberwareQuality": "Cyberware Quality",
@@ -229,20 +192,6 @@
         "heights": "Heights",
         "abandoned": "Abandoned",
         "constructionSite": "Construction Site",
-        "descriptions": {
-            "is": "is a",
-            "styled": "styled",
-            "ownedBy": "It's owned by a {{type}} corporation and",
-            "major": "major",
-            "controlledBy": "It's controlled by a {{owner}} and",
-            "facility": "It's a {{owner}} facility and",
-            "abandoned": "It's abandoned, claimed by scavs, and",
-            "property": "It's {{owner}} property and",
-            "noSecurity": "has no security personnel.",
-            "guardedBy": "is guarded by {{security}}.",
-            "currentEvent": "Currently, there's {{event}} happening on the premises.",
-            "rumors": "Rumors say {{secret}} can be found inside if one knows where to look."
-        },
         "type": {
             "ABANDONED_BUILDING": "Abandoned building",
             "COMMERCIAL_BUILDING": "Commercial building (Small businesses)",

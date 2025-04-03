@@ -24,7 +24,7 @@ declare global {
 
 const BuildingView = () => {
     const { t } = useTranslation()
-    useDocumentTitle(`RNG Manager - ${t('modules.BUILDING')}`)
+    useDocumentTitle(`Magnus Laser - ${t('modules.BUILDING')}`)
     const { readerMode } = useContext(ReaderModeContext)
     const [buildings, setBuildings] = useState<DisplayBuilding[]>([])
     const [compactView, setCompactView] = useState(false)

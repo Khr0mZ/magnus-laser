@@ -24,7 +24,7 @@ declare global {
 
 const GangView = () => {
     const { t } = useTranslation()
-    useDocumentTitle(`RNG Manager - ${t('modules.GANG')}`)
+    useDocumentTitle(`Magnus Laser - ${t('modules.GANG')}`)
     const { readerMode } = useContext(ReaderModeContext)
     const [gangs, setGangs] = useState<Gang[]>([])
     const [compactView, setCompactView] = useState(false)
@@ -66,7 +66,7 @@ const GangView = () => {
     }, [gangs])
 
     const handleGenerateGang = () => {
-        setGangs((prevGangs) => [...prevGangs, generateRandomGang()])
+        setGangs((prevGangs) => [...prevGangs, generateRandomGang(t)])
         setIsSaving(true)
     }
 

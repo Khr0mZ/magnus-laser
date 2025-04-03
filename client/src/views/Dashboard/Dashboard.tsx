@@ -21,7 +21,7 @@ const Dashboard = () => {
     const navigate = useNavigate()
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
-    useDocumentTitle(`RNG Manager - ${t('modules.DASHBOARD')}`)
+    useDocumentTitle(`Magnus Laser - ${t('modules.DASHBOARD')}`)
 
     return (
         <Container maxWidth={false}>
@@ -163,7 +163,7 @@ const Dashboard = () => {
                                     position: 'relative',
                                     zIndex: 4,
                                     padding: 3,
-                                    backgroundColor: readerMode ? 'rgba(50, 50, 255, 0.1)' : 'rgba(5, 7, 24, 0.6)',
+                                    backgroundColor: readerMode ? colors.neons.blue.dark + '99' : 'rgba(5, 7, 24, 0.6)',
                                     backdropFilter: 'blur(5px)',
                                     height: '100%',
                                 }}

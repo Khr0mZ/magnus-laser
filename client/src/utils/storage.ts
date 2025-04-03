@@ -5,8 +5,8 @@ import { Building, Gang } from '../graphql/types'
  */
 
 // Storage keys
-const GANGS_STORAGE_KEY = 'cyber-manager-gangs'
-const BUILDINGS_STORAGE_KEY = 'cyber-manager-buildings'
+const GANGS_STORAGE_KEY = 'magnus-laser-gangs'
+const BUILDINGS_STORAGE_KEY = 'magnus-laser-buildings'
 
 // Gangs Storage Functions
 

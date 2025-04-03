@@ -2,7 +2,7 @@ import { Container, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 
 const FixerJobView = () => {
-    useDocumentTitle(`RNG Manager - Fixer Job`)
+    useDocumentTitle(`Magnus Laser HQ - Fixer Job`)
 
     return (
         <Container maxWidth={'xxl'}>

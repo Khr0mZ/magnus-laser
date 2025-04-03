@@ -216,19 +216,19 @@ body.reader-mode .MuiCardContent-root .MuiTypography-root {
 
 /* Card styling for reader mode */
 body.reader-mode .MuiCard-root {
-    background-color: #3a3f44 !important;
+    background-color: white;
     background-image: none !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
     border-radius: 8px !important;
     overflow: hidden !important;
     transition: transform 0.2s, box-shadow 0.2s !important;
-    color: white !important;
+    color: white;
 }
 
 body.reader-mode .MuiCard-root:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
-    background-color: #414649 !important;
+    background-color: lightgrey;
 }
 
 body.reader-mode .MuiCard-root::after {

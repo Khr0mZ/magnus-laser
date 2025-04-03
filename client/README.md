@@ -1,4 +1,4 @@
-# Cyber Manager: RNG Manager
+# Magnus Laser
 
 A cyberpunk-themed application for managing tabletop RPG game elements. This application provides tools to manage gangs, buildings, corporations, fixer jobs, and NPCs for your tabletop RPG games.
 

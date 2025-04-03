@@ -2,7 +2,7 @@ enum NavigationPaths {
     DASHBOARD = '/',
     GANG = '/gang',
     BUILDING = '/building',
-    CORPORATION = '/corporation',
+    CORPORATION = '/corpo',
     FIXER_JOB = '/fixer_job',
     NPC = '/npc',
 }

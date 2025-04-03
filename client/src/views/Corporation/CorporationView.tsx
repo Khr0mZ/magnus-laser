@@ -2,7 +2,7 @@ import { Container, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 
 const CorporationView = () => {
-    useDocumentTitle(`RNG Manager - Corporation`)
+    useDocumentTitle(`Magnus Laser - Corporation`)
 
     return (
         <Container maxWidth={'xxl'}>

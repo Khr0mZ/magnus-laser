@@ -1,3 +1,4 @@
+import { TFunction } from 'i18next'
 import { v4 as uuidv4 } from 'uuid'
 import {
     Armor,
@@ -240,7 +241,7 @@ const gangNameCategories: Record<GangNameType, string[]> = {
     ],
 }
 
-export const generateRandomGang = (gang?: Partial<Gang>): Gang => {
+export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => {
     // Things to generate
     // - Name
     // TODO: - Description
@@ -275,7 +276,7 @@ export const generateRandomGang = (gang?: Partial<Gang>): Gang => {
             term2 = getRandomElement(category2Array)
         }
     }
-    const gangName = `The ${term1} ${term2}`
+    const gangName = `${t('common.the')} ${term1} ${term2}`
     // Generate Gang Type
     const gangType = getRandomElement(Object.values(GangType))
     // Generate Cyberware Quality
