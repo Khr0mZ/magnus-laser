@@ -182,18 +182,8 @@
     },
     "buildings": {
         "title": "Building Generator",
-        "former": "Former",
-        "building": "Building",
-        "mall": "Mall",
-        "dragon": "Dragon",
-        "club": "Club",
-        "cubeHotel": "Cube Hotel",
-        "luxury": "Luxury",
-        "heights": "Heights",
-        "abandoned": "Abandoned",
-        "constructionSite": "Construction Site",
         "type": {
-            "ABANDONED_BUILDING": "Abandoned building",
+            "ABANDONED_BUILDING": "Abandoned",
             "COMMERCIAL_BUILDING": "Commercial building (Small businesses)",
             "CORPO_BUILDING": "Corpo building",
             "CUBE_HOTEL_MOTEL_CARGO_CONTAINER": "Cube Hotel / Motel / Cargo container",
@@ -220,7 +210,7 @@
             "POSERGANG": "Posergang",
             "SMALL_BUSINESS": "Small Business"
         },
-        "security": {
+        "securityPersonnel": {
             "BORG": "Borg",
             "CITY_SEC": "City Sec",
             "CORPO_SEC": "Corpo Sec",

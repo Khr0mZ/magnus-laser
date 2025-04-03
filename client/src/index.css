@@ -172,9 +172,9 @@ body {
 
 /* Reader Mode Styles */
 body.reader-mode {
-    background-color: #f8f9fa !important;
-    color: #242424 !important;
-    line-height: 1.6 !important;
+    background-color: #f8f9fa;
+    color: #242424;
+    line-height: 1.6;
 }
 
 /* Text selection for reader mode */
@@ -186,79 +186,73 @@ body.reader-mode ::selection {
 
 /* MUI component overrides for reader mode */
 body.reader-mode .MuiPaper-root {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-    background-color: white !important;
-    color: #242424 !important;
-    background-image: none !important;
-    border: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    color: #242424;
+    background-image: none;
+    border: none;
 }
 
 body.reader-mode .MuiButton-root {
-    text-transform: inherit !important;
+    text-transform: inherit;
 }
 
 body.reader-mode .MuiTypography-root {
-    color: #242424 !important;
-    text-shadow: none !important;
+    color: #242424;
+    text-shadow: none;
 }
 
 /* Exception for gang name typography */
 body.reader-mode .gang-name-typography.MuiTypography-root {
-    color: inherit !important;
+    color: inherit;
 }
 
 /* Dashboard specific text colors for reader mode */
 body.reader-mode .MuiCardHeader-title,
 body.reader-mode .MuiCardHeader-subheader,
 body.reader-mode .MuiCardContent-root .MuiTypography-root {
-    color: white !important;
+    color: white;
 }
 
 /* Card styling for reader mode */
 body.reader-mode .MuiCard-root {
     background-color: white;
-    background-image: none !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-    border-radius: 8px !important;
-    overflow: hidden !important;
-    transition: transform 0.2s, box-shadow 0.2s !important;
+    background-image: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
     color: white;
 }
 
 body.reader-mode .MuiCard-root:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     background-color: lightgrey;
 }
 
 body.reader-mode .MuiCard-root::after {
-    content: none !important;
+    content: none;
 }
 
 body.reader-mode .MuiCardHeader-root {
-    border-bottom: 1px solid #4d5256 !important;
-    padding-bottom: 8px !important;
+    border-bottom: 1px solid #4d5256;
+    padding-bottom: 8px;
 }
 
 body.reader-mode .MuiCardHeader-title {
-    font-weight: 600 !important;
-    color: white !important;
+    font-weight: 600;
+    color: white;
 }
 
 body.reader-mode .MuiCardHeader-subheader {
-    color: rgba(255, 255, 255, 0.8) !important;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 body.reader-mode .MuiCardContent-root {
-    padding: 16px !important;
+    padding: 16px;
 }
 
 body.reader-mode .MuiCardContent-root:last-child {
-    padding-bottom: 16px !important;
-}
-
-/* Dashboard card icons in reader mode */
-body.reader-mode .MuiCard-root svg,
-body.reader-mode .MuiCard-root .MuiSvgIcon-root {
-    color: white !important;
+    padding-bottom: 16px;
 }

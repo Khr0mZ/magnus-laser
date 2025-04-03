@@ -5,9 +5,14 @@ import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { buildingColumns, gangColumns, ModuleTypes } from '../../utils/constants'
-import { processGangValueForDisplay } from '../../utils/functions'
+import {
+    getBuildingColor,
+    getComplementaryColor,
+    getGangColorValue,
+    processGangValueForDisplay,
+} from '../../utils/functions'
+import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
 import { translateLabel } from '../../utils/i18nUtils'
-import { processBuildingValueForDisplay } from '../buildings/BuildingUtils'
 import { buttonGlitch } from './Animations'
 
 type TableViewProps = {
@@ -110,11 +115,11 @@ const TableView = (props: TableViewProps) => {
                         switch (moduleType) {
                             case ModuleTypes.GANG:
                                 name = item.name
-                                color = (item as Gang).color
+                                color = getGangColorValue((item as Gang).color)
                                 break
                             case ModuleTypes.BUILDING:
                                 name = item.name
-                                color = colors.neons.cyan.default
+                                color = getBuildingColor((item as Building).type)
                                 break
                         }
 
@@ -152,9 +157,37 @@ const TableView = (props: TableViewProps) => {
                                         sx={{
                                             fontWeight: 500,
                                             color: color,
+                                            textShadow: `0 0 5px ${getComplementaryColor(
+                                                color
+                                            )}40, -1px -1px 0 ${getComplementaryColor(
+                                                color
+                                            )}40, 1px -1px 0 ${getComplementaryColor(
+                                                color
+                                            )}40, -1px 1px 0 ${getComplementaryColor(
+                                                color
+                                            )}40, 1px 1px 0 ${getComplementaryColor(color)}40`,
                                         }}
                                     >
-                                        {name}
+                                        {readerMode ? (
+                                            <span
+                                                style={{
+                                                    color: color,
+                                                    textShadow: `0 0 5px ${getComplementaryColor(
+                                                        color
+                                                    )}40, -1px -1px 0 ${getComplementaryColor(
+                                                        color
+                                                    )}40, 1px -1px 0 ${getComplementaryColor(
+                                                        color
+                                                    )}40, -1px 1px 0 ${getComplementaryColor(
+                                                        color
+                                                    )}40, 1px 1px 0 ${getComplementaryColor(color)}40`,
+                                                }}
+                                            >
+                                                {name}
+                                            </span>
+                                        ) : (
+                                            name
+                                        )}
                                     </Typography>
                                 </TableCell>
 
@@ -174,8 +207,13 @@ const TableView = (props: TableViewProps) => {
                                             // @ts-expect-error - Gang object has dynamic properties based on column.key
                                             processGangValueForDisplay(column.key, item[column.key], t)}
                                         {moduleType === ModuleTypes.BUILDING &&
-                                            // @ts-expect-error - Building object has dynamic properties based on column.key
-                                            processBuildingValueForDisplay(column.key, item[column.key], t)}
+                                            processBuildingValueForDisplay(
+                                                column.key,
+                                                // @ts-expect-error - Building object has dynamic properties based on column.key
+                                                item[column.key],
+                                                t,
+                                                (item as Building).isAbandoned
+                                            )}
                                     </TableCell>
                                 ))}
 

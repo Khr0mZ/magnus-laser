@@ -15,4 +15,5 @@ type Building {
   style: Style!
   event: Event!
   secret: Secret!
+  isAbandoned: Boolean!
 }

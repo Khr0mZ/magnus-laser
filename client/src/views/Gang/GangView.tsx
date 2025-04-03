@@ -42,7 +42,7 @@ const GangView = () => {
 
         // Set the initial data without triggering a save
         if (savedGangs.length > 0) {
-            setGangs(savedGangs as unknown as Gang[])
+            setGangs(savedGangs)
         }
 
         // Save the initial length to avoid triggering save notification for unchanged data
@@ -66,7 +66,7 @@ const GangView = () => {
     }, [gangs])
 
     const handleGenerateGang = () => {
-        setGangs((prevGangs) => [...prevGangs, generateRandomGang(t)])
+        setGangs((prevGangs) => [generateRandomGang(t), ...prevGangs])
         setIsSaving(true)
     }
 

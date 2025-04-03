@@ -2,7 +2,6 @@ import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { DisplayBuilding } from '../../components/buildings/BuildingTypes'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
 import { DeleteDialog } from '../../components/common/DeleteDialog'
 import GridView from '../../components/common/GridView'
@@ -11,8 +10,11 @@ import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { Building } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { JobDifficulty, ModuleTypes } from '../../utils/constants'
+import { getJobDifficultyModifier } from '../../utils/functions'
+import { generateRandomBuilding } from '../../utils/generatorBuilding'
 import { clearBuildings, loadBuildings, saveBuildings } from '../../utils/storage'
 
 // Add window interface augmentation
@@ -26,7 +28,7 @@ const BuildingView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('modules.BUILDING')}`)
     const { readerMode } = useContext(ReaderModeContext)
-    const [buildings, setBuildings] = useState<DisplayBuilding[]>([])
+    const [buildings, setBuildings] = useState<Building[]>([])
     const [compactView, setCompactView] = useState(false)
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -43,7 +45,7 @@ const BuildingView = () => {
 
         // Set the initial data without triggering a save
         if (savedBuildings.length > 0) {
-            setBuildings(savedBuildings as unknown as DisplayBuilding[])
+            setBuildings(savedBuildings)
         }
 
         // Save the initial length to avoid triggering save notification for unchanged data
@@ -71,10 +73,10 @@ const BuildingView = () => {
     }
 
     const handleGenerateBuilding = () => {
-        // setBuildings((prevBuildings) => [
-        //     ...prevBuildings,
-        //     generateRandomBuilding(getJobDifficultyModifier(jobDifficulty)),
-        // ])
+        setBuildings((prevBuildings) => [
+            generateRandomBuilding(getJobDifficultyModifier(jobDifficulty)),
+            ...prevBuildings,
+        ])
         setIsSaving(true)
     }
 

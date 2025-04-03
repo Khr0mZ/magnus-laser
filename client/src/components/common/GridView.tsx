@@ -17,9 +17,15 @@ import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
-import { getGangColorValue, getOrderedGangData, processGangValueForDisplay } from '../../utils/functions'
-import { DisplayBuilding } from '../buildings/BuildingTypes'
-import { getOrderedBuildingData, processBuildingValueForDisplay } from '../buildings/BuildingUtils'
+import {
+    getBuildingColor,
+    getComplementaryColor,
+    getGangColorValue,
+    getOrderedBuildingData,
+    getOrderedGangData,
+    processGangValueForDisplay,
+} from '../../utils/functions'
+import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
 
 import { buttonGlitch } from './Animations'
 
@@ -44,8 +50,8 @@ const GridView = (props: GridViewProps) => {
             color = getGangColorValue((item as Gang).color)
             break
         case ModuleTypes.BUILDING:
-            itemData = getOrderedBuildingData(item as DisplayBuilding, t)
-            color = colors.neons.cyan.default
+            itemData = getOrderedBuildingData(item as Building, t)
+            color = getBuildingColor((item as Building).type)
             break
     }
 
@@ -113,6 +119,7 @@ const GridView = (props: GridViewProps) => {
                                     fontWeight: 'bold',
                                     fontFamily: 'Orbitron, sans-serif',
                                     color: color,
+                                    textShadow: `0 0 5px ${getComplementaryColor(color)}`,
                                 }}
                             >
                                 {readerMode ? (
@@ -149,14 +156,24 @@ const GridView = (props: GridViewProps) => {
                                         {moduleType === ModuleTypes.GANG &&
                                             processGangValueForDisplay('type', item.type, t)}
                                         {moduleType === ModuleTypes.BUILDING &&
-                                            processBuildingValueForDisplay('type', item.type, t)}
+                                            processBuildingValueForDisplay(
+                                                'type',
+                                                item.type,
+                                                t,
+                                                'isAbandoned' in item ? item.isAbandoned : false
+                                            )}
                                     </span>
                                 ) : (
                                     <>
                                         {moduleType === ModuleTypes.GANG &&
                                             processGangValueForDisplay('type', item.type, t)}
                                         {moduleType === ModuleTypes.BUILDING &&
-                                            processBuildingValueForDisplay('type', item.type, t)}
+                                            processBuildingValueForDisplay(
+                                                'type',
+                                                item.type,
+                                                t,
+                                                'isAbandoned' in item ? item.isAbandoned : false
+                                            )}
                                     </>
                                 )}
                             </Typography>
@@ -275,80 +292,80 @@ const GridView = (props: GridViewProps) => {
                     >
                         <Table size="small">
                             <TableBody>
-                                {itemData.map((item) => {
-                                    let displayValue = ''
-                                    if (moduleType === ModuleTypes.GANG) {
-                                        displayValue = processGangValueForDisplay(item.key, item.value, t)
-                                    } else if (moduleType === ModuleTypes.BUILDING) {
-                                        displayValue = processBuildingValueForDisplay(item.key, item.value, t)
-                                    }
-
-                                    return (
-                                        <TableRow
-                                            key={item.key}
+                                {itemData.map((entry) => (
+                                    <TableRow
+                                        key={entry.key}
+                                        sx={{
+                                            position: 'relative',
+                                            ...(readerMode
+                                                ? {
+                                                      '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' },
+                                                      '&:nth-of-type(even)': { bgcolor: '#fff' },
+                                                      '&:hover': {
+                                                          bgcolor: '#f0f0f0',
+                                                      },
+                                                  }
+                                                : {
+                                                      '&:nth-of-type(odd)': { bgcolor: 'rgba(0, 15, 30, 0.4)' },
+                                                      '&:nth-of-type(even)': {
+                                                          bgcolor: 'rgba(0, 20, 40, 0.2)',
+                                                      },
+                                                      '&:hover': {
+                                                          bgcolor: 'rgba(0, 255, 255, 0.1)',
+                                                          '& .cell-content': {
+                                                              color: colors.neons.cyan.default,
+                                                              textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                                                          },
+                                                      },
+                                                  }),
+                                            transition: 'all 0.3s ease',
+                                        }}
+                                    >
+                                        <TableCell
                                             sx={{
-                                                position: 'relative',
+                                                borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
+                                                color: colors.neons.cyan.default,
+                                                fontWeight: 'bold',
+                                                width: '40%',
+                                                textShadow: `0 0 5px ${colors.neons.cyan.dark}`,
+                                                ...(readerMode && {
+                                                    color: '#333',
+                                                    textShadow: 'none',
+                                                    borderBottom: '1px solid #ddd ',
+                                                }),
+                                            }}
+                                            className="cell-content"
+                                        >
+                                            {entry.label}
+                                        </TableCell>
+                                        <TableCell
+                                            sx={{
+                                                borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
+                                                color: '#fff',
+                                                textShadow: `0 0 5px ${colors.neons.green.dark}`,
                                                 ...(readerMode
                                                     ? {
-                                                          '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' },
-                                                          '&:nth-of-type(even)': { bgcolor: '#fff' },
-                                                          '&:hover': {
-                                                              bgcolor: '#f0f0f0',
-                                                          },
+                                                          color: '#333 ',
+                                                          textShadow: 'none ',
+                                                          borderBottom: '1px solid #ddd ',
+                                                          fontWeight: 500,
                                                       }
-                                                    : {
-                                                          '&:nth-of-type(odd)': { bgcolor: 'rgba(0, 15, 30, 0.4)' },
-                                                          '&:nth-of-type(even)': {
-                                                              bgcolor: 'rgba(0, 20, 40, 0.2)',
-                                                          },
-                                                          '&:hover': {
-                                                              bgcolor: 'rgba(0, 255, 255, 0.1)',
-                                                              '& .cell-content': {
-                                                                  color: colors.neons.cyan.default,
-                                                                  textShadow: `0 0 5px ${colors.neons.cyan.default}`,
-                                                              },
-                                                          },
-                                                      }),
-                                                transition: 'all 0.3s ease',
+                                                    : {}),
                                             }}
+                                            className="cell-content"
                                         >
-                                            <TableCell
-                                                sx={{
-                                                    borderBottom: 'none',
-                                                    color: colors.neons.cyan.default,
-                                                    fontWeight: 'bold',
-                                                    width: '40%',
-                                                    textShadow: `0 0 5px ${colors.neons.cyan.dark}`,
-                                                    ...(readerMode && {
-                                                        color: '#333 !important',
-                                                        textShadow: 'none !important',
-                                                    }),
-                                                }}
-                                                className="cell-content"
-                                            >
-                                                {item.label}
-                                            </TableCell>
-                                            <TableCell
-                                                sx={{
-                                                    borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
-                                                    color: '#fff',
-                                                    textShadow: `0 0 5px ${colors.neons.green.dark}`,
-                                                    ...(readerMode
-                                                        ? {
-                                                              color: '#333 !important',
-                                                              textShadow: 'none !important',
-                                                              borderBottom: '1px solid #ddd !important',
-                                                              fontWeight: 500,
-                                                          }
-                                                        : {}),
-                                                }}
-                                                className="cell-content"
-                                            >
-                                                {displayValue}
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                })}
+                                            {moduleType === ModuleTypes.GANG &&
+                                                processGangValueForDisplay(entry.key, entry.value, t)}
+                                            {moduleType === ModuleTypes.BUILDING &&
+                                                processBuildingValueForDisplay(
+                                                    entry.key,
+                                                    entry.value,
+                                                    t,
+                                                    'isAbandoned' in item ? item.isAbandoned : false
+                                                )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
                             </TableBody>
                         </Table>
                     </TableContainer>

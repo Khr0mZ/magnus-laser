@@ -50,43 +50,43 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
 
             style.textContent = `
                 .scrollbar-track-y {
-                    right: 0 !important;
-                    width: ${currentThumbSize}px !important;
-                    opacity: 1 !important;
-                    background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default}) !important;
+                    right: 0 ;
+                    width: ${currentThumbSize}px ;
+                    opacity: 1 ;
+                    background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default}) ;
                 }
                 
                 .scrollbar-thumb-y {
-                    width: ${currentThumbSize}px !important;
-                    background: linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default}) !important;
-                    border-radius: 4px !important;
-                    box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4) !important;
-                    min-height: 100px !important;
+                    width: ${currentThumbSize}px ;
+                    background: linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default}) ;
+                    border-radius: 4px ;
+                    box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4) ;
+                    min-height: 100px ;
                 }
                 
                 .scrollbar-track-x {
-                    display: none !important;
+                    display: none ;
                 }
             `
         } else {
             styleElement.textContent = `
                 .scrollbar-track-y {
-                    right: 0 !important;
-                    width: ${currentThumbSize}px !important;
-                    opacity: 1 !important;
-                    background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default}) !important;
+                    right: 0 ;
+                    width: ${currentThumbSize}px ;
+                    opacity: 1 ;
+                    background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default}) ;
                 }
                 
                 .scrollbar-thumb-y {
-                    width: ${currentThumbSize}px !important;
-                    background: linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default}) !important;
-                    border-radius: 4px !important;
-                    box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4) !important;
-                    min-height: 100px !important;
+                    width: ${currentThumbSize}px ;
+                    background: linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default}) ;
+                    border-radius: 4px ;
+                    box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4) ;
+                    min-height: 100px ;
                 }
                 
                 .scrollbar-track-x {
-                    display: none !important;
+                    display: none ;
                 }
             `
         }

@@ -328,10 +328,9 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                   border: 'none',
                                   position: 'relative',
                                   zIndex: 10,
-                                  transform: 'none !important',
                                   transition: 'box-shadow 0.2s, background-color 0.2s',
                                   '&:hover': {
-                                      transform: 'none !important',
+                                      transform: 'none',
                                   },
                               }
                             : {
@@ -359,9 +358,9 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                   overflow: 'hidden',
                                   zIndex: 10,
                                   transition: 'background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s',
-                                  transform: 'none !important',
+                                  transform: 'none ',
                                   '&:hover': {
-                                      transform: 'none !important',
+                                      transform: 'none ',
                                   },
                               }
                             : {
@@ -468,12 +467,12 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                   position: 'relative',
                                   zIndex: 10,
                                   transition: 'box-shadow 0.2s, background-color 0.2s',
-                                  transform: 'none !important',
+                                  transform: 'none ',
                                   overflow: 'hidden',
                                   '&:hover': {
                                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
                                       backgroundColor: '#414649',
-                                      transform: 'none !important',
+                                      transform: 'none ',
                                   },
                                   '&::after': {
                                       content: 'none',

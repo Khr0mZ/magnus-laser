@@ -1,4 +1,7 @@
-import { Apartment, Badge, BusinessCenter, Groups3, LiveHelp } from '@mui/icons-material'
+import { Apartment, Badge, BusinessCenter, Check, Close, Groups3, LiveHelp } from '@mui/icons-material'
+import { TFunction } from 'i18next'
+import { BuildingType } from '../graphql/types'
+import colors from './colors'
 import { ModuleTypes } from './constants'
 
 /**
@@ -63,4 +66,73 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
             fontSize={isNavigation ? 'large' : 'inherit'}
         />
     )
+}
+
+/**
+ * Process a building value for display
+ * @param key The key of the value
+ * @param value The value to process
+ * @param t The translation function
+ * @returns The processed value
+ */
+export const processBuildingValueForDisplay = (
+    key: string,
+    value: unknown,
+    t: TFunction,
+    isAbandoned: boolean
+): React.ReactNode => {
+    // Skip the typename property that GraphQL adds
+    if (key === '__typename') {
+        return ''
+    }
+
+    if (key === 'type') {
+        if (isAbandoned) {
+            return (
+                t(`buildings.type.${BuildingType.ABANDONED_BUILDING}`, String(BuildingType.ABANDONED_BUILDING)) +
+                ' ' +
+                t(`buildings.type.${value}`, String(value))
+            )
+        }
+        return t(`buildings.type.${value}`, String(value))
+    }
+
+    // Handle boolean values
+    if (typeof value === 'boolean') {
+        return value ? (
+            <Check
+                sx={{ color: colors.neons.green.dark }}
+                fontSize={'small'}
+                className={'glitch-text'}
+                data-text={true}
+            />
+        ) : (
+            <Close
+                sx={{ color: colors.neons.red.dark }}
+                fontSize={'small'}
+                className={'glitch-text'}
+                data-text={false}
+            />
+        )
+    }
+
+    // Handle enum values with translations
+    if (typeof value === 'string') {
+        // Map key to the appropriate i18n namespace
+        const namespaceMap: Record<string, string> = {
+            type: 'buildings.type',
+            style: 'buildings.style',
+            ownership: 'buildings.ownership',
+            securityPersonnel: 'buildings.securityPersonnel',
+            event: 'buildings.event',
+            secret: 'buildings.secret',
+        }
+
+        if (namespaceMap[key]) {
+            // Use the exact enum key as it appears in the translation file
+            return t(`${namespaceMap[key]}.${value}`, String(value))
+        }
+    }
+
+    return value as React.ReactNode
 }

@@ -16,235 +16,123 @@ import {
     KnownForPart2,
     Sin,
 } from '../graphql/types'
+import { gangConnectors, gangNameCategories, gangPrefixes, gangSuffixes, gangTypeNameData } from './constants'
 import { getRandomElement, getRandomInt } from './functions'
 
-const gangNameCategories: Record<GangNameType, string[]> = {
-    [GangNameType.WEATHER_PHENOMENA]: [
-        'Storm',
-        'Thunder',
-        'Lightning',
-        'Hurricane',
-        'Cyclone',
-        'Blizzard',
-        'Tornado',
-        'Tempest',
-        'Haze',
-        'Fog',
-        'Mist',
-        'Rain',
-        'Typhoon',
-        'Smog',
-        'Ash',
-        'Inferno',
-        'Dust',
-        'Shock',
-        'Sand',
-        'Gale',
-    ],
-    [GangNameType.COLOR]: [
-        'Crimson',
-        'Neon',
-        'Obsidian',
-        'Chrome',
-        'Indigo',
-        'Violet',
-        'Scarlet',
-        'Ivory',
-        'Cobalt',
-        'Amber',
-        'Emerald',
-        'Onyx',
-        'Azure',
-        'Neochrome',
-        'Silver',
-        'Gold',
-        'Copper',
-        'Jade',
-        'Ultraviolet',
-        'Infrared',
-    ],
-    [GangNameType.PLACE]: [
-        'Sector',
-        'District',
-        'Zone',
-        'Hive',
-        'Harbor',
-        'Alley',
-        'Bay',
-        'Gate',
-        'Sprawl',
-        'Dock',
-        'Underground',
-        'Metro',
-        'Megaplex',
-        'Grid',
-        'Complex',
-        'Streets',
-        'Core',
-        'Wastes',
-        'Arena',
-        'Den',
-    ],
-    [GangNameType.WEAPON]: [
-        'Blades',
-        'Guns',
-        'Razors',
-        'Lasers',
-        'Knives',
-        'Rifles',
-        'Bullets',
-        'Daggers',
-        'Axes',
-        'Sabers',
-        'Chains',
-        'Shurikens',
-        'Gauntlets',
-        'Swords',
-        'Pistols',
-        'Cannons',
-        'Railguns',
-        'Arsenal',
-        'Spikes',
-        'Hammers',
-    ],
-    [GangNameType.BODY_PART]: [
-        'Eyes',
-        'Claws',
-        'Fangs',
-        'Hearts',
-        'Hands',
-        'Spines',
-        'Skulls',
-        'Veins',
-        'Fists',
-        'Jaws',
-        'Bones',
-        'Talons',
-        'Knuckles',
-        'Nerves',
-        'Skin',
-        'Muscle',
-        'Blood',
-        'Breath',
-        'Minds',
-        'Fang',
-    ],
-    [GangNameType.NUMBER]: [
-        'Eight',
-        'Sixteen',
-        'Eighteen',
-        'Twenty-Three',
-        'Twenty-Seven',
-        'Thirty-Two',
-        'Thirty-Five',
-        'Forty-Two',
-        'Forty-Four',
-        'Fifty-Three',
-        'Fifty-Eight',
-        'Sixty-Four',
-        'Sixty-Nine',
-        'Seventy-Two',
-        'Eighty-One',
-        'Ninety-Nine',
-        'Hundred',
-        'Thousand',
-        'Zero',
-        'Million',
-    ],
-    [GangNameType.ADJECTIVE]: [
-        'Cyber',
-        'Savage',
-        'Digital',
-        'Phantom',
-        'Grim',
-        'Iron',
-        'Quantum',
-        'Synthetic',
-        'Virtual',
-        'Rogue',
-        'Neural',
-        'Augmented',
-        'Chromed',
-        'Dystopian',
-        'Radical',
-        'Atomic',
-        'Genetic',
-        'Infamous',
-        'Encrypted',
-        'Toxic',
-    ],
-    [GangNameType.PROFESSION]: [
-        'Nomads',
-        'Hackers',
-        'Runners',
-        'Fixers',
-        'Mercs',
-        'Techs',
-        'Netrunners',
-        'Scavengers',
-        'Rippers',
-        'Mechanics',
-        'Slicers',
-        'Boosters',
-        'Ronin',
-        'Operatives',
-        'Smugglers',
-        'Hunters',
-        'Dealers',
-        'Enforcers',
-        'Engineers',
-        'Ghosts',
-    ],
-    [GangNameType.ANIMAL]: [
-        'Wolves',
-        'Ravens',
-        'Jackals',
-        'Sharks',
-        'Vipers',
-        'Cobras',
-        'Panthers',
-        'Falcons',
-        'Rats',
-        'Hornets',
-        'Spiders',
-        'Scorpions',
-        'Wasps',
-        'Hyenas',
-        'Bats',
-        'Mantis',
-        'Serpents',
-        'Leopards',
-        'Locusts',
-        'Dragons',
-    ],
-    [GangNameType.NEIGHBORHOOD]: [
-        'Watson',
-        'Pacifica',
-        'Kabuki',
-        'Chinatown',
-        'Charter',
-        'Heywood',
-        'Glen',
-        'Japantown',
-        'Coronado',
-        'Santo',
-        'Westbrook',
-        'Vista',
-        'Arroyo',
-        'Plaza',
-        'Northside',
-        'Combat',
-        'Industrial',
-        'University',
-        'Southside',
-        'Badlands',
-    ],
+/**
+ * Internal function to generate a gang name
+ * @param t - The translation function
+ * @param type - The gang type
+ * @param gangColor - The gang color
+ * @returns A gang name
+ */
+function generateGangName(t: TFunction, type: GangType, gangColor: GangColor): string {
+    // Get appropriate naming patterns for this gang type
+    const appropriatePatterns = gangTypeNameData[type].preferredPatterns || [1, 2, 3, 4, 5]
+    const namingPattern = getRandomElement(appropriatePatterns)
+
+    // Define all the elements we might need
+    const adjective = getRandomElement(gangNameCategories[GangNameType.ADJECTIVE])
+    const animal = getRandomElement(gangNameCategories[GangNameType.ANIMAL])
+    const bodyPart = getRandomElement(gangNameCategories[GangNameType.BODY_PART])
+    const color = getRandomElement(gangNameCategories[GangNameType.COLOR])
+    const neighborhood = getRandomElement(gangNameCategories[GangNameType.NEIGHBORHOOD])
+    const number = getRandomElement(gangNameCategories[GangNameType.NUMBER])
+    const place = getRandomElement(gangNameCategories[GangNameType.PLACE])
+    const profession = getRandomElement(gangNameCategories[GangNameType.PROFESSION])
+    const weapon = getRandomElement(gangNameCategories[GangNameType.WEAPON])
+    const weather = getRandomElement(gangNameCategories[GangNameType.WEATHER_PHENOMENA])
+
+    const prefix = getRandomElement(gangPrefixes)
+    const suffix = getRandomElement(gangSuffixes)
+    const connector = getRandomElement(gangConnectors)
+
+    // Generate a random number for numeric patterns
+    const randomNum = getRandomInt(1, 99).toString()
+
+    // Name generation patterns
+    let name = ''
+
+    switch (namingPattern) {
+        case 1: // Classic pattern: "The Chrome Wolves"
+            name = `${t('common.the')} ${adjective} ${animal}`
+            break
+        case 2: // Compound with suffix: "Crimson Dragons Crew"
+            name = `${color} ${animal} ${suffix}`
+            break
+        case 3: // Location-based: "Westbrook Rippers"
+            name = `${neighborhood} ${profession}`
+            break
+        case 4: // Body parts: "Iron Fists"
+            name = `${adjective} ${bodyPart}`
+            break
+        case 5: // Weapons focus: "Phantom Blades"
+            name = `${adjective} ${weapon}`
+            break
+        case 6: // Numbered gangs: "18th Street Vipers"
+            name = `${randomNum}${getRandomInt(1, 3) === 1 ? 'th' : ''} ${place} ${animal}`
+            break
+        case 7: // Weather elements: "Thunder Jackals"
+            name = `${weather} ${animal}`
+            break
+        case 8: // Military style: "Chrome Strike Force"
+            name = `${color} Strike ${profession}`
+            break
+        case 9: // Connector phrases: "Wolves of the Wasteland"
+            name = `${animal} ${connector} ${place}`
+            break
+        case 10: // Enhanced Short and punchy: "The Steel Razors" instead of just "The Razors"
+            name = `${t('common.the')} ${adjective} ${weapon}`
+            break
+        case 11: // Profession focused: "Rogue Netrunners"
+            name = `${adjective} ${profession}`
+            break
+        case 12: // Number gang with more elements: "Sixty-Nine Elite Crew" instead of just "Sixty-Nine Crew"
+            name = `${number} ${adjective} ${suffix}`
+            break
+        case 13: // Syndicate style with more detail: "Cobalt Shadow Syndicate" instead of just "Cobalt Syndicate"
+            name = `${color} ${adjective} ${suffix}`
+            break
+        case 14: // Religious/vigilante: "Brotherhood of Steel"
+            name = `${suffix} ${connector} ${adjective}`
+            break
+        case 15: // Quirky poser: "Los Chrome Boys"
+            name = `${prefix} ${color} ${profession}`
+            break
+        default:
+            name = `${t('common.the')} ${adjective} ${animal}`
+    }
+
+    // Add color influence for certain patterns if not already using color
+    if (gangColor && !name.includes(color) && [2, 6, 8, 13, 15].includes(namingPattern)) {
+        const colorText = gangNameCategories[GangNameType.COLOR][Object.values(GangColor).indexOf(gangColor)]
+        if (colorText && Math.random() > 0.7) {
+            if (namingPattern === 13) {
+                name = `${colorText} ${adjective} ${suffix}`
+            } else if (namingPattern === 15) {
+                name = `${prefix} ${colorText} ${profession}`
+            } else if (Math.random() > 0.5) {
+                name = name.replace(adjective, colorText)
+            }
+        }
+    }
+
+    // Add "The" to names that don't already have it or a prefix
+    if (!name.startsWith('The ') && !gangPrefixes.some((p) => name.startsWith(p)) && Math.random() > 0.6) {
+        name = `${t('common.the')} ${name}`
+    }
+
+    return name
 }
 
+/**
+ * Generate a random gang
+ * @param t - The translation function
+ * @param gang - The gang object with the desired properties
+ * @returns A gang
+ */
 export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => {
     // Things to generate
-    // - Name
-    // TODO: - Description
     // - Type
     // - Cyberware Quality
     // - Skill
@@ -258,27 +146,11 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
     // - Flaw
     // - Current Attitude
     // - News The Leader Is Receiving
+    // - Name
+    // TODO: - Description
 
-    // Generate Gang Name
-    const nameCategory1 = getRandomElement(Object.values(GangNameType))
-    let nameCategory2 = getRandomElement(Object.values(GangNameType))
-    // Reroll nameCategory2 if it's COLOR or ADJECTIVE
-    while (nameCategory2 === GangNameType.COLOR || nameCategory2 === GangNameType.ADJECTIVE) {
-        nameCategory2 = getRandomElement(Object.values(GangNameType))
-    }
-    const category1Array = gangNameCategories[nameCategory1]
-    const category2Array = gangNameCategories[nameCategory2]
-    const term1 = getRandomElement(category1Array)
-    let term2 = getRandomElement(category2Array)
-    // Reroll term2 if it's the same as term1
-    if (nameCategory1 === nameCategory2) {
-        while (term1 === term2) {
-            term2 = getRandomElement(category2Array)
-        }
-    }
-    const gangName = `${t('common.the')} ${term1} ${term2}`
     // Generate Gang Type
-    const gangType = getRandomElement(Object.values(GangType))
+    const type = getRandomElement(Object.values(GangType))
     // Generate Cyberware Quality
     const cyberwareQualityRoll = getRandomInt(1, 10)
     let cyberwareQuality: CyberwareQuality
@@ -653,27 +525,33 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
             break
     }
 
+    // Generate Gang Name using the new generator
+    const name = generateGangName(t, type, color)
+
+    // TODO: Generate Description
+    const description = 'Description goes here!'
+    // Create the gang object
     const newGang: Gang = {
         ID: uuidv4(),
-        name: gangName,
-        description: 'Description goes here!',
-        type: gangType,
-        cyberwareQuality: cyberwareQuality,
-        skill: skill,
-        weapons: weapons,
-        armor: armor,
-        secretive: secretive,
-        status: status,
-        color: color,
-        sin: sin,
+        name,
+        description,
+        type,
+        cyberwareQuality,
+        skill,
+        weapons,
+        armor,
+        secretive,
+        status,
+        color,
+        sin,
         knownFor: {
-            knownForPart1: knownForPart1 as KnownForPart1,
-            knownForPart2: knownForPart2 as KnownForPart2,
+            knownForPart1,
+            knownForPart2,
         },
-        flaw: flaw,
-        currentAttitude: currentAttitude,
-        newsTheLeaderIsReceiving: newsTheLeaderIsReceiving,
-        ...gang,
+        flaw,
+        currentAttitude,
+        newsTheLeaderIsReceiving,
+        ...gang, // Override with any provided properties
     }
     return newGang
 }
