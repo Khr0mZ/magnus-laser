@@ -572,10 +572,13 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
  */
 export const generateGangDescription = (t: TFunction, gang: Gang): string => {
     const {
+        name,
         type,
         cyberwareQuality,
         skill,
+        weapons,
         armor,
+        secretive,
         status,
         color,
         sin,
@@ -585,96 +588,345 @@ export const generateGangDescription = (t: TFunction, gang: Gang): string => {
         newsTheLeaderIsReceiving,
     } = gang
 
-    // Initialize description sections
-    let identity = ''
-    let appearance = ''
-    let reputation = ''
-    let currentState = ''
+    // Choose a description pattern randomly based on gang type
+    const descriptionPattern = getRandomInt(1, 6)
 
-    // Build identity section
+    // Element variables for description building
+    let identityDesc = ''
+    let appearanceDesc = ''
+    let reputationDesc = ''
+    let activityDesc = ''
+    let strengthDesc = ''
+    let weaknessDesc = ''
+    let newsDesc = ''
+    let atmosphereDesc = ''
+    let secretiveDesc = ''
+
+    // Generate identity description based on gang type
     switch (type) {
         case GangType.BOOSTER:
-            identity = `${gang.name} ${t('gangs.description.boosterIdentity')}`
+            identityDesc = getRandomElement([
+                `${name} is a notorious boostergang that ${t('gangs.description.boosterIdentity')}`,
+                `Known as ${name}, this boostergang ${t('gangs.description.boosterIdentityAlt')}`,
+                `The streets whisper of ${name}, a boostergang that ${t('gangs.description.boosterIdentityAlt2')}`,
+            ])
             break
         case GangType.POSER:
-            identity = `${gang.name} ${t('gangs.description.poserIdentity')}`
+            identityDesc = getRandomElement([
+                `${name} is a flashy posergang that ${t('gangs.description.poserIdentity')}`,
+                `The posers of ${name} ${t('gangs.description.poserIdentityAlt')}`,
+                `Styled as ${name}, this posergang ${t('gangs.description.poserIdentityAlt2')}`,
+            ])
             break
         case GangType.SYNDICATE:
-            identity = `${gang.name} ${t('gangs.description.syndicateIdentity')}`
+            identityDesc = getRandomElement([
+                `${name} operates as a syndicate that ${t('gangs.description.syndicateIdentity')}`,
+                `The syndicate known as ${name} ${t('gangs.description.syndicateIdentityAlt')}`,
+                `${name} is a well-structured syndicate that ${t('gangs.description.syndicateIdentityAlt2')}`,
+            ])
             break
         case GangType.FREELANCER:
-            identity = `${gang.name} ${t('gangs.description.freelancerIdentity')}`
+            identityDesc = getRandomElement([
+                `${name} is a group of freelancers who ${t('gangs.description.freelancerIdentity')}`,
+                `The freelancers of ${name} ${t('gangs.description.freelancerIdentityAlt')}`,
+                `Operating as ${name}, these freelancers ${t('gangs.description.freelancerIdentityAlt2')}`,
+            ])
             break
         case GangType.MILITARY:
-            identity = `${gang.name} ${t('gangs.description.militaryIdentity')}`
+            identityDesc = getRandomElement([
+                `${name} is a militaristic gang that ${t('gangs.description.militaryIdentity')}`,
+                `The paramilitary group ${name} ${t('gangs.description.militaryIdentityAlt')}`,
+                `${name} runs operations like a military unit, ${t('gangs.description.militaryIdentityAlt2')}`,
+            ])
             break
         default:
-            identity = `${gang.name} ${t('gangs.description.defaultIdentity')}`
+            identityDesc = `${name} ${t('gangs.description.defaultIdentity')}`
     }
 
-    // Build appearance section
+    // Generate appearance description
     let cyberwareDesc = ''
     switch (cyberwareQuality) {
         case CyberwareQuality.POOR:
-            cyberwareDesc = t('gangs.description.poorCyberware')
+            cyberwareDesc = getRandomElement([
+                t('gangs.description.poorCyberware'),
+                t('gangs.description.poorCyberwareAlt'),
+                t('gangs.description.poorCyberwareAlt2'),
+            ])
             break
         case CyberwareQuality.STANDARD:
-            cyberwareDesc = t('gangs.description.standardCyberware')
+            cyberwareDesc = getRandomElement([
+                t('gangs.description.standardCyberware'),
+                t('gangs.description.standardCyberwareAlt'),
+                t('gangs.description.standardCyberwareAlt2'),
+            ])
             break
         case CyberwareQuality.EXCELLENT:
-            cyberwareDesc = t('gangs.description.excellentCyberware')
+            cyberwareDesc = getRandomElement([
+                t('gangs.description.excellentCyberware'),
+                t('gangs.description.excellentCyberwareAlt'),
+                t('gangs.description.excellentCyberwareAlt2'),
+            ])
             break
     }
 
     const skillDesc =
         skill <= 10
-            ? t('gangs.description.inexperiencedSkill')
+            ? getRandomElement([
+                  t('gangs.description.inexperiencedSkill'),
+                  t('gangs.description.inexperiencedSkillAlt'),
+                  t('gangs.description.inexperiencedSkillAlt2'),
+              ])
             : skill <= 14
-            ? t('gangs.description.capableSkill')
-            : t('gangs.description.highlySkillSkill')
+            ? getRandomElement([
+                  t('gangs.description.capableSkill'),
+                  t('gangs.description.capableSkillAlt'),
+                  t('gangs.description.capableSkillAlt2'),
+              ])
+            : getRandomElement([
+                  t('gangs.description.highlySkillSkill'),
+                  t('gangs.description.highlySkillSkillAlt'),
+                  t('gangs.description.highlySkillSkillAlt2'),
+              ])
 
     const armorDesc =
         armor.spb <= 4 && armor.h <= 4
-            ? t('gangs.description.minimalArmor')
+            ? getRandomElement([
+                  t('gangs.description.minimalArmor'),
+                  t('gangs.description.minimalArmorAlt'),
+                  t('gangs.description.minimalArmorAlt2'),
+              ])
             : armor.spb >= 13 || armor.h >= 13
-            ? t('gangs.description.heavyArmor')
-            : t('gangs.description.moderateArmor')
+            ? getRandomElement([
+                  t('gangs.description.heavyArmor'),
+                  t('gangs.description.heavyArmorAlt'),
+                  t('gangs.description.heavyArmorAlt2'),
+              ])
+            : getRandomElement([
+                  t('gangs.description.moderateArmor'),
+                  t('gangs.description.moderateArmorAlt'),
+                  t('gangs.description.moderateArmorAlt2'),
+              ])
 
-    appearance = t('gangs.description.appearance', { skillDesc, cyberwareDesc, armorDesc })
+    const weaponPower = weapons?.d6 || 0
+    const weaponDesc =
+        weaponPower <= 2
+            ? t('gangs.description.lightlyArmed')
+            : weaponPower <= 5
+            ? t('gangs.description.wellArmed')
+            : t('gangs.description.heavilyArmed')
 
+    // Generate secretive description based on the secretive value
+    if (secretive) {
+        // Higher values indicate more secretive gangs
+        if (secretive >= 20) {
+            secretiveDesc = getRandomElement([
+                t('gangs.description.highlySecretive'),
+                t('gangs.description.extremelySecretive'),
+                t('gangs.description.paranoidSecrecy'),
+            ])
+        } else if (secretive >= 15) {
+            secretiveDesc = getRandomElement([
+                t('gangs.description.verySecretive'),
+                t('gangs.description.carefullyGuarded'),
+                t('gangs.description.wellHidden'),
+            ])
+        } else if (secretive >= 10) {
+            secretiveDesc = getRandomElement([
+                t('gangs.description.moderatelySecretive'),
+                t('gangs.description.cautious'),
+                t('gangs.description.discreet'),
+            ])
+        } else {
+            secretiveDesc = getRandomElement([
+                t('gangs.description.minimallySecretive'),
+                t('gangs.description.somewhatOpen'),
+                t('gangs.description.barelyHidden'),
+            ])
+        }
+    }
+
+    // Build appearance description with different patterns
+    const appearancePatterns = [
+        // Pattern 1: General appearance first, then specific details
+        `${t('gangs.description.appearanceGeneral', { skillDesc })} ${cyberwareDesc} ${armorDesc}`,
+        // Pattern 2: Focus on weapons and armor first
+        `${weaponDesc} ${armorDesc} ${cyberwareDesc}`,
+        // Pattern 3: Focus on skill and cybernetics
+        `${t('gangs.description.appearanceSkill', { skillDesc, cyberwareDesc })}`,
+    ]
+
+    appearanceDesc = getRandomElement(appearancePatterns)
+
+    // Add color information if present
     if (color) {
-        appearance += t('gangs.description.color', { color: t(`gangs.color.${color}`) })
+        const colorPatterns = [
+            t('gangs.description.color', { color: t(`gangs.color.${color}`) }),
+            t('gangs.description.colorAlt', { color: t(`gangs.color.${color}`) }),
+            t('gangs.description.colorAlt2', { color: t(`gangs.color.${color}`) }),
+        ]
+        appearanceDesc += getRandomElement(colorPatterns)
     }
 
-    // Build reputation section
-    reputation = t('gangs.description.reputation', { status: t(`gangs.status.${status}`).toLowerCase() })
+    // Build reputation section with different patterns
+    const statusDesc = t(`gangs.status.${status}`).toLowerCase()
+    const reputationPatterns = [
+        t('gangs.description.reputation', { status: statusDesc }),
+        t('gangs.description.reputationAlt', { status: statusDesc }),
+        t('gangs.description.reputationAlt2', { status: statusDesc }),
+    ]
 
+    reputationDesc = getRandomElement(reputationPatterns)
+
+    // Add known for info with varying patterns
     if (knownFor.knownForPart1 && knownFor.knownForPart2) {
-        reputation += t('gangs.description.knownFor', {
-            knownForPart1: t(`gangs.knownForPart1.${knownFor.knownForPart1}`).toLowerCase(),
-            knownForPart2: t(`gangs.knownForPart2.${knownFor.knownForPart2}`).toLowerCase(),
-        })
+        const knownForPart1Text = t(`gangs.knownForPart1.${knownFor.knownForPart1}`).toLowerCase()
+        const knownForPart2Text = t(`gangs.knownForPart2.${knownFor.knownForPart2}`).toLowerCase()
+
+        const knownForPatterns = [
+            t('gangs.description.knownFor', { knownForPart1: knownForPart1Text, knownForPart2: knownForPart2Text }),
+            t('gangs.description.knownForAlt', { knownForPart1: knownForPart1Text, knownForPart2: knownForPart2Text }),
+            t('gangs.description.knownForEmphasis', {
+                knownForPart1: knownForPart1Text,
+                knownForPart2: knownForPart2Text,
+            }),
+        ]
+
+        reputationDesc += getRandomElement(knownForPatterns)
     }
 
+    // Add sin information if present
     if (sin && sin !== Sin.NONE) {
-        reputation += t('gangs.description.sin', { sin: t(`gangs.sin.${sin}`).toLowerCase() })
+        const sinText = t(`gangs.sin.${sin}`).toLowerCase()
+        const sinPatterns = [
+            t('gangs.description.sin', { sin: sinText }),
+            t('gangs.description.sinAlt', { sin: sinText }),
+            t('gangs.description.sinEmphasis', { sin: sinText }),
+        ]
+
+        reputationDesc += getRandomElement(sinPatterns)
     }
 
+    // Add flaw information if present
     if (flaw && flaw !== Flaw.NONE) {
-        reputation += t('gangs.description.flaw', { flaw: t(`gangs.flaw.${flaw}`).toLowerCase() })
+        const flawText = t(`gangs.flaw.${flaw}`).toLowerCase()
+        weaknessDesc = getRandomElement([
+            t('gangs.description.flaw', { flaw: flawText }),
+            t('gangs.description.flawAlt', { flaw: flawText }),
+            t('gangs.description.flawHidden', { flaw: flawText }),
+        ])
     }
 
-    // Build current state section
+    // Build current activities section
     if (currentAttitude && currentAttitude !== Attitude.NONE) {
-        currentState = t('gangs.description.currentAttitude', {
-            attitude: t(`gangs.attitude.${currentAttitude}`).toLowerCase(),
-        })
+        const attitudeText = t(`gangs.attitude.${currentAttitude}`).toLowerCase()
+        activityDesc = getRandomElement([
+            t('gangs.description.currentAttitude', { attitude: attitudeText }),
+            t('gangs.description.currentAttitudeAlt', { attitude: attitudeText }),
+            t('gangs.description.currentAttitudeRumor', { attitude: attitudeText }),
+        ])
     }
 
+    // Add news if present
     if (newsTheLeaderIsReceiving && newsTheLeaderIsReceiving !== GangNews.NONE) {
-        currentState += t('gangs.description.news', { news: t(`gangs.news.${newsTheLeaderIsReceiving}`).toLowerCase() })
+        const newsText = t(`gangs.news.${newsTheLeaderIsReceiving}`).toLowerCase()
+        newsDesc = getRandomElement([
+            t('gangs.description.news', { news: newsText }),
+            t('gangs.description.newsUrgent', { news: newsText }),
+            t('gangs.description.newsRumor', { news: newsText }),
+        ])
     }
 
-    // Combine all sections into a cohesive description
-    return `${identity} ${appearance} ${reputation}. ${currentState}`.trim()
+    // Generate random atmospheric details based on gang type and status
+    const atmosphereOptions = [
+        t('gangs.atmosphere.feared'),
+        t('gangs.atmosphere.respected'),
+        t('gangs.atmosphere.infamous'),
+        t('gangs.atmosphere.mysterious'),
+        t('gangs.atmosphere.volatile'),
+    ]
+    atmosphereDesc = getRandomElement(atmosphereOptions)
+
+    // Combine elements based on the chosen pattern
+    let finalDescription = ''
+
+    switch (descriptionPattern) {
+        case 1: // Traditional pattern: identity, appearance, reputation, current state
+            finalDescription = `${identityDesc} ${appearanceDesc} ${
+                secretiveDesc ? secretiveDesc + ' ' : ''
+            }${reputationDesc}${weaknessDesc ? ' ' + weaknessDesc : ''}. ${activityDesc ? activityDesc : ''}${
+                newsDesc ? ' ' + newsDesc : ''
+            }`
+            break
+
+        case 2: // Start with reputation, then identity and appearance
+            finalDescription = `${reputationDesc} ${identityDesc} ${appearanceDesc} ${
+                secretiveDesc ? secretiveDesc + ' ' : ''
+            }${weaknessDesc ? ' ' + weaknessDesc : ''}. ${activityDesc ? activityDesc : ''}${
+                newsDesc ? ' ' + newsDesc : ''
+            }`
+            break
+
+        case 3: // Start with current activity, then identity and details
+            if (activityDesc || newsDesc) {
+                finalDescription = `${activityDesc ? activityDesc : ''}${
+                    newsDesc ? ' ' + newsDesc : ''
+                } ${identityDesc} ${appearanceDesc} ${secretiveDesc ? secretiveDesc + ' ' : ''}${reputationDesc}${
+                    weaknessDesc ? ' ' + weaknessDesc : ''
+                }.`
+            } else {
+                // Fall back to traditional pattern if no activity/news
+                finalDescription = `${identityDesc} ${appearanceDesc} ${
+                    secretiveDesc ? secretiveDesc + ' ' : ''
+                }${reputationDesc}${weaknessDesc ? ' ' + weaknessDesc : ''}.`
+            }
+            break
+
+        case 4: // Atmospheric opening
+            finalDescription = `${atmosphereDesc} ${identityDesc} ${
+                secretiveDesc ? secretiveDesc + ' ' : ''
+            }${appearanceDesc} ${reputationDesc}${weaknessDesc ? ' ' + weaknessDesc : ''}. ${
+                activityDesc ? activityDesc : ''
+            }${newsDesc ? ' ' + newsDesc : ''}`
+            break
+
+        case 5: // Focus on strengths and weaknesses, including secretiveness
+            strengthDesc = `They are known for their ${skillDesc
+                .replace(/They are |They have /g, '')
+                .trim()} and ${cyberwareDesc.replace(/They sport |They use |They have /g, '').trim()}.`
+            finalDescription = `${identityDesc} ${strengthDesc} ${secretiveDesc ? secretiveDesc + ' ' : ''}${
+                weaknessDesc ? weaknessDesc + ' ' : ''
+            }${reputationDesc} ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
+            break
+
+        case 6: // Lead with secretiveness if it's a highly secretive gang
+            if (secretive && secretive >= 15) {
+                finalDescription = `${secretiveDesc} ${identityDesc} ${appearanceDesc} ${reputationDesc}${
+                    weaknessDesc ? ' ' + weaknessDesc : ''
+                }. ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
+            } else {
+                finalDescription = `${identityDesc} ${appearanceDesc} ${
+                    secretiveDesc ? secretiveDesc + ' ' : ''
+                }${reputationDesc}. ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
+            }
+            break
+
+        default: // Default to simplest pattern
+            finalDescription = `${identityDesc} ${appearanceDesc} ${
+                secretiveDesc ? secretiveDesc + ' ' : ''
+            }${reputationDesc}. ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
+    }
+
+    // Clean up extra spaces and fix sentence structure
+    finalDescription = finalDescription
+        .replace(/\s+/g, ' ')
+        .replace(/\.\s+\./g, '.')
+        .replace(/\s+\./g, '.')
+        .replace(/\.\s*$/g, '.') // Ensure description ends with a period
+        .trim()
+
+    if (!finalDescription.endsWith('.')) {
+        finalDescription += '.'
+    }
+
+    return finalDescription
 }

@@ -654,6 +654,7 @@ export const generateRandomBuilding = (
  */
 export const generateBuildingDescription = (t: TFunction, building: Building): string => {
     const {
+        name,
         type,
         isAbandoned,
         elevators,
@@ -670,70 +671,115 @@ export const generateBuildingDescription = (t: TFunction, building: Building): s
         secret,
     } = building
 
-    // Initialize description sections
-    let overview = ''
-    let physical = ''
-    let security = ''
-    let currentHappenings = ''
+    // Choose a description pattern randomly (1-6)
+    const descriptionPattern = getRandomInt(1, 6)
+
+    // Element variables for description building
+    let overviewDesc = ''
+    let physicalDesc = ''
+    let securityDesc = ''
+    let currentHappeningsDesc = ''
+    let secretDesc = ''
+    let atmosphereDesc = ''
+    let accessDesc = ''
 
     // Build overview section based on type, style, and ownership
     if (isAbandoned) {
-        overview = t('buildings.description.abandonedOverview', {
-            name: building.name,
-            type: t(`buildings.type.${type}`).toLowerCase(),
-            style: t(`buildings.style.${style}`).toLowerCase(),
-        })
+        const abandonedPatterns = [
+            t('buildings.description.abandonedOverview', {
+                name,
+                type: t(`buildings.type.${type}`).toLowerCase(),
+                style: t(`buildings.style.${style}`).toLowerCase(),
+            }),
+            t('buildings.description.abandonedOverviewAlt', {
+                name,
+                type: t(`buildings.type.${type}`).toLowerCase(),
+                style: t(`buildings.style.${style}`).toLowerCase(),
+            }),
+            t('buildings.description.abandonedOverviewEmphasis', {
+                name,
+                type: t(`buildings.type.${type}`).toLowerCase(),
+                style: t(`buildings.style.${style}`).toLowerCase(),
+            }),
+        ]
+        overviewDesc = getRandomElement(abandonedPatterns)
     } else {
-        overview = t('buildings.description.normalOverview', {
-            name: building.name,
-            style: t(`buildings.style.${style}`).toLowerCase(),
-            type: t(`buildings.type.${type}`).toLowerCase(),
-        })
+        const normalPatterns = [
+            t('buildings.description.normalOverview', {
+                name,
+                style: t(`buildings.style.${style}`).toLowerCase(),
+                type: t(`buildings.type.${type}`).toLowerCase(),
+            }),
+            t('buildings.description.normalOverviewAlt', {
+                name,
+                style: t(`buildings.style.${style}`).toLowerCase(),
+                type: t(`buildings.type.${type}`).toLowerCase(),
+            }),
+            t('buildings.description.normalOverviewType', {
+                name,
+                type: t(`buildings.type.${type}`).toLowerCase(),
+            }),
+        ]
+        overviewDesc = getRandomElement(normalPatterns)
 
-        // Add ownership information
-        switch (ownership) {
-            case Ownership.NO_ONE_SCAVS:
-                overview += t('buildings.description.ownership.noOneScavs')
-                break
-            case Ownership.LOW_LEVEL_GONKS:
-                overview += t('buildings.description.ownership.lowLevelGonks')
-                break
-            case Ownership.GANG_MAFIA:
-                overview += t('buildings.description.ownership.gangMafia')
-                break
-            case Ownership.POSERGANG:
-                overview += t('buildings.description.ownership.posergang')
-                break
-            case Ownership.BYSTANDER:
-                overview += t('buildings.description.ownership.bystander')
-                break
-            case Ownership.FIXER:
-                overview += t('buildings.description.ownership.fixer')
-                break
-            case Ownership.SMALL_BUSINESS:
-                overview += t('buildings.description.ownership.smallBusiness')
-                break
-            case Ownership.LOCAL_GOV:
-                overview += t('buildings.description.ownership.localGov')
-                break
-            case Ownership.CORPO:
-                overview += t('buildings.description.ownership.corpo')
-                break
-            case Ownership.MILITARISTIC_GANG:
-                overview += t('buildings.description.ownership.militaristicGang')
-                break
-            case Ownership.GOVERNMENT:
-                overview += t('buildings.description.ownership.government')
-                break
-            case Ownership.MEGA_CORPO:
-                overview += t('buildings.description.ownership.megaCorpo')
-                break
-            default:
-                overview += t('buildings.description.ownership.default')
+        // Add ownership information with variation
+        const ownershipDescriptions = {
+            [Ownership.NO_ONE_SCAVS]: [
+                t('buildings.description.ownership.noOneScavs'),
+                t('buildings.description.ownership.noOneScavsAlt'),
+            ],
+            [Ownership.LOW_LEVEL_GONKS]: [
+                t('buildings.description.ownership.lowLevelGonks'),
+                t('buildings.description.ownership.lowLevelGonksAlt'),
+            ],
+            [Ownership.GANG_MAFIA]: [
+                t('buildings.description.ownership.gangMafia'),
+                t('buildings.description.ownership.gangMafiaAlt'),
+            ],
+            [Ownership.POSERGANG]: [
+                t('buildings.description.ownership.posergang'),
+                t('buildings.description.ownership.posergangAlt'),
+            ],
+            [Ownership.BYSTANDER]: [
+                t('buildings.description.ownership.bystander'),
+                t('buildings.description.ownership.bystanderAlt'),
+            ],
+            [Ownership.FIXER]: [
+                t('buildings.description.ownership.fixer'),
+                t('buildings.description.ownership.fixerAlt'),
+            ],
+            [Ownership.SMALL_BUSINESS]: [
+                t('buildings.description.ownership.smallBusiness'),
+                t('buildings.description.ownership.smallBusinessAlt'),
+            ],
+            [Ownership.LOCAL_GOV]: [
+                t('buildings.description.ownership.localGov'),
+                t('buildings.description.ownership.localGovAlt'),
+            ],
+            [Ownership.CORPO]: [
+                t('buildings.description.ownership.corpo'),
+                t('buildings.description.ownership.corpoAlt'),
+            ],
+            [Ownership.MILITARISTIC_GANG]: [
+                t('buildings.description.ownership.militaristicGang'),
+                t('buildings.description.ownership.militaristicGangAlt'),
+            ],
+            [Ownership.GOVERNMENT]: [
+                t('buildings.description.ownership.government'),
+                t('buildings.description.ownership.governmentAlt'),
+            ],
+            [Ownership.MEGA_CORPO]: [
+                t('buildings.description.ownership.megaCorpo'),
+                t('buildings.description.ownership.megaCorpoAlt'),
+            ],
         }
+
+        // Get ownership description with randomness
+        const ownershipOptions = ownershipDescriptions[ownership] || [t('buildings.description.ownership.default')]
+        overviewDesc += getRandomElement(ownershipOptions)
     }
 
-    // Build physical features section
+    // Build physical features section with more variety
     const features = []
 
     if (elevators) features.push(t('buildings.description.features.elevators'))
@@ -742,72 +788,213 @@ export const generateBuildingDescription = (t: TFunction, building: Building): s
     if (backupLights) features.push(t('buildings.description.features.backupLights'))
     if (landingPad) features.push(t('buildings.description.features.landingPad'))
 
+    // Create different patterns for features section
     if (features.length > 0) {
-        physical = t('buildings.description.featuresSection', { features: features.join(', ') })
+        // Different ways to present features
+        const featurePatterns = [
+            t('buildings.description.featuresSection', { features: features.join(', ') }),
+            t('buildings.description.featuresSectionAlt', { features: features.join(', ') }),
+            t('buildings.description.featuresSectionEmphasis', { features: features.join(' and ') }),
+        ]
+        physicalDesc = getRandomElement(featurePatterns)
     }
 
+    // Secret entrance description with variation
     if (secretOrAltEntrance) {
-        physical += t('buildings.description.secretEntrance')
+        const secretEntranceOptions = [
+            t('buildings.description.secretEntrance'),
+            t('buildings.description.secretEntranceHidden'),
+            t('buildings.description.secretEntranceRumor'),
+        ]
+        physicalDesc += getRandomElement(secretEntranceOptions)
     }
 
-    // Build security section
-    security = t('buildings.description.securityIntro')
-    switch (securityPersonnel) {
-        case SecurityPersonnel.NONE:
-            security += t('buildings.description.security.none')
-            break
-        case SecurityPersonnel.LOCALS_TENNANTS:
-            security += t('buildings.description.security.localsTenants')
-            break
-        case SecurityPersonnel.LOCAL_SEC_GANG:
-            security += t('buildings.description.security.localSecGang')
-            break
-        case SecurityPersonnel.VEHICLES:
-            security += t('buildings.description.security.vehicles')
-            break
-        case SecurityPersonnel.CITY_SEC:
-            security += t('buildings.description.security.citySec')
-            break
-        case SecurityPersonnel.CORPO_SEC:
-            security += t('buildings.description.security.corpoSec')
-            break
-        case SecurityPersonnel.RESPONSE_BACKUP:
-            security += t('buildings.description.security.responseBackup')
-            break
-        case SecurityPersonnel.HEAVY_WEAPONS:
-            security += t('buildings.description.security.heavyWeapons')
-            break
-        case SecurityPersonnel.HEAVY_VEHICLES:
-            security += t('buildings.description.security.heavyVehicles')
-            break
-        case SecurityPersonnel.FAST_RESPONSE_BACKUP:
-            security += t('buildings.description.security.fastResponseBackup')
-            break
-        case SecurityPersonnel.ELITE_TROOPS:
-            security += t('buildings.description.security.eliteTroops')
-            break
-        case SecurityPersonnel.BORG:
-            security += t('buildings.description.security.borg')
-            break
-        default:
-            security += t('buildings.description.security.default')
+    // Build access description for buildings
+    const accessFeatures = []
+    if (elevators) accessFeatures.push('elevators')
+    if (parking) accessFeatures.push('parking')
+    if (emergencyExit) accessFeatures.push('emergency exits')
+
+    if (accessFeatures.length >= 2) {
+        accessDesc = t('buildings.description.accessFeatures', { features: accessFeatures.join(' and ') })
     }
 
+    // Build security section with more variety
+    const securityIntros = [
+        t('buildings.description.securityIntro'),
+        t('buildings.description.securityIntroAlt'),
+        t('buildings.description.securityIntroDetailed'),
+    ]
+    securityDesc = getRandomElement(securityIntros)
+
+    // Security personnel descriptions with variation
+    const securityDescriptions = {
+        [SecurityPersonnel.NONE]: [
+            t('buildings.description.security.none'),
+            t('buildings.description.security.noneAlt'),
+        ],
+        [SecurityPersonnel.LOCALS_TENNANTS]: [
+            t('buildings.description.security.localsTenants'),
+            t('buildings.description.security.localsTenantsAlt'),
+        ],
+        [SecurityPersonnel.LOCAL_SEC_GANG]: [
+            t('buildings.description.security.localSecGang'),
+            t('buildings.description.security.localSecGangAlt'),
+        ],
+        [SecurityPersonnel.VEHICLES]: [
+            t('buildings.description.security.vehicles'),
+            t('buildings.description.security.vehiclesAlt'),
+        ],
+        [SecurityPersonnel.CITY_SEC]: [
+            t('buildings.description.security.citySec'),
+            t('buildings.description.security.citySecAlt'),
+        ],
+        [SecurityPersonnel.CORPO_SEC]: [
+            t('buildings.description.security.corpoSec'),
+            t('buildings.description.security.corpoSecAlt'),
+        ],
+        [SecurityPersonnel.RESPONSE_BACKUP]: [
+            t('buildings.description.security.responseBackup'),
+            t('buildings.description.security.responseBackupAlt'),
+        ],
+        [SecurityPersonnel.HEAVY_WEAPONS]: [
+            t('buildings.description.security.heavyWeapons'),
+            t('buildings.description.security.heavyWeaponsAlt'),
+        ],
+        [SecurityPersonnel.HEAVY_VEHICLES]: [
+            t('buildings.description.security.heavyVehicles'),
+            t('buildings.description.security.heavyVehiclesAlt'),
+        ],
+        [SecurityPersonnel.FAST_RESPONSE_BACKUP]: [
+            t('buildings.description.security.fastResponseBackup'),
+            t('buildings.description.security.fastResponseBackupAlt'),
+        ],
+        [SecurityPersonnel.ELITE_TROOPS]: [
+            t('buildings.description.security.eliteTroops'),
+            t('buildings.description.security.eliteTroopsAlt'),
+        ],
+        [SecurityPersonnel.BORG]: [
+            t('buildings.description.security.borg'),
+            t('buildings.description.security.borgAlt'),
+        ],
+    }
+
+    // Get security description with randomness
+    const securityOptions = securityDescriptions[securityPersonnel] || [t('buildings.description.security.default')]
+    securityDesc += getRandomElement(securityOptions)
+
+    // Gatehouse/front desk description with variation
     if (gatehouseFrontDesk) {
-        security += t('buildings.description.gatehouse')
+        const gatehouseOptions = [
+            t('buildings.description.gatehouse'),
+            t('buildings.description.gatehouseDetailed'),
+            t('buildings.description.gatehouseImportant'),
+        ]
+        securityDesc += getRandomElement(gatehouseOptions)
     }
 
-    // Build current happenings section
+    // Build current happenings section with more variety
     if (event) {
-        currentHappenings = t('buildings.description.event', { event: t(`buildings.event.${event}`).toLowerCase() })
+        const eventText = t(`buildings.event.${event}`).toLowerCase()
+        const eventPatterns = [
+            t('buildings.description.event', { event: eventText }),
+            t('buildings.description.eventCurrent', { event: eventText }),
+            t('buildings.description.eventRumor', { event: eventText }),
+        ]
+        currentHappeningsDesc = getRandomElement(eventPatterns)
     }
 
+    // Secret information with variation
     if (secret) {
-        currentHappenings += t('buildings.description.secret', {
-            secret: t(`buildings.secret.${secret}`).toLowerCase(),
-        })
+        const secretText = t(`buildings.secret.${secret}`).toLowerCase()
+        const secretPatterns = [
+            t('buildings.description.secret', { secret: secretText }),
+            t('buildings.description.secretHidden', { secret: secretText }),
+            t('buildings.description.secretWhispered', { secret: secretText }),
+        ]
+        secretDesc = getRandomElement(secretPatterns)
     }
 
-    // Combine all sections into a cohesive description
-    return `${overview}${physical}${security} ${currentHappenings}`.trim()
+    // Generate random atmospheric details based on building style
+    const atmosphereByStyle = {
+        [Style.AUSTERE]: t('buildings.atmosphere.austere'),
+        [Style.SOVIETIC]: t('buildings.atmosphere.sovietic'),
+        [Style.URBAN_GRAFFITI]: t('buildings.atmosphere.urbanGraffiti'),
+        [Style.MODERN]: t('buildings.atmosphere.modern'),
+        [Style.TRIBAL]: t('buildings.atmosphere.tribal'),
+        [Style.NEON_FEST]: t('buildings.atmosphere.neonFest'),
+        [Style.EUROPEAN]: t('buildings.atmosphere.european'),
+        [Style.MILITARISTIC]: t('buildings.atmosphere.militaristic'),
+        [Style.CORPORATE]: t('buildings.atmosphere.corporate'),
+        [Style.ORIENTAL]: t('buildings.atmosphere.oriental'),
+        [Style.EXOTIC]: t('buildings.atmosphere.exotic'),
+        [Style.LUXURIOUS]: t('buildings.atmosphere.luxurious'),
+    }
+
+    atmosphereDesc = atmosphereByStyle[style] || t('buildings.atmosphere.generic')
+
+    // Combine elements based on the chosen pattern
+    let finalDescription = ''
+
+    switch (descriptionPattern) {
+        case 1: // Standard pattern: overview, physical features, security, current events
+            finalDescription = `${overviewDesc}${physicalDesc ? ' ' + physicalDesc : ''} ${securityDesc} ${
+                currentHappeningsDesc ? currentHappeningsDesc : ''
+            }${secretDesc ? ' ' + secretDesc : ''}`
+            break
+
+        case 2: // Start with atmosphere, then overview and details
+            finalDescription = `${atmosphereDesc} ${overviewDesc}${
+                physicalDesc ? ' ' + physicalDesc : ''
+            } ${securityDesc} ${currentHappeningsDesc ? currentHappeningsDesc : ''}${
+                secretDesc ? ' ' + secretDesc : ''
+            }`
+            break
+
+        case 3: // Start with current happenings, then building details
+            if (currentHappeningsDesc) {
+                finalDescription = `${currentHappeningsDesc} ${overviewDesc}${
+                    physicalDesc ? ' ' + physicalDesc : ''
+                } ${securityDesc}${secretDesc ? ' ' + secretDesc : ''}`
+            } else {
+                // Fall back to standard pattern if no current happenings
+                finalDescription = `${overviewDesc}${physicalDesc ? ' ' + physicalDesc : ''} ${securityDesc}${
+                    secretDesc ? ' ' + secretDesc : ''
+                }`
+            }
+            break
+
+        case 4: // Focus on security first
+            finalDescription = `${overviewDesc} ${securityDesc}${physicalDesc ? ' ' + physicalDesc : ''} ${
+                currentHappeningsDesc ? currentHappeningsDesc : ''
+            }${secretDesc ? ' ' + secretDesc : ''}`
+            break
+
+        case 5: // Focus on access and circulation
+            finalDescription = `${overviewDesc} ${accessDesc || (physicalDesc ? physicalDesc : '')} ${securityDesc} ${
+                currentHappeningsDesc ? currentHappeningsDesc : ''
+            }${secretDesc ? ' ' + secretDesc : ''}`
+            break
+
+        default: // Default pattern with atmospheric elements
+            finalDescription = `${overviewDesc} ${atmosphereDesc}${
+                physicalDesc ? ' ' + physicalDesc : ''
+            } ${securityDesc} ${currentHappeningsDesc ? currentHappeningsDesc : ''}${
+                secretDesc ? ' ' + secretDesc : ''
+            }`
+    }
+
+    // Clean up extra spaces and add periods between sentences if needed
+    finalDescription = finalDescription
+        .replace(/\s+/g, ' ')
+        .replace(/\.\s+\./g, '.')
+        .replace(/\s+\./g, '.')
+        .replace(/\.\s*$/g, '.') // Ensure description ends with a period
+        .trim()
+
+    if (!finalDescription.endsWith('.')) {
+        finalDescription += '.'
+    }
+
+    return finalDescription
 }
