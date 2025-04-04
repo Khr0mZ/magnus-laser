@@ -16,7 +16,13 @@ import colors from '../../utils/colors'
 import { JobDifficulty, ModuleTypes } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
 import { generateRandomBuilding } from '../../utils/generatorBuilding'
-import { clearBuildings, loadBuildings, saveBuildings } from '../../utils/storage'
+import {
+    clearBuildings,
+    loadBuildings,
+    loadViewPreference,
+    saveBuildings,
+    saveViewPreference,
+} from '../../utils/storage'
 
 // Add window interface augmentation
 declare global {
@@ -30,7 +36,10 @@ const BuildingView = () => {
     useDocumentTitle(`Magnus Laser - ${t('modules.BUILDING')}`)
     const { readerMode } = useContext(ReaderModeContext)
     const [buildings, setBuildings] = useState<Building[]>([])
-    const [compactView, setCompactView] = useState(false)
+
+    // Load view preference from localStorage each time component is mounted
+    const [compactView, setCompactView] = useState(() => loadViewPreference(ModuleTypes.BUILDING))
+
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [buildingToDelete, setBuildingToDelete] = useState<number | null>(null)
@@ -137,7 +146,10 @@ const BuildingView = () => {
     }
 
     const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string) => {
-        setCompactView(newView === 'table')
+        const isTableView = newView === 'table'
+        setCompactView(isTableView)
+        // Save view preference to localStorage
+        saveViewPreference(ModuleTypes.BUILDING, isTableView)
     }
 
     return (

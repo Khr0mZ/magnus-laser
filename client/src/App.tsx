@@ -10,6 +10,7 @@ import UserProvider from './contexts/UserContext'
 import './i18n' // Import i18n configuration
 import './index.css'
 import NavigationPaths from './navigation'
+import { loadReaderMode, saveReaderMode } from './utils/storage'
 import { getDesignTokens } from './utils/theme'
 import BuildingView from './views/Building/BuildingView'
 import Corporation from './views/Corporation/CorporationView'
@@ -19,9 +20,15 @@ import GangView from './views/Gang/GangView'
 import NPC from './views/NPC/NPCView'
 
 const App = (): JSX.Element => {
-    // State to track if reader mode is enabled
-    const [readerMode, setReaderMode] = useState(false)
-    const toggleReaderMode = () => setReaderMode((prev) => !prev)
+    // State to track if reader mode is enabled - using function to initialize from localStorage
+    const [readerMode, setReaderMode] = useState(() => loadReaderMode())
+
+    const toggleReaderMode = () => {
+        const newReaderMode = !readerMode
+        setReaderMode(newReaderMode)
+        // Save the preference when toggled
+        saveReaderMode(newReaderMode)
+    }
 
     // Apply reader-mode class to body when reader mode changes
     useEffect(() => {

@@ -14,7 +14,7 @@ import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { generateRandomGang } from '../../utils/generatorGang'
-import { clearGangs, loadGangs, saveGangs } from '../../utils/storage'
+import { clearGangs, loadGangs, loadViewPreference, saveGangs, saveViewPreference } from '../../utils/storage'
 
 // Add window.gangsDataLoaded declaration
 declare global {
@@ -28,7 +28,10 @@ const GangView = () => {
     useDocumentTitle(`Magnus Laser - ${t('modules.GANG')}`)
     const { readerMode } = useContext(ReaderModeContext)
     const [gangs, setGangs] = useState<Gang[]>([])
-    const [compactView, setCompactView] = useState(false)
+
+    // Load view preference from localStorage each time component is mounted
+    const [compactView, setCompactView] = useState(() => loadViewPreference(ModuleTypes.GANG))
+
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [gangToDelete, setGangToDelete] = useState<number | null>(null)
@@ -126,7 +129,10 @@ const GangView = () => {
 
     const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
         if (newView !== null) {
-            setCompactView(newView === 'table')
+            const isTableView = newView === 'table'
+            setCompactView(isTableView)
+            // Save view preference to localStorage
+            saveViewPreference(ModuleTypes.GANG, isTableView)
         }
     }
 

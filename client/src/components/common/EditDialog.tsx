@@ -786,9 +786,11 @@ export const EditDialog = (props: EditDialogProps) => {
                           }
                 }
             >
-                {moduleType === ModuleTypes.GANG
-                    ? t('gangs.editTitle', 'Edit Gang')
-                    : t('buildings.editTitle', 'Edit Building')}
+                <Typography variant="h3">
+                    {moduleType === ModuleTypes.GANG
+                        ? t('gangs.editTitle', 'Edit Gang')
+                        : t('buildings.editTitle', 'Edit Building')}
+                </Typography>
             </DialogTitle>
             <DialogContent
                 sx={{

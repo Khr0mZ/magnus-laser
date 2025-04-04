@@ -6,6 +6,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Magnus Laser</title>
         <link rel="stylesheet" type="text/css" href="/fonts.css" />
+        <script>
+            // Apply reader mode class immediately based on stored preference
+            // to prevent any initial flicker
+            try {
+                const readerModeJson = localStorage.getItem('magnus-laser-reader-mode')
+                const isReaderMode = readerModeJson ? JSON.parse(readerModeJson) : false
+                if (isReaderMode) {
+                    // Apply reader mode class to body as soon as it's available
+                    document.addEventListener('DOMContentLoaded', function () {
+                        document.body.classList.add('reader-mode')
+                    })
+                }
+            } catch (e) {
+                console.error('Error applying initial reader mode:', e)
+            }
+        </script>
     </head>
     <body>
         <div id="root"></div>
