@@ -5,7 +5,7 @@ import { useContext } from 'react'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
 import { notifyDataImported } from '../../utils/storage'
-import { glitch } from '../common/Animations.tsx'
+import { flicker, neonColorCycle, neonPulse, pulseGlowCyan } from '../common/Animations.tsx'
 
 // Storage keys used in the application for module data
 // Note: User settings like view preferences and reader mode are deliberately excluded
@@ -17,9 +17,11 @@ const APP_STORAGE_KEYS = [
 
 interface DataButtonProps {
     type: 'export' | 'import'
+    showLabel?: boolean
+    id?: string
 }
 
-const DataButton = ({ type }: DataButtonProps): JSX.Element => {
+const DataButton = ({ type, showLabel = true, id }: DataButtonProps): JSX.Element => {
     const { readerMode } = useContext(ReaderModeContext)
     const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
@@ -268,86 +270,121 @@ const DataButton = ({ type }: DataButtonProps): JSX.Element => {
 
     return (
         <Button
+            id={id}
             size={'large'}
             disableRipple
             disableFocusRipple
             onClick={handleClick}
             sx={{
-                padding: '12px 16px',
-                minWidth: '70px',
-                borderRadius: 0,
+                position: 'relative',
+                padding: showLabel ? '12px 16px' : '24px',
+                minWidth: showLabel ? '70px' : '120px',
+                minHeight: showLabel ? 'inherit' : '120px',
+                borderRadius: '4px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'center',
-                zIndex: 1,
+                zIndex: 5,
+                overflow: 'hidden',
+                backgroundColor: readerMode ? colors.neons.blue.dark + '40' : 'rgba(5, 7, 24, 0.5)',
+                backdropFilter: 'blur(5px)',
+                animation: readerMode ? 'none' : `${pulseGlowCyan} 2s infinite`,
+                border: readerMode ? `1px solid ${color.default}40` : `1px solid ${color.default}60`,
+                boxShadow: readerMode ? `0 0 15px ${color.dark}40` : `0 0 15px ${color.default}40`,
+                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: `radial-gradient(circle at center, ${color.default}10, transparent 70%)`,
+                    opacity: 0.2,
+                    zIndex: -1,
+                },
+                '&:hover': {
+                    transform: 'translateY(-5px) scale(1.05)',
+                    animation: `${neonPulse} 2s infinite`,
+                    cursor: 'pointer',
+                    backgroundColor: readerMode ? colors.neons.blue.dark + '60' : 'rgba(5, 7, 24, 0.7)',
+                    border: readerMode ? `1px solid ${color.default}80` : `1px solid ${color.default}90`,
+                    boxShadow: readerMode ? `0 0 20px ${color.default}50` : `0 0 25px ${color.default}70`,
+                    '& svg': {
+                        animation: `${flicker} 4s infinite, ${neonColorCycle} 5s infinite`,
+                        filter: `drop-shadow(0 0 ${showLabel ? 8 : 12}px ${color.default})`,
+                        transform: 'scale(1.1)',
+                        opacity: 0.9,
+                    },
+                    '&::before': {
+                        opacity: readerMode ? 0.3 : 0.5,
+                    },
+                },
                 ...(readerMode
                     ? {
                           // Reader mode button style
-                          color: '#555',
-                          '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                              '& svg': {
-                                  transform: 'scale(1.1)',
-                              },
-                          },
+                          color: color.dark,
                           '& svg': {
-                              transition: 'transform 0.2s',
-                              width: 24,
-                              height: 24,
+                              transition: 'all 0.3s',
+                              width: showLabel ? 28 : 48,
+                              height: showLabel ? 28 : 48,
+                              filter: `drop-shadow(0 0 ${showLabel ? 3 : 5}px ${color.dark}80)`,
                           },
                       }
                     : {
                           // Cyberpunk button style
                           color: color.default,
-                          '&:hover': {
-                              backgroundColor: `rgba(${type === 'export' ? '0, 255, 0' : '0, 0, 255'}, 0.1)`,
-                              '& svg': {
-                                  filter: `drop-shadow(0 0 5px ${color.default})`,
-                                  animation: `${glitch} 1s ease infinite alternate`,
-                              },
-                              '&::after': {
-                                  opacity: 1,
-                                  width: '100%',
-                              },
-                          },
                           '& svg': {
-                              filter: `drop-shadow(0 0 2px ${color.dark})`,
-                              width: 24,
-                              height: 24,
-                          },
-                          transition: 'all 0.3s',
-                          position: 'relative',
-                          '&::after': {
-                              content: '""',
-                              position: 'absolute',
-                              bottom: 0,
-                              left: 0,
-                              width: '0%',
-                              height: '2px',
-                              backgroundColor: color.default,
-                              boxShadow: `0 0 10px ${color.default}`,
-                              opacity: 0,
-                              transition: 'all 0.3s ease-out',
+                              transition: 'all 0.3s',
+                              width: showLabel ? 28 : 48,
+                              height: showLabel ? 28 : 48,
+                              filter: `drop-shadow(0 0 ${showLabel ? 5 : 8}px ${color.default}90)`,
+                              opacity: 0.8,
                           },
                       }),
             }}
         >
-            <Icon />
-            <Typography
-                variant="caption"
+            <Icon
                 sx={{
-                    mt: 0.5,
-                    ...(readerMode
+                    position: 'relative',
+                    zIndex: 2,
+                    '&::before': showLabel
                         ? {}
                         : {
-                              fontFamily: '"Orbitron", "Rajdhani", "Lexend", sans-serif',
-                              textTransform: 'uppercase',
-                          }),
+                              content: '""',
+                              position: 'absolute',
+                              top: -5,
+                              left: -5,
+                              right: -5,
+                              bottom: -5,
+                              background: `radial-gradient(circle at center, ${color.default}20, transparent 70%)`,
+                              borderRadius: '50%',
+                              zIndex: -1,
+                          },
                 }}
-            >
-                {label}
-            </Typography>
+            />
+            {showLabel && (
+                <Typography
+                    variant="caption"
+                    sx={{
+                        mt: 1,
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        zIndex: 2,
+                        ...(readerMode
+                            ? {}
+                            : {
+                                  fontFamily: '"Orbitron", "Rajdhani", "Lexend", sans-serif',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em',
+                                  textShadow: `0 0 5px ${color.default}`,
+                              }),
+                    }}
+                >
+                    {label}
+                </Typography>
+            )}
         </Button>
     )
 }

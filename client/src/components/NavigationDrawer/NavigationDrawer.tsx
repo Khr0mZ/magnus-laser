@@ -3,7 +3,6 @@ import { useContext } from 'react'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
-import { DataButton } from './DataManagement'
 import DrawerButton from './DrawerButton'
 import LogoButton from './LogoButton'
 import ReaderModeButton from './ReaderModeButton'
@@ -95,12 +94,6 @@ const NavigationDrawer = (): JSX.Element => {
                             <DrawerButton key={module} module={module} />
                         ))}
                     </Stack>
-
-                    {/* Export Data Button */}
-                    <DataButton type="export" />
-
-                    {/* Import Data Button */}
-                    <DataButton type="import" />
 
                     {/* Reader Mode Toggle Button */}
                     <ReaderModeButton />

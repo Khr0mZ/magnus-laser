@@ -39,7 +39,11 @@
         "buildingDescription": "Buildings are structures that can be explored by the players.",
         "corporationDescription": "Corpos are organizations that can be interacted with by the players.",
         "fixerJobDescription": "Fixer Jobs are gigs that the players can complete.",
-        "npcDescription": "NPCs are characters that can be interacted with by the players."
+        "npcDescription": "NPCs are characters that can be interacted with by the players.",
+        "exportData": "Export Data",
+        "importData": "Import Data",
+        "exportDescription": "Save all your created content to a local file",
+        "importDescription": "Load your saved content from a file"
     },
     "gangs": {
         "title": "Gang Generator",
