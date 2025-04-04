@@ -172,7 +172,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     />
                 </Grid>
                 {/* Type */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel id="type-label" sx={inputLabelStyle}>
                             {t('gangs.labels.type')}
@@ -193,7 +193,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Cyberware Quality */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('gangs.labels.cyberwareQuality')}</InputLabel>
                         <Select
@@ -211,7 +211,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Skill */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <TextField
                         fullWidth
                         label={t('gangs.labels.skill')}
@@ -223,7 +223,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     />
                 </Grid>
                 {/* Weapons D6*/}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <TextField
                         fullWidth
                         label={t('gangs.labels.weapons.spb', 'Weapons D6')}
@@ -240,7 +240,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     />
                 </Grid>
                 {/* Armor SPB */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <TextField
                         fullWidth
                         label={t('gangs.labels.armor.spb', 'Armor SPB')}
@@ -257,7 +257,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     />
                 </Grid>
                 {/* Armor H */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <TextField
                         fullWidth
                         label={t('gangs.labels.armor.h', 'Armor H')}
@@ -274,7 +274,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     />
                 </Grid>
                 {/* Secretive */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <TextField
                         fullWidth
                         label={t('gangs.labels.secretive')}
@@ -286,7 +286,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     />
                 </Grid>
                 {/* Status */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('gangs.labels.status')}</InputLabel>
                         <Select
@@ -304,7 +304,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Color */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('gangs.labels.color')}</InputLabel>
                         <Select
@@ -335,7 +335,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Sin */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('gangs.labels.sin')}</InputLabel>
                         <Select
@@ -353,7 +353,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Known For Part 1 */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>
                             {t('gangs.labels.knownForPart1', 'Known For Part 1')}
@@ -378,7 +378,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Known For Part 2 */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>
                             {t('gangs.labels.knownForPart2', 'Known For Part 2')}
@@ -403,7 +403,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Flaw */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('gangs.labels.flaw')}</InputLabel>
                         <Select
@@ -421,7 +421,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Current Attitude */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('gangs.labels.currentAttitude')}</InputLabel>
                         <Select
@@ -439,7 +439,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* News The Leader Is Receiving */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('gangs.labels.newsTheLeaderIsReceiving')}</InputLabel>
                         <Select
@@ -489,7 +489,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     />
                 </Grid>
                 {/* Type */}
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} md={6}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel id="type-label" sx={inputLabelStyle}>
                             {t('buildings.labels.type')}
@@ -510,7 +510,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Style */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.style')}</InputLabel>
                         <Select
@@ -528,7 +528,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Ownership */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.ownership')}</InputLabel>
                         <Select
@@ -546,7 +546,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Is Abandoned */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.isAbandoned')}</InputLabel>
                         <Select
@@ -561,7 +561,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Elevators */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.elevators')}</InputLabel>
                         <Select
@@ -576,7 +576,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Parking */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.parking')}</InputLabel>
                         <Select
@@ -591,7 +591,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Gatehouse / Front Desk */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.gatehouseFrontDesk')}</InputLabel>
                         <Select
@@ -606,7 +606,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Emergency Exit */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.emergencyExit')}</InputLabel>
                         <Select
@@ -621,7 +621,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Backup Lights */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.backupLights')}</InputLabel>
                         <Select
@@ -636,7 +636,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Landing Pad */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.landingPad')}</InputLabel>
                         <Select
@@ -651,7 +651,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Secret / Alt Entrance */}
-                <Grid item xs={12} sm={1.5}>
+                <Grid item xs={12} md={1.5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.secretOrAltEntrance')}</InputLabel>
                         <Select
@@ -667,7 +667,7 @@ export const EditDialog = (props: EditDialogProps) => {
                 </Grid>
 
                 {/* Security Personnel */}
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} md={3}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.securityPersonnel')}</InputLabel>
                         <Select
@@ -686,7 +686,7 @@ export const EditDialog = (props: EditDialogProps) => {
                 </Grid>
 
                 {/* Event */}
-                <Grid item xs={12} sm={5}>
+                <Grid item xs={12} md={5}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.event')}</InputLabel>
                         <Select
@@ -704,7 +704,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     </FormControl>
                 </Grid>
                 {/* Secret */}
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} md={4}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel sx={inputLabelStyle}>{t('buildings.labels.secret')}</InputLabel>
                         <Select
@@ -786,7 +786,7 @@ export const EditDialog = (props: EditDialogProps) => {
                           }
                 }
             >
-                <Typography variant="h3">
+                <Typography variant="subtitle1" component="div" sx={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
                     {moduleType === ModuleTypes.GANG
                         ? t('gangs.editTitle', 'Edit Gang')
                         : t('buildings.editTitle', 'Edit Building')}

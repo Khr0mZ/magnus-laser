@@ -155,7 +155,7 @@ const BuildingView = () => {
     return (
         <Container maxWidth={false}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
                 <Typography
                     variant="h1"
                     className="glitch-text"
@@ -168,12 +168,22 @@ const BuildingView = () => {
                 >
                     {t('buildings.title', 'Building Generator')}
                 </Typography>
-                <JobDifficultySelector
-                    jobDifficulty={jobDifficulty}
-                    onJobDifficultyChange={handleJobDifficultyChange}
-                />
-                {/* View Toggle Buttons */}
-                <ViewToggle compactView={compactView} onViewChange={handleViewChange} />
+                <Stack
+                    direction="row"
+                    sx={{
+                        mb: 1,
+                        flexWrap: 'wrap-reverse',
+                        gap: 1,
+                        justifyContent: 'flex-end',
+                    }}
+                >
+                    <JobDifficultySelector
+                        jobDifficulty={jobDifficulty}
+                        onJobDifficultyChange={handleJobDifficultyChange}
+                    />
+                    {/* View Toggle Buttons */}
+                    <ViewToggle compactView={compactView} onViewChange={handleViewChange} />
+                </Stack>
             </Stack>
 
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
