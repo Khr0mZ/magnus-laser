@@ -17,6 +17,7 @@ import { JobDifficulty, ModuleTypes } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
 import { generateRandomBuilding } from '../../utils/generatorBuilding'
 import {
+    DATA_IMPORT_EVENT,
     clearBuildings,
     loadBuildings,
     loadViewPreference,
@@ -63,6 +64,26 @@ const BuildingView = () => {
         // Save the initial length to avoid triggering save notification for unchanged data
         prevBuildingsRef.current = savedBuildings.length
         firstMountRef.current = false
+    }, [])
+
+    // Listen for data import events
+    useEffect(() => {
+        const handleDataImport = () => {
+            // Refresh data
+            const savedBuildings = loadBuildings()
+            setBuildings(savedBuildings)
+            prevBuildingsRef.current = savedBuildings.length
+
+            // Refresh view preferences
+            const viewPreference = loadViewPreference(ModuleTypes.BUILDING)
+            setCompactView(viewPreference)
+        }
+
+        window.addEventListener(DATA_IMPORT_EVENT, handleDataImport)
+
+        return () => {
+            window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport)
+        }
     }, [])
 
     // Save buildings to local storage whenever they change, but only show notification

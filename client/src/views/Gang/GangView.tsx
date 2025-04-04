@@ -14,7 +14,14 @@ import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { generateRandomGang } from '../../utils/generatorGang'
-import { clearGangs, loadGangs, loadViewPreference, saveGangs, saveViewPreference } from '../../utils/storage'
+import {
+    DATA_IMPORT_EVENT,
+    clearGangs,
+    loadGangs,
+    loadViewPreference,
+    saveGangs,
+    saveViewPreference,
+} from '../../utils/storage'
 
 // Add window.gangsDataLoaded declaration
 declare global {
@@ -54,6 +61,26 @@ const GangView = () => {
         // Save the initial length to avoid triggering save notification for unchanged data
         prevGangsRef.current = savedGangs.length
         firstMountRef.current = false
+    }, [])
+
+    // Listen for data import events
+    useEffect(() => {
+        const handleDataImport = () => {
+            // Refresh data
+            const savedGangs = loadGangs()
+            setGangs(savedGangs)
+            prevGangsRef.current = savedGangs.length
+
+            // Refresh view preferences
+            const viewPreference = loadViewPreference(ModuleTypes.GANG)
+            setCompactView(viewPreference)
+        }
+
+        window.addEventListener(DATA_IMPORT_EVENT, handleDataImport)
+
+        return () => {
+            window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport)
+        }
     }, [])
 
     // Save gangs to local storage whenever they change, but only show notification

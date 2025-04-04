@@ -10,7 +10,7 @@ import UserProvider from './contexts/UserContext'
 import './i18n' // Import i18n configuration
 import './index.css'
 import NavigationPaths from './navigation'
-import { loadReaderMode, saveReaderMode } from './utils/storage'
+import { DATA_IMPORT_EVENT, loadReaderMode, saveReaderMode } from './utils/storage'
 import { getDesignTokens } from './utils/theme'
 import BuildingView from './views/Building/BuildingView'
 import Corporation from './views/Corporation/CorporationView'
@@ -38,6 +38,20 @@ const App = (): JSX.Element => {
             document.body.classList.remove('reader-mode')
         }
     }, [readerMode])
+
+    // Listen for data import events to update reader mode
+    useEffect(() => {
+        const handleDataImport = () => {
+            const savedReaderMode = loadReaderMode()
+            setReaderMode(savedReaderMode)
+        }
+
+        window.addEventListener(DATA_IMPORT_EVENT, handleDataImport)
+
+        return () => {
+            window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport)
+        }
+    }, [])
 
     return (
         <UserProvider>

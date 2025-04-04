@@ -11,6 +11,16 @@ const BUILDINGS_STORAGE_KEY = 'magnus-laser-buildings'
 const VIEW_PREFERENCES_KEY = 'magnus-laser-view-preferences'
 const READER_MODE_KEY = 'magnus-laser-reader-mode'
 
+// Event system for data changes
+export const DATA_IMPORT_EVENT = 'magnus-laser-data-imported'
+
+/**
+ * Notify all components that data has been imported
+ */
+export const notifyDataImported = (): void => {
+    window.dispatchEvent(new CustomEvent(DATA_IMPORT_EVENT))
+}
+
 // Gangs Storage Functions
 
 /**
