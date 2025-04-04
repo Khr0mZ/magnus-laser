@@ -734,7 +734,7 @@ export const generateBuildingDescription = (t: TFunction, building: Building): s
     }
 
     // Build physical features section
-    let features = []
+    const features = []
 
     if (elevators) features.push(t('buildings.description.features.elevators'))
     if (parking) features.push(t('buildings.description.features.parking'))

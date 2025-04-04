@@ -120,7 +120,7 @@ export const EditDialog = (props: EditDialogProps) => {
         }
     }, [item])
 
-    const handleChange = (field: string, value: any) => {
+    const handleChange = (field: string, value: unknown) => {
         setEditedItem((prev) => {
             if (!prev) return prev
 
