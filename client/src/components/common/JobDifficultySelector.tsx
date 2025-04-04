@@ -216,7 +216,9 @@ const JobDifficultySelector = (props: JobDifficultySelectorProps) => {
                         height: 32,
                     }}
                 >
-                    {t('common.jobDifficultySelector.easy')} +{getJobDifficultyModifier(JobDifficulty.EASY)}
+                    <Typography noWrap sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                        {t('common.jobDifficultySelector.easy')} +{getJobDifficultyModifier(JobDifficulty.EASY)}
+                    </Typography>
                 </ToggleButton>
                 <ToggleButton
                     value={JobDifficulty.TYPICAL}
@@ -300,7 +302,9 @@ const JobDifficultySelector = (props: JobDifficultySelectorProps) => {
                         height: 32,
                     }}
                 >
-                    {t('common.jobDifficultySelector.typical')} +{getJobDifficultyModifier(JobDifficulty.TYPICAL)}
+                    <Typography noWrap sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                        {t('common.jobDifficultySelector.typical')} +{getJobDifficultyModifier(JobDifficulty.TYPICAL)}
+                    </Typography>
                 </ToggleButton>
                 <ToggleButton
                     value={JobDifficulty.DANGEROUS}
@@ -384,7 +388,10 @@ const JobDifficultySelector = (props: JobDifficultySelectorProps) => {
                         height: 32,
                     }}
                 >
-                    {t('common.jobDifficultySelector.dangerous')} +{getJobDifficultyModifier(JobDifficulty.DANGEROUS)}
+                    <Typography noWrap sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                        {t('common.jobDifficultySelector.dangerous')} +
+                        {getJobDifficultyModifier(JobDifficulty.DANGEROUS)}
+                    </Typography>
                 </ToggleButton>
             </ToggleButtonGroup>
         </Stack>

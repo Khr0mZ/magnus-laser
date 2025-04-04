@@ -4,12 +4,13 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
 import { DeleteDialog } from '../../components/common/DeleteDialog'
+import EditDialog from '../../components/common/EditDialog'
 import GridView from '../../components/common/GridView'
 import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { Gang } from '../../graphql/types'
+import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { generateRandomGang } from '../../utils/generatorGang'
@@ -31,6 +32,8 @@ const GangView = () => {
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [gangToDelete, setGangToDelete] = useState<number | null>(null)
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [gangToEdit, setGangToEdit] = useState<Gang | null>(null)
     const prevGangsRef = useRef<number>(0)
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
@@ -102,6 +105,23 @@ const GangView = () => {
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false)
         setGangToDelete(null)
+    }
+
+    const handleEditClick = (index: number) => {
+        setGangToEdit(gangs[index])
+        setEditDialogOpen(true)
+    }
+
+    const handleEditSave = (editedItem: Gang) => {
+        setGangs((prevGangs) => prevGangs.map((gang) => (gang.ID === editedItem.ID ? editedItem : gang)))
+        setIsSaving(true)
+        setEditDialogOpen(false)
+        setGangToEdit(null)
+    }
+
+    const handleEditCancel = () => {
+        setEditDialogOpen(false)
+        setGangToEdit(null)
     }
 
     const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
@@ -343,7 +363,12 @@ const GangView = () => {
                     {t('common.noItems', { type: t('modules.GANG').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
-                <TableView items={gangs} onDelete={handleDeleteClick} moduleType={ModuleTypes.GANG} />
+                <TableView
+                    items={gangs}
+                    onDelete={handleDeleteClick}
+                    moduleType={ModuleTypes.GANG}
+                    onEdit={handleEditClick}
+                />
             ) : (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     {gangs.map((gang, index) => (
@@ -353,6 +378,7 @@ const GangView = () => {
                             index={index}
                             onDelete={handleDeleteClick}
                             moduleType={ModuleTypes.GANG}
+                            onEdit={handleEditClick}
                         />
                     ))}
                 </Grid>
@@ -372,6 +398,15 @@ const GangView = () => {
                 onConfirm={handleClearConfirm}
                 moduleType={ModuleTypes.GANG}
                 isClearAll={true}
+            />
+
+            {/* Edit dialog */}
+            <EditDialog
+                open={editDialogOpen}
+                onClose={handleEditCancel}
+                onSave={handleEditSave as (item: Gang | Building) => void}
+                item={gangToEdit}
+                moduleType={ModuleTypes.GANG}
             />
         </Container>
     )

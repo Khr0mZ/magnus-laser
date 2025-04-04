@@ -20,7 +20,8 @@
             "title": "View:",
             "tableView": "Table",
             "detailedView": "Grid"
-        }
+        },
+        "description": "Description"
     },
     "modules": {
         "DASHBOARD": "Services",
@@ -352,7 +353,8 @@
             "style": "Style",
             "event": "Event",
             "secret": "Secret",
-            "name": "Name"
+            "name": "Name",
+            "isAbandoned": "Is Abandoned?"
         }
     }
 }

@@ -34,10 +34,11 @@ type GridViewProps = {
     index: number
     onDelete: (index: number) => void
     moduleType: ModuleTypes
+    onEdit: (index: number) => void
 }
 
 const GridView = (props: GridViewProps) => {
-    const { item, index, onDelete, moduleType } = props
+    const { item, index, onDelete, moduleType, onEdit } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
 
@@ -58,6 +59,7 @@ const GridView = (props: GridViewProps) => {
     return (
         <Grid item xs={12} md={6} xl={4}>
             <Card
+                onClick={() => onEdit(index)}
                 sx={{
                     bgcolor: '#0e1630',
                     border: 'none',
@@ -66,6 +68,7 @@ const GridView = (props: GridViewProps) => {
                     boxShadow: '0 10px 20px rgba(0,0,0,0.5)',
                     position: 'relative',
                     transition: 'all 0.2s ease',
+                    cursor: 'pointer',
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -181,7 +184,10 @@ const GridView = (props: GridViewProps) => {
 
                         {/* Delete Button - Updated to use confirmation */}
                         <Button
-                            onClick={() => onDelete(index)}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onDelete(index)
+                            }}
                             sx={{
                                 minWidth: '30px',
                                 width: '30px',

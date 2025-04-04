@@ -6,23 +6,31 @@ import colors from '../utils/colors'
 interface CustomScrollbarProps {
     children: React.ReactNode
     className?: string
+    scrollDirection?: 'vertical' | 'horizontal'
+    height?: string | number
 }
 
 // Track created instances for global refreshes
 const scrollbarInstances: Set<Scrollbar> = new Set()
 
-const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }) => {
+const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
+    children,
+    className,
+    scrollDirection = 'vertical',
+    height,
+}) => {
     const theme = useTheme()
     const isLight = theme.palette.mode === 'light'
     const scrollbarRef = useRef<HTMLDivElement>(null)
     const [scrollbarInstance, setScrollbarInstance] = useState<Scrollbar | null>(null)
     const [needsScrolling, setNeedsScrolling] = useState(false)
-    // We need to force re-render when theme changes to update inline styles
     const [paddingRight, setPaddingRight] = useState(0)
+    const [paddingBottom, setPaddingBottom] = useState(0)
 
     // Use refs to track state without causing re-renders
     const thumbSizeRef = useRef(isLight ? 16 : 8)
     const needsScrollingRef = useRef(false)
+    const isHorizontal = scrollDirection === 'horizontal'
 
     // Update padding helper function
     const updateContainerPadding = useCallback(() => {
@@ -31,73 +39,68 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
         const needsScrolling = needsScrollingRef.current
         const newPadding = needsScrolling ? thumbSizeRef.current : 0
 
-        // Update state for re-render
-        setPaddingRight(newPadding)
+        if (isHorizontal) {
+            setPaddingBottom(newPadding)
+            scrollbarRef.current.style.paddingBottom = `${newPadding}px`
+        } else {
+            setPaddingRight(newPadding)
+            scrollbarRef.current.style.paddingRight = `${newPadding}px`
+        }
+    }, [isHorizontal])
 
-        // Also apply directly to DOM for immediate effect
-        scrollbarRef.current.style.paddingRight = `${newPadding}px`
-    }, [])
-
-    // Function to apply all scrollbar styles globally (for both track and thumb)
+    // Function to apply scrollbar styles
     const applyScrollbarStyles = useCallback(() => {
         const currentThumbSize = thumbSizeRef.current
-        const styleElement = document.getElementById('scrollbar-styles')
 
+        // Get or create style element
+        let styleElement = document.getElementById('scrollbar-styles')
         if (!styleElement) {
-            const style = document.createElement('style')
-            style.id = 'scrollbar-styles'
-            document.head.appendChild(style)
-
-            style.textContent = `
-                .scrollbar-track-y {
-                    right: 0 ;
-                    width: ${currentThumbSize}px ;
-                    opacity: 1 ;
-                    background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default}) ;
-                }
-                
-                .scrollbar-thumb-y {
-                    width: ${currentThumbSize}px ;
-                    background: linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default}) ;
-                    border-radius: 4px ;
-                    box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4) ;
-                    min-height: 100px ;
-                }
-                
-                .scrollbar-track-x {
-                    display: none ;
-                }
-            `
-        } else {
-            styleElement.textContent = `
-                .scrollbar-track-y {
-                    right: 0 ;
-                    width: ${currentThumbSize}px ;
-                    opacity: 1 ;
-                    background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default}) ;
-                }
-                
-                .scrollbar-thumb-y {
-                    width: ${currentThumbSize}px ;
-                    background: linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default}) ;
-                    border-radius: 4px ;
-                    box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4) ;
-                    min-height: 100px ;
-                }
-                
-                .scrollbar-track-x {
-                    display: none ;
-                }
-            `
+            styleElement = document.createElement('style')
+            styleElement.id = 'scrollbar-styles'
+            document.head.appendChild(styleElement)
         }
 
-        // Apply direct styles to all DOM elements
+        // Set CSS styles with template literals
+        styleElement.textContent = `
+            .scrollbar-track-y {
+                right: 0;
+                width: ${currentThumbSize}px;
+                opacity: 1;
+                background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default});
+            }
+            
+            .scrollbar-thumb-y {
+                width: ${currentThumbSize}px;
+                background: linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default});
+                border-radius: 4px;
+                box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4);
+                min-height: 100px;
+            }
+            
+            .scrollbar-track-x {
+                bottom: 0;
+                height: ${currentThumbSize}px;
+                opacity: 1;
+                background: linear-gradient(to right, ${colors.neons.purple.default}, ${colors.neons.yellow.default});
+            }
+            
+            .scrollbar-thumb-x {
+                height: ${currentThumbSize}px;
+                background: linear-gradient(to right, ${colors.neons.cyan.default}, ${colors.neons.pink.default});
+                border-radius: 4px;
+                box-shadow: 0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4);
+                min-width: 100px;
+            }
+        `
+
+        // Apply styles directly to DOM elements for immediate effect
         document.querySelectorAll('.scrollbar-track-y').forEach((track) => {
             if (track instanceof HTMLElement) {
                 track.style.width = `${currentThumbSize}px`
                 track.style.right = '0'
                 track.style.background = `linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default})`
                 track.style.opacity = '1'
+                track.style.display = isHorizontal ? 'none' : 'block'
             }
         })
 
@@ -111,10 +114,23 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
             }
         })
 
-        // Hide horizontal scrollbar
         document.querySelectorAll('.scrollbar-track-x').forEach((track) => {
             if (track instanceof HTMLElement) {
-                track.style.display = 'none'
+                track.style.height = `${currentThumbSize}px`
+                track.style.bottom = '0'
+                track.style.background = `linear-gradient(to right, ${colors.neons.purple.default}, ${colors.neons.yellow.default})`
+                track.style.opacity = '1'
+                track.style.display = isHorizontal ? 'block' : 'none'
+            }
+        })
+
+        document.querySelectorAll('.scrollbar-thumb-x').forEach((thumb) => {
+            if (thumb instanceof HTMLElement) {
+                thumb.style.height = `${currentThumbSize}px`
+                thumb.style.background = `linear-gradient(to right, ${colors.neons.cyan.default}, ${colors.neons.pink.default})`
+                thumb.style.borderRadius = '4px'
+                thumb.style.boxShadow = `0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4)`
+                thumb.style.minWidth = '100px'
             }
         })
 
@@ -124,7 +140,35 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
                 instance.update()
             }
         })
-    }, [])
+    }, [isHorizontal])
+
+    // Check if content requires scrolling
+    const checkIfScrollingNeeded = useCallback(() => {
+        if (!scrollbarRef.current) return false
+
+        const container = scrollbarRef.current
+        const content = container.querySelector('.scroll-content') as HTMLElement
+
+        if (!content) return false
+
+        const contentHeight = content.scrollHeight
+        const contentWidth = content.scrollWidth
+        const containerHeight = container.clientHeight
+        const containerWidth = container.clientWidth
+
+        const needsScroll = isHorizontal ? contentWidth > containerWidth : contentHeight > containerHeight
+
+        // Update local refs and state
+        needsScrollingRef.current = needsScroll
+        if (needsScroll !== needsScrolling) {
+            setNeedsScrolling(needsScroll)
+        }
+
+        // Update padding immediately
+        updateContainerPadding()
+
+        return needsScroll
+    }, [needsScrolling, updateContainerPadding, isHorizontal])
 
     // Update theme-dependent values and styles
     useEffect(() => {
@@ -140,14 +184,13 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
         if (scrollbarInstance) {
             scrollbarInstance.update()
 
-            // Apply another update after a short delay to ensure changes take effect
+            // Apply updates after delays to ensure everything takes effect
             setTimeout(() => {
                 updateContainerPadding()
                 applyScrollbarStyles()
                 scrollbarInstance.update()
             }, 50)
 
-            // And another update after a longer delay
             setTimeout(() => {
                 updateContainerPadding()
                 applyScrollbarStyles()
@@ -155,31 +198,6 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
             }, 200)
         }
     }, [isLight, applyScrollbarStyles, scrollbarInstance, updateContainerPadding])
-
-    // Check if content requires scrolling
-    const checkIfScrollingNeeded = useCallback(() => {
-        if (!scrollbarRef.current) return false
-
-        const container = scrollbarRef.current
-        const content = container.querySelector('.scroll-content') as HTMLElement
-
-        if (!content) return false
-
-        const contentHeight = content.scrollHeight
-        const containerHeight = container.clientHeight
-        const needsScroll = contentHeight > containerHeight
-
-        // Update local refs and state
-        needsScrollingRef.current = needsScroll
-        if (needsScroll !== needsScrolling) {
-            setNeedsScrolling(needsScroll)
-        }
-
-        // Update padding immediately
-        updateContainerPadding()
-
-        return needsScroll
-    }, [needsScrolling, updateContainerPadding])
 
     // Initialize scrollbar
     useEffect(() => {
@@ -233,17 +251,15 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
         }
     }, [applyScrollbarStyles, checkIfScrollingNeeded])
 
-    // Update on route/page change
+    // Update on children/route/page change
     useEffect(() => {
         if (!scrollbarInstance) return
 
-        // When children change (page change), update everything
         const updateTimer = setTimeout(() => {
             checkIfScrollingNeeded()
             applyScrollbarStyles()
             scrollbarInstance.update()
 
-            // Apply a second time after a longer delay to ensure everything is set
             setTimeout(() => {
                 checkIfScrollingNeeded()
                 applyScrollbarStyles()
@@ -263,7 +279,7 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
         }
     }, [scrollbarInstance, applyScrollbarStyles, updateContainerPadding])
 
-    // Set up MutationObserver to detect DOM changes that might affect scrolling
+    // Monitor DOM changes
     useEffect(() => {
         if (!scrollbarRef.current || !scrollbarInstance) return
 
@@ -271,7 +287,6 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
         if (!contentElement) return
 
         const observer = new MutationObserver(() => {
-            // When DOM changes, update everything
             setTimeout(() => {
                 checkIfScrollingNeeded()
                 updateContainerPadding()
@@ -296,10 +311,11 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ children, className }
             className={`smooth-scrollbar-container ${className || ''}`}
             style={{
                 width: '100%',
-                height: 'calc(100vh - 92px)',
+                height: height || (isHorizontal ? 'auto' : 'calc(100vh - 92px)'),
                 overflow: 'hidden',
                 position: 'relative',
-                paddingRight: paddingRight,
+                paddingRight: isHorizontal ? 0 : paddingRight,
+                paddingBottom: isHorizontal ? paddingBottom : 0,
             }}
         >
             <div className="scroll-content">{children}</div>

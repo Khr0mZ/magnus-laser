@@ -4,13 +4,14 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
 import { DeleteDialog } from '../../components/common/DeleteDialog'
+import EditDialog from '../../components/common/EditDialog'
 import GridView from '../../components/common/GridView'
 import JobDifficultySelector from '../../components/common/JobDifficultySelector'
 import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { Building } from '../../graphql/types'
+import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { JobDifficulty, ModuleTypes } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
@@ -33,6 +34,8 @@ const BuildingView = () => {
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [buildingToDelete, setBuildingToDelete] = useState<number | null>(null)
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [buildingToEdit, setBuildingToEdit] = useState<Building | null>(null)
     const [jobDifficulty, setJobDifficulty] = useState<JobDifficulty>(JobDifficulty.TYPICAL)
     const prevBuildingsRef = useRef<number>(0)
     const [isSaving, setIsSaving] = useState(false)
@@ -114,6 +117,25 @@ const BuildingView = () => {
         setBuildingToDelete(null)
     }
 
+    const handleEditClick = (index: number) => {
+        setBuildingToEdit(buildings[index])
+        setEditDialogOpen(true)
+    }
+
+    const handleEditSave = (editedItem: Building) => {
+        setBuildings((prevBuildings) =>
+            prevBuildings.map((building) => (building.ID === editedItem.ID ? editedItem : building))
+        )
+        setIsSaving(true)
+        setEditDialogOpen(false)
+        setBuildingToEdit(null)
+    }
+
+    const handleEditCancel = () => {
+        setEditDialogOpen(false)
+        setBuildingToEdit(null)
+    }
+
     const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string) => {
         setCompactView(newView === 'table')
     }
@@ -121,7 +143,7 @@ const BuildingView = () => {
     return (
         <Container maxWidth={false}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
                 <Typography
                     variant="h1"
                     className="glitch-text"
@@ -353,7 +375,12 @@ const BuildingView = () => {
                     {t('common.noItems', { type: t('modules.BUILDING').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
-                <TableView items={buildings} onDelete={handleDeleteClick} moduleType={ModuleTypes.BUILDING} />
+                <TableView
+                    items={buildings}
+                    onDelete={handleDeleteClick}
+                    moduleType={ModuleTypes.BUILDING}
+                    onEdit={handleEditClick}
+                />
             ) : (
                 <Grid container spacing={3} sx={{ mb: 3 }}>
                     {buildings.map((building, index) => (
@@ -363,6 +390,7 @@ const BuildingView = () => {
                             index={index}
                             onDelete={handleDeleteClick}
                             moduleType={ModuleTypes.BUILDING}
+                            onEdit={handleEditClick}
                         />
                     ))}
                 </Grid>
@@ -383,6 +411,15 @@ const BuildingView = () => {
                 onConfirm={handleClearConfirm}
                 moduleType={ModuleTypes.BUILDING}
                 isClearAll={true}
+            />
+
+            {/* Edit dialog */}
+            <EditDialog
+                open={editDialogOpen}
+                onClose={handleEditCancel}
+                onSave={handleEditSave as (item: Building | Gang) => void}
+                item={buildingToEdit}
+                moduleType={ModuleTypes.BUILDING}
             />
         </Container>
     )

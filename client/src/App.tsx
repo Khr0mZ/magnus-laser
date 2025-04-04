@@ -40,7 +40,7 @@ const App = (): JSX.Element => {
                     <SnackbarProvider maxSnack={5}>
                         <BrowserRouter>
                             <NavigationDrawer />
-                            <CustomScrollbar>
+                            <CustomScrollbar scrollDirection="vertical">
                                 <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
                                     <Routes>
                                         <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
