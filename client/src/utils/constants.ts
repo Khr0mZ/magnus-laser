@@ -1263,3 +1263,11 @@ export const buildingNameData: Record<BuildingType | Style | Ownership, Partial<
         },
     },
 }
+
+// Storage keys used in the application for module data
+// Note: User settings like view preferences and reader mode are deliberately excluded
+export const APP_STORAGE_KEYS = [
+    'magnus-laser-gangs',
+    'magnus-laser-buildings',
+    // Add other module-related data keys here as needed
+]

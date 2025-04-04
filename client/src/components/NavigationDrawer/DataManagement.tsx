@@ -4,16 +4,9 @@ import { useSnackbar } from 'notistack'
 import { useContext } from 'react'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
+import { APP_STORAGE_KEYS } from '../../utils/constants.ts'
 import { notifyDataImported } from '../../utils/storage'
 import { flicker, neonColorCycle, neonPulse, pulseGlowCyan } from '../common/Animations.tsx'
-
-// Storage keys used in the application for module data
-// Note: User settings like view preferences and reader mode are deliberately excluded
-const APP_STORAGE_KEYS = [
-    'magnus-laser-gangs',
-    'magnus-laser-buildings',
-    // Add other module-related data keys here as needed
-]
 
 interface DataButtonProps {
     type: 'export' | 'import'
@@ -28,7 +21,7 @@ const DataButton = ({ type, showLabel = true, id }: DataButtonProps): JSX.Elemen
     // Function to handle data export
     const handleExport = () => {
         try {
-            const data: Record<string, any> = {}
+            const data: Record<string, unknown> = {}
 
             // Only export keys related to our application modules
             for (const key of APP_STORAGE_KEYS) {
@@ -389,4 +382,4 @@ const DataButton = ({ type, showLabel = true, id }: DataButtonProps): JSX.Elemen
     )
 }
 
-export { APP_STORAGE_KEYS, DataButton }
+export default DataButton

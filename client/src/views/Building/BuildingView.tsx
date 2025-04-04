@@ -3,12 +3,12 @@ import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
-import { DeleteDialog } from '../../components/common/DeleteDialog'
 import EditDialog from '../../components/common/EditDialog'
 import GridView from '../../components/common/GridView'
 import JobDifficultySelector from '../../components/common/JobDifficultySelector'
 import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
+import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Building, Gang } from '../../graphql/types'
@@ -440,19 +440,27 @@ const BuildingView = () => {
             )}
 
             {/* Confirmation dialogs */}
-            <DeleteDialog
+            <WarningDialog
                 open={deleteDialogOpen}
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
+                title={t('common.deleteConfirmTitle')}
+                message={t('common.deleteConfirmMessage', { type: t(`modules.${ModuleTypes.BUILDING}`).toLowerCase() })}
                 moduleType={ModuleTypes.BUILDING}
+                isDelete={true}
                 isClearAll={false}
             />
 
-            <DeleteDialog
+            <WarningDialog
                 open={clearAllDialogOpen}
                 onClose={handleClearCancel}
                 onConfirm={handleClearConfirm}
+                title={t('common.clearAllConfirmTitle')}
+                message={t('common.clearAllConfirmMessage', {
+                    type: t(`modules.${ModuleTypes.BUILDING}`).toLowerCase(),
+                })}
                 moduleType={ModuleTypes.BUILDING}
+                isDelete={true}
                 isClearAll={true}
             />
 

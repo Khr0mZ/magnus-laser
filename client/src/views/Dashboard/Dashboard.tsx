@@ -2,7 +2,7 @@ import { FolderOpen, Save, SaveAlt, UploadFile } from '@mui/icons-material'
 import { Alert, Box, Card, CardContent, Container, Grid, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useSnackbar } from 'notistack'
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -13,11 +13,12 @@ import {
     pulseGlowCyan,
     severeGlitch,
 } from '../../components/common/Animations.tsx'
-import { APP_STORAGE_KEYS } from '../../components/NavigationDrawer/DataManagement'
+import { WarningDialog } from '../../components/common/WarningDialog'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext.tsx'
 import NavigationPaths from '../../navigation.ts'
 import colors from '../../utils/colors.ts'
 import { ModuleTypes } from '../../utils/constants'
+import { APP_STORAGE_KEYS } from '../../utils/constants.ts'
 import { getModuleIcon } from '../../utils/functions.tsx'
 import { notifyDataImported } from '../../utils/storage'
 
@@ -26,12 +27,13 @@ const Dashboard = () => {
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
     const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+    const [importDialogOpen, setImportDialogOpen] = useState(false)
     useDocumentTitle(`Magnus Laser - ${t('modules.DASHBOARD')}`)
 
     // Function to handle data export
     const handleExport = () => {
         try {
-            const data: Record<string, any> = {}
+            const data: Record<string, unknown> = {}
 
             // Only export keys related to our application modules
             for (const key of APP_STORAGE_KEYS) {
@@ -122,8 +124,15 @@ const Dashboard = () => {
         }
     }
 
-    // Function to handle data import
-    const handleImport = () => {
+    // Function that opens the warning dialog before import
+    const handleImportClick = () => {
+        setImportDialogOpen(true)
+    }
+
+    // Function to handle data import after confirmation
+    const handleImportConfirmed = () => {
+        setImportDialogOpen(false)
+
         try {
             // Create file input element
             const input = document.createElement('input')
@@ -268,6 +277,16 @@ const Dashboard = () => {
 
     return (
         <Container maxWidth={false}>
+            {/* Import Warning Dialog */}
+            <WarningDialog
+                open={importDialogOpen}
+                onClose={() => setImportDialogOpen(false)}
+                onConfirm={handleImportConfirmed}
+                title={t('dashboard.importData')}
+                message={t('dashboard.importDescriptionWarning')}
+                confirmText={t('dashboard.confirmImport', 'Import')}
+            />
+
             <Box
                 sx={{
                     position: 'relative',
@@ -440,7 +459,7 @@ const Dashboard = () => {
                 {/* Import Data Card */}
                 <Grid item xs={6} md={3} lg={3} xl={3} xxl={2}>
                     <Card
-                        onClick={handleImport}
+                        onClick={handleImportClick}
                         sx={{
                             position: 'relative',
                             borderRadius: '4px',

@@ -42,8 +42,10 @@
         "npcDescription": "NPCs are characters that can be interacted with by the players.",
         "exportData": "Export Data",
         "importData": "Import Data",
-        "exportDescription": "Save all your created content to a local file",
-        "importDescription": "Load your saved content from a file"
+        "exportDescription": "Save all your created content to a local file.",
+        "importDescription": "Load your saved content from a file",
+        "importDescriptionWarning": "This will overwrite all your existing data",
+        "confirmImport": "Import Data"
     },
     "gangs": {
         "title": "Gang Generator",

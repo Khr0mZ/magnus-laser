@@ -262,3 +262,16 @@ export const neonPulse = keyframes`
     border-color: ${colors.neons.cyan.default}80;
   }
 `
+
+// Text glow animations for various colors
+export const textGlowRed = keyframes`
+  0% {
+    text-shadow: 0 0 4px ${colors.neons.red.default}, 0 0 8px ${colors.neons.red.default}70;
+  }
+  50% {
+    text-shadow: 0 0 8px ${colors.neons.red.default}, 0 0 15px ${colors.neons.red.default}90, 0 0 20px ${colors.neons.red.default}50;
+  }
+  100% {
+    text-shadow: 0 0 4px ${colors.neons.red.default}, 0 0 8px ${colors.neons.red.default}70;
+  }
+`

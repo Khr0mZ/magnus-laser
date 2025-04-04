@@ -1,4 +1,4 @@
-import { DataButton } from './DataManagement'
+import DataButton from './DataManagement'
 import DrawerButton from './DrawerButton'
 import LogoButton from './LogoButton'
 import NavigationDrawer from './NavigationDrawer'
