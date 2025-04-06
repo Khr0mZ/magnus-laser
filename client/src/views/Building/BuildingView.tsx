@@ -50,6 +50,8 @@ const BuildingView = () => {
     const prevBuildingsRef = useRef<number>(0)
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
+    const [isGenerating, setIsGenerating] = useState(false)
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false)
 
     // Load buildings from local storage on component mount
     useEffect(() => {
@@ -95,6 +97,9 @@ const BuildingView = () => {
         // Always save the data when it exists
         if (buildings.length > 0) {
             saveBuildings(buildings)
+        } else {
+            // If the array becomes empty, explicitly clear storage
+            clearBuildings()
         }
 
         // Update length reference
@@ -105,12 +110,17 @@ const BuildingView = () => {
         if (newJobType !== null) setJobDifficulty(newJobType)
     }
 
-    const handleGenerateBuilding = () => {
-        setBuildings((prevBuildings) => [
-            generateRandomBuilding(t, getJobDifficultyModifier(jobDifficulty)),
-            ...prevBuildings,
-        ])
-        setIsSaving(true)
+    const handleGenerateBuilding = async () => {
+        setIsGenerating(true)
+        try {
+            const newBuilding = await generateRandomBuilding(t, getJobDifficultyModifier(jobDifficulty))
+            setBuildings((prevBuildings) => [newBuilding, ...prevBuildings])
+            setIsSaving(true)
+        } catch (error) {
+            console.error('Failed to generate building:', error)
+        } finally {
+            setIsGenerating(false)
+        }
     }
 
     const handleClearAllClick = () => {
@@ -213,12 +223,13 @@ const BuildingView = () => {
                         variant="contained"
                         color="primary"
                         onClick={handleGenerateBuilding}
+                        disabled={isGenerating}
                         sx={{
                             position: 'relative',
                             bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',
                             borderColor: readerMode ? '#2e7d32' : colors.neons.green.default,
                             color: readerMode ? '#1b7d2e' : colors.neons.green.default,
-                            textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}`,
+                            textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.green.light}`,
                             fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
                             letterSpacing: readerMode ? 'normal' : '0.05em',
                             overflow: 'hidden',
@@ -280,7 +291,7 @@ const BuildingView = () => {
                                   }),
                         }}
                     >
-                        <span className="generate-text">{t('common.generate')}</span>
+                        {isGenerating ? t('common.generating', 'Generating...') : t('common.generate')}
                     </Button>
                 </Box>
 
@@ -471,6 +482,11 @@ const BuildingView = () => {
                 onSave={handleEditSave as (item: Building | Gang) => void}
                 item={buildingToEdit}
                 moduleType={ModuleTypes.BUILDING}
+                isGeneratingImage={isGeneratingImage}
+                setIsGeneratingImage={setIsGeneratingImage}
+                setIsSaving={setIsSaving}
+                setBuildings={setBuildings}
+                setBuildingToEdit={setBuildingToEdit}
             />
         </Container>
     )

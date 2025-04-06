@@ -16,7 +16,15 @@ import {
     KnownForPart2,
     Sin,
 } from '../graphql/types'
-import { gangConnectors, gangNameCategories, gangPrefixes, gangSuffixes, gangTypeNameData } from './constants'
+import { blobToBase64, generateHuggingFaceDescription, generateHuggingFaceImage } from './apiUtils.tsx'
+import {
+    gangConnectors,
+    gangNameCategories,
+    gangPrefixes,
+    gangSuffixes,
+    gangTypeNameData,
+    ModuleTypes,
+} from './constants'
 import { getRandomElement, getRandomInt } from './functions'
 
 /**
@@ -131,7 +139,7 @@ function generateGangName(t: TFunction, type: GangType, gangColor: GangColor): s
  * @param gang - The gang object with the desired properties
  * @returns A gang
  */
-export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => {
+export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Promise<Gang> => {
     // Things to generate
     // - Type
     // - Cyberware Quality
@@ -147,7 +155,8 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
     // - Current Attitude
     // - News The Leader Is Receiving
     // - Name
-    // - Description
+    // - Description (now generated via API)
+    // - Image (now generated via API)
 
     // Generate Gang Type
     const type = getRandomElement(Object.values(GangType))
@@ -525,11 +534,11 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
             break
     }
 
-    // Generate Gang Name using the new generator
+    // Generate Name (needs type and color generated above)
     const name = generateGangName(t, type, color)
 
-    // Create the gang object with base properties
-    const baseGang: Gang = {
+    // Construct the base gang object
+    const newGang: Gang = {
         ID: uuidv4(),
         name,
         description: '',
@@ -549,28 +558,54 @@ export const generateRandomGang = (t: TFunction, gang?: Partial<Gang>): Gang => 
         flaw,
         currentAttitude,
         newsTheLeaderIsReceiving,
+        image: '',
+        ...gang,
     }
 
-    // Generate the description using our new function
-    const description = generateGangDescription(t, baseGang)
+    // --- Generate Description using API ---
+    try {
+        const generatedDesc = await generateHuggingFaceDescription(newGang, ModuleTypes.GANG, t)
+        if (generatedDesc) {
+            newGang.description = generatedDesc
+        } else {
+            console.warn(`API description generation failed for gang ${newGang.name}. Using local fallback.`)
+            newGang.description = generateLocalGangDescription(t, newGang) // Fallback
+        }
+    } catch (error) {
+        console.error(`Error generating API description for gang ${newGang.name}:`, error)
+        console.warn(`Using local fallback description generation for gang ${newGang.name}.`)
+        newGang.description = generateLocalGangDescription(t, newGang) // Fallback
+    }
 
-    // Create the final gang object, allowing for overrides
-    const newGang: Gang = {
-        ...baseGang,
-        description,
-        ...gang, // Override with any provided properties
+    // --- Generate Image using API (if description exists) ---
+    if (newGang.description) {
+        try {
+            const imageBlob = await generateHuggingFaceImage(newGang.description, newGang.name)
+            if (imageBlob) {
+                newGang.image = await blobToBase64(imageBlob)
+            } else {
+                console.warn(`API image generation returned null for gang ${newGang.name}, leaving empty.`)
+                newGang.image = '' // Ensure it's an empty string on failure
+            }
+        } catch (error) {
+            console.error(`Error generating or converting image for gang ${newGang.name}:`, error)
+            newGang.image = '' // Ensure it's an empty string on error
+        }
+    } else {
+        newGang.image = '' // Ensure image is empty if description failed
     }
 
     return newGang
 }
 
 /**
- * Generate a description for a gang based on its properties
+ * Internal function to generate a description for a gang based on its properties.
+ * It is used as a fallback if the API description generation fails.
  * @param t - The translation function
  * @param gang - The gang object
  * @returns A natural language description of the gang
  */
-export const generateGangDescription = (t: TFunction, gang: Gang): string => {
+const generateLocalGangDescription = (t: TFunction, gang: Gang): string => {
     const {
         name,
         type,

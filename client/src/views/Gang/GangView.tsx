@@ -47,6 +47,8 @@ const GangView = () => {
     const prevGangsRef = useRef<number>(0)
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
+    const [isGenerating, setIsGenerating] = useState(false)
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false)
 
     // Load gangs from local storage on component mount
     useEffect(() => {
@@ -98,9 +100,17 @@ const GangView = () => {
         prevGangsRef.current = gangs.length
     }, [gangs])
 
-    const handleGenerateGang = () => {
-        setGangs((prevGangs) => [generateRandomGang(t), ...prevGangs])
-        setIsSaving(true)
+    const handleGenerateGang = async () => {
+        setIsGenerating(true)
+        try {
+            const newGang = await generateRandomGang(t)
+            setGangs((prevGangs) => [newGang, ...prevGangs])
+            setIsSaving(true)
+        } catch (error) {
+            console.error('Failed to generate gang:', error)
+        } finally {
+            setIsGenerating(false)
+        }
     }
 
     const handleClearAllClick = () => {
@@ -189,12 +199,13 @@ const GangView = () => {
                         variant="contained"
                         color="primary"
                         onClick={handleGenerateGang}
+                        disabled={isGenerating}
                         sx={{
                             position: 'relative',
                             bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',
                             borderColor: readerMode ? '#2e7d32' : colors.neons.green.default,
                             color: readerMode ? '#1b7d2e' : colors.neons.green.default,
-                            textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}`,
+                            textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.green.light}`,
                             fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
                             letterSpacing: readerMode ? 'normal' : '0.05em',
                             overflow: 'hidden',
@@ -257,7 +268,7 @@ const GangView = () => {
                                   }),
                         }}
                     >
-                        <span className="generate-text">{t('common.generate')}</span>
+                        {isGenerating ? t('common.generating', 'Generating...') : t('common.generate')}
                     </Button>
                 </Box>
 
@@ -446,6 +457,11 @@ const GangView = () => {
                 onSave={handleEditSave as (item: Gang | Building) => void}
                 item={gangToEdit}
                 moduleType={ModuleTypes.GANG}
+                isGeneratingImage={isGeneratingImage}
+                setIsGeneratingImage={setIsGeneratingImage}
+                setIsSaving={setIsSaving}
+                setGangs={setGangs}
+                setGangToEdit={setGangToEdit}
             />
         </Container>
     )

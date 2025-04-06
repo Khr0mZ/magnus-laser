@@ -21,7 +21,22 @@
             "tableView": "Table",
             "detailedView": "Grid"
         },
-        "description": "Description"
+        "description": "Description",
+        "missingInfoForImage": "Please provide a name and description before generating an image",
+        "generatingImage": "Generating image...",
+        "imageGeneratedSuccess": "Image generated successfully",
+        "imageGenerationFailed": "Image generation failed",
+        "imageGenerationError": "An error occurred while generating the image",
+        "uploadImage": "Upload Image",
+        "removeImage": "Remove Image",
+        "regenerateImage": "Regenerate Image",
+        "enterDescriptionFirstForImage": "Please enter or generate a description before generating an image",
+        "itemImageAlt": "Image for {{name}}",
+        "save": "Save",
+        "cancel": "Cancel",
+        "yes": "Yes",
+        "no": "No",
+        "noImageFound": "NO IMAGE FOUND"
     },
     "modules": {
         "DASHBOARD": "Services",

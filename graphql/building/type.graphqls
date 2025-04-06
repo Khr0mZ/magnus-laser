@@ -16,4 +16,5 @@ type Building {
   event: Event!
   secret: Secret!
   isAbandoned: Boolean!
+  image: String!
 }

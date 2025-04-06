@@ -2,7 +2,8 @@
 import { TFunction } from 'i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { Building, BuildingType, Event, Ownership, Secret, SecurityPersonnel, Style } from '../graphql/types'
-import { buildingNameData, commonNameElements } from './constants'
+import { blobToBase64, generateHuggingFaceDescription, generateHuggingFaceImage } from './apiUtils.tsx'
+import { buildingNameData, commonNameElements, ModuleTypes } from './constants'
 import { getRandomElement, getRandomInt } from './functions'
 
 /**
@@ -132,11 +133,11 @@ function generateBuildingName(type: BuildingType, style: Style, ownership: Owner
  * @param building - The building object with the desired properties
  * @returns A building
  */
-export const generateRandomBuilding = (
+export const generateRandomBuilding = async (
     t: TFunction,
     jobDifficultyModifier: number,
     building?: Partial<Building>
-): Building => {
+): Promise<Building> => {
     // jobDifficultyModifier is a number between 0 and 2 that is used to modify all the rolls for the building properties
     // Things to generate
     // - Type
@@ -153,7 +154,8 @@ export const generateRandomBuilding = (
     // - Event
     // - Secret
     // - Name
-    // - Description
+    // - Description (now generated via API or locally if API fails)
+    // - Image (now generated via API or locally if API fails)
 
     // Generate Building Type
     // If buildingTypeRoll + jobDifficultyModifier is 1, we need to roll again
@@ -613,8 +615,8 @@ export const generateRandomBuilding = (
     // Generate building name
     const name = generateBuildingName(type, style, ownership, isAbandoned)
 
-    // Create base building object with all properties
-    const baseBuilding: Building = {
+    // Construct the base building object
+    const newBuilding: Building = {
         ID: uuidv4(),
         name,
         description: '',
@@ -631,28 +633,55 @@ export const generateRandomBuilding = (
         securityPersonnel,
         style,
         event,
+        image: '',
         secret,
+        ...building,
     }
 
-    const description = generateBuildingDescription(t, baseBuilding)
+    // --- Generate Description using API ---
+    try {
+        const generatedDesc = await generateHuggingFaceDescription(newBuilding, ModuleTypes.BUILDING, t)
+        if (generatedDesc) {
+            newBuilding.description = generatedDesc
+        } else {
+            console.warn(`API description generation failed for building ${newBuilding.name}. Using local fallback.`)
+            newBuilding.description = generateLocalBuildingDescription(t, newBuilding) // Use fallback function
+        }
+    } catch (error) {
+        console.error(`Error generating API description for building ${newBuilding.name}:`, error)
+        console.warn(`Using local fallback description generation for building ${newBuilding.name}.`)
+        newBuilding.description = generateLocalBuildingDescription(t, newBuilding) // Use fallback function
+    }
 
-    // Create the final building object, allowing for overrides
-    const newBuilding: Building = {
-        ...baseBuilding,
-        description,
-        ...building, // Override with any provided properties
+    // --- Generate Image using API (if description exists) ---
+    if (newBuilding.description) {
+        try {
+            const imageBlob = await generateHuggingFaceImage(newBuilding.description, newBuilding.name)
+            if (imageBlob) {
+                newBuilding.image = await blobToBase64(imageBlob)
+            } else {
+                console.warn(`API image generation returned null for building ${newBuilding.name}, leaving empty.`)
+                newBuilding.image = '' // Ensure it's an empty string on failure
+            }
+        } catch (error) {
+            console.error(`Error generating or converting image for building ${newBuilding.name}:`, error)
+            newBuilding.image = '' // Ensure it's an empty string on error
+        }
+    } else {
+        newBuilding.image = '' // Ensure image is empty if description failed
     }
 
     return newBuilding
 }
 
 /**
- * Generate a description for a building based on its properties
+ * Internal function to generate a description for a building based on its properties.
+ * It is used as a fallback if the API description generation fails.
  * @param t - The translation function
  * @param building - The building object
  * @returns A natural language description of the building
  */
-export const generateBuildingDescription = (t: TFunction, building: Building): string => {
+const generateLocalBuildingDescription = (t: TFunction, building: Building): string => {
     const {
         name,
         type,

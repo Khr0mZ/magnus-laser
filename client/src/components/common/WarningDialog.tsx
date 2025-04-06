@@ -1,4 +1,4 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material'
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Typography } from '@mui/material'
 import { ReactNode, useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
@@ -144,7 +144,33 @@ export const WarningDialog = (props: WarningDialogProps) => {
                           }
                 }
             >
-                {resolvedTitle}
+                <Typography
+                    variant="h3"
+                    component="div"
+                    className="glitch-text"
+                    data-text={resolvedTitle}
+                    sx={{
+                        color:
+                            confirmColor === 'red'
+                                ? '#d32f2f'
+                                : confirmColor === 'green'
+                                ? '#2e7d32'
+                                : confirmColor === 'blue'
+                                ? '#1976d2'
+                                : '#0097a7',
+                        textShadow: `0 0 10px ${
+                            confirmColor === 'red'
+                                ? '#d32f2f'
+                                : confirmColor === 'green'
+                                ? '#2e7d32'
+                                : confirmColor === 'blue'
+                                ? '#1976d2'
+                                : '#0097a7'
+                        }`,
+                    }}
+                >
+                    {resolvedTitle}
+                </Typography>
             </DialogTitle>
             <DialogContent>
                 <DialogContentText

@@ -15,6 +15,7 @@ type Gang {
   flaw: Flaw!
   currentAttitude: Attitude!
   newsTheLeaderIsReceiving: GangNews!
+  image: String!
 }
 
 type Armor {

@@ -1,4 +1,5 @@
 import {
+    Avatar,
     Box,
     Button,
     Card,
@@ -28,6 +29,7 @@ import {
 import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
 
 import { buttonGlitch } from './Animations'
+import TiptapEditor from './TiptapEditor.tsx'
 
 type GridViewProps = {
     item: Gang | Building
@@ -257,32 +259,54 @@ const GridView = (props: GridViewProps) => {
                         </Button>
                     </Box>
 
-                    {/* Header Section */}
+                    {/* Image Display */}
+                    {item.image && (
+                        <Box
+                            sx={{
+                                position: 'relative',
+                                width: '100%',
+                                aspectRatio: '1 / 1',
+                                display: 'flex',
+                                alignItems: 'center',
+                                maxHeight: '300px',
+                                justifyContent: 'center',
+                                bgcolor: readerMode ? 'transparent' : 'rgba(0, 0, 0, 0.5)',
+                                transition: 'all 0.3s ease',
+                                p: 0.5,
+                                borderRadius: '4px',
+                                borderBottom: `1px solid ${color}40`,
+                                borderTop: `1px solid ${color}40`,
+                            }}
+                        >
+                            <Avatar
+                                src={item.image}
+                                alt={t('common.itemImageAlt', { name: item.name })}
+                                variant="rounded"
+                                sx={{
+                                    bgcolor: 'transparent',
+                                    color: 'transparent',
+                                    objectFit: 'contain',
+                                    width: 'auto',
+                                    height: '300px',
+                                }}
+                            />
+                        </Box>
+                    )}
+                    {/* Header Section - Use TiptapDisplay for description */}
                     <Box
                         sx={{
                             bgcolor: readerMode ? colors.grays.gray900 : 'rgba(14, 22, 48, 0.9)',
                             mx: readerMode ? -2 : 0,
-                            p: 2,
+                            px: 2,
                             mt: 0,
                             position: 'relative',
                             overflow: 'hidden',
+                            color: readerMode ? colors.grays.gray000 : '#fff',
+                            fontSize: '0.9rem',
+                            fontWeight: 500,
                         }}
                     >
-                        <Typography
-                            variant="body1"
-                            sx={{
-                                textShadow: readerMode ? 'none' : '0 0 2px rgba(0,0,0,0.8)',
-                                position: 'relative',
-                                zIndex: 2,
-                                fontWeight: 500,
-                            }}
-                        >
-                            {readerMode ? (
-                                <span style={{ color: colors.grays.gray000, fontWeight: 500 }}>{item.description}</span>
-                            ) : (
-                                item.description
-                            )}
-                        </Typography>
+                        <TiptapEditor value={item.description} />
                     </Box>
 
                     {/* Data Table */}
