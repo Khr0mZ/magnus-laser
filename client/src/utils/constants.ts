@@ -6,8 +6,10 @@ import { NameComponents, TableColumn } from './types'
 export enum ModuleTypes {
     GANG = 'GANG',
     BUILDING = 'BUILDING',
-    CORPORATION = 'CORPORATION',
     FIXER_JOB = 'FIXER_JOB',
+    BOUNTY = 'BOUNTY',
+    CLUB = 'CLUB',
+    CORPORATION = 'CORPORATION',
     NPC = 'NPC',
     SETTINGS = 'SETTINGS',
 }

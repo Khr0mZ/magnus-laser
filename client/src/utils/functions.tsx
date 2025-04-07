@@ -1,4 +1,15 @@
-import { Apartment, Badge, BusinessCenter, Check, Close, Groups3, LiveHelp, Settings } from '@mui/icons-material'
+import {
+    Apartment,
+    Badge,
+    BusinessCenter,
+    Check,
+    Close,
+    GpsFixed,
+    Groups3,
+    LiveHelp,
+    Nightlife,
+    Settings,
+} from '@mui/icons-material'
 import { TFunction } from 'i18next'
 import { BuildingType } from '../graphql/types'
 import colors from './colors'
@@ -46,16 +57,30 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />
         )
-    if (module === ModuleTypes.CORPORATION)
+    if (module === ModuleTypes.FIXER_JOB)
         return (
-            <BusinessCenter
+            <LiveHelp
                 sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />
         )
-    if (module === ModuleTypes.FIXER_JOB)
+    if (module === ModuleTypes.BOUNTY)
         return (
-            <LiveHelp
+            <GpsFixed
+                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
+                fontSize={isNavigation ? 'large' : 'inherit'}
+            />
+        )
+    if (module === ModuleTypes.CLUB)
+        return (
+            <Nightlife
+                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
+                fontSize={isNavigation ? 'large' : 'inherit'}
+            />
+        )
+    if (module === ModuleTypes.CORPORATION)
+        return (
+            <BusinessCenter
                 sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />

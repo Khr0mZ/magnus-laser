@@ -1,4 +1,5 @@
 import { Done } from '@mui/icons-material'
+import { Container } from '@mui/material'
 import Box from '@mui/material/Box'
 import LinearProgress from '@mui/material/LinearProgress'
 import Typography from '@mui/material/Typography'
@@ -9,14 +10,11 @@ import {
     blink,
     flicker,
     glitch,
-    horizontalScanline,
     iconGlowFilter,
     moduleProgressCycle,
     neonColorCycle,
     pulseGlowGreen,
-    scanlineAnimation,
     textNeonPulse,
-    verticalScanline,
 } from './common/Animations'
 import MatrixBackground from './common/MatrixBackground'
 
@@ -44,7 +42,7 @@ interface LoadingModule {
 }
 
 // Define the total time the loader will be open (in milliseconds)
-export const LOADER_DISPLAY_TIME = 1500
+export const LOADER_DISPLAY_TIME = 1000
 
 // Helper function to generate random hex values for dynamic data display
 const generateRandomHex = (length: number): string => {
@@ -100,8 +98,8 @@ const CyberpunkLoader = ({ loadingStatus, onLoadComplete, readerMode }: Cyberpun
         { id: 'system', name: t('loader.system'), progress: 0, loadTime: 9 },
         { id: 'readerMode', name: t('loader.readerMode'), progress: 0, loadTime: 8 }, // Relative weights
         { id: 'viewPrefs', name: t('loader.viewPrefs'), progress: 0, loadTime: 6 },
-        { id: 'buildings', name: t('loader.buildings'), progress: 0, loadTime: 10 },
-        { id: 'gangs', name: t('loader.gangs'), progress: 0, loadTime: 7 },
+        { id: 'gangs', name: t('gangs.title'), progress: 0, loadTime: 7 },
+        { id: 'buildings', name: t('buildings.title'), progress: 0, loadTime: 10 },
     ])
 
     // Calculate actual module durations based on LOADER_DISPLAY_TIME and weights
@@ -271,489 +269,435 @@ const CyberpunkLoader = ({ loadingStatus, onLoadComplete, readerMode }: Cyberpun
     }, [isTimerElapsed, loadingStatus, onLoadComplete])
 
     return (
-        <Box
-            sx={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: readerMode ? colors.grays.gray700 : '#050718',
-                zIndex: 9999,
-                // Use font stack from fonts.css
-                fontFamily: "'Rajdhani', 'Lexend', system-ui, sans-serif",
-                overflow: 'hidden',
-                padding: '20px',
-                boxSizing: 'border-box',
-            }}
-        >
-            {/* Add Matrix Background Here */}
-            {!readerMode && <MatrixBackground />}
-
-            {/* --- Main Loader Content Wrapper (Centered) --- */}
-            {/* This Box now takes the role of the old column 1 wrapper */}
+        <Container maxWidth={false} sx={{ pt: 3 }}>
             <Box
                 sx={{
-                    height: '95%',
-                    width: '80%',
-                    maxWidth: '900px',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    position: 'relative',
-                    padding: '30px',
-                    // Conditionally set color based on readerMode
-                    color: readerMode ? '#ffffff' : colors.neons.cyan.default,
+                    bgcolor: readerMode ? colors.grays.gray700 : '#050718',
+                    zIndex: 9999,
+                    // Use font stack from fonts.css
+                    fontFamily: "'Rajdhani', 'Lexend', system-ui, sans-serif",
                     overflow: 'hidden',
+                    padding: '20px',
+                    boxSizing: 'border-box',
                 }}
             >
-                {/* Glitching Logo Watermark */}
+                {/* Add Matrix Background Here */}
+                {!readerMode && <MatrixBackground />}
+
+                {/* --- Main Loader Content Wrapper (Centered) --- */}
+                {/* This Box now takes the role of the old column 1 wrapper */}
                 <Box
-                    aria-hidden="true"
                     sx={{
-                        position: 'absolute',
-                        top: '20%',
-                        left: '10%',
-                        transform: 'translate(-50%, -50%)',
+                        height: '95%',
                         width: '80%',
-                        height: '80%',
-                        backgroundImage: 'url(/magnusLaserLogo.png)',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'center',
-                        backgroundSize: 'contain',
-                        zIndex: -1,
-                        pointerEvents: 'none',
-                        mixBlendMode: 'soft-light',
-                        // Disable animations in reader mode
-                        animation: readerMode ? 'none' : `${flicker} 6s infinite, ${glitch} 4s infinite alternate`,
-                    }}
-                />
-
-                {/* --- Overlays --- */}
-                {/* Vertical Scanline */}
-                <Box
-                    aria-hidden="true"
-                    sx={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        width: '2px',
-                        height: '100%',
-                        // Use gray for reader mode, otherwise neon pink
-                        background: readerMode
-                            ? 'linear-gradient(to bottom, transparent, #aaaaaa, transparent)'
-                            : `linear-gradient(to bottom, transparent, ${colors.neons.pink.default}, transparent)`,
-                        // Reduce opacity in reader mode
-                        opacity: readerMode ? 0.2 : 0.5,
-                        // Disable animation in reader mode
-                        animation: readerMode ? 'none' : `${verticalScanline} 2.5s ease-in-out infinite alternate`,
-                        zIndex: 1,
-                        pointerEvents: 'none',
-                    }}
-                />
-                {/* Horizontal Scanline */}
-                <Box
-                    aria-hidden="true"
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '2px',
-                        // Use gray for reader mode, otherwise neon cyan
-                        background: readerMode
-                            ? 'linear-gradient(to right, transparent, #aaaaaa, transparent)'
-                            : `linear-gradient(to right, transparent, ${colors.neons.cyan.default}, transparent)`,
-                        // Reduce opacity in reader mode
-                        opacity: readerMode ? 0.3 : 0.7,
-                        // Disable animation in reader mode
-                        animation: readerMode ? 'none' : `${horizontalScanline} 3s ease-in-out infinite`,
-                        zIndex: 1,
-                        pointerEvents: 'none',
-                    }}
-                />
-                {/* General Scanlines Texture (Keep this one for texture, but maybe reduce opacity slightly) */}
-                <Box
-                    aria-hidden="true"
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        // Keep animation, but reduce effect in reader mode
-                        background: readerMode
-                            ? 'linear-gradient(to bottom, transparent 50%, rgba(180, 180, 180, 0.02) 50%)'
-                            : 'linear-gradient(to bottom, transparent 50%, rgba(0, 255, 255, 0.03) 50%)',
-                        backgroundSize: '100% 4px',
-                        pointerEvents: 'none',
-                        zIndex: 0,
-                        animation: `${scanlineAnimation} 8s linear infinite`,
-                    }}
-                />
-
-                {/* --- Actual Content Wrapper --- */}
-                <Box
-                    sx={{
-                        position: 'relative',
-                        zIndex: 2,
+                        maxWidth: '900px',
                         display: 'flex',
                         flexDirection: 'column',
-                        height: '100%',
-                        width: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        padding: '30px',
+                        // Conditionally set color based on readerMode
+                        color: readerMode ? '#ffffff' : colors.neons.cyan.default,
+                        overflow: 'hidden',
                     }}
                 >
-                    {/* Title */}
-                    <Typography
-                        variant="h1"
-                        component="h1"
-                        data-text="MAGNUS LASER"
-                        className="glitch-text"
+                    {/* Glitching Logo Watermark */}
+                    <Box
+                        aria-hidden="true"
                         sx={{
-                            textAlign: 'center',
-                            color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
-                            textShadow: `0 0 10px ${colors.neons.cyan.default}`,
-                            flexGrow: 1,
+                            position: 'absolute',
+                            top: '20%',
+                            left: '10%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '80%',
+                            height: '80%',
+                            backgroundImage: 'url(/magnusLaserLogo.png)',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            backgroundSize: 'contain',
+                            zIndex: -1,
+                            pointerEvents: 'none',
+                            mixBlendMode: 'soft-light',
+                            // Disable animations in reader mode
+                            animation: readerMode ? 'none' : `${flicker} 6s infinite, ${glitch} 4s infinite alternate`,
                         }}
-                    >
-                        MAGNUS LASER
-                    </Typography>
-                    {/* Subtitle */}
-                    <Typography
-                        variant="h5"
-                        data-text="QUANTUM NEURAL INTERFACE"
+                    />
+
+                    {/* --- Actual Content Wrapper --- */}
+                    <Box
                         sx={{
-                            // Conditionally set color
-                            color: readerMode ? colors.grays.gray100 : colors.neons.cyan.default,
-                            //fontSize: '3rem',
-                            m: '0 0 10px',
-                            textAlign: 'center',
-                            fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                            letterSpacing: '4px',
-                            fontWeight: 'bold',
-                            // Remove text shadow and animation in reader mode
-                            textShadow: readerMode ? 'none' : `0 0 10px ${colors.neons.cyan.default}`,
                             position: 'relative',
-                            animation: readerMode ? 'none' : `${flicker} 4s infinite`,
-                            // Hide pseudo-elements causing glitch/color effects in reader mode
-                            '&::before, &::after': {
-                                content: 'attr(data-text)',
-                                position: 'absolute',
-                                width: '100%',
-                                height: '100%',
-                                top: 0,
-                                left: 0,
-                                display: readerMode ? 'none' : 'block', // Hide in reader mode
-                            },
-                            '&::before': {
-                                color: colors.neons.pink.default,
-                                zIndex: -1,
-                                opacity: 0.8,
-                                textShadow: `0 0 5px ${colors.neons.pink.default}`,
-                                left: '-2px',
-                                animation: `${glitch} 3s infinite alternate`,
-                            },
-                            '&::after': {
-                                color: colors.neons.green.default,
-                                zIndex: -2,
-                                opacity: 0.8,
-                                textShadow: `0 0 5px ${colors.neons.green.default}`,
-                                left: '2px',
-                                animation: `${glitch} 2s infinite alternate-reverse`,
-                            },
+                            zIndex: 2,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%',
+                            width: '100%',
                         }}
                     >
-                        QUANTUM NEURAL INTERFACE
-                    </Typography>
-
-                    {/* Boot Sequence Area */}
-                    <Box sx={{ position: 'relative', height: '220px', mb: '25px', width: '100%' }}>
-                        <Box
-                            ref={bootSequenceRef}
-                            sx={{
-                                height: '200px',
-                                overflowY: 'auto',
-                                p: '10px',
-                                bgcolor: readerMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-                                // Use standard border in reader mode
-                                border: readerMode ? '1px solid #cccccc' : `1px solid ${colors.neons.cyan.default}33`,
-                                borderRadius: '4px',
-                                fontFamily: '"Share Tech Mono", monospace',
-                                // Conditionally set color
-                                color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
-                                fontSize: '0.9rem',
-                                position: 'relative',
-                                scrollbarWidth: 'none',
-                                '&::-webkit-scrollbar': { display: 'none' },
-                            }}
-                        >
-                            {displayedBootTexts.map(({ text }, index) => (
-                                <Typography
-                                    key={index}
-                                    sx={{
-                                        mb: '4px',
-                                        // Remove text shadow in reader mode
-                                        textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}80`,
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-all',
-                                    }}
-                                >
-                                    {text}
-                                    {index === displayedBootTexts.length - 1 && (
-                                        <Box
-                                            component="span"
-                                            sx={{
-                                                display: 'inline-block',
-                                                ml: '4px',
-                                                fontWeight: 'bold',
-                                                animation: `${blink} 1s infinite`,
-                                            }}
-                                        >
-                                            {' '}
-                                            _{' '}
-                                        </Box>
-                                    )}
-                                </Typography>
-                            ))}
-                        </Box>
-                        <Box
-                            aria-hidden="true"
-                            sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                background: `linear-gradient(to bottom, ${colors.neons.cyan.default}1A 0%, transparent 5%, transparent 95%, ${colors.neons.cyan.default}1A 100%)`,
-                                pointerEvents: 'none',
-                                zIndex: 1,
-                                borderRadius: '4px',
-                                mixBlendMode: 'overlay',
-                            }}
-                        />
-                    </Box>
-
-                    {/* Total Progress Bar Area */}
-                    <Box sx={{ width: '100%', position: 'relative', mb: '30px' }}>
+                        {/* Title */}
                         <Typography
-                            variant="body2"
+                            variant="h3"
+                            component="h3"
+                            data-text={t('loader.title')}
+                            className="glitch-text"
                             sx={{
-                                mb: '8px',
-                                fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                                // Conditionally set color, remove shadow and animation
-                                color: readerMode ? colors.grays.gray100 : colors.neons.cyan.default,
-                                fontSize: '0.9rem',
-                                textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
-                                fontWeight: 'bold',
-                                animation: readerMode ? 'none' : `${textNeonPulse} 3s infinite alternate`,
+                                textAlign: 'center',
+                                color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
+                                textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                             }}
                         >
-                            TOTAL SYSTEM INITIALIZATION
+                            {t('loader.title')}
                         </Typography>
-                        <Box
+                        {/* Subtitle */}
+                        <Typography
+                            variant="h5"
+                            data-text={t('loader.subtitle')}
                             sx={{
-                                height: '24px',
-                                width: '100%',
-                                bgcolor: 'rgba(0, 20, 40, 0.5)',
-                                borderRadius: '4px',
+                                // Conditionally set color
+                                color: readerMode ? colors.grays.gray100 : colors.neons.cyan.default,
+                                //fontSize: '3rem',
+                                mb: 2,
+                                textAlign: 'center',
+                                fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
+                                letterSpacing: '4px',
+                                fontWeight: 'bold',
+                                // Remove text shadow and animation in reader mode
+                                textShadow: readerMode ? 'none' : `0 0 10px ${colors.neons.cyan.default}`,
                                 position: 'relative',
-                                // Use standard border and shadow in reader mode
-                                border: readerMode ? '1px solid #cccccc' : `1px solid ${colors.neons.cyan.default}4D`,
-                                boxShadow: readerMode ? 'none' : 'inset 0 0 10px rgba(0, 0, 0, 0.5)',
-                                // Disable glow animation in reader mode
-                                animation:
-                                    readerMode || overallProgress < 100 ? 'none' : `${pulseGlowGreen} 2s infinite`,
+                                animation: readerMode ? 'none' : `${flicker} 4s infinite`,
+                                // Hide pseudo-elements causing glitch/color effects in reader mode
+                                '&::before, &::after': {
+                                    content: 'attr(data-text)',
+                                    position: 'absolute',
+                                    width: '100%',
+                                    height: '100%',
+                                    top: 0,
+                                    left: 0,
+                                    display: readerMode ? 'none' : 'block', // Hide in reader mode
+                                },
+                                '&::before': {
+                                    color: colors.neons.pink.default,
+                                    zIndex: -1,
+                                    opacity: 0.8,
+                                    textShadow: `0 0 5px ${colors.neons.pink.default}`,
+                                    left: '-2px',
+                                    animation: `${glitch} 3s infinite alternate`,
+                                },
+                                '&::after': {
+                                    color: colors.neons.green.default,
+                                    zIndex: -2,
+                                    opacity: 0.8,
+                                    textShadow: `0 0 5px ${colors.neons.green.default}`,
+                                    left: '2px',
+                                    animation: `${glitch} 2s infinite alternate-reverse`,
+                                },
                             }}
                         >
-                            <LinearProgress
-                                variant="determinate"
-                                value={overallProgress}
+                            {t('loader.subtitle')}
+                        </Typography>
+
+                        {/* Boot Sequence Area */}
+                        <Box sx={{ position: 'relative', height: '220px', mb: '25px', width: '100%' }}>
+                            <Box
+                                ref={bootSequenceRef}
                                 sx={{
-                                    height: '100%',
-                                    borderRadius: '2px',
-                                    backgroundColor: 'transparent',
+                                    height: '200px',
+                                    overflowY: 'auto',
+                                    p: '10px',
+                                    bgcolor: readerMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+                                    // Use standard border in reader mode
+                                    border: readerMode
+                                        ? '1px solid #cccccc'
+                                        : `1px solid ${colors.neons.cyan.default}33`,
+                                    borderRadius: '4px',
+                                    fontFamily: '"Share Tech Mono", monospace',
+                                    // Conditionally set color
+                                    color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
+                                    fontSize: '0.9rem',
                                     position: 'relative',
-                                    overflow: 'hidden',
-                                    '& .MuiLinearProgress-bar': {
+                                    scrollbarWidth: 'none',
+                                    '&::-webkit-scrollbar': { display: 'none' },
+                                }}
+                            >
+                                {displayedBootTexts.map(({ text }, index) => (
+                                    <Typography
+                                        key={index}
+                                        sx={{
+                                            mb: '4px',
+                                            // Remove text shadow in reader mode
+                                            textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}80`,
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-all',
+                                        }}
+                                    >
+                                        {text}
+                                        {index === displayedBootTexts.length - 1 && (
+                                            <Box
+                                                component="span"
+                                                sx={{
+                                                    display: 'inline-block',
+                                                    ml: '4px',
+                                                    fontWeight: 'bold',
+                                                    animation: `${blink} 1s infinite`,
+                                                }}
+                                            >
+                                                {' '}
+                                                _{' '}
+                                            </Box>
+                                        )}
+                                    </Typography>
+                                ))}
+                            </Box>
+                            <Box
+                                aria-hidden="true"
+                                sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    background: `linear-gradient(to bottom, ${colors.neons.cyan.default}1A 0%, transparent 5%, transparent 95%, ${colors.neons.cyan.default}1A 100%)`,
+                                    pointerEvents: 'none',
+                                    zIndex: 1,
+                                    borderRadius: '4px',
+                                    mixBlendMode: 'overlay',
+                                }}
+                            />
+                        </Box>
+
+                        {/* Total Progress Bar Area */}
+                        <Box sx={{ width: '100%', position: 'relative', mb: '30px' }}>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    mb: '8px',
+                                    fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
+                                    // Conditionally set color, remove shadow and animation
+                                    color: readerMode ? colors.grays.gray100 : colors.neons.cyan.default,
+                                    fontSize: '0.9rem',
+                                    textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
+                                    fontWeight: 'bold',
+                                    animation: readerMode ? 'none' : `${textNeonPulse} 3s infinite alternate`,
+                                }}
+                            >
+                                TOTAL SYSTEM INITIALIZATION
+                            </Typography>
+                            <Box
+                                sx={{
+                                    height: '24px',
+                                    width: '100%',
+                                    bgcolor: 'rgba(0, 20, 40, 0.5)',
+                                    borderRadius: '4px',
+                                    position: 'relative',
+                                    // Use standard border and shadow in reader mode
+                                    border: readerMode
+                                        ? '1px solid #cccccc'
+                                        : `1px solid ${colors.neons.cyan.default}4D`,
+                                    boxShadow: readerMode ? 'none' : 'inset 0 0 10px rgba(0, 0, 0, 0.5)',
+                                    // Disable glow animation in reader mode
+                                    animation:
+                                        readerMode || overallProgress < 100 ? 'none' : `${pulseGlowGreen} 2s infinite`,
+                                }}
+                            >
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={overallProgress}
+                                    sx={{
+                                        height: '100%',
                                         borderRadius: '2px',
-                                        transition: 'transform 0.2s linear',
-                                        background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.cyan.default}E6)`,
+                                        backgroundColor: 'transparent',
+                                        position: 'relative',
                                         overflow: 'hidden',
-                                        '&::after': {
-                                            content: '""',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            height: '100%',
-                                            backgroundImage: `repeating-linear-gradient(
+                                        '& .MuiLinearProgress-bar': {
+                                            borderRadius: '2px',
+                                            transition: 'transform 0.2s linear',
+                                            background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.cyan.default}E6)`,
+                                            overflow: 'hidden',
+                                            '&::after': {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                                backgroundImage: `repeating-linear-gradient(
                                                 45deg,
                                                 rgba(255, 255, 255, 0.1) 0px,
                                                 rgba(255, 255, 255, 0.1) 4px,
                                                 rgba(0, 0, 0, 0.05) 4px, 
                                                 rgba(0, 0, 0, 0.05) 8px  
                                             )`,
-                                            backgroundSize: '40px 40px',
-                                            opacity: 1,
-                                            mixBlendMode: 'hard-light',
+                                                backgroundSize: '40px 40px',
+                                                opacity: 1,
+                                                mixBlendMode: 'hard-light',
+                                            },
                                         },
-                                    },
-                                    ...(overallProgress >= 100 && {
-                                        '& .MuiLinearProgress-bar': {
-                                            background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.pink.default}E6)`,
-                                        },
-                                    }),
-                                }}
-                            />
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    position: 'absolute',
-                                    top: '-30px',
-                                    right: 0,
-                                    fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                                    // Conditionally set color
-                                    color: readerMode ? '#ffffff' : '#d9fbfb',
-                                    fontSize: '0.9rem',
-                                    fontWeight: 'bold',
-                                }}
-                            >
-                                {`${Math.round(overallProgress)}%`}
-                            </Typography>
-                        </Box>
-                    </Box>
-
-                    {/* Modules Progress Area */}
-                    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '15px', flexGrow: 1 }}>
-                        {loadingModules.map((module) => (
-                            <Box key={module.id} sx={{ width: '100%' }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '4px' }}>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            fontSize: '0.9rem',
-                                            // Conditionally set color and remove shadow
-                                            color: readerMode ? colors.grays.gray100 : '#d9fbfb',
-                                            textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}80`,
-                                            fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                                        }}
-                                    >
-                                        {module.name}
-                                    </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            fontSize: '0.9rem',
-                                            // Conditionally set color
-                                            color: readerMode ? colors.grays.gray100 : '#d9fbfb',
-                                            fontWeight: 'bold',
-                                            fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                                        }}
-                                    >
-                                        {module.progress < 100 ? (
-                                            `${Math.round(module.progress)}%`
-                                        ) : (
-                                            <Done
-                                                sx={{
-                                                    fontSize: 'inherit',
-                                                    // Use standard green and remove animation in reader mode
-                                                    color: readerMode ? '#4caf50' : colors.neons.green.default,
-                                                    verticalAlign: 'middle',
-                                                    animation: readerMode ? 'none' : `${iconGlowFilter} 2s infinite`,
-                                                }}
-                                            />
-                                        )}
-                                    </Typography>
-                                </Box>
-                                <Box
+                                        ...(overallProgress >= 100 && {
+                                            '& .MuiLinearProgress-bar': {
+                                                background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.pink.default}E6)`,
+                                            },
+                                        }),
+                                    }}
+                                />
+                                <Typography
+                                    variant="caption"
                                     sx={{
-                                        height: '20px',
-                                        bgcolor: 'rgba(0, 20, 40, 0.5)',
-                                        borderRadius: '2px',
-                                        overflow: 'hidden',
-                                        position: 'relative',
-                                        // Use standard border and shadow in reader mode
-                                        border: readerMode
-                                            ? '1px solid #cccccc'
-                                            : `1px solid ${colors.neons.cyan.default}4D`,
-                                        boxShadow: readerMode ? 'none' : 'inset 0 0 5px rgba(0, 0, 0, 0.5)',
-                                        // Disable animation in reader mode
-                                        animation:
-                                            readerMode || module.progress < 100
-                                                ? 'none'
-                                                : `${moduleProgressCycle} 2s infinite`,
+                                        position: 'absolute',
+                                        top: '-30px',
+                                        right: 0,
+                                        fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
+                                        // Conditionally set color
+                                        color: readerMode ? '#ffffff' : '#d9fbfb',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 'bold',
                                     }}
                                 >
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={module.progress}
+                                    {`${Math.round(overallProgress)}%`}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        {/* Modules Progress Area */}
+                        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '15px', flexGrow: 1 }}>
+                            {loadingModules.map((module) => (
+                                <Box key={module.id} sx={{ width: '100%' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '4px' }}>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontSize: '0.9rem',
+                                                // Conditionally set color and remove shadow
+                                                color: readerMode ? colors.grays.gray100 : '#d9fbfb',
+                                                textShadow: readerMode
+                                                    ? 'none'
+                                                    : `0 0 5px ${colors.neons.cyan.default}80`,
+                                                fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
+                                            }}
+                                        >
+                                            {module.name}
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontSize: '0.9rem',
+                                                // Conditionally set color
+                                                color: readerMode ? colors.grays.gray100 : '#d9fbfb',
+                                                fontWeight: 'bold',
+                                                fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
+                                            }}
+                                        >
+                                            {module.progress < 100 ? (
+                                                `${Math.round(module.progress)}%`
+                                            ) : (
+                                                <Done
+                                                    sx={{
+                                                        fontSize: 'inherit',
+                                                        // Use standard green and remove animation in reader mode
+                                                        color: readerMode ? '#4caf50' : colors.neons.green.default,
+                                                        verticalAlign: 'middle',
+                                                        animation: readerMode
+                                                            ? 'none'
+                                                            : `${iconGlowFilter} 2s infinite`,
+                                                    }}
+                                                />
+                                            )}
+                                        </Typography>
+                                    </Box>
+                                    <Box
                                         sx={{
-                                            height: '100%',
+                                            height: '20px',
+                                            bgcolor: 'rgba(0, 20, 40, 0.5)',
                                             borderRadius: '2px',
-                                            backgroundColor: 'transparent',
-                                            position: 'relative',
                                             overflow: 'hidden',
-                                            '& .MuiLinearProgress-bar': {
+                                            position: 'relative',
+                                            // Use standard border and shadow in reader mode
+                                            border: readerMode
+                                                ? '1px solid #cccccc'
+                                                : `1px solid ${colors.neons.cyan.default}4D`,
+                                            boxShadow: readerMode ? 'none' : 'inset 0 0 5px rgba(0, 0, 0, 0.5)',
+                                            // Disable animation in reader mode
+                                            animation:
+                                                readerMode || module.progress < 100
+                                                    ? 'none'
+                                                    : `${moduleProgressCycle} 2s infinite`,
+                                        }}
+                                    >
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={module.progress}
+                                            sx={{
+                                                height: '100%',
                                                 borderRadius: '2px',
-                                                transition: 'transform 0.2s linear',
-                                                background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.purple.default}B3, ${colors.neons.blue.default}B3, ${colors.neons.green.default}E6)`,
+                                                backgroundColor: 'transparent',
+                                                position: 'relative',
                                                 overflow: 'hidden',
-                                                '&::after': {
-                                                    content: '""',
-                                                    position: 'absolute',
-                                                    top: 0,
-                                                    left: 0,
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    backgroundImage: `repeating-linear-gradient(
+                                                '& .MuiLinearProgress-bar': {
+                                                    borderRadius: '2px',
+                                                    transition: 'transform 0.2s linear',
+                                                    background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.purple.default}B3, ${colors.neons.blue.default}B3, ${colors.neons.green.default}E6)`,
+                                                    overflow: 'hidden',
+                                                    '&::after': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        backgroundImage: `repeating-linear-gradient(
                                                         45deg,
                                                         rgba(255, 255, 255, 0.1) 0px,
                                                         rgba(255, 255, 255, 0.1) 4px,
                                                         rgba(0, 0, 0, 0.05) 4px, 
                                                         rgba(0, 0, 0, 0.05) 8px  
                                                     )`,
-                                                    backgroundSize: '40px 40px',
-                                                    opacity: 1,
-                                                    mixBlendMode: 'hard-light',
+                                                        backgroundSize: '40px 40px',
+                                                        opacity: 1,
+                                                        mixBlendMode: 'hard-light',
+                                                    },
                                                 },
-                                            },
-                                            ...(overallProgress >= 100 && {
-                                                '& .MuiLinearProgress-bar': {
-                                                    background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.purple.default}B3, ${colors.neons.blue.default}B3, ${colors.neons.green.default}E6)`,
-                                                },
-                                            }),
-                                        }}
-                                    />
+                                                ...(overallProgress >= 100 && {
+                                                    '& .MuiLinearProgress-bar': {
+                                                        background: `linear-gradient(to right, ${colors.neons.pink.default}B3, ${colors.neons.purple.default}B3, ${colors.neons.blue.default}B3, ${colors.neons.green.default}E6)`,
+                                                    },
+                                                }),
+                                            }}
+                                        />
+                                    </Box>
                                 </Box>
-                            </Box>
-                        ))}
-                    </Box>
+                            ))}
+                        </Box>
 
-                    {/* Bottom Message */}
-                    <Typography
-                        variant="body1"
-                        sx={{
-                            mt: 'auto',
-                            pt: '20px',
-                            textAlign: 'center',
-                            fontSize: '1rem',
-                            // Conditionally set color, remove shadow and animation
-                            color: readerMode ? '#ffffff' : colors.neons.pink.default,
-                            textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.pink.default}B3`,
-                            fontStyle: 'italic',
-                            letterSpacing: '1px',
-                            animation: readerMode ? 'none' : `${neonColorCycle} 8s infinite alternate`,
-                        }}
-                    >
-                        Choom, just a few more ticks. Getting everything delta for ya...
-                    </Typography>
+                        {/* Bottom Message */}
+                        <Typography
+                            variant="body1"
+                            sx={{
+                                mt: 'auto',
+                                pt: '20px',
+                                textAlign: 'center',
+                                fontSize: '1rem',
+                                // Conditionally set color, remove shadow and animation
+                                color: readerMode ? '#ffffff' : colors.neons.pink.default,
+                                textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.pink.default}B3`,
+                                fontStyle: 'italic',
+                                letterSpacing: '1px',
+                                animation: readerMode ? 'none' : `${neonColorCycle} 8s infinite alternate`,
+                            }}
+                        >
+                            Choom, just a few more ticks. Getting everything delta for ya...
+                        </Typography>
+                    </Box>
                 </Box>
             </Box>
-        </Box>
+        </Container>
     )
 }
 

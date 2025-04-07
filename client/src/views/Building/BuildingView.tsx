@@ -195,21 +195,22 @@ const BuildingView = () => {
     }
 
     return (
-        <Container maxWidth={false}>
+        <Container maxWidth={false} sx={{ pt: 3 }}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={2}>
                 <Typography
-                    variant="h1"
+                    variant="h3"
                     className="glitch-text"
-                    data-text={t('buildings.title', 'Building Generator')}
+                    data-text={t('buildings.title')}
                     sx={{
                         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                         flexGrow: 1,
                     }}
                 >
-                    {t('buildings.title', 'Building Generator')}
+                    {t('buildings.title')}
                 </Typography>
+
                 <Stack
                     direction="row"
                     sx={{
@@ -226,6 +227,16 @@ const BuildingView = () => {
                     {viewPrefsLoaded && <ViewToggle compactView={compactView} onViewChange={handleViewChange} />}
                 </Stack>
             </Stack>
+            <Typography
+                variant="h4"
+                sx={{
+                    color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
+                    textShadow: `0 0 8px ${colors.neons.green.default}`,
+                    mb: 1,
+                }}
+            >
+                {t('modules.BUILDING_DESCRIPTION')}
+            </Typography>
 
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', gap: 2 }}>

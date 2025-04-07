@@ -47,7 +47,6 @@ import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { getGangColorValue } from '../../utils/functions'
 import { buttonGlitch, flicker, glitch, pulseGlowBlue, pulseGlowCyan } from './Animations'
-import TiptapEditor from './TiptapEditor'
 import { WarningDialog } from './WarningDialog'
 
 type EditDialogProps = {
@@ -237,10 +236,14 @@ export const EditDialog = (props: EditDialogProps) => {
                 </Grid>
                 {/* Description */}
                 <Grid item xs={12} md={8}>
-                    <TiptapEditor
+                    <TextField
+                        fullWidth
                         label={t('common.description')}
-                        value={gangItem.description || ''}
-                        onChange={(content) => handleChange('description', content)}
+                        value={gangItem.description}
+                        onChange={(e) => handleChange('description', e.target.value)}
+                        variant="outlined"
+                        sx={textFieldOutlinedStyle}
+                        multiline
                     />
                 </Grid>
                 {/* Image */}
@@ -952,10 +955,15 @@ export const EditDialog = (props: EditDialogProps) => {
                 </Grid>
                 {/* Description */}
                 <Grid item xs={12} md={8}>
-                    <TiptapEditor
+                    <TextField
+                        fullWidth
                         label={t('common.description')}
                         value={buildingItem.description || ''}
-                        onChange={(content) => handleChange('description', content)}
+                        onChange={(e) => handleChange('description', e.target.value)}
+                        variant="outlined"
+                        sx={textFieldOutlinedStyle}
+                        multiline
+                        rows={15}
                     />
                 </Grid>
                 {/* Image */}
@@ -982,7 +990,6 @@ export const EditDialog = (props: EditDialogProps) => {
                                     ? `2px solid ${colors.neons.blue.default}`
                                     : `2px solid ${colors.neons.cyan.default}`,
                             },
-                            p: 0.5,
                             borderRadius: '4px',
                         }}
                     >

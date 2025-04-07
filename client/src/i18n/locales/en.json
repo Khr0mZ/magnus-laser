@@ -32,7 +32,7 @@
         "regenerateImage": "Re-render Optics",
         "enterDescriptionFirstForImage": "Slot an intel brief before rendering optics.",
         "itemImageAlt": "Optics for {{name}}",
-        "save": "Save State",
+        "save": "Save",
         "cancel": "Abort",
         "yes": "Yes",
         "no": "No",
@@ -45,23 +45,26 @@
         "confirm": "Execute"
     },
     "modules": {
-        "DASHBOARD": "Console",
+        "DASHBOARD": "Welcome to Magnus Laser Console, Choom.",
+        "DASHBOARD_DESCRIPTION": "Main access point for our Services.",
         "GANG": "Gang",
+        "GANG_DESCRIPTION": "Gangs are groups your edgerunners can interface with.",
         "BUILDING": "Building",
+        "BUILDING_DESCRIPTION": "Buildings are locations your edgerunners can infiltrate or explore.",
         "CORPORATION": "Corpo",
+        "CORPORATION_DESCRIPTION": "Corpos are the suits your edgerunners might cross paths with.",
         "FIXER_JOB": "Gig",
+        "FIXER_JOB_DESCRIPTION": "Gigs are jobs your edgerunners can pull off for eddies.",
         "NPC": "Contact",
-        "SETTINGS": "System"
+        "NPC_DESCRIPTION": "Contacts are individuals your edgerunners can connect with.",
+        "SETTINGS": "System",
+        "SETTINGS_DESCRIPTION": "System prefs for your rig.",
+        "BOUNTY": "Bounty",
+        "BOUNTY_DESCRIPTION": "Bounties are jobs your edgerunners can pull off for eddies.",
+        "CLUB": "Club",
+        "CLUB_DESCRIPTION": "Clubs are locations your edgerunners can visit for fun."
     },
     "dashboard": {
-        "welcome": "Welcome to Magnus Laser HQ, Choom",
-        "description": "Main access point for Magnus Laser Services. Check module status below.",
-        "createRandom": "Spin up random {{module}} assets here.",
-        "gangDescription": "Crews are groups your edgerunners can interface with.",
-        "buildingDescription": "Structures are locations your edgerunners can infiltrate or explore.",
-        "corporationDescription": "Corpos are the suits your edgerunners might cross paths with.",
-        "fixerJobDescription": "Gigs are jobs your edgerunners can pull off for eddies.",
-        "npcDescription": "Contacts are individuals your edgerunners can connect with.",
         "exportData": "Dump Data",
         "importData": "Load Data",
         "exportDescription": "Dump all generated assets to a local shard.",
@@ -70,7 +73,7 @@
         "confirmImport": "Confirm Data Load"
     },
     "gangs": {
-        "title": "Gang Generator",
+        "title": "Street Gang Intel Feed",
         "type": {
             "BOOSTER": "Booster gang",
             "EDGERUNNER": "Edgerunner team",
@@ -301,7 +304,7 @@
         }
     },
     "buildings": {
-        "title": "Building Generator",
+        "title": "Architectural Database Access",
         "type": {
             "ABANDONED_BUILDING": "Abandoned",
             "COMMERCIAL_BUILDING": "Commercial building (Small businesses)",
@@ -516,12 +519,11 @@
         "apiKeySecurityNote": "Your API key is stored locally on your rig and never sent to our servers."
     },
     "loader": {
-        "subtitle": "Cyberpunk Generator Interface v2.0.77",
+        "title": "Magnus Laser HQ v2.0.77",
+        "subtitle": "Quantum Neural Interface",
         "system": "System Kernel Init",
         "readerMode": "Neural Interface Mode",
         "viewPrefs": "Interface Visualization Prefs",
-        "buildings": "Architectural Database Access",
-        "gangs": "Street Gang Intel Feed",
         "message": "Hang tight, choom. Getting everything delta..."
     }
 }

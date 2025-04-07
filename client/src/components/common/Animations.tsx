@@ -41,6 +41,9 @@ export const scanlineFlow = keyframes`
   }
 `
 
+export const glowGreen = keyframes`
+  box-shadow: 0 0 5px ${colors.neons.green.default}, 0 0 10px ${colors.neons.green.default}40;
+`
 export const pulseGlowGreen = keyframes`
   0% {
     box-shadow: 0 0 5px ${colors.neons.green.default}, 0 0 10px ${colors.neons.green.default}40;

@@ -79,6 +79,7 @@ const TiptapEditor = ({ label, value, onChange, sx }: TiptapEditorProps) => {
         bgcolor: readerMode ? theme.palette.background.paper : 'rgba(10, 15, 30, 0.95)',
         p: 0.5,
         py: 0.25,
+        fontSize: '16px',
         border: readerMode ? '1px solid rgba(0, 0, 0, 0.23)' : `1px solid ${colors.neons.cyan.default}`,
         '&.MuiInputLabel-shrink': {
             transform: 'translate(14px, -9px) scale(0.75)',

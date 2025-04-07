@@ -256,3 +256,7 @@ body.reader-mode .MuiCardContent-root {
 body.reader-mode .MuiCardContent-root:last-child {
     padding-bottom: 16px;
 }
+
+.prosemirror-editor {
+    outline: none !important;
+}
