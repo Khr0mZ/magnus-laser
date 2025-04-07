@@ -1,7 +1,8 @@
-import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Container, Grid, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ViewPreferencesContext } from '../../App'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
 import EditDialog from '../../components/common/EditDialog'
 import GridView from '../../components/common/GridView'
@@ -10,20 +11,14 @@ import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
+import { useData } from '../../contexts/DataContext'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { JobDifficulty, ModuleTypes } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
 import { generateRandomBuilding } from '../../utils/generatorBuilding'
-import {
-    DATA_IMPORT_EVENT,
-    clearBuildings,
-    loadBuildings,
-    loadViewPreference,
-    saveBuildings,
-    saveViewPreference,
-} from '../../utils/storage'
+import { clearBuildings, saveBuildings, saveViewPreference } from '../../utils/storage'
 
 // Add window interface augmentation
 declare global {
@@ -36,10 +31,14 @@ const BuildingView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('modules.BUILDING')}`)
     const { readerMode } = useContext(ReaderModeContext)
+    const { viewPreferences, viewPrefsLoaded, updateViewPreference } = useContext(ViewPreferencesContext)
+    const { buildings: dataBuildings, setBuildings: setDataBuildings, isLoading } = useData()
     const [buildings, setBuildings] = useState<Building[]>([])
 
-    // Load view preference from localStorage each time component is mounted
-    const [compactView, setCompactView] = useState(() => loadViewPreference(ModuleTypes.BUILDING))
+    // Use view preference from context
+    const [compactView, setCompactView] = useState(() => {
+        return viewPrefsLoaded ? viewPreferences[ModuleTypes.BUILDING] : false
+    })
 
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -53,58 +52,42 @@ const BuildingView = () => {
     const [isGenerating, setIsGenerating] = useState(false)
     const [isGeneratingImage, setIsGeneratingImage] = useState(false)
 
-    // Load buildings from local storage on component mount
+    // Update local state when view preferences change
     useEffect(() => {
-        // Get data from local storage
-        const savedBuildings = loadBuildings()
-
-        // Set the initial data without triggering a save
-        if (savedBuildings.length > 0) {
-            setBuildings(savedBuildings)
+        if (viewPrefsLoaded) {
+            setCompactView(viewPreferences[ModuleTypes.BUILDING])
         }
+    }, [viewPreferences, viewPrefsLoaded])
 
-        // Save the initial length to avoid triggering save notification for unchanged data
-        prevBuildingsRef.current = savedBuildings.length
-        firstMountRef.current = false
-    }, [])
-
-    // Listen for data import events
+    // Update local state when data context changes
     useEffect(() => {
-        const handleDataImport = () => {
-            // Refresh data
-            const savedBuildings = loadBuildings()
-            setBuildings(savedBuildings)
-            prevBuildingsRef.current = savedBuildings.length
-
-            // Refresh view preferences
-            const viewPreference = loadViewPreference(ModuleTypes.BUILDING)
-            setCompactView(viewPreference)
+        if (dataBuildings.length > 0) {
+            setBuildings(dataBuildings)
+            prevBuildingsRef.current = dataBuildings.length
         }
+    }, [dataBuildings])
 
-        window.addEventListener(DATA_IMPORT_EVENT, handleDataImport)
-
-        return () => {
-            window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport)
-        }
-    }, [])
-
-    // Save buildings to local storage whenever they change, but only show notification
-    // for actual data changes (add/remove items)
+    // Save buildings to storage when they change
     useEffect(() => {
         // Skip during component initialization
-        if (firstMountRef.current) return
+        if (firstMountRef.current) {
+            firstMountRef.current = false
+            return
+        }
 
         // Always save the data when it exists
         if (buildings.length > 0) {
             saveBuildings(buildings)
+            setDataBuildings(buildings) // Update context data
         } else {
             // If the array becomes empty, explicitly clear storage
             clearBuildings()
+            setDataBuildings([])
         }
 
         // Update length reference
         prevBuildingsRef.current = buildings.length
-    }, [buildings])
+    }, [buildings, setDataBuildings])
 
     const handleJobDifficultyChange = (_: React.MouseEvent<HTMLElement>, newJobType: JobDifficulty) => {
         if (newJobType !== null) setJobDifficulty(newJobType)
@@ -127,9 +110,10 @@ const BuildingView = () => {
         setClearAllDialogOpen(true)
     }
 
-    const handleClearConfirm = () => {
+    const handleClearConfirm = async () => {
         setBuildings([])
-        clearBuildings()
+        await clearBuildings()
+        setDataBuildings([])
         setIsSaving(true)
         setClearAllDialogOpen(false)
     }
@@ -176,11 +160,38 @@ const BuildingView = () => {
         setBuildingToEdit(null)
     }
 
-    const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string) => {
+    const handleViewChange = async (_: React.MouseEvent<HTMLElement>, newView: string) => {
+        if (newView === null) return
+
         const isTableView = newView === 'table'
         setCompactView(isTableView)
-        // Save view preference to localStorage
-        saveViewPreference(ModuleTypes.BUILDING, isTableView)
+
+        // Save view preference to storage and update context
+        await saveViewPreference(ModuleTypes.BUILDING, isTableView)
+        updateViewPreference(ModuleTypes.BUILDING, isTableView)
+    }
+
+    // Show loading spinner while data is loading
+    if (isLoading) {
+        return (
+            <Container
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '80vh',
+                }}
+            >
+                <CircularProgress
+                    size={60}
+                    thickness={4}
+                    sx={{
+                        color: colors.neons.cyan.default,
+                        boxShadow: `0 0 20px ${colors.neons.cyan.default}`,
+                    }}
+                />
+            </Container>
+        )
     }
 
     return (
@@ -212,8 +223,7 @@ const BuildingView = () => {
                         jobDifficulty={jobDifficulty}
                         onJobDifficultyChange={handleJobDifficultyChange}
                     />
-                    {/* View Toggle Buttons */}
-                    <ViewToggle compactView={compactView} onViewChange={handleViewChange} />
+                    {viewPrefsLoaded && <ViewToggle compactView={compactView} onViewChange={handleViewChange} />}
                 </Stack>
             </Stack>
 

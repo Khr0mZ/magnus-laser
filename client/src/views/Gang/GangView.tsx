@@ -1,7 +1,8 @@
-import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Container, Grid, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ViewPreferencesContext } from '../../App'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
 import EditDialog from '../../components/common/EditDialog'
 import GridView from '../../components/common/GridView'
@@ -9,19 +10,13 @@ import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
+import { useData } from '../../contexts/DataContext'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { generateRandomGang } from '../../utils/generatorGang'
-import {
-    DATA_IMPORT_EVENT,
-    clearGangs,
-    loadGangs,
-    loadViewPreference,
-    saveGangs,
-    saveViewPreference,
-} from '../../utils/storage'
+import { clearGangs, saveGangs, saveViewPreference } from '../../utils/storage'
 
 // Add window.gangsDataLoaded declaration
 declare global {
@@ -34,10 +29,14 @@ const GangView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('modules.GANG')}`)
     const { readerMode } = useContext(ReaderModeContext)
+    const { viewPreferences, viewPrefsLoaded, updateViewPreference } = useContext(ViewPreferencesContext)
+    const { gangs: dataGangs, setGangs: setDataGangs, isLoading } = useData()
     const [gangs, setGangs] = useState<Gang[]>([])
 
-    // Load view preference from localStorage each time component is mounted
-    const [compactView, setCompactView] = useState(() => loadViewPreference(ModuleTypes.GANG))
+    // Use view preference from context
+    const [compactView, setCompactView] = useState(() => {
+        return viewPrefsLoaded ? viewPreferences[ModuleTypes.GANG] : false
+    })
 
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -50,55 +49,38 @@ const GangView = () => {
     const [isGenerating, setIsGenerating] = useState(false)
     const [isGeneratingImage, setIsGeneratingImage] = useState(false)
 
-    // Load gangs from local storage on component mount
+    // Update local state when view preferences change
     useEffect(() => {
-        // Get data from local storage
-        const savedGangs = loadGangs()
-
-        // Set the initial data without triggering a save
-        if (savedGangs.length > 0) {
-            setGangs(savedGangs)
+        if (viewPrefsLoaded) {
+            setCompactView(viewPreferences[ModuleTypes.GANG])
         }
+    }, [viewPreferences, viewPrefsLoaded])
 
-        // Save the initial length to avoid triggering save notification for unchanged data
-        prevGangsRef.current = savedGangs.length
-        firstMountRef.current = false
-    }, [])
-
-    // Listen for data import events
+    // Update local state when data context changes
     useEffect(() => {
-        const handleDataImport = () => {
-            // Refresh data
-            const savedGangs = loadGangs()
-            setGangs(savedGangs)
-            prevGangsRef.current = savedGangs.length
-
-            // Refresh view preferences
-            const viewPreference = loadViewPreference(ModuleTypes.GANG)
-            setCompactView(viewPreference)
+        if (dataGangs.length > 0) {
+            setGangs(dataGangs)
+            prevGangsRef.current = dataGangs.length
         }
+    }, [dataGangs])
 
-        window.addEventListener(DATA_IMPORT_EVENT, handleDataImport)
-
-        return () => {
-            window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport)
-        }
-    }, [])
-
-    // Save gangs to local storage whenever they change, but only show notification
-    // for actual data changes (add/remove items)
+    // Save gangs to storage when they change in local state
     useEffect(() => {
         // Skip during component initialization
-        if (firstMountRef.current) return
+        if (firstMountRef.current) {
+            firstMountRef.current = false
+            return
+        }
 
         // Always save the data when it exists
         if (gangs.length > 0) {
             saveGangs(gangs as Gang[])
+            setDataGangs(gangs) // Update context data
         }
 
         // Update length reference
         prevGangsRef.current = gangs.length
-    }, [gangs])
+    }, [gangs, setDataGangs])
 
     const handleGenerateGang = async () => {
         setIsGenerating(true)
@@ -117,9 +99,10 @@ const GangView = () => {
         setClearAllDialogOpen(true)
     }
 
-    const handleClearConfirm = () => {
+    const handleClearConfirm = async () => {
         setGangs([])
-        clearGangs()
+        await clearGangs()
+        setDataGangs([]) // Update context data
         setIsSaving(true)
         setClearAllDialogOpen(false)
     }
@@ -164,13 +147,38 @@ const GangView = () => {
         setGangToEdit(null)
     }
 
-    const handleViewChange = (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
-        if (newView !== null) {
-            const isTableView = newView === 'table'
-            setCompactView(isTableView)
-            // Save view preference to localStorage
-            saveViewPreference(ModuleTypes.GANG, isTableView)
-        }
+    const handleViewChange = async (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
+        if (newView === null) return
+
+        const isTableView = newView === 'table'
+        setCompactView(isTableView)
+
+        // Save view preference to storage and update context
+        await saveViewPreference(ModuleTypes.GANG, isTableView)
+        updateViewPreference(ModuleTypes.GANG, isTableView)
+    }
+
+    // Show loading spinner while data is loading
+    if (isLoading) {
+        return (
+            <Container
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '80vh',
+                }}
+            >
+                <CircularProgress
+                    size={60}
+                    thickness={4}
+                    sx={{
+                        color: colors.neons.cyan.default,
+                        boxShadow: `0 0 20px ${colors.neons.cyan.default}`,
+                    }}
+                />
+            </Container>
+        )
     }
 
     return (
@@ -189,8 +197,7 @@ const GangView = () => {
                 >
                     {t('gangs.title', 'Gang Generator')}
                 </Typography>
-                {/* View Toggle Buttons */}
-                <ViewToggle compactView={compactView} onViewChange={handleViewChange} />
+                {viewPrefsLoaded && <ViewToggle compactView={compactView} onViewChange={handleViewChange} />}
             </Stack>
 
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>

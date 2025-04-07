@@ -1,8 +1,9 @@
+import localforage from 'localforage'
 import { Building, Gang } from '../graphql/types'
 import { ModuleTypes } from './constants'
 
 /**
- * Utility functions for local storage operations
+ * Utility functions for local storage operations using IndexedDB through localForage
  */
 
 // Storage keys
@@ -10,9 +11,17 @@ const GANGS_STORAGE_KEY = 'magnus-laser-gangs'
 const BUILDINGS_STORAGE_KEY = 'magnus-laser-buildings'
 const VIEW_PREFERENCES_KEY = 'magnus-laser-view-preferences'
 const READER_MODE_KEY = 'magnus-laser-reader-mode'
+const HUGGING_FACE_API_KEY = 'magnus-laser-huggingface-api-key'
 
 // Event system for data changes
 export const DATA_IMPORT_EVENT = 'magnus-laser-data-imported'
+
+// Initialize localForage with custom settings
+localforage.config({
+    name: 'MagnusLaser',
+    storeName: 'cyber_data', // The name of the IndexedDB database
+    description: 'Magnus Laser Cyberpunk Generator Data',
+})
 
 /**
  * Notify all components that data has been imported
@@ -24,78 +33,78 @@ export const notifyDataImported = (): void => {
 // Gangs Storage Functions
 
 /**
- * Save gangs to local storage
+ * Save gangs to IndexedDB
  * @param gangs Array of gangs to save
  */
-export const saveGangs = (gangs: Gang[]): void => {
+export const saveGangs = async (gangs: Gang[]): Promise<void> => {
     try {
-        localStorage.setItem(GANGS_STORAGE_KEY, JSON.stringify(gangs))
+        await localforage.setItem(GANGS_STORAGE_KEY, gangs)
     } catch (error) {
-        console.error('Error saving gangs to local storage:', error)
+        console.error('Error saving gangs to storage:', error)
     }
 }
 
 /**
- * Load gangs from local storage
+ * Load gangs from IndexedDB
  * @returns Array of gangs or empty array if none found
  */
-export const loadGangs = (): Gang[] => {
+export const loadGangs = async (): Promise<Gang[]> => {
     try {
-        const gangsJson = localStorage.getItem(GANGS_STORAGE_KEY)
-        return gangsJson ? JSON.parse(gangsJson) : []
+        const gangs = await localforage.getItem<Gang[]>(GANGS_STORAGE_KEY)
+        return gangs || []
     } catch (error) {
-        console.error('Error loading gangs from local storage:', error)
+        console.error('Error loading gangs from storage:', error)
         return []
     }
 }
 
 /**
- * Clear all saved gangs from local storage
+ * Clear gangs from IndexedDB
  */
-export const clearGangs = (): void => {
+export const clearGangs = async (): Promise<void> => {
     try {
-        localStorage.removeItem(GANGS_STORAGE_KEY)
+        await localforage.removeItem(GANGS_STORAGE_KEY)
     } catch (error) {
-        console.error('Error clearing gangs from local storage:', error)
+        console.error('Error clearing gangs from storage:', error)
     }
 }
 
 // Buildings Storage Functions
 
 /**
- * Save buildings to local storage
+ * Save buildings to IndexedDB
  * @param buildings Array of buildings to save
  */
-export const saveBuildings = (buildings: Building[]): void => {
+export const saveBuildings = async (buildings: Building[]): Promise<void> => {
     try {
-        localStorage.setItem(BUILDINGS_STORAGE_KEY, JSON.stringify(buildings))
+        await localforage.setItem(BUILDINGS_STORAGE_KEY, buildings)
     } catch (error) {
-        console.error('Error saving buildings to local storage:', error)
+        console.error('Error saving buildings to storage:', error)
     }
 }
 
 /**
- * Load buildings from local storage
+ * Load buildings from IndexedDB
  * @returns Array of buildings or empty array if none found
  */
-export const loadBuildings = (): Building[] => {
+export const loadBuildings = async (): Promise<Building[]> => {
     try {
-        const buildingsJson = localStorage.getItem(BUILDINGS_STORAGE_KEY)
-        return buildingsJson ? JSON.parse(buildingsJson) : []
+        const buildings = await localforage.getItem<Building[]>(BUILDINGS_STORAGE_KEY)
+        return buildings || []
     } catch (error) {
-        console.error('Error loading buildings from local storage:', error)
+        console.error('Error loading buildings from storage:', error)
         return []
     }
 }
 
 /**
- * Clear all saved buildings from local storage
+ * Clear buildings from IndexedDB
  */
-export const clearBuildings = (): void => {
+export const clearBuildings = async (): Promise<void> => {
     try {
-        localStorage.removeItem(BUILDINGS_STORAGE_KEY)
+        await localforage.removeItem(BUILDINGS_STORAGE_KEY)
     } catch (error) {
-        console.error('Error clearing buildings from local storage:', error)
+        console.error('Error clearing buildings from storage:', error)
     }
 }
 
@@ -104,19 +113,18 @@ export const clearBuildings = (): void => {
  * @param moduleType The module type
  * @param isTableView Whether the table view is selected
  */
-export const saveViewPreference = (moduleType: ModuleTypes, isTableView: boolean): void => {
+export const saveViewPreference = async (moduleType: ModuleTypes, isTableView: boolean): Promise<void> => {
     try {
         // Get current preferences or initialize empty object
-        const currentPrefsJson = localStorage.getItem(VIEW_PREFERENCES_KEY)
-        const currentPrefs = currentPrefsJson ? JSON.parse(currentPrefsJson) : {}
+        const currentPrefs = (await localforage.getItem<Record<string, boolean>>(VIEW_PREFERENCES_KEY)) || {}
 
         // Update preference for the module
         currentPrefs[moduleType] = isTableView
 
-        // Save back to localStorage
-        localStorage.setItem(VIEW_PREFERENCES_KEY, JSON.stringify(currentPrefs))
+        // Save back to storage
+        await localforage.setItem(VIEW_PREFERENCES_KEY, currentPrefs)
     } catch (error) {
-        console.error('Error saving view preference to local storage:', error)
+        console.error('Error saving view preference to storage:', error)
     }
 }
 
@@ -125,17 +133,45 @@ export const saveViewPreference = (moduleType: ModuleTypes, isTableView: boolean
  * @param moduleType The module type
  * @returns Whether table view is preferred (true) or grid view (false)
  */
-export const loadViewPreference = (moduleType: ModuleTypes): boolean => {
+export const loadViewPreference = async (moduleType: ModuleTypes): Promise<boolean> => {
     try {
-        const prefsJson = localStorage.getItem(VIEW_PREFERENCES_KEY)
-        if (!prefsJson) return false
+        const prefs = await localforage.getItem<Record<string, boolean>>(VIEW_PREFERENCES_KEY)
 
-        const prefs = JSON.parse(prefsJson)
         // Return the preference if it exists, otherwise default to false (grid view)
-        return prefs[moduleType] ?? false
+        return prefs ? prefs[moduleType] ?? false : false
     } catch (error) {
-        console.error('Error loading view preference from local storage:', error)
+        console.error('Error loading view preference from storage:', error)
         return false
+    }
+}
+
+/**
+ * Load all view preferences
+ * @returns Record mapping module types to view preferences
+ */
+export const loadAllViewPreferences = async (): Promise<Record<ModuleTypes, boolean>> => {
+    try {
+        const prefs = (await localforage.getItem<Record<string, boolean>>(VIEW_PREFERENCES_KEY)) || {}
+
+        // Initialize default preferences for all module types
+        const allPrefs: Partial<Record<ModuleTypes, boolean>> = {}
+
+        // Set defaults for all module types that use view preferences
+        Object.values(ModuleTypes).forEach((moduleType) => {
+            allPrefs[moduleType] = prefs[moduleType] ?? false
+        })
+
+        return allPrefs as Record<ModuleTypes, boolean>
+    } catch (error) {
+        console.error('Error loading all view preferences from storage:', error)
+
+        // Return defaults (grid view) for all modules
+        const defaults: Partial<Record<ModuleTypes, boolean>> = {}
+        Object.values(ModuleTypes).forEach((moduleType) => {
+            defaults[moduleType] = false
+        })
+
+        return defaults as Record<ModuleTypes, boolean>
     }
 }
 
@@ -143,11 +179,11 @@ export const loadViewPreference = (moduleType: ModuleTypes): boolean => {
  * Save reader mode preference
  * @param isReaderMode Whether reader mode is enabled
  */
-export const saveReaderMode = (isReaderMode: boolean): void => {
+export const saveReaderMode = async (isReaderMode: boolean): Promise<void> => {
     try {
-        localStorage.setItem(READER_MODE_KEY, JSON.stringify(isReaderMode))
+        await localforage.setItem(READER_MODE_KEY, isReaderMode)
     } catch (error) {
-        console.error('Error saving reader mode preference to local storage:', error)
+        console.error('Error saving reader mode preference to storage:', error)
     }
 }
 
@@ -155,12 +191,62 @@ export const saveReaderMode = (isReaderMode: boolean): void => {
  * Load reader mode preference
  * @returns Whether reader mode is enabled
  */
-export const loadReaderMode = (): boolean => {
+export const loadReaderMode = async (): Promise<boolean> => {
     try {
-        const readerModeJson = localStorage.getItem(READER_MODE_KEY)
-        return readerModeJson ? JSON.parse(readerModeJson) : false
+        const readerMode = await localforage.getItem<boolean>(READER_MODE_KEY)
+        return readerMode ?? false
     } catch (error) {
-        console.error('Error loading reader mode preference from local storage:', error)
+        console.error('Error loading reader mode preference from storage:', error)
         return false
     }
 }
+
+/**
+ * Save Hugging Face API key to storage
+ * @param apiKey The API key to save
+ */
+export const saveHuggingFaceApiKey = async (apiKey: string): Promise<void> => {
+    try {
+        await localforage.setItem(HUGGING_FACE_API_KEY, apiKey)
+    } catch (error) {
+        console.error('Error saving Hugging Face API key to storage:', error)
+    }
+}
+
+/**
+ * Load Hugging Face API key from storage
+ * @returns The API key, or empty string if not found
+ */
+export const loadHuggingFaceApiKey = async (): Promise<string> => {
+    try {
+        const apiKey = await localforage.getItem<string>(HUGGING_FACE_API_KEY)
+        return apiKey || ''
+    } catch (error) {
+        console.error('Error loading Hugging Face API key from storage:', error)
+        return ''
+    }
+}
+
+/**
+ * Clear Hugging Face API key from storage
+ */
+export const clearHuggingFaceApiKey = async (): Promise<void> => {
+    try {
+        await localforage.removeItem(HUGGING_FACE_API_KEY)
+    } catch (error) {
+        console.error('Error clearing Hugging Face API key from storage:', error)
+    }
+}
+
+// For initialization when async operations can't be used
+// These functions allow synchronous access during component initialization
+
+/**
+ * Load reader mode preference synchronously (for initialization)
+ * @returns Whether reader mode is enabled (defaults to false)
+ */
+export const loadReaderModeSync = (): boolean => {
+    return false // Default to false, will be updated after async call completes
+}
+
+// Debug utilities - completely removed

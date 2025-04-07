@@ -5,6 +5,7 @@ enum NavigationPaths {
     CORPORATION = '/corpo',
     FIXER_JOB = '/fixer_job',
     NPC = '/npc',
+    SETTINGS = '/settings',
 }
 
 export default NavigationPaths

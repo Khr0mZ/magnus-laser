@@ -9,6 +9,7 @@ export enum ModuleTypes {
     CORPORATION = 'CORPORATION',
     FIXER_JOB = 'FIXER_JOB',
     NPC = 'NPC',
+    SETTINGS = 'SETTINGS',
 }
 
 // Job difficulty

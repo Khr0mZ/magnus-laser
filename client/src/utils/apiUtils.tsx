@@ -4,15 +4,33 @@ import { closeSnackbar, enqueueSnackbar } from 'notistack'
 import { SetStateAction } from 'react'
 import { Building, Gang } from '../graphql/types'
 import { ModuleTypes } from './constants'
+import { loadHuggingFaceApiKey } from './storage'
 
-// Restore Hugging Face constants
-const HUGGINGFACE_API_TOKEN = import.meta.env.VITE_HUGGINGFACE_TOKEN
+// Hugging Face constants
 const TEXT_MODEL_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1' // Or your preferred HF text model
 const IMAGE_MODEL_URL = 'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0' // Or your preferred HF image model
 
-// Basic check if the key exists
-if (!HUGGINGFACE_API_TOKEN) {
-    console.error('Hugging Face API token (VITE_HUGGINGFACE_TOKEN) is missing. Please add it to your .env file.')
+// Cache for API token
+let cachedApiToken: string | null = null
+
+// Function to get the Hugging Face API token (user-provided or from env)
+const getHuggingFaceToken = async (): Promise<string> => {
+    // Return cached token if available
+    if (cachedApiToken !== null) {
+        return cachedApiToken
+    }
+
+    // Try to load from IndexedDB
+    const userToken = await loadHuggingFaceApiKey()
+    if (userToken) {
+        cachedApiToken = userToken
+        return userToken
+    }
+
+    // Fall back to env variable
+    const envToken = import.meta.env.VITE_HUGGINGFACE_TOKEN || ''
+    cachedApiToken = envToken
+    return envToken
 }
 
 /**
@@ -30,6 +48,8 @@ export const generateHuggingFaceDescription = async (
     const isBuilding = moduleType === ModuleTypes.BUILDING
     const building = isBuilding ? (item as Building) : null
     const gang = !isBuilding ? (item as Gang) : null
+
+    const HUGGINGFACE_API_TOKEN = await getHuggingFaceToken()
 
     if (!HUGGINGFACE_API_TOKEN) {
         console.error('Hugging Face token is missing, cannot generate description.')
@@ -137,6 +157,8 @@ export const generateHuggingFaceDescription = async (
  * @returns The generated image Blob, or null on error.
  */
 export const generateHuggingFaceImage = async (description: string, name: string): Promise<Blob | null> => {
+    const HUGGINGFACE_API_TOKEN = await getHuggingFaceToken()
+
     if (!HUGGINGFACE_API_TOKEN) {
         console.error('Hugging Face token is missing, cannot generate image.')
         return null

@@ -1,4 +1,4 @@
-import { Apartment, Badge, BusinessCenter, Check, Close, Groups3, LiveHelp } from '@mui/icons-material'
+import { Apartment, Badge, BusinessCenter, Check, Close, Groups3, LiveHelp, Settings } from '@mui/icons-material'
 import { TFunction } from 'i18next'
 import { BuildingType } from '../graphql/types'
 import colors from './colors'
@@ -56,6 +56,13 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
     if (module === ModuleTypes.FIXER_JOB)
         return (
             <LiveHelp
+                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
+                fontSize={isNavigation ? 'large' : 'inherit'}
+            />
+        )
+    if (module === ModuleTypes.SETTINGS)
+        return (
+            <Settings
                 sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />

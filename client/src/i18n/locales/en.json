@@ -36,7 +36,9 @@
         "cancel": "Cancel",
         "yes": "Yes",
         "no": "No",
-        "noImageFound": "NO IMAGE FOUND"
+        "noImageFound": "NO IMAGE FOUND",
+        "settings": "Settings",
+        "clickToClose": "Click anywhere to close"
     },
     "modules": {
         "DASHBOARD": "Services",
@@ -44,7 +46,8 @@
         "BUILDING": "Building",
         "CORPORATION": "Corpo",
         "FIXER_JOB": "Fixer Job",
-        "NPC": "NPC"
+        "NPC": "NPC",
+        "SETTINGS": "Settings"
     },
     "dashboard": {
         "welcome": "Welcome to Magnus Laser HQ",
@@ -499,5 +502,22 @@
             "name": "Name",
             "isAbandoned": "Is Abandoned?"
         }
+    },
+    "settings": {
+        "apiKeys": "API Keys",
+        "huggingFaceApiKey": "Hugging Face API Key",
+        "huggingFaceApiKeyDescription": "Add your own Hugging Face API key to generate descriptions and images. If not provided, the app will use the default key if available.",
+        "apiKeyLabel": "API Key",
+        "apiKeyPlaceholder": "Enter your Hugging Face API key",
+        "apiKeySecurityNote": "Your API key is stored locally on your device and is never sent to our servers."
+    },
+    "loader": {
+        "subtitle": "Cyberpunk Generator Interface v2.0.77",
+        "system": "System Kernel Initialization",
+        "readerMode": "Neural Interface Mode",
+        "viewPrefs": "Interface Visualization Settings",
+        "buildings": "Architectural Database Records",
+        "gangs": "Street Crew Intelligence Data",
+        "message": "Choom, just a few more ticks. Getting everything delta for ya..."
     }
 }
