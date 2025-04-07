@@ -1,25 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Building, Gang } from '../graphql/types'
 import { DATA_IMPORT_EVENT, loadBuildings, loadGangs } from '../utils/storage'
-
-interface DataContextType {
-    buildings: Building[]
-    gangs: Gang[]
-    isLoading: boolean
-    setBuildings: React.Dispatch<React.SetStateAction<Building[]>>
-    setGangs: React.Dispatch<React.SetStateAction<Gang[]>>
-}
-
-// Create context with default values
-const DataContext = createContext<DataContextType>({
-    buildings: [],
-    gangs: [],
-    isLoading: true,
-    setBuildings: () => {},
-    setGangs: () => {},
-})
-
-export const useData = () => useContext(DataContext)
+import { DataContext } from './dataHooks'
 
 interface DataProviderProps {
     children: React.ReactNode
@@ -85,4 +67,4 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>
 }
 
-export default DataContext
+export default DataProvider

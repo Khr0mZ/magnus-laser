@@ -172,7 +172,7 @@ body {
 
 /* Reader Mode Styles */
 body.reader-mode {
-    background-color: #f8f9fa;
+    background-color: lightgrey;
     color: #242424;
     line-height: 1.6;
 }
@@ -198,7 +198,7 @@ body.reader-mode .MuiButton-root {
 }
 
 body.reader-mode .MuiTypography-root {
-    color: #242424;
+    /* color: #242424; */ /* Commented out: Allow sx prop in components like Loader to control color */
     text-shadow: none;
 }
 

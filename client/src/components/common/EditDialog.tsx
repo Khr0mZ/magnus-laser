@@ -1659,7 +1659,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     }
                 >
                     <Typography
-                        variant="body1"
+                        variant="h3"
                         className="glitch-text"
                         component="div"
                         data-text={
@@ -1668,10 +1668,8 @@ export const EditDialog = (props: EditDialogProps) => {
                                 : t('buildings.editTitle', 'Edit Building')
                         }
                         sx={{
-                            color: colors.neons.cyan.default,
+                            color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                             textShadow: `0 0 10px ${colors.neons.cyan.default}`,
-                            fontSize: '1.5rem',
-                            fontWeight: 600,
                         }}
                     >
                         {moduleType === ModuleTypes.GANG

@@ -2,7 +2,6 @@ import { Box, Button, CircularProgress, Container, Grid, Stack, Typography } fro
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ViewPreferencesContext } from '../../App'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
 import EditDialog from '../../components/common/EditDialog'
 import GridView from '../../components/common/GridView'
@@ -10,8 +9,9 @@ import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
-import { useData } from '../../contexts/DataContext'
+import { useData } from '../../contexts/dataHooks'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { ViewPreferencesContext } from '../../contexts/ViewPreferencesContext'
 import { Building, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
@@ -190,7 +190,7 @@ const GangView = () => {
                     className="glitch-text"
                     data-text={t('gangs.title', 'Gang Generator')}
                     sx={{
-                        color: colors.neons.cyan.default,
+                        color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                         flexGrow: 1,
                     }}
@@ -275,7 +275,7 @@ const GangView = () => {
                                   }),
                         }}
                     >
-                        {isGenerating ? t('common.generating', 'Generating...') : t('common.generate')}
+                        {isGenerating ? t('common.generating') : t('common.generate')}
                     </Button>
                 </Box>
 
@@ -373,7 +373,7 @@ const GangView = () => {
                               }),
                     }}
                 >
-                    <span className="button-text">{t('common.clear')}</span>
+                    {t('common.clear')}
                 </Button>
             </Stack>
 
@@ -381,7 +381,7 @@ const GangView = () => {
                 <Typography
                     variant="body1"
                     sx={{
-                        color: colors.neons.cyan.default,
+                        color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 5px ${colors.neons.cyan.default}`,
                         fontFamily: '"Orbitron", monospace',
                         letterSpacing: '1px',
@@ -391,24 +391,6 @@ const GangView = () => {
                         backgroundColor: 'rgba(0, 30, 40, 0.2)',
                         display: 'inline-block',
                         position: 'relative',
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundImage:
-                                'linear-gradient(to right, rgba(0, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 255, 255, 0.03) 1px, transparent 1px)',
-                            backgroundSize: '20px 20px',
-                            pointerEvents: 'none',
-                        },
-                        '&::after': {
-                            content: '"> "',
-                            color: colors.neons.green.default,
-                            animation: `${buttonGlitch} 2s infinite`,
-                            textShadow: `0 0 5px ${colors.neons.green.default}`,
-                        },
                     }}
                 >
                     {t('common.noItems', { type: t('modules.GANG').toLowerCase() })}

@@ -306,7 +306,7 @@ const Dashboard = () => {
                     className="glitch-text"
                     data-text={t('modules.DASHBOARD')}
                     sx={{
-                        color: colors.neons.cyan.default,
+                        color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                     }}
                 >
@@ -315,7 +315,7 @@ const Dashboard = () => {
                 <Typography
                     variant="h2"
                     sx={{
-                        color: colors.neons.green.default,
+                        color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
                         textShadow: `0 0 8px ${colors.neons.green.default}`,
                     }}
                 >
@@ -324,7 +324,7 @@ const Dashboard = () => {
                 <Typography
                     variant="h3"
                     sx={{
-                        color: colors.grays.gray700,
+                        color: readerMode ? colors.grays.gray000 : colors.grays.gray700,
                         mt: 1,
                     }}
                 >

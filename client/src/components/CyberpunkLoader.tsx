@@ -30,7 +30,11 @@ export interface LoadingStatus {
 }
 
 // Props interface for the CyberpunkLoader component
-interface CyberpunkLoaderProps {}
+interface CyberpunkLoaderProps {
+    loadingStatus: LoadingStatus
+    onLoadComplete: () => void
+    readerMode: boolean
+}
 
 interface LoadingModule {
     id: string
@@ -40,7 +44,7 @@ interface LoadingModule {
 }
 
 // Define the total time the loader will be open (in milliseconds)
-export const LOADER_DISPLAY_TIME = 15000
+export const LOADER_DISPLAY_TIME = 1500
 
 // Helper function to generate random hex values for dynamic data display
 const generateRandomHex = (length: number): string => {
@@ -86,9 +90,10 @@ const easeInOutQuad = (t: number): number => {
     return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 }
 
-const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
+const CyberpunkLoader = ({ loadingStatus, onLoadComplete, readerMode }: CyberpunkLoaderProps): JSX.Element => {
     const { t } = useTranslation()
     const bootSequenceRef = useRef<HTMLDivElement>(null)
+    const [isTimerElapsed, setIsTimerElapsed] = useState(false)
 
     // Initial loading modules state (loadTime acts as relative weight)
     const [loadingModules, setLoadingModules] = useState<LoadingModule[]>([
@@ -231,6 +236,7 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
         return () => {
             clearInterval(textInterval)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bootTexts.length, dataEntries.length]) // Dependencies
 
     // Effect for scrolling boot sequence (remains the same)
@@ -239,6 +245,30 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
             bootSequenceRef.current.scrollTop = bootSequenceRef.current.scrollHeight
         }
     }, [displayedBootTexts])
+
+    // Effect to track the minimum display time
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsTimerElapsed(true)
+        }, LOADER_DISPLAY_TIME)
+
+        return () => clearTimeout(timer)
+    }, [])
+
+    // Effect to check if loading is fully complete
+    useEffect(() => {
+        // Check if the timer has elapsed
+        if (!isTimerElapsed) {
+            return // Wait for the minimum display time
+        }
+
+        // Check if all loading status flags are true
+        const allLoaded = Object.values(loadingStatus).every((status) => status === true)
+
+        if (allLoaded) {
+            onLoadComplete() // Signal to parent component
+        }
+    }, [isTimerElapsed, loadingStatus, onLoadComplete])
 
     return (
         <Box
@@ -251,7 +281,7 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                bgcolor: '#050718',
+                bgcolor: readerMode ? colors.grays.gray700 : '#050718',
                 zIndex: 9999,
                 // Use font stack from fonts.css
                 fontFamily: "'Rajdhani', 'Lexend', system-ui, sans-serif",
@@ -261,7 +291,7 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
             }}
         >
             {/* Add Matrix Background Here */}
-            <MatrixBackground />
+            {!readerMode && <MatrixBackground />}
 
             {/* --- Main Loader Content Wrapper (Centered) --- */}
             {/* This Box now takes the role of the old column 1 wrapper */}
@@ -276,7 +306,8 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                     justifyContent: 'center',
                     position: 'relative',
                     padding: '30px',
-                    color: colors.neons.cyan.default,
+                    // Conditionally set color based on readerMode
+                    color: readerMode ? '#ffffff' : colors.neons.cyan.default,
                     overflow: 'hidden',
                 }}
             >
@@ -297,7 +328,8 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                         zIndex: -1,
                         pointerEvents: 'none',
                         mixBlendMode: 'soft-light',
-                        animation: `${flicker} 6s infinite, ${glitch} 4s infinite alternate`,
+                        // Disable animations in reader mode
+                        animation: readerMode ? 'none' : `${flicker} 6s infinite, ${glitch} 4s infinite alternate`,
                     }}
                 />
 
@@ -311,9 +343,14 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                         top: 0,
                         width: '2px',
                         height: '100%',
-                        background: `linear-gradient(to bottom, transparent, ${colors.neons.pink.default}, transparent)`,
-                        opacity: 0.5,
-                        animation: `${verticalScanline} 2.5s ease-in-out infinite alternate`,
+                        // Use gray for reader mode, otherwise neon pink
+                        background: readerMode
+                            ? 'linear-gradient(to bottom, transparent, #aaaaaa, transparent)'
+                            : `linear-gradient(to bottom, transparent, ${colors.neons.pink.default}, transparent)`,
+                        // Reduce opacity in reader mode
+                        opacity: readerMode ? 0.2 : 0.5,
+                        // Disable animation in reader mode
+                        animation: readerMode ? 'none' : `${verticalScanline} 2.5s ease-in-out infinite alternate`,
                         zIndex: 1,
                         pointerEvents: 'none',
                     }}
@@ -327,14 +364,19 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                         left: 0,
                         width: '100%',
                         height: '2px',
-                        background: `linear-gradient(to right, transparent, ${colors.neons.cyan.default}, transparent)`,
-                        opacity: 0.7,
-                        animation: `${horizontalScanline} 3s ease-in-out infinite`,
+                        // Use gray for reader mode, otherwise neon cyan
+                        background: readerMode
+                            ? 'linear-gradient(to right, transparent, #aaaaaa, transparent)'
+                            : `linear-gradient(to right, transparent, ${colors.neons.cyan.default}, transparent)`,
+                        // Reduce opacity in reader mode
+                        opacity: readerMode ? 0.3 : 0.7,
+                        // Disable animation in reader mode
+                        animation: readerMode ? 'none' : `${horizontalScanline} 3s ease-in-out infinite`,
                         zIndex: 1,
                         pointerEvents: 'none',
                     }}
                 />
-                {/* General Scanlines Texture */}
+                {/* General Scanlines Texture (Keep this one for texture, but maybe reduce opacity slightly) */}
                 <Box
                     aria-hidden="true"
                     sx={{
@@ -343,7 +385,10 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                         left: 0,
                         width: '100%',
                         height: '100%',
-                        background: 'linear-gradient(to bottom, transparent 50%, rgba(0, 255, 255, 0.03) 50%)',
+                        // Keep animation, but reduce effect in reader mode
+                        background: readerMode
+                            ? 'linear-gradient(to bottom, transparent 50%, rgba(180, 180, 180, 0.02) 50%)'
+                            : 'linear-gradient(to bottom, transparent 50%, rgba(0, 255, 255, 0.03) 50%)',
                         backgroundSize: '100% 4px',
                         pointerEvents: 'none',
                         zIndex: 0,
@@ -367,17 +412,34 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                         variant="h1"
                         component="h1"
                         data-text="MAGNUS LASER"
+                        className="glitch-text"
                         sx={{
-                            color: colors.neons.cyan.default,
-                            fontSize: '3rem',
+                            textAlign: 'center',
+                            color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
+                            textShadow: `0 0 10px ${colors.neons.cyan.default}`,
+                            flexGrow: 1,
+                        }}
+                    >
+                        MAGNUS LASER
+                    </Typography>
+                    {/* Subtitle */}
+                    <Typography
+                        variant="h5"
+                        data-text="QUANTUM NEURAL INTERFACE"
+                        sx={{
+                            // Conditionally set color
+                            color: readerMode ? colors.grays.gray100 : colors.neons.cyan.default,
+                            //fontSize: '3rem',
                             m: '0 0 10px',
                             textAlign: 'center',
                             fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
                             letterSpacing: '4px',
                             fontWeight: 'bold',
-                            textShadow: `0 0 10px ${colors.neons.cyan.default}`,
+                            // Remove text shadow and animation in reader mode
+                            textShadow: readerMode ? 'none' : `0 0 10px ${colors.neons.cyan.default}`,
                             position: 'relative',
-                            animation: `${flicker} 4s infinite`,
+                            animation: readerMode ? 'none' : `${flicker} 4s infinite`,
+                            // Hide pseudo-elements causing glitch/color effects in reader mode
                             '&::before, &::after': {
                                 content: 'attr(data-text)',
                                 position: 'absolute',
@@ -385,6 +447,7 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                 height: '100%',
                                 top: 0,
                                 left: 0,
+                                display: readerMode ? 'none' : 'block', // Hide in reader mode
                             },
                             '&::before': {
                                 color: colors.neons.pink.default,
@@ -404,24 +467,6 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                             },
                         }}
                     >
-                        MAGNUS LASER
-                    </Typography>
-                    {/* Subtitle */}
-                    <Typography
-                        variant="subtitle1"
-                        data-text="QUANTUM NEURAL INTERFACE"
-                        sx={{
-                            color: colors.neons.pink.default,
-                            fontSize: '1.5rem',
-                            textAlign: 'center',
-                            mb: '30px',
-                            letterSpacing: '2px',
-                            textShadow: `0 0 5px ${colors.neons.pink.default}`,
-                            position: 'relative',
-                            fontWeight: 'bold',
-                            fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                        }}
-                    >
                         QUANTUM NEURAL INTERFACE
                     </Typography>
 
@@ -433,11 +478,13 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                 height: '200px',
                                 overflowY: 'auto',
                                 p: '10px',
-                                bgcolor: 'rgba(0, 0, 0, 0.6)',
-                                border: `1px solid ${colors.neons.cyan.default}33`,
+                                bgcolor: readerMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+                                // Use standard border in reader mode
+                                border: readerMode ? '1px solid #cccccc' : `1px solid ${colors.neons.cyan.default}33`,
                                 borderRadius: '4px',
                                 fontFamily: '"Share Tech Mono", monospace',
-                                color: colors.neons.green.default,
+                                // Conditionally set color
+                                color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
                                 fontSize: '0.9rem',
                                 position: 'relative',
                                 scrollbarWidth: 'none',
@@ -449,7 +496,8 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                     key={index}
                                     sx={{
                                         mb: '4px',
-                                        textShadow: `0 0 5px ${colors.neons.green.default}80`,
+                                        // Remove text shadow in reader mode
+                                        textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}80`,
                                         whiteSpace: 'pre-wrap',
                                         wordBreak: 'break-all',
                                     }}
@@ -496,11 +544,12 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                             sx={{
                                 mb: '8px',
                                 fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                                color: colors.neons.cyan.default,
+                                // Conditionally set color, remove shadow and animation
+                                color: readerMode ? colors.grays.gray100 : colors.neons.cyan.default,
                                 fontSize: '0.9rem',
-                                textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                                textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
                                 fontWeight: 'bold',
-                                animation: `${textNeonPulse} 3s infinite alternate`,
+                                animation: readerMode ? 'none' : `${textNeonPulse} 3s infinite alternate`,
                             }}
                         >
                             TOTAL SYSTEM INITIALIZATION
@@ -512,11 +561,12 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                 bgcolor: 'rgba(0, 20, 40, 0.5)',
                                 borderRadius: '4px',
                                 position: 'relative',
-                                border: `1px solid ${colors.neons.cyan.default}4D`,
-                                boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.5)',
-                                ...(overallProgress >= 100 && {
-                                    animation: `${pulseGlowGreen} 2s infinite`,
-                                }),
+                                // Use standard border and shadow in reader mode
+                                border: readerMode ? '1px solid #cccccc' : `1px solid ${colors.neons.cyan.default}4D`,
+                                boxShadow: readerMode ? 'none' : 'inset 0 0 10px rgba(0, 0, 0, 0.5)',
+                                // Disable glow animation in reader mode
+                                animation:
+                                    readerMode || overallProgress < 100 ? 'none' : `${pulseGlowGreen} 2s infinite`,
                             }}
                         >
                             <LinearProgress
@@ -566,7 +616,8 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                     top: '-30px',
                                     right: 0,
                                     fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
-                                    color: '#d9fbfb',
+                                    // Conditionally set color
+                                    color: readerMode ? '#ffffff' : '#d9fbfb',
                                     fontSize: '0.9rem',
                                     fontWeight: 'bold',
                                 }}
@@ -585,8 +636,9 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                         variant="body2"
                                         sx={{
                                             fontSize: '0.9rem',
-                                            color: '#d9fbfb',
-                                            textShadow: `0 0 5px ${colors.neons.cyan.default}80`,
+                                            // Conditionally set color and remove shadow
+                                            color: readerMode ? colors.grays.gray100 : '#d9fbfb',
+                                            textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}80`,
                                             fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
                                         }}
                                     >
@@ -596,7 +648,8 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                         variant="body2"
                                         sx={{
                                             fontSize: '0.9rem',
-                                            color: '#d9fbfb',
+                                            // Conditionally set color
+                                            color: readerMode ? colors.grays.gray100 : '#d9fbfb',
                                             fontWeight: 'bold',
                                             fontFamily: "'Orbitron', 'Rajdhani', 'Lexend', sans-serif",
                                         }}
@@ -607,9 +660,10 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                             <Done
                                                 sx={{
                                                     fontSize: 'inherit',
-                                                    color: colors.neons.green.default,
+                                                    // Use standard green and remove animation in reader mode
+                                                    color: readerMode ? '#4caf50' : colors.neons.green.default,
                                                     verticalAlign: 'middle',
-                                                    animation: `${iconGlowFilter} 2s infinite`,
+                                                    animation: readerMode ? 'none' : `${iconGlowFilter} 2s infinite`,
                                                 }}
                                             />
                                         )}
@@ -622,11 +676,16 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                                         borderRadius: '2px',
                                         overflow: 'hidden',
                                         position: 'relative',
-                                        border: `1px solid ${colors.neons.cyan.default}4D`,
-                                        boxShadow: 'inset 0 0 5px rgba(0, 0, 0, 0.5)',
-                                        ...(module.progress >= 100 && {
-                                            animation: `${moduleProgressCycle} 2s infinite`,
-                                        }),
+                                        // Use standard border and shadow in reader mode
+                                        border: readerMode
+                                            ? '1px solid #cccccc'
+                                            : `1px solid ${colors.neons.cyan.default}4D`,
+                                        boxShadow: readerMode ? 'none' : 'inset 0 0 5px rgba(0, 0, 0, 0.5)',
+                                        // Disable animation in reader mode
+                                        animation:
+                                            readerMode || module.progress < 100
+                                                ? 'none'
+                                                : `${moduleProgressCycle} 2s infinite`,
                                     }}
                                 >
                                     <LinearProgress
@@ -682,11 +741,12 @@ const CyberpunkLoader = ({}: CyberpunkLoaderProps): JSX.Element => {
                             pt: '20px',
                             textAlign: 'center',
                             fontSize: '1rem',
-                            color: colors.neons.pink.default,
-                            textShadow: `0 0 8px ${colors.neons.pink.default}B3`,
+                            // Conditionally set color, remove shadow and animation
+                            color: readerMode ? '#ffffff' : colors.neons.pink.default,
+                            textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.pink.default}B3`,
                             fontStyle: 'italic',
                             letterSpacing: '1px',
-                            animation: `${neonColorCycle} 8s infinite alternate`,
+                            animation: readerMode ? 'none' : `${neonColorCycle} 8s infinite alternate`,
                         }}
                     >
                         Choom, just a few more ticks. Getting everything delta for ya...

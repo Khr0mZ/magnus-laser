@@ -28,6 +28,7 @@ import {
 } from '../../utils/functions'
 import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
 
+import { Close } from '@mui/icons-material'
 import { buttonGlitch } from './Animations'
 import TiptapEditor from './TiptapEditor.tsx'
 
@@ -123,23 +124,13 @@ const GridView = (props: GridViewProps) => {
                                     fontSize: '1rem',
                                     fontWeight: 'bold',
                                     fontFamily: 'Orbitron, sans-serif',
-                                    color: color,
-                                    textShadow: `0 0 5px ${getComplementaryColor(color)}`,
+                                    color: readerMode ? colors.grays.gray000 + ' !important' : color,
+                                    textShadow: readerMode
+                                        ? `0 0 5px ${colors.grays.gray900}` + ' !important'
+                                        : `0 0 5px ${getComplementaryColor(color)}`,
                                 }}
                             >
-                                {readerMode ? (
-                                    <span
-                                        style={{
-                                            color: colors.grays.gray000,
-                                            fontWeight: 'bold',
-                                            textShadow: `0 0 5px ${colors.grays.gray900}`,
-                                        }}
-                                    >
-                                        {item.name}
-                                    </span>
-                                ) : (
-                                    item.name
-                                )}
+                                {item.name}
                             </Typography>
                             <Typography
                                 variant="body2"
@@ -148,39 +139,18 @@ const GridView = (props: GridViewProps) => {
                                     fontWeight: 'normal',
                                     textTransform: 'uppercase',
                                     letterSpacing: '1px',
+                                    color: readerMode ? colors.grays.gray000 : undefined,
+                                    textShadow: readerMode ? `0 0 5px ${colors.grays.gray900}` : 'none',
                                 }}
                             >
-                                {readerMode ? (
-                                    <span
-                                        style={{
-                                            color: colors.grays.gray000,
-                                            fontWeight: 'bold',
-                                            textShadow: `0 0 5px ${colors.grays.gray900}`,
-                                        }}
-                                    >
-                                        {moduleType === ModuleTypes.GANG &&
-                                            processGangValueForDisplay('type', item.type, t)}
-                                        {moduleType === ModuleTypes.BUILDING &&
-                                            processBuildingValueForDisplay(
-                                                'type',
-                                                item.type,
-                                                t,
-                                                'isAbandoned' in item ? item.isAbandoned : false
-                                            )}
-                                    </span>
-                                ) : (
-                                    <>
-                                        {moduleType === ModuleTypes.GANG &&
-                                            processGangValueForDisplay('type', item.type, t)}
-                                        {moduleType === ModuleTypes.BUILDING &&
-                                            processBuildingValueForDisplay(
-                                                'type',
-                                                item.type,
-                                                t,
-                                                'isAbandoned' in item ? item.isAbandoned : false
-                                            )}
-                                    </>
-                                )}
+                                {moduleType === ModuleTypes.GANG && processGangValueForDisplay('type', item.type, t)}
+                                {moduleType === ModuleTypes.BUILDING &&
+                                    processBuildingValueForDisplay(
+                                        'type',
+                                        item.type,
+                                        t,
+                                        'isAbandoned' in item ? item.isAbandoned : false
+                                    )}
                             </Typography>
                         </Box>
 
@@ -247,15 +217,13 @@ const GridView = (props: GridViewProps) => {
                                     : {},
                             }}
                         >
-                            <span
-                                style={{
+                            <Close
+                                sx={{
                                     textShadow: `0 0 5px ${colors.neons.red.default}`,
                                     zIndex: 2,
                                     animation: `${buttonGlitch} 5s infinite`,
                                 }}
-                            >
-                                ✕
-                            </span>
+                            />
                         </Button>
                     </Box>
 

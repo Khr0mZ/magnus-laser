@@ -21,7 +21,7 @@ const JobDifficultySelector = (props: JobDifficultySelectorProps) => {
             <Typography
                 sx={{
                     fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                    color: colors.neons.cyan.default,
+                    color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                     textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
                     fontWeight: readerMode ? 600 : 400,
                     fontSize: '0.85rem',

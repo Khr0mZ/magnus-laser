@@ -49,8 +49,7 @@ export const WarningDialog = (props: WarningDialogProps) => {
             : t(`common.deleteConfirmMessage`, { type: moduleType ? t(`modules.${moduleType}`).toLowerCase() : '' })
         : message
 
-    const resolvedConfirmText =
-        confirmText || (isDelete ? t('common.delete', 'Delete') : t('common.confirm', 'Confirm'))
+    const resolvedConfirmText = confirmText || (isDelete ? t('common.delete') : t('common.confirm'))
     const resolvedCancelText = cancelText || t('common.cancel', 'Cancel')
 
     // Get the appropriate color based on confirmColor prop
@@ -150,14 +149,15 @@ export const WarningDialog = (props: WarningDialogProps) => {
                     className="glitch-text"
                     data-text={resolvedTitle}
                     sx={{
-                        color:
-                            confirmColor === 'red'
-                                ? '#d32f2f'
-                                : confirmColor === 'green'
-                                ? '#2e7d32'
-                                : confirmColor === 'blue'
-                                ? '#1976d2'
-                                : '#0097a7',
+                        color: readerMode
+                            ? colors.grays.gray000
+                            : confirmColor === 'red'
+                            ? '#d32f2f'
+                            : confirmColor === 'green'
+                            ? '#2e7d32'
+                            : confirmColor === 'blue'
+                            ? '#1976d2'
+                            : '#0097a7',
                         textShadow: `0 0 10px ${
                             confirmColor === 'red'
                                 ? '#d32f2f'

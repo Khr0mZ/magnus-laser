@@ -20,7 +20,11 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
     const { readerMode } = useContext(ReaderModeContext)
 
     const pickColor = (navigationPath: NavigationPaths) => {
-        return pathname.startsWith(navigationPath) ? colors.neons.cyan.default : colors.grays.gray700
+        return pathname.startsWith(navigationPath)
+            ? readerMode
+                ? colors.neons.blue.default
+                : colors.neons.pink.default
+            : colors.grays.gray700
     }
 
     const isActive = (navigationPath: NavigationPaths) => {
@@ -37,6 +41,8 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
             size={'large'}
             onClick={active ? undefined : () => navigate(navigationPath)}
             sx={{
+                width: '85px',
+                boxSizing: 'content-box',
                 color: pickColor(navigationPath),
                 position: 'relative',
                 ...(readerMode
@@ -124,8 +130,8 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
                                   left: '10%',
                                   width: '80%',
                                   height: '2px',
-                                  backgroundColor: colors.neons.pink.default,
-                                  boxShadow: `0 0 10px ${colors.neons.pink.default}`,
+                                  backgroundColor: colors.neons.yellow.default,
+                                  boxShadow: `0 0 10px ${colors.neons.yellow.default}`,
                               },
                           }),
                       }),
@@ -177,11 +183,17 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
                     <Typography
                         variant={'caption'}
                         sx={{
+                            color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                             position: 'relative',
                             transition: 'all 0.3s',
                             textTransform: 'uppercase',
                             ...(readerMode
-                                ? {}
+                                ? {
+                                      ...(active && {
+                                          fontWeight: 900,
+                                          color: colors.neons.blue.default,
+                                      }),
+                                  }
                                 : {
                                       fontFamily: active ? '"Courier New", monospace' : 'inherit',
                                       letterSpacing: active ? '1px' : 'inherit',

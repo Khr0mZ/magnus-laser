@@ -34,11 +34,11 @@ const LogoButton = (): JSX.Element => {
                     : {
                           // Cyberpunk button style
                           '&:hover': {
-                              backgroundColor: 'rgba(0, 255, 139, 0.1)',
+                              backgroundColor: 'rgba(0, 255, 255, 0.1)',
                               '& .logo-glow': {
                                   opacity: 1,
                                   transform: 'scale(1.5)',
-                                  filter: `drop-shadow(0 0 15px ${colors.neons.green.default})`,
+                                  filter: `drop-shadow(0 0 15px ${colors.neons.blue.default})`,
                                   animation: `${severeGlitch} 0.5s ease infinite`,
                               },
                               '&::after': {
@@ -55,8 +55,8 @@ const LogoButton = (): JSX.Element => {
                               left: 0,
                               width: '0%',
                               height: '2px',
-                              backgroundColor: colors.neons.green.default,
-                              boxShadow: `0 0 10px ${colors.neons.green.default}`,
+                              backgroundColor: colors.neons.pink.default,
+                              boxShadow: `0 0 10px ${colors.neons.pink.default}`,
                               opacity: 0,
                               transition: 'all 0.3s ease-out',
                           },

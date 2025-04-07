@@ -1,3 +1,4 @@
+import { Close } from '@mui/icons-material'
 import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -108,7 +109,7 @@ const TableView = (props: TableViewProps) => {
                                     textAlign: 'center',
                                 }}
                             >
-                                {t('common.actions', 'Actions')}
+                                {t('common.actions')}
                             </TableCell>
                         </TableRow>
                     </TableHead>
@@ -164,38 +165,29 @@ const TableView = (props: TableViewProps) => {
                                             data-text={name}
                                             sx={{
                                                 fontWeight: 500,
-                                                color: color,
-                                                textShadow: `0 0 5px ${getComplementaryColor(
-                                                    color
-                                                )}40, -1px -1px 0 ${getComplementaryColor(
-                                                    color
-                                                )}40, 1px -1px 0 ${getComplementaryColor(
-                                                    color
-                                                )}40, -1px 1px 0 ${getComplementaryColor(
-                                                    color
-                                                )}40, 1px 1px 0 ${getComplementaryColor(color)}40`,
+                                                color: readerMode ? color : color,
+                                                textShadow: readerMode
+                                                    ? `0 0 5px ${getComplementaryColor(
+                                                          color
+                                                      )}40, -1px -1px 0 ${getComplementaryColor(
+                                                          color
+                                                      )}40, 1px -1px 0 ${getComplementaryColor(
+                                                          color
+                                                      )}40, -1px 1px 0 ${getComplementaryColor(
+                                                          color
+                                                      )}40, 1px 1px 0 ${getComplementaryColor(color)}40`
+                                                    : `0 0 5px ${getComplementaryColor(
+                                                          color
+                                                      )}40, -1px -1px 0 ${getComplementaryColor(
+                                                          color
+                                                      )}40, 1px -1px 0 ${getComplementaryColor(
+                                                          color
+                                                      )}40, -1px 1px 0 ${getComplementaryColor(
+                                                          color
+                                                      )}40, 1px 1px 0 ${getComplementaryColor(color)}40`,
                                             }}
                                         >
-                                            {readerMode ? (
-                                                <span
-                                                    style={{
-                                                        color: color,
-                                                        textShadow: `0 0 5px ${getComplementaryColor(
-                                                            color
-                                                        )}40, -1px -1px 0 ${getComplementaryColor(
-                                                            color
-                                                        )}40, 1px -1px 0 ${getComplementaryColor(
-                                                            color
-                                                        )}40, -1px 1px 0 ${getComplementaryColor(
-                                                            color
-                                                        )}40, 1px 1px 0 ${getComplementaryColor(color)}40`,
-                                                    }}
-                                                >
-                                                    {name}
-                                                </span>
-                                            ) : (
-                                                name
-                                            )}
+                                            {name}
                                         </Typography>
                                     </TableCell>
 
@@ -290,15 +282,13 @@ const TableView = (props: TableViewProps) => {
                                                 },
                                             }}
                                         >
-                                            <span
-                                                style={{
+                                            <Close
+                                                sx={{
                                                     textShadow: `0 0 5px ${colors.neons.red.default}`,
                                                     zIndex: 2,
                                                     animation: `${buttonGlitch} 5s infinite`,
                                                 }}
-                                            >
-                                                ✕
-                                            </span>
+                                            />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
