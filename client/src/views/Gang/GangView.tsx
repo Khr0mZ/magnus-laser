@@ -3,7 +3,7 @@ import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
-import EditDialog from '../../components/common/EditDialog'
+import EditDialog from '../../components/common/EditDialog/EditDialog'
 import GridView from '../../components/common/GridView'
 import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
@@ -12,10 +12,10 @@ import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { ViewPreferencesContext } from '../../contexts/ViewPreferencesContext'
-import { Building, Gang } from '../../graphql/types'
+import { Building, FixerJob, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
-import { generateRandomGang } from '../../utils/generatorGang'
+import { generateRandomGang } from '../../utils/generators/generatorGang'
 import { clearGangs, saveGangs, saveViewPreference } from '../../utils/storage'
 
 // Add window.gangsDataLoaded declaration
@@ -44,10 +44,13 @@ const GangView = () => {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [gangToEdit, setGangToEdit] = useState<Gang | null>(null)
     const prevGangsRef = useRef<number>(0)
+    const prevGangsDataRef = useRef<Gang[]>([])
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
     const [isGenerating, setIsGenerating] = useState(false)
     const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+    const syncingFromContextRef = useRef(false)
+    const updatingContextRef = useRef(false)
 
     // Update local state when view preferences change
     useEffect(() => {
@@ -58,13 +61,24 @@ const GangView = () => {
 
     // Update local state when data context changes
     useEffect(() => {
-        if (dataGangs.length > 0) {
-            setGangs(dataGangs)
-            prevGangsRef.current = dataGangs.length
-        }
+        // Prevent infinite loop - only update if we're not currently updating context
+        if (updatingContextRef.current) return
+
+        // Mark that we're syncing from context
+        syncingFromContextRef.current = true
+
+        // Always sync with context data, even if empty
+        setGangs(dataGangs)
+        prevGangsRef.current = dataGangs.length
+        prevGangsDataRef.current = structuredClone(dataGangs)
+
+        // Reset the syncing flag after state update
+        setTimeout(() => {
+            syncingFromContextRef.current = false
+        }, 0)
     }, [dataGangs])
 
-    // Save gangs to storage when they change in local state
+    // Save gangs to storage when they change
     useEffect(() => {
         // Skip during component initialization
         if (firstMountRef.current) {
@@ -72,15 +86,36 @@ const GangView = () => {
             return
         }
 
+        // Skip if the change was triggered by syncing from context
+        if (syncingFromContextRef.current) return
+
+        // Check if the data has actually changed to avoid unnecessary saves
+        const hasChanged = JSON.stringify(gangs) !== JSON.stringify(prevGangsDataRef.current)
+        if (!hasChanged) return
+
+        // Set updating context flag
+        updatingContextRef.current = true
+
         // Always save the data when it exists
         if (gangs.length > 0) {
-            saveGangs(gangs as Gang[])
+            saveGangs(gangs)
             setDataGangs(gangs) // Update context data
+        } else if (prevGangsRef.current > 0 && gangs.length === 0 && !isLoading) {
+            // Only clear if we previously had gangs and now we don't
+            // AND we're not still loading data
+            clearGangs()
+            setDataGangs([])
         }
 
-        // Update length reference
+        // Update references
         prevGangsRef.current = gangs.length
-    }, [gangs, setDataGangs])
+        prevGangsDataRef.current = structuredClone(gangs)
+
+        // Reset the context updating flag after state update
+        setTimeout(() => {
+            updatingContextRef.current = false
+        }, 0)
+    }, [gangs, setDataGangs, isLoading])
 
     const handleGenerateGang = async () => {
         setIsGenerating(true)
@@ -452,7 +487,7 @@ const GangView = () => {
             <EditDialog
                 open={editDialogOpen}
                 onClose={handleEditCancel}
-                onSave={handleEditSave as (item: Gang | Building) => void}
+                onSave={handleEditSave as (item: Gang | Building | FixerJob) => void}
                 item={gangToEdit}
                 moduleType={ModuleTypes.GANG}
                 isGeneratingImage={isGeneratingImage}

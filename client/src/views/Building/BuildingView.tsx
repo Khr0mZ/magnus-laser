@@ -3,7 +3,7 @@ import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
-import EditDialog from '../../components/common/EditDialog'
+import EditDialog from '../../components/common/EditDialog/EditDialog'
 import GridView from '../../components/common/GridView'
 import JobDifficultySelector from '../../components/common/JobDifficultySelector'
 import TableView from '../../components/common/TableView'
@@ -13,11 +13,11 @@ import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { ViewPreferencesContext } from '../../contexts/ViewPreferencesContext'
-import { Building, Gang } from '../../graphql/types'
+import { Building, FixerJob, Gang, JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
-import { JobDifficulty, ModuleTypes } from '../../utils/constants'
+import { ModuleTypes } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
-import { generateRandomBuilding } from '../../utils/generatorBuilding'
+import { generateRandomBuilding } from '../../utils/generators/generatorBuilding'
 import { clearBuildings, saveBuildings, saveViewPreference } from '../../utils/storage'
 
 // Add window interface augmentation
@@ -47,10 +47,13 @@ const BuildingView = () => {
     const [buildingToEdit, setBuildingToEdit] = useState<Building | null>(null)
     const [jobDifficulty, setJobDifficulty] = useState<JobDifficulty>(JobDifficulty.TYPICAL)
     const prevBuildingsRef = useRef<number>(0)
+    const prevBuildingsDataRef = useRef<Building[]>([])
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
     const [isGenerating, setIsGenerating] = useState(false)
     const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+    const syncingFromContextRef = useRef(false)
+    const updatingContextRef = useRef(false)
 
     // Update local state when view preferences change
     useEffect(() => {
@@ -61,10 +64,21 @@ const BuildingView = () => {
 
     // Update local state when data context changes
     useEffect(() => {
-        if (dataBuildings.length > 0) {
-            setBuildings(dataBuildings)
-            prevBuildingsRef.current = dataBuildings.length
-        }
+        // Prevent infinite loop - only update if we're not currently updating context
+        if (updatingContextRef.current) return
+
+        // Mark that we're syncing from context
+        syncingFromContextRef.current = true
+
+        // Always sync with context data, even if empty
+        setBuildings(dataBuildings)
+        prevBuildingsRef.current = dataBuildings.length
+        prevBuildingsDataRef.current = structuredClone(dataBuildings)
+
+        // Reset the syncing flag after state update
+        setTimeout(() => {
+            syncingFromContextRef.current = false
+        }, 0)
     }, [dataBuildings])
 
     // Save buildings to storage when they change
@@ -75,19 +89,36 @@ const BuildingView = () => {
             return
         }
 
+        // Skip if the change was triggered by syncing from context
+        if (syncingFromContextRef.current) return
+
+        // Check if the data has actually changed to avoid unnecessary saves
+        const hasChanged = JSON.stringify(buildings) !== JSON.stringify(prevBuildingsDataRef.current)
+        if (!hasChanged) return
+
+        // Set updating context flag
+        updatingContextRef.current = true
+
         // Always save the data when it exists
         if (buildings.length > 0) {
             saveBuildings(buildings)
             setDataBuildings(buildings) // Update context data
-        } else {
-            // If the array becomes empty, explicitly clear storage
+        } else if (prevBuildingsRef.current > 0 && buildings.length === 0 && !isLoading) {
+            // Only clear if we previously had buildings and now we don't
+            // AND we're not still loading data
             clearBuildings()
             setDataBuildings([])
         }
 
-        // Update length reference
+        // Update references
         prevBuildingsRef.current = buildings.length
-    }, [buildings, setDataBuildings])
+        prevBuildingsDataRef.current = structuredClone(buildings)
+
+        // Reset the context updating flag after state update
+        setTimeout(() => {
+            updatingContextRef.current = false
+        }, 0)
+    }, [buildings, setDataBuildings, isLoading])
 
     const handleJobDifficultyChange = (_: React.MouseEvent<HTMLElement>, newJobType: JobDifficulty) => {
         if (newJobType !== null) setJobDifficulty(newJobType)
@@ -483,7 +514,7 @@ const BuildingView = () => {
             <EditDialog
                 open={editDialogOpen}
                 onClose={handleEditCancel}
-                onSave={handleEditSave as (item: Building | Gang) => void}
+                onSave={handleEditSave as (item: Building | Gang | FixerJob) => void}
                 item={buildingToEdit}
                 moduleType={ModuleTypes.BUILDING}
                 isGeneratingImage={isGeneratingImage}

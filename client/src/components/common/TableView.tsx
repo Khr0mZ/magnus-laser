@@ -4,21 +4,28 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import CustomScrollbar from '../../components/CustomScrollbar'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { Building, Gang } from '../../graphql/types'
+import { Building, FixerJob, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
-import { buildingColumns, gangColumns, ModuleTypes } from '../../utils/constants'
+import { buildingColumns, fixerJobColumns, gangColumns, ModuleTypes } from '../../utils/constants'
 import {
     getBuildingColor,
     getComplementaryColor,
+    getFixerJobDifficultyColor,
     getGangColorValue,
+    processFixerJobValueForDisplay,
     processGangValueForDisplay,
 } from '../../utils/functions'
 import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
 import { translateLabel } from '../../utils/i18nUtils'
 import { buttonGlitch } from './Animations'
 
+type TableColumn = {
+    key: string
+    label: string
+}
+
 type TableViewProps = {
-    items: Gang[] | Building[]
+    items: Gang[] | Building[] | FixerJob[]
     onDelete: (index: number) => void
     moduleType: ModuleTypes
     onEdit: (index: number) => void
@@ -31,16 +38,17 @@ const TableView = (props: TableViewProps) => {
 
     if (items.length === 0) return null
 
-    let columns: {
-        key: string
-        label: string
-    }[] = []
+    let columns: TableColumn[] = []
     switch (moduleType) {
         case ModuleTypes.GANG:
             columns = gangColumns
             break
         case ModuleTypes.BUILDING:
             columns = buildingColumns
+            break
+        case ModuleTypes.FIXER_JOB:
+            columns = fixerJobColumns
+            break
     }
 
     return (
@@ -95,6 +103,8 @@ const TableView = (props: TableViewProps) => {
                                     {moduleType === ModuleTypes.GANG && translateLabel(t, column.label, 'gangs')}
                                     {moduleType === ModuleTypes.BUILDING &&
                                         translateLabel(t, column.label, 'buildings')}
+                                    {moduleType === ModuleTypes.FIXER_JOB &&
+                                        translateLabel(t, column.label, 'fixerJobs')}
                                 </TableCell>
                             ))}
 
@@ -116,7 +126,7 @@ const TableView = (props: TableViewProps) => {
 
                     <TableBody>
                         {items.map((item, index) => {
-                            // Generate localized name
+                            // Generate localized name and color based on module type
                             let name = ''
                             let color = ''
                             switch (moduleType) {
@@ -127,6 +137,10 @@ const TableView = (props: TableViewProps) => {
                                 case ModuleTypes.BUILDING:
                                     name = item.name
                                     color = getBuildingColor((item as Building).type)
+                                    break
+                                case ModuleTypes.FIXER_JOB:
+                                    name = item.name
+                                    color = getFixerJobDifficultyColor((item as FixerJob).difficulty)
                                     break
                             }
 
@@ -152,20 +166,18 @@ const TableView = (props: TableViewProps) => {
                                         transition: 'all 0.2s',
                                     }}
                                 >
-                                    {/* Name Cell */}
+                                    {/* Name cell */}
                                     <TableCell
                                         className="cell-content"
                                         align="center"
-                                        sx={{
-                                            borderBottom: `1px solid ${colors.neons.cyan.dark}`,
-                                        }}
+                                        sx={{ borderBottom: `1px solid ${colors.neons.cyan.dark}` }}
                                     >
                                         <Typography
                                             className={readerMode ? 'gang-name-typography' : 'glitch-text'}
                                             data-text={name}
                                             sx={{
                                                 fontWeight: 500,
-                                                color: readerMode ? color : color,
+                                                color: name,
                                                 textShadow: readerMode
                                                     ? `0 0 5px ${getComplementaryColor(
                                                           color
@@ -191,7 +203,7 @@ const TableView = (props: TableViewProps) => {
                                         </Typography>
                                     </TableCell>
 
-                                    {/* All other data cells */}
+                                    {/* Render data cells for each column (excluding name since it's already rendered) */}
                                     {columns.slice(1).map((column) => (
                                         <TableCell
                                             key={column.key}
@@ -204,20 +216,55 @@ const TableView = (props: TableViewProps) => {
                                             className="cell-content"
                                         >
                                             {moduleType === ModuleTypes.GANG &&
-                                                // @ts-expect-error - Gang object has dynamic properties based on column.key
-                                                processGangValueForDisplay(column.key, item[column.key], t)}
+                                                processGangValueForDisplay(
+                                                    column.key,
+                                                    (item as Gang)[column.key as keyof Gang],
+                                                    t
+                                                )}
                                             {moduleType === ModuleTypes.BUILDING &&
                                                 processBuildingValueForDisplay(
                                                     column.key,
-                                                    // @ts-expect-error - Building object has dynamic properties based on column.key
-                                                    item[column.key],
+                                                    (item as Building)[column.key as keyof Building],
                                                     t,
                                                     (item as Building).isAbandoned
                                                 )}
+                                            {moduleType === ModuleTypes.FIXER_JOB && (
+                                                <>
+                                                    {column.key === 'name' && item.name}
+                                                    {column.key.startsWith('plot.') &&
+                                                        processFixerJobValueForDisplay(
+                                                            column.key,
+                                                            (() => {
+                                                                const parts = column.key.split('.')
+                                                                let value = item as Record<string, unknown>
+
+                                                                for (const part of parts) {
+                                                                    if (!value || typeof value !== 'object')
+                                                                        return undefined
+
+                                                                    // Special case for verb which is a union type
+                                                                    if (
+                                                                        part === 'verb' &&
+                                                                        value.verb &&
+                                                                        typeof value.verb === 'object'
+                                                                    ) {
+                                                                        value = value.verb as Record<string, unknown>
+                                                                        continue
+                                                                    }
+
+                                                                    value = value[part] as Record<string, unknown>
+                                                                }
+
+                                                                return value
+                                                            })(),
+                                                            t
+                                                        )}
+                                                </>
+                                            )}
                                         </TableCell>
                                     ))}
 
-                                    {/* Actions */}
+                                    {/* Actions cell */}
                                     <TableCell
                                         sx={{
                                             color: colors.neons.red.default,

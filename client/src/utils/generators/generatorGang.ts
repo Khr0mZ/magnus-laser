@@ -15,123 +15,18 @@ import {
     KnownForPart1,
     KnownForPart2,
     Sin,
-} from '../graphql/types'
-import { blobToBase64, generateHuggingFaceDescription, generateHuggingFaceImage } from './apiUtils.tsx'
+} from '../../graphql/types'
+import { blobToBase64, generateHuggingFaceImage, generateHuggingFaceText } from '../apiUtils.tsx'
+import { ModuleTypes } from '../constants'
+import { getRandomElement, getRandomInt } from '../functions'
 import {
     gangConnectors,
     gangNameCategories,
     gangPrefixes,
     gangSuffixes,
     gangTypeNameData,
-    ModuleTypes,
-} from './constants'
-import { getRandomElement, getRandomInt } from './functions'
-
-/**
- * Internal function to generate a gang name
- * @param t - The translation function
- * @param type - The gang type
- * @param gangColor - The gang color
- * @returns A gang name
- */
-function generateGangName(t: TFunction, type: GangType, gangColor: GangColor): string {
-    // Get appropriate naming patterns for this gang type
-    const appropriatePatterns = gangTypeNameData[type].preferredPatterns || [1, 2, 3, 4, 5]
-    const namingPattern = getRandomElement(appropriatePatterns)
-
-    // Define all the elements we might need
-    const adjective = getRandomElement(gangNameCategories[GangNameType.ADJECTIVE])
-    const animal = getRandomElement(gangNameCategories[GangNameType.ANIMAL])
-    const bodyPart = getRandomElement(gangNameCategories[GangNameType.BODY_PART])
-    const color = getRandomElement(gangNameCategories[GangNameType.COLOR])
-    const neighborhood = getRandomElement(gangNameCategories[GangNameType.NEIGHBORHOOD])
-    const number = getRandomElement(gangNameCategories[GangNameType.NUMBER])
-    const place = getRandomElement(gangNameCategories[GangNameType.PLACE])
-    const profession = getRandomElement(gangNameCategories[GangNameType.PROFESSION])
-    const weapon = getRandomElement(gangNameCategories[GangNameType.WEAPON])
-    const weather = getRandomElement(gangNameCategories[GangNameType.WEATHER_PHENOMENA])
-
-    const prefix = getRandomElement(gangPrefixes)
-    const suffix = getRandomElement(gangSuffixes)
-    const connector = getRandomElement(gangConnectors)
-
-    // Generate a random number for numeric patterns
-    const randomNum = getRandomInt(1, 99).toString()
-
-    // Name generation patterns
-    let name = ''
-
-    switch (namingPattern) {
-        case 1: // Classic pattern: "The Chrome Wolves"
-            name = `${t('common.the')} ${adjective} ${animal}`
-            break
-        case 2: // Compound with suffix: "Crimson Dragons Crew"
-            name = `${color} ${animal} ${suffix}`
-            break
-        case 3: // Location-based: "Westbrook Rippers"
-            name = `${neighborhood} ${profession}`
-            break
-        case 4: // Body parts: "Iron Fists"
-            name = `${adjective} ${bodyPart}`
-            break
-        case 5: // Weapons focus: "Phantom Blades"
-            name = `${adjective} ${weapon}`
-            break
-        case 6: // Numbered gangs: "18th Street Vipers"
-            name = `${randomNum}${getRandomInt(1, 3) === 1 ? 'th' : ''} ${place} ${animal}`
-            break
-        case 7: // Weather elements: "Thunder Jackals"
-            name = `${weather} ${animal}`
-            break
-        case 8: // Military style: "Chrome Strike Force"
-            name = `${color} Strike ${profession}`
-            break
-        case 9: // Connector phrases: "Wolves of the Wasteland"
-            name = `${animal} ${connector} ${place}`
-            break
-        case 10: // Enhanced Short and punchy: "The Steel Razors" instead of just "The Razors"
-            name = `${t('common.the')} ${adjective} ${weapon}`
-            break
-        case 11: // Profession focused: "Rogue Netrunners"
-            name = `${adjective} ${profession}`
-            break
-        case 12: // Number gang with more elements: "Sixty-Nine Elite Crew" instead of just "Sixty-Nine Crew"
-            name = `${number} ${adjective} ${suffix}`
-            break
-        case 13: // Syndicate style with more detail: "Cobalt Shadow Syndicate" instead of just "Cobalt Syndicate"
-            name = `${color} ${adjective} ${suffix}`
-            break
-        case 14: // Religious/vigilante: "Brotherhood of Steel"
-            name = `${suffix} ${connector} ${adjective}`
-            break
-        case 15: // Quirky poser: "Los Chrome Boys"
-            name = `${prefix} ${color} ${profession}`
-            break
-        default:
-            name = `${t('common.the')} ${adjective} ${animal}`
-    }
-
-    // Add color influence for certain patterns if not already using color
-    if (gangColor && !name.includes(color) && [2, 6, 8, 13, 15].includes(namingPattern)) {
-        const colorText = gangNameCategories[GangNameType.COLOR][Object.values(GangColor).indexOf(gangColor)]
-        if (colorText && Math.random() > 0.7) {
-            if (namingPattern === 13) {
-                name = `${colorText} ${adjective} ${suffix}`
-            } else if (namingPattern === 15) {
-                name = `${prefix} ${colorText} ${profession}`
-            } else if (Math.random() > 0.5) {
-                name = name.replace(adjective, colorText)
-            }
-        }
-    }
-
-    // Add "The" to names that don't already have it or a prefix
-    if (!name.startsWith('The ') && !gangPrefixes.some((p) => name.startsWith(p)) && Math.random() > 0.6) {
-        name = `${t('common.the')} ${name}`
-    }
-
-    return name
-}
+    TextGenerationType,
+} from './constantsGenerators'
 
 /**
  * Generate a random gang
@@ -534,13 +429,10 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
             break
     }
 
-    // Generate Name (needs type and color generated above)
-    const name = generateGangName(t, type, color)
-
     // Construct the base gang object
     const newGang: Gang = {
         ID: uuidv4(),
-        name,
+        name: '',
         description: '',
         type,
         cyberwareQuality,
@@ -562,9 +454,29 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
         ...gang,
     }
 
+    // --- Generate Name using API ---
+    try {
+        const generatedName = await generateHuggingFaceText(newGang, ModuleTypes.GANG, t, TextGenerationType.NAME)
+        if (generatedName) {
+            newGang.name = generatedName
+        } else {
+            console.warn(`API name generation failed for gang ${newGang.name}. Using local fallback.`)
+            newGang.name = generateLocalGangName(t, type, color) // Use fallback function
+        }
+    } catch (error) {
+        console.error(`Error generating API name for gang ${newGang.name}:`, error)
+        console.warn(`Using local fallback name generation for gang ${newGang.name}.`)
+        newGang.name = generateLocalGangName(t, type, color) // Use fallback function
+    }
+
     // --- Generate Description using API ---
     try {
-        const generatedDesc = await generateHuggingFaceDescription(newGang, ModuleTypes.GANG, t)
+        const generatedDesc = await generateHuggingFaceText(
+            newGang,
+            ModuleTypes.GANG,
+            t,
+            TextGenerationType.DESCRIPTION
+        )
         if (generatedDesc) {
             newGang.description = generatedDesc
         } else {
@@ -580,7 +492,7 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
     // --- Generate Image using API (if description exists) ---
     if (newGang.description) {
         try {
-            const imageBlob = await generateHuggingFaceImage(newGang.description, newGang.name)
+            const imageBlob = await generateHuggingFaceImage(newGang.description, newGang.name, ModuleTypes.GANG)
             if (imageBlob) {
                 newGang.image = await blobToBase64(imageBlob)
             } else {
@@ -596,6 +508,113 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
     }
 
     return newGang
+}
+
+/**
+ * Internal function to generate a name for a gang based on its properties.
+ * It is used as a fallback if the API name generation fails.
+ * @param t - The translation function
+ * @param type - The gang type
+ * @param gangColor - The gang color
+ * @returns A gang name
+ */
+function generateLocalGangName(t: TFunction, type: GangType, gangColor: GangColor): string {
+    // Get appropriate naming patterns for this gang type
+    const appropriatePatterns = gangTypeNameData[type].preferredPatterns || [1, 2, 3, 4, 5]
+    const namingPattern = getRandomElement(appropriatePatterns)
+
+    // Define all the elements we might need
+    const adjective = getRandomElement(gangNameCategories[GangNameType.ADJECTIVE])
+    const animal = getRandomElement(gangNameCategories[GangNameType.ANIMAL])
+    const bodyPart = getRandomElement(gangNameCategories[GangNameType.BODY_PART])
+    const color = getRandomElement(gangNameCategories[GangNameType.COLOR])
+    const neighborhood = getRandomElement(gangNameCategories[GangNameType.NEIGHBORHOOD])
+    const number = getRandomElement(gangNameCategories[GangNameType.NUMBER])
+    const place = getRandomElement(gangNameCategories[GangNameType.PLACE])
+    const profession = getRandomElement(gangNameCategories[GangNameType.PROFESSION])
+    const weapon = getRandomElement(gangNameCategories[GangNameType.WEAPON])
+    const weather = getRandomElement(gangNameCategories[GangNameType.WEATHER_PHENOMENA])
+
+    const prefix = getRandomElement(gangPrefixes)
+    const suffix = getRandomElement(gangSuffixes)
+    const connector = getRandomElement(gangConnectors)
+
+    // Generate a random number for numeric patterns
+    const randomNum = getRandomInt(1, 99).toString()
+
+    // Name generation patterns
+    let name = ''
+
+    switch (namingPattern) {
+        case 1: // Classic pattern: "The Chrome Wolves"
+            name = `${t('common.the')} ${adjective} ${animal}`
+            break
+        case 2: // Compound with suffix: "Crimson Dragons Crew"
+            name = `${color} ${animal} ${suffix}`
+            break
+        case 3: // Location-based: "Westbrook Rippers"
+            name = `${neighborhood} ${profession}`
+            break
+        case 4: // Body parts: "Iron Fists"
+            name = `${adjective} ${bodyPart}`
+            break
+        case 5: // Weapons focus: "Phantom Blades"
+            name = `${adjective} ${weapon}`
+            break
+        case 6: // Numbered gangs: "18th Street Vipers"
+            name = `${randomNum}${getRandomInt(1, 3) === 1 ? 'th' : ''} ${place} ${animal}`
+            break
+        case 7: // Weather elements: "Thunder Jackals"
+            name = `${weather} ${animal}`
+            break
+        case 8: // Military style: "Chrome Strike Force"
+            name = `${color} Strike ${profession}`
+            break
+        case 9: // Connector phrases: "Wolves of the Wasteland"
+            name = `${animal} ${connector} ${place}`
+            break
+        case 10: // Enhanced Short and punchy: "The Steel Razors" instead of just "The Razors"
+            name = `${t('common.the')} ${adjective} ${weapon}`
+            break
+        case 11: // Profession focused: "Rogue Netrunners"
+            name = `${adjective} ${profession}`
+            break
+        case 12: // Number gang with more elements: "Sixty-Nine Elite Crew" instead of just "Sixty-Nine Crew"
+            name = `${number} ${adjective} ${suffix}`
+            break
+        case 13: // Syndicate style with more detail: "Cobalt Shadow Syndicate" instead of just "Cobalt Syndicate"
+            name = `${color} ${adjective} ${suffix}`
+            break
+        case 14: // Religious/vigilante: "Brotherhood of Steel"
+            name = `${suffix} ${connector} ${adjective}`
+            break
+        case 15: // Quirky poser: "Los Chrome Boys"
+            name = `${prefix} ${color} ${profession}`
+            break
+        default:
+            name = `${t('common.the')} ${adjective} ${animal}`
+    }
+
+    // Add color influence for certain patterns if not already using color
+    if (gangColor && !name.includes(color) && [2, 6, 8, 13, 15].includes(namingPattern)) {
+        const colorText = gangNameCategories[GangNameType.COLOR][Object.values(GangColor).indexOf(gangColor)]
+        if (colorText && Math.random() > 0.7) {
+            if (namingPattern === 13) {
+                name = `${colorText} ${adjective} ${suffix}`
+            } else if (namingPattern === 15) {
+                name = `${prefix} ${colorText} ${profession}`
+            } else if (Math.random() > 0.5) {
+                name = name.replace(adjective, colorText)
+            }
+        }
+    }
+
+    // Add "The" to names that don't already have it or a prefix
+    if (!name.startsWith('The ') && !gangPrefixes.some((p) => name.startsWith(p)) && Math.random() > 0.6) {
+        name = `${t('common.the')} ${name}`
+    }
+
+    return name
 }
 
 /**

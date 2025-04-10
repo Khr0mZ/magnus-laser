@@ -13,6 +13,7 @@ import {
     Typography,
 } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
+import localforage from 'localforage'
 import { useSnackbar } from 'notistack'
 import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -32,7 +33,7 @@ import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
-import { APP_STORAGE_KEYS } from '../../utils/constants'
+import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
 import { loadHuggingFaceApiKey, notifyDataImported, saveHuggingFaceApiKey } from '../../utils/storage'
 
 const SettingsView = () => {
@@ -69,25 +70,20 @@ const SettingsView = () => {
     }
 
     // Function to handle data export
-    const handleExport = () => {
+    const handleExport = async () => {
         try {
             const data: Record<string, unknown> = {}
 
             // Only export keys related to our application modules
             for (const key of APP_STORAGE_KEYS) {
-                const value = localStorage.getItem(key)
+                const value = await localforage.getItem(key)
                 if (value) {
-                    try {
-                        data[key] = JSON.parse(value)
-                    } catch {
-                        // If parsing fails, store as string
-                        data[key] = value
-                    }
+                    data[key] = value
                 }
             }
 
             // Create a JSON file to download
-            const fileName = `cyber-manager-data-${new Date().toISOString().split('T')[0]}.json`
+            const fileName = `magnus-laser-data-${new Date().toISOString().split('T')[0]}.json`
             const dataStr = JSON.stringify(data, null, 2)
             const dataBlob = new Blob([dataStr], { type: 'application/json' })
 
@@ -177,12 +173,12 @@ const SettingsView = () => {
             input.type = 'file'
             input.accept = 'application/json'
 
-            input.onchange = (e) => {
+            input.onchange = async (e) => {
                 const file = (e.target as HTMLInputElement).files?.[0]
                 if (!file) return
 
                 const reader = new FileReader()
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                     try {
                         const data = JSON.parse(event.target?.result as string)
 
@@ -190,7 +186,7 @@ const SettingsView = () => {
                         let importedItems = 0
                         for (const key of Object.keys(data)) {
                             if (APP_STORAGE_KEYS.includes(key)) {
-                                localStorage.setItem(key, JSON.stringify(data[key]))
+                                await localforage.setItem(key, data[key])
                                 importedItems++
                             }
                         }

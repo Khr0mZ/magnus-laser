@@ -34,6 +34,7 @@ const AppContent = (): JSX.Element => {
         toggleReaderMode,
         updateViewPreference,
         handleLoaderComplete,
+        setStorageCleanupComplete,
     } = useAppInitialization()
 
     // If preferences are still loading, render nothing (or a minimal placeholder)
@@ -48,6 +49,7 @@ const AppContent = (): JSX.Element => {
                 loadingStatus={loadingStatus}
                 onLoadComplete={handleLoaderComplete}
                 readerMode={readerMode}
+                setStorageCleanupComplete={setStorageCleanupComplete}
             />
         )
     }

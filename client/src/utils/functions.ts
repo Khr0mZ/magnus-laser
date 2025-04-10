@@ -1,7 +1,7 @@
 import { TFunction } from 'i18next'
-import { Building, BuildingType, Gang, GangColor } from '../graphql/types.ts'
+import { Building, BuildingType, FixerJob, Gang, GangColor, JobDifficulty } from '../graphql/types.ts'
 import colors from './colors.ts'
-import { JobDifficulty } from './constants.ts'
+import { fixerJobColumns } from './constants.ts'
 import { translateLabel } from './i18nUtils.ts'
 
 /**
@@ -45,6 +45,56 @@ export const getRandomInt = (min: number, max: number): number => {
  */
 export const getRandomElement = <T>(array: T[]): T => {
     return array[Math.floor(Math.random() * array.length)]
+}
+
+/**
+ * Convert a hex color string to RGB values
+ * @param hex The hex color string (accepts 3-digit, 6-digit, with or without # prefix)
+ * @returns A tuple containing the [r, g, b] values as numbers
+ */
+export const hexToRgb = (hex: string): [number, number, number] => {
+    // Trim input once
+    const trimmedHex = hex.trim()
+
+    // Ensure the color has a # prefix
+    const normalizedHex = trimmedHex.startsWith('#') ? trimmedHex : `#${trimmedHex}`
+
+    // Handle both 3-digit and 6-digit hex formats
+    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i
+    const fullHex = normalizedHex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b)
+
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex)
+
+    // If parsing fails, return a default color
+    if (!result) {
+        console.warn(`Invalid color format: ${hex}, using fallback color`)
+        return [128, 128, 128] // Default to gray
+    }
+
+    return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+}
+
+/**
+ * Get the complementary color for a given color
+ * @param color The color string in hex format (e.g., '#ff0000', 'ff0000', '#f00', or 'f00')
+ * @returns The complementary color as a hex string (e.g., '#00ffff')
+ */
+export const getComplementaryColor = (color: string): string => {
+    try {
+        const [r, g, b] = hexToRgb(color)
+        const complementaryR = 255 - r
+        const complementaryG = 255 - g
+        const complementaryB = 255 - b
+
+        // Convert RGB back to hex
+        const complementaryHex = `#${((complementaryR << 16) | (complementaryG << 8) | complementaryB)
+            .toString(16)
+            .padStart(6, '0')}`
+        return complementaryHex
+    } catch (error) {
+        console.warn(`Error calculating complementary color for: ${color}`, error)
+        return '#7f7f7f' // Return a neutral gray as fallback
+    }
 }
 
 // GANG FUNCTIONS
@@ -237,52 +287,156 @@ export const getOrderedBuildingData = (
     ]
 }
 
+// FIXER JOB FUNCTIONS
+
 /**
- * Convert a hex color string to RGB values
- * @param hex The hex color string (accepts 3-digit, 6-digit, with or without # prefix)
- * @returns A tuple containing the [r, g, b] values as numbers
+ * Get the color value for a fixer job difficulty
+ * @param difficulty The fixer job difficulty
+ * @returns The color value
  */
-export const hexToRgb = (hex: string): [number, number, number] => {
-    // Trim input once
-    const trimmedHex = hex.trim()
-
-    // Ensure the color has a # prefix
-    const normalizedHex = trimmedHex.startsWith('#') ? trimmedHex : `#${trimmedHex}`
-
-    // Handle both 3-digit and 6-digit hex formats
-    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i
-    const fullHex = normalizedHex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b)
-
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex)
-
-    // If parsing fails, return a default color
-    if (!result) {
-        console.warn(`Invalid color format: ${hex}, using fallback color`)
-        return [128, 128, 128] // Default to gray
+export const getFixerJobDifficultyColor = (difficulty: JobDifficulty): string => {
+    const colorMap: Record<JobDifficulty, string> = {
+        [JobDifficulty.EASY]: colors.neons.green.default,
+        [JobDifficulty.TYPICAL]: colors.neons.yellow.default,
+        [JobDifficulty.DANGEROUS]: colors.neons.red.default,
     }
-
-    return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+    return colorMap[difficulty] || colors.grays.gray400
 }
 
 /**
- * Get the complementary color for a given color
- * @param color The color string in hex format (e.g., '#ff0000', 'ff0000', '#f00', or 'f00')
- * @returns The complementary color as a hex string (e.g., '#00ffff')
+ * Get ordered fixer job data for display
+ * @param fixerJob The fixer job data
+ * @param t Translation function
+ * @returns Array of data items ordered for display
  */
-export const getComplementaryColor = (color: string): string => {
-    try {
-        const [r, g, b] = hexToRgb(color)
-        const complementaryR = 255 - r
-        const complementaryG = 255 - g
-        const complementaryB = 255 - b
+export const getOrderedFixerJobData = (
+    fixerJob: FixerJob,
+    t: TFunction
+): { key: string; label: string; value: unknown }[] => {
+    // Helper function to get value by dot-notation path
+    const getValueByPath = (obj: Record<string, unknown>, path: string): unknown => {
+        const parts = path.split('.')
+        let current = obj as Record<string, unknown>
 
-        // Convert RGB back to hex
-        const complementaryHex = `#${((complementaryR << 16) | (complementaryG << 8) | complementaryB)
-            .toString(16)
-            .padStart(6, '0')}`
-        return complementaryHex
-    } catch (error) {
-        console.warn(`Error calculating complementary color for: ${color}`, error)
-        return '#7f7f7f' // Return a neutral gray as fallback
+        for (const part of parts) {
+            if (current === null || current === undefined) {
+                return undefined
+            }
+
+            // Special case for verb which is a union type
+            if (part === 'verb' && current.verb && typeof current.verb === 'object' && current.verb !== null) {
+                current = current.verb as Record<string, unknown>
+                continue
+            }
+
+            current = current[part] as Record<string, unknown>
+        }
+
+        return current
     }
+
+    // Extract values for all columns
+    const result = fixerJobColumns.map((col) => {
+        // Get the value using the path
+        let value = getValueByPath(fixerJob, col.key)
+
+        // Special case for verb which is a union type
+        if (col.key === 'plot.verb.value' && !value && fixerJob.plot?.verb) {
+            if ('value' in fixerJob.plot.verb) {
+                value = fixerJob.plot.verb.value
+            }
+        }
+
+        return {
+            key: col.key,
+            label: translateLabel(t, col.label, 'fixerJobs'),
+            value: value,
+        }
+    })
+
+    // Filter out empty values
+    return result
+}
+
+/**
+ * Process a fixer job value for display
+ * @param key The key of the value
+ * @param item The fixer job item or a direct value
+ * @param t The translation function
+ * @returns The processed value as a string
+ */
+export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TFunction): string => {
+    // Skip the typename property that GraphQL adds
+    if (key === '__typename') {
+        return ''
+    }
+
+    // If a direct value was passed instead of the full fixer job
+    if (item === undefined || item === null) {
+        return ''
+    }
+
+    // Simple mapping for enums
+    if (typeof item === 'string') {
+        // Direct mapping to namespaces based on key patterns
+        const keyNamespaceMap: Record<string, string> = {
+            // Verb fields
+            'plot.verb.value': 'fixerJobs.verb',
+
+            // Types for various entities
+            'plot.subjectIfNotPlace.type': 'fixerJobs.character', // Default to character, special case for item below
+            'plot.complication.type': 'fixerJobs.complication',
+            'plot.complication.character.type': 'fixerJobs.character',
+            'plot.complication.item.type': 'fixerJobs.item',
+            'plot.item.type': 'fixerJobs.item',
+            'plot.plotPlace.building.type': 'fixerJobs.location',
+            'plot.plotPlace.complication.type': 'fixerJobs.locationComplication',
+
+            // Attitude and condition fields
+            'plot.subjectIfNotPlace.attitude': 'fixerJobs.characterAttitude',
+            'plot.subjectIfNotPlace.condition': 'fixerJobs.itemCondition',
+
+            // Building related fields
+            'plot.plotPlace.building.style': 'buildings.style',
+            'plot.plotPlace.building.ownership': 'buildings.ownership',
+            'plot.plotPlace.building.securityPersonnel': 'buildings.securityPersonnel',
+        }
+
+        // Special case for gang types
+        if (key.includes('gang.type') || key.includes('gang.gang.type')) {
+            return t(`gangs.type.${item}`, String(item))
+        }
+
+        // Special case for item types (including AI_ROBOT_DRONE)
+        if (
+            (key === 'plot.subjectIfNotPlace.type' || key === 'plot.item.type') &&
+            (item === 'AI_ROBOT_DRONE' ||
+                item === 'BIOLOGICAL_SAMPLES' ||
+                item === 'CYBERWARE' ||
+                item === 'DIGITAL_FILES' ||
+                item === 'DRUGS_ILLEGAL_CONTRABAND' ||
+                item === 'EXOTIC_ANIMAL' ||
+                item === 'FOOD_FUELS_SUPPLIES' ||
+                item === 'MONEY' ||
+                item === 'VEHICLE' ||
+                item === 'WEAPONS')
+        ) {
+            return t(`fixerJobs.item.${item}`, String(item))
+        }
+
+        // Look up the namespace
+        const namespace = keyNamespaceMap[key]
+        if (namespace) {
+            // Special case for plot.verb.value - directly check that we have the translation
+            if (key === 'plot.verb.value') {
+                const translated = t(`${namespace}.${item}`, String(item))
+                return translated
+            }
+
+            return t(`${namespace}.${item}`, String(item))
+        }
+    }
+
+    // If no translation found, just return the string value
+    return String(item)
 }

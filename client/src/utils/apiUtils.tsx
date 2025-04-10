@@ -2,13 +2,10 @@ import { Alert, Box, Typography } from '@mui/material'
 import { t, TFunction } from 'i18next'
 import { closeSnackbar, enqueueSnackbar } from 'notistack'
 import { SetStateAction } from 'react'
-import { Building, Gang } from '../graphql/types'
+import { Building, FixerJob, Gang } from '../graphql/types'
 import { ModuleTypes } from './constants'
+import { IMAGE_MODEL_URL, TEXT_MODEL_URL, TextGenerationType } from './generators/constantsGenerators'
 import { loadHuggingFaceApiKey } from './storage'
-
-// Hugging Face constants
-const TEXT_MODEL_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1' // Or your preferred HF text model
-const IMAGE_MODEL_URL = 'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0' // Or your preferred HF image model
 
 // Cache for API token
 let cachedApiToken: string | null = null
@@ -35,41 +32,40 @@ const getHuggingFaceToken = async (): Promise<string> => {
 
 /**
  * Generates text description using Hugging Face API.
- * @param item - The building or gang object.
- * @param moduleType - The type of module (Building or Gang).
+ * @param item - The building, gang or fixer job object.
+ * @param moduleType - The type of module (Building, Gang or FixerJob).
  * @param t - The translation function.
  * @returns The generated description string or null on error.
  */
-export const generateHuggingFaceDescription = async (
-    item: Building | Gang,
+export const generateHuggingFaceText = async (
+    item: Building | Gang | FixerJob,
     moduleType: ModuleTypes,
-    t: TFunction
+    t: TFunction,
+    type: TextGenerationType
 ): Promise<string | null> => {
     const isBuilding = moduleType === ModuleTypes.BUILDING
     const building = isBuilding ? (item as Building) : null
-    const gang = !isBuilding ? (item as Gang) : null
-
+    const isGang = moduleType === ModuleTypes.GANG
+    const gang = isGang ? (item as Gang) : null
+    const isFixerJob = moduleType === ModuleTypes.FIXER_JOB
+    const fixerJob = isFixerJob ? (item as FixerJob) : null
     const HUGGINGFACE_API_TOKEN = await getHuggingFaceToken()
+    const addName = type === TextGenerationType.DESCRIPTION
 
     if (!HUGGINGFACE_API_TOKEN) {
         console.error('Hugging Face token is missing, cannot generate description.')
         return null
     }
 
-    if ((isBuilding && !building) || (!isBuilding && !gang)) {
+    if ((isBuilding && !building) || (isGang && !gang) || (isFixerJob && !fixerJob)) {
         console.error('Invalid item provided for description generation.')
         return null
     }
 
-    // Construct the prompt (same logic as before)
-    const promptContent = `
-    Generate a cyberpunk-themed description (max 100 words) for a ${
-        isBuilding ? 'building' : 'gang'
-    } with these details:
-    ${
-        building
-            ? `
-    Name: ${building.name},
+    const buildingPrompt =
+        building &&
+        `
+    ${addName ? `Name: ${building.name}` : ''}
     IsAbandoned: ${building.isAbandoned ? 'Yes' : 'No'},
     Type: ${t(`buildings.type.${building.type}`)},
     Elevators: ${building.elevators ? 'Yes' : 'No'},
@@ -85,9 +81,10 @@ export const generateHuggingFaceDescription = async (
     Event: ${t(`buildings.event.${building.event}`)},
     Secret: ${t(`buildings.secret.${building.secret}`)}.
     `
-            : gang
-            ? `
-    Name: ${gang.name},
+    const gangPrompt =
+        gang &&
+        `
+    ${addName ? `Name: ${gang.name}` : ''}
     Type: ${t(`gangs.type.${gang.type}`)},
     Cyberware Quality: ${t(`gangs.cyberwareQuality.${gang.cyberwareQuality}`)},
     Skill: ${gang.skill < 11 ? 'Low' : gang.skill < 14 ? 'Medium' : 'High'},
@@ -103,15 +100,55 @@ export const generateHuggingFaceDescription = async (
     Color: ${t(`gangs.color.${gang.color}`)},
     Sin: ${t(`gangs.sin.${gang.sin}`)},
     Known For: ${t(`gangs.knownForPart1.${gang.knownFor?.knownForPart1}`)} and ${t(
-                  `gangs.knownForPart2.${gang.knownFor?.knownForPart2}`
-              )},
+            `gangs.knownForPart2.${gang.knownFor?.knownForPart2}`
+        )},
     Flaw: ${t(`gangs.flaw.${gang.flaw}`)},
     Current Attitude: ${t(`gangs.currentAttitude.${gang.currentAttitude}`)},
     News The Leader Is Receiving: ${t(`gangs.newsTheLeaderIsReceiving.${gang.newsTheLeaderIsReceiving}`)}.
     `
+    // FIXME: the fixer job prompt is not complete
+    const fixerJobPrompt =
+        fixerJob &&
+        `
+${addName ? `Name: ${fixerJob.name}` : ''}
+Plot Verb: ${fixerJob.plot.verb ? fixerJob.plot.verb.value || '' : ''},
+${
+    fixerJob.plot.subjectIfNotPlace && fixerJob.plot.subjectIfNotPlace.__typename === 'PlotCharacter'
+        ? `Character Type: ${fixerJob.plot.subjectIfNotPlace.type},`
+        : ''
+}
+${
+    fixerJob.plot.subjectIfNotPlace && fixerJob.plot.subjectIfNotPlace.__typename === 'PlotCharacter'
+        ? `Character Attitude: ${fixerJob.plot.subjectIfNotPlace.attitude},`
+        : ''
+}
+${fixerJob.plot.plotPlace ? `Location: ${fixerJob.plot.plotPlace.building?.type || ''},` : ''}
+${fixerJob.plot.plotPlace ? `Location Complication: ${fixerJob.plot.plotPlace.complication?.type || ''},` : ''}
+${fixerJob.plot.complication ? `Plot Complication: ${fixerJob.plot.complication.type || ''},` : ''}
+`
+
+    // Construct the prompt
+    const promptContent = `Generate a cyberpunk-themed ${type} for a ${
+        isBuilding ? 'building' : isGang ? 'gang' : 'fixer gig'
+    } using the following details:
+
+    ${
+        isBuilding && type === TextGenerationType.NAME
+            ? `When generating the name for the building, use a Night City style. You may incorporate elements like street names, numbers, personal names, surnames, or corporate-sounding terms.`
             : ''
     }
-    `
+    ${
+        isGang && type === TextGenerationType.NAME
+            ? `When generating the name for the gang, incorporate at least two of the following categories: adjective, animal, body part, color, neighborhood, number, place, profession, weapon, or weather phenomenon.`
+            : ''
+    }
+    ${
+        isFixerJob && type === TextGenerationType.NAME
+            ? `When generating the name for the gig, use a neon-noir style.`
+            : ''
+    }
+
+    ${building ? buildingPrompt : gang ? gangPrompt : fixerJob ? fixerJobPrompt : ''}`
 
     try {
         // Call Hugging Face Text API
@@ -156,8 +193,14 @@ export const generateHuggingFaceDescription = async (
  * @param name - The item's name.
  * @returns The generated image Blob, or null on error.
  */
-export const generateHuggingFaceImage = async (description: string, name: string): Promise<Blob | null> => {
+export const generateHuggingFaceImage = async (
+    description: string,
+    name: string,
+    moduleType: ModuleTypes
+): Promise<Blob | null> => {
     const HUGGINGFACE_API_TOKEN = await getHuggingFaceToken()
+    const isBuilding = moduleType === ModuleTypes.BUILDING
+    const isGang = moduleType === ModuleTypes.GANG
 
     if (!HUGGINGFACE_API_TOKEN) {
         console.error('Hugging Face token is missing, cannot generate image.')
@@ -169,9 +212,20 @@ export const generateHuggingFaceImage = async (description: string, name: string
         return null
     }
 
-    const imagePrompt = `Create a cinematic, cyberpunk-themed image of the following:
-    Name: ${name},
-    Description: ${description}`
+    const imagePrompt = `Generate a cyberpunk-themed image of ${
+        isBuilding
+            ? 'a unique building'
+            : isGang
+            ? 'a gang of street operatives in a striking pose'
+            : 'a fixer contract or gig scenario visualized as a high-tech operation'
+    }.
+
+    Name: ${name}
+    Description: ${description}
+
+    Use the description to determine visual style, setting, and mood. 
+    Focus on strong composition, atmospheric details, and a believable cyberpunk world. 
+    Prioritize clarity, depth, and relevant visual elements that match the subject.`
 
     try {
         // Call Hugging Face Image API
@@ -227,9 +281,15 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
             return reject(new Error('Blob cannot be null or undefined.'))
         }
 
+        // Check if blob is too large (>5MB)
+        if (blob.size > 5 * 1024 * 1024) {
+            console.warn('Large image detected, consider compressing before storage', blob.size)
+        }
+
         const reader = new FileReader()
         reader.onerror = (error) => {
             console.error('FileReader error:', error)
+            reader.abort() // Explicitly abort on error
             reject(error)
         }
         reader.onload = () => {
@@ -240,6 +300,9 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
                 console.error('FileReader result is not a string:', reader.result)
                 reject(new Error('Failed to read blob as Base64 string.'))
             }
+            // Clean up reader after use
+            reader.onload = null
+            reader.onerror = null
         }
         // Check if blob type indicates it's likely readable as Data URL
         if (
@@ -250,8 +313,6 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
         } else {
             console.warn(`Attempting to read blob of type ${blob.type} as Data URL. This might not be intended.`)
             reader.readAsDataURL(blob) // Proceed but warn
-            // Alternatively, reject directly:
-            // reject(new Error(`Cannot convert Blob of type ${blob.type} to Base64 Data URL.`));
         }
     })
 }
@@ -267,9 +328,12 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
  * @param setBuildingToEdit - The function to set the building to edit state.
  * @param setGangs - The function to set the gangs state.
  * @param setGangToEdit - The function to set the gang to edit state.
+ * @param setFixerJobs - The function to set the fixer jobs state.
+ * @param setFixerJobToEdit - The function to set the fixer job to edit state.
+ * @param imageFieldPath - Optional path to the specific image field to update (for nested objects).
  */
 export const handleRegenerateImage = async (
-    itemToRegenerate: Building | Gang,
+    itemToRegenerate: Building | Gang | FixerJob,
     readerMode: boolean,
     setIsGeneratingImage: (isGenerating: boolean) => void,
     setIsSaving: (isSaving: boolean) => void,
@@ -277,7 +341,10 @@ export const handleRegenerateImage = async (
     setBuildings?: (value: SetStateAction<Building[]>) => void,
     setBuildingToEdit?: (value: SetStateAction<Building | null>) => void,
     setGangs?: (value: SetStateAction<Gang[]>) => void,
-    setGangToEdit?: (value: SetStateAction<Gang | null>) => void
+    setGangToEdit?: (value: SetStateAction<Gang | null>) => void,
+    setFixerJobs?: (value: SetStateAction<FixerJob[]>) => void,
+    setFixerJobToEdit?: (value: SetStateAction<FixerJob | null>) => void,
+    imageFieldPath?: string
 ) => {
     if (!itemToRegenerate.description || !itemToRegenerate.name) {
         enqueueSnackbar('', {
@@ -306,55 +373,110 @@ export const handleRegenerateImage = async (
     }
 
     setIsGeneratingImage(true)
+    let generatedBlob: Blob | null = null
 
     try {
-        const blob = await generateHuggingFaceImage(itemToRegenerate.description, itemToRegenerate.name)
-        if (blob) {
-            const base64Image = await blobToBase64(blob)
-            if (moduleType === ModuleTypes.BUILDING && setBuildings && setBuildingToEdit) {
-                setBuildings((prevBuildings) =>
-                    prevBuildings.map((b: Building) =>
-                        b.ID === itemToRegenerate.ID ? { ...b, image: base64Image } : b
-                    )
-                )
-                setBuildingToEdit((prev) =>
-                    prev && prev.ID === itemToRegenerate.ID ? { ...prev, image: base64Image } : prev
-                )
-            } else if (moduleType === ModuleTypes.GANG && setGangs && setGangToEdit) {
-                setGangs((prevGangs) =>
-                    prevGangs.map((g: Gang) => (g.ID === itemToRegenerate.ID ? { ...g, image: base64Image } : g))
-                )
-                setGangToEdit((prev) =>
-                    prev && prev.ID === itemToRegenerate.ID ? { ...prev, image: base64Image } : prev
-                )
-            }
-            enqueueSnackbar('', {
-                variant: 'success',
-                autoHideDuration: 3000,
-                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
-                content: (key) => (
-                    <Alert
-                        severity="success"
-                        sx={{
-                            bgcolor: readerMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(10, 15, 30, 0.9)',
-                            color: readerMode ? '#333' : '#fff',
-                            borderLeft: '4px solid',
-                            borderColor: 'success.main',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                        }}
-                        onClose={() => closeSnackbar(key)}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="body2">{t('common.imageGeneratedSuccess')}</Typography>
-                        </Box>
-                    </Alert>
-                ),
-            })
-
-            setIsSaving(true)
-        } else {
+        generatedBlob = await generateHuggingFaceImage(itemToRegenerate.description, itemToRegenerate.name, moduleType)
+        if (!generatedBlob) {
             throw new Error(t('common.imageGenerationFailed'))
         }
+
+        const base64Image = await blobToBase64(generatedBlob)
+
+        // Helper function to set a nested property by path string
+        const setNestedProperty = <T extends Record<string, unknown>>(obj: T, path: string, value: unknown): T => {
+            if (!path) return { ...obj, image: value } as T // Default to main image if no path
+
+            const parts = path.split('.')
+            const result = { ...obj }
+            let current = result as Record<string, unknown>
+
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i]
+                if (!(part in current)) {
+                    current[part] = {}
+                } else {
+                    current[part] = { ...(current[part] as Record<string, unknown>) }
+                }
+                current = current[part] as Record<string, unknown>
+            }
+
+            current[parts[parts.length - 1]] = value
+            return result
+        }
+
+        // Update the appropriate state based on the module type
+        if (setBuildings && moduleType === ModuleTypes.BUILDING) {
+            setBuildings((prevBuildings) =>
+                prevBuildings.map((b) =>
+                    b.ID === itemToRegenerate.ID ? setNestedProperty(b, imageFieldPath || 'image', base64Image) : b
+                )
+            )
+
+            if (setBuildingToEdit) {
+                setBuildingToEdit((prev) =>
+                    prev && prev.ID === itemToRegenerate.ID
+                        ? setNestedProperty(prev, imageFieldPath || 'image', base64Image)
+                        : prev
+                )
+            }
+        } else if (setGangs && moduleType === ModuleTypes.GANG) {
+            setGangs((prevGangs) =>
+                prevGangs.map((g) =>
+                    g.ID === itemToRegenerate.ID ? setNestedProperty(g, imageFieldPath || 'image', base64Image) : g
+                )
+            )
+
+            if (setGangToEdit) {
+                setGangToEdit((prev) =>
+                    prev && prev.ID === itemToRegenerate.ID
+                        ? setNestedProperty(prev, imageFieldPath || 'image', base64Image)
+                        : prev
+                )
+            }
+        } else if (setFixerJobs && moduleType === ModuleTypes.FIXER_JOB) {
+            setFixerJobs((prevFixerJobs) =>
+                prevFixerJobs.map((j) =>
+                    j.ID === itemToRegenerate.ID ? setNestedProperty(j, imageFieldPath || 'image', base64Image) : j
+                )
+            )
+
+            if (setFixerJobToEdit) {
+                setFixerJobToEdit((prev) =>
+                    prev && prev.ID === itemToRegenerate.ID
+                        ? setNestedProperty(prev, imageFieldPath || 'image', base64Image)
+                        : prev
+                )
+            }
+        }
+
+        // Clear references to free memory
+        generatedBlob = null
+
+        enqueueSnackbar('', {
+            variant: 'success',
+            autoHideDuration: 3000,
+            anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+            content: (key) => (
+                <Alert
+                    severity="success"
+                    sx={{
+                        bgcolor: readerMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(10, 15, 30, 0.9)',
+                        color: readerMode ? '#333' : '#fff',
+                        borderLeft: '4px solid',
+                        borderColor: 'success.main',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    }}
+                    onClose={() => closeSnackbar(key)}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body2">{t('common.imageGeneratedSuccess')}</Typography>
+                    </Box>
+                </Alert>
+            ),
+        })
+
+        setIsSaving(true)
     } catch (error: unknown) {
         console.error('Error regenerating image:', error)
         const errorMessage = error instanceof Error ? error.message : t('common.imageGenerationError')
@@ -382,6 +504,8 @@ export const handleRegenerateImage = async (
             ),
         })
     } finally {
+        // Clean up
+        generatedBlob = null
         setIsGeneratingImage(false)
     }
 }

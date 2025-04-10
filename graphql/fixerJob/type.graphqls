@@ -1,0 +1,105 @@
+# To allow a union of different verb types, wrap each enum value in a separate object type.
+interface Verb {
+  value: String!
+}
+# Wrapper for PlotCharacterVerb enum values.
+type PlotCharacterVerbWrapper implements Verb {
+  value: PlotCharacterVerb!
+}
+# Wrapper for PlotItemVerb enum values.
+type PlotItemVerbWrapper implements Verb {
+  value: PlotItemVerb!
+}
+# Wrapper for PlotGangVerb enum values.
+type PlotGangVerbWrapper implements Verb {
+  value: PlotGangVerb!
+}
+# Wrapper for PlotPlaceVerb enum values.
+type PlotPlaceVerbWrapper implements Verb {
+  value: PlotPlaceVerb!
+}
+# The PlotVerb union aggregates all verb wrapper types.
+union PlotVerb =
+    PlotCharacterVerbWrapper
+  | PlotItemVerbWrapper
+  | PlotGangVerbWrapper
+  | PlotPlaceVerbWrapper
+
+# The FixerJob type represents a job or mission within the narrative.
+type FixerJob {
+  ID: ID!
+  name: String!
+  description: String!
+  plot: Plot!
+  image: String!
+  difficulty: JobDifficulty!
+}
+
+# The Plot type represents the overall plot of a FixerJob.
+type Plot {
+  # The verb indicates the main action to take.
+  verb: PlotVerb!
+  # plotPlace represents the location where the plot takes place.
+  plotPlace: PlotPlace!
+  # If the focus is not on the place, subjectIfNotPlace will represent either a character, an item, or a gang.
+  subjectIfNotPlace: PlotSubject
+  # Complication describes what complicates the plot.
+  complication: PlotComplication
+}
+
+# The PlotSubject union represents the possible subjects of the plot.
+union PlotSubject = PlotCharacter | PlotItem | PlotGang
+
+# The PlotCharacter type represents an individual character involved in the plot.
+type PlotCharacter {
+  name: String!
+  type: PlotCharacterType!
+  attitude: PlotCharacterAttitude!
+  image: String!
+}
+
+# The PlotItem type represents an item involved in the plot.
+type PlotItem {
+  name: String!
+  type: PlotItemType!
+  condition: PlotItemCondition!
+  image: String!
+}
+
+# The PlotGang type represents a gang involved in the plot.
+type PlotGang {
+  gang: Gang!
+  complication: GangComplication!
+}
+
+# The PlotPlace type represents a building or location where the plot occurs.
+type PlotPlace {
+  building: Building!
+  complication: PlaceComplication!
+}
+
+# The PlotComplication type describes an obstacle or complication in the plot.
+type PlotComplication {
+  type: PlotComplicationType!
+  # The following fields are conditionally set based on the complication type.
+  character: PlotCharacter
+  item: PlotItem
+  gang: PlotGang
+}
+
+# GangComplication gives details about complications involving a gang.
+type GangComplication {
+  type: PlotGangComplicationType!
+  # Details about the character and/or item involved in the gang complication.
+  character: PlotCharacter
+  item: PlotItem
+}
+
+# PlaceComplication gives details about complications involving the plot location/building.
+type PlaceComplication {
+  type: PlotPlaceComplicationType!
+  # Details about the character, item, or gang involved in the place complication.
+  character: PlotCharacter
+  item: PlotItem
+  gang: PlotGang
+}

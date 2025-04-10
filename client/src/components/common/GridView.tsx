@@ -15,15 +15,18 @@ import {
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { Building, Gang } from '../../graphql/types'
+import { Building, FixerJob, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import {
     getBuildingColor,
     getComplementaryColor,
+    getFixerJobDifficultyColor,
     getGangColorValue,
     getOrderedBuildingData,
+    getOrderedFixerJobData,
     getOrderedGangData,
+    processFixerJobValueForDisplay,
     processGangValueForDisplay,
 } from '../../utils/functions'
 import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
@@ -33,7 +36,7 @@ import { buttonGlitch } from './Animations'
 import TiptapEditor from './TiptapEditor.tsx'
 
 type GridViewProps = {
-    item: Gang | Building
+    item: Gang | Building | FixerJob
     index: number
     onDelete: (index: number) => void
     moduleType: ModuleTypes
@@ -56,6 +59,10 @@ const GridView = (props: GridViewProps) => {
         case ModuleTypes.BUILDING:
             itemData = getOrderedBuildingData(item as Building, t)
             color = getBuildingColor((item as Building).type)
+            break
+        case ModuleTypes.FIXER_JOB:
+            itemData = getOrderedFixerJobData(item as FixerJob, t)
+            color = getFixerJobDifficultyColor((item as FixerJob).difficulty)
             break
     }
 
@@ -133,23 +140,29 @@ const GridView = (props: GridViewProps) => {
                                 {item.name}
                             </Typography>
                             <Typography
-                                variant="body2"
                                 sx={{
                                     fontSize: '0.7rem',
                                     fontWeight: 'normal',
                                     textTransform: 'uppercase',
                                     letterSpacing: '1px',
-                                    color: readerMode ? colors.grays.gray000 : undefined,
+                                    color: readerMode ? colors.grays.gray000 + '!important' : undefined,
                                     textShadow: readerMode ? `0 0 5px ${colors.grays.gray900}` : 'none',
                                 }}
                             >
-                                {moduleType === ModuleTypes.GANG && processGangValueForDisplay('type', item.type, t)}
+                                {moduleType === ModuleTypes.GANG &&
+                                    processGangValueForDisplay('type', (item as Gang).type, t)}
                                 {moduleType === ModuleTypes.BUILDING &&
                                     processBuildingValueForDisplay(
                                         'type',
-                                        item.type,
+                                        (item as Building).type,
                                         t,
                                         'isAbandoned' in item ? item.isAbandoned : false
+                                    )}
+                                {moduleType === ModuleTypes.FIXER_JOB &&
+                                    processFixerJobValueForDisplay(
+                                        'plot.verb.value',
+                                        (item as FixerJob).plot.verb?.value,
+                                        t
                                     )}
                             </Typography>
                         </Box>
@@ -232,30 +245,36 @@ const GridView = (props: GridViewProps) => {
                         <Box
                             sx={{
                                 position: 'relative',
-                                width: '100%',
+                                width: readerMode ? 'calc(100% + 32px)' : '100%',
                                 aspectRatio: '1 / 1',
                                 display: 'flex',
                                 alignItems: 'center',
                                 maxHeight: '300px',
                                 justifyContent: 'center',
-                                bgcolor: readerMode ? 'transparent' : 'rgba(0, 0, 0, 0.5)',
+                                bgcolor: `${getGangColorValue((item as Gang).color)}70`,
                                 transition: 'all 0.3s ease',
                                 p: 0.5,
-                                borderRadius: '4px',
                                 borderBottom: `1px solid ${color}40`,
                                 borderTop: `1px solid ${color}40`,
+                                mx: readerMode ? -2 : 0,
                             }}
                         >
                             <Avatar
                                 src={item.image}
                                 alt={t('common.itemImageAlt', { name: item.name })}
                                 variant="rounded"
+                                slotProps={{
+                                    img: {
+                                        style: {
+                                            objectFit: 'contain',
+                                        },
+                                    },
+                                }}
                                 sx={{
                                     bgcolor: 'transparent',
                                     color: 'transparent',
-                                    objectFit: 'contain',
-                                    width: 'auto',
-                                    height: '300px',
+                                    width: '100%',
+                                    height: '100%',
                                 }}
                             />
                         </Box>
@@ -322,9 +341,8 @@ const GridView = (props: GridViewProps) => {
                                         <TableCell
                                             sx={{
                                                 borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
-                                                color: colors.neons.cyan.default,
                                                 fontWeight: 'bold',
-                                                width: '40%',
+                                                maxWidth: '15vw',
                                                 textShadow: `0 0 5px ${colors.neons.cyan.dark}`,
                                                 ...(readerMode && {
                                                     color: '#333',
@@ -334,12 +352,24 @@ const GridView = (props: GridViewProps) => {
                                             }}
                                             className="cell-content"
                                         >
-                                            {entry.label}
+                                            <Typography
+                                                title={entry.label}
+                                                variant="body2"
+                                                noWrap
+                                                sx={{
+                                                    color:
+                                                        (readerMode
+                                                            ? colors.grays.gray000
+                                                            : colors.neons.cyan.default) + ' !important',
+                                                }}
+                                            >
+                                                {entry.label}
+                                            </Typography>
                                         </TableCell>
                                         <TableCell
                                             sx={{
+                                                maxWidth: '15vw',
                                                 borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
-                                                color: '#fff',
                                                 textShadow: `0 0 5px ${colors.neons.green.dark}`,
                                                 ...(readerMode
                                                     ? {
@@ -352,15 +382,41 @@ const GridView = (props: GridViewProps) => {
                                             }}
                                             className="cell-content"
                                         >
-                                            {moduleType === ModuleTypes.GANG &&
-                                                processGangValueForDisplay(entry.key, entry.value, t)}
-                                            {moduleType === ModuleTypes.BUILDING &&
-                                                processBuildingValueForDisplay(
-                                                    entry.key,
-                                                    entry.value,
-                                                    t,
-                                                    'isAbandoned' in item ? item.isAbandoned : false
-                                                )}
+                                            <Typography
+                                                title={
+                                                    moduleType === ModuleTypes.GANG
+                                                        ? processGangValueForDisplay(entry.key, entry.value, t)
+                                                        : moduleType === ModuleTypes.BUILDING
+                                                        ? (processBuildingValueForDisplay(
+                                                              entry.key,
+                                                              entry.value,
+                                                              t,
+                                                              'isAbandoned' in item ? item.isAbandoned : false
+                                                          ) as string)
+                                                        : '—'
+                                                }
+                                                variant="body2"
+                                                noWrap
+                                                sx={{
+                                                    color:
+                                                        (readerMode ? colors.grays.gray000 : colors.grays.gray900) +
+                                                        ' !important',
+                                                }}
+                                            >
+                                                {moduleType === ModuleTypes.GANG &&
+                                                    processGangValueForDisplay(entry.key, entry.value, t)}
+                                                {moduleType === ModuleTypes.BUILDING &&
+                                                    processBuildingValueForDisplay(
+                                                        entry.key,
+                                                        entry.value,
+                                                        t,
+                                                        'isAbandoned' in item ? item.isAbandoned : false
+                                                    )}
+                                                {moduleType === ModuleTypes.FIXER_JOB &&
+                                                    (entry.value !== undefined
+                                                        ? processFixerJobValueForDisplay(entry.key, entry.value, t)
+                                                        : '—')}
+                                            </Typography>
                                         </TableCell>
                                     </TableRow>
                                 ))}

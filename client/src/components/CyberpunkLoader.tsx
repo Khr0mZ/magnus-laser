@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import colors from '../utils/colors'
+import { cleanupOrphanedImages } from '../utils/storage'
 import {
     blink,
     flicker,
@@ -24,7 +25,9 @@ export interface LoadingStatus {
     viewPreferences?: boolean
     buildingsData?: boolean
     gangsData?: boolean
+    fixerJobsData?: boolean
     systemInit?: boolean
+    storageCleanup?: boolean
 }
 
 // Props interface for the CyberpunkLoader component
@@ -32,6 +35,7 @@ interface CyberpunkLoaderProps {
     loadingStatus: LoadingStatus
     onLoadComplete: () => void
     readerMode: boolean
+    setStorageCleanupComplete: () => void
 }
 
 interface LoadingModule {
@@ -88,18 +92,25 @@ const easeInOutQuad = (t: number): number => {
     return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 }
 
-const CyberpunkLoader = ({ loadingStatus, onLoadComplete, readerMode }: CyberpunkLoaderProps): JSX.Element => {
+const CyberpunkLoader = ({
+    loadingStatus,
+    onLoadComplete,
+    readerMode,
+    setStorageCleanupComplete,
+}: CyberpunkLoaderProps): JSX.Element => {
     const { t } = useTranslation()
     const bootSequenceRef = useRef<HTMLDivElement>(null)
     const [isTimerElapsed, setIsTimerElapsed] = useState(false)
+    const cleanupStatusUpdatedRef = useRef(false)
 
     // Initial loading modules state (loadTime acts as relative weight)
     const [loadingModules, setLoadingModules] = useState<LoadingModule[]>([
         { id: 'system', name: t('loader.system'), progress: 0, loadTime: 9 },
+        { id: 'storageCleanup', name: t('loader.storageCleanup'), progress: 0, loadTime: 9 },
         { id: 'readerMode', name: t('loader.readerMode'), progress: 0, loadTime: 8 }, // Relative weights
         { id: 'viewPrefs', name: t('loader.viewPrefs'), progress: 0, loadTime: 6 },
         { id: 'gangs', name: t('gangs.title'), progress: 0, loadTime: 7 },
-        { id: 'buildings', name: t('buildings.title'), progress: 0, loadTime: 10 },
+        { id: 'buildings', name: t('buildings.title'), progress: 0, loadTime: 7 },
     ])
 
     // Calculate actual module durations based on LOADER_DISPLAY_TIME and weights
@@ -257,16 +268,49 @@ const CyberpunkLoader = ({ loadingStatus, onLoadComplete, readerMode }: Cyberpun
     useEffect(() => {
         // Check if the timer has elapsed
         if (!isTimerElapsed) {
+            console.log('Timer not elapsed yet, waiting...')
             return // Wait for the minimum display time
         }
 
         // Check if all loading status flags are true
+        console.log('Current loading status:', loadingStatus)
         const allLoaded = Object.values(loadingStatus).every((status) => status === true)
+        console.log('All loaded?', allLoaded)
 
         if (allLoaded) {
+            console.log('Loading complete, calling onLoadComplete')
             onLoadComplete() // Signal to parent component
         }
     }, [isTimerElapsed, loadingStatus, onLoadComplete])
+
+    // Effect to perform image cleanup
+    useEffect(() => {
+        const runCleanup = async () => {
+            try {
+                // Just run the cleanup without updating any progress displays
+                await cleanupOrphanedImages()
+
+                // Update the loadingStatus when complete
+                if (!cleanupStatusUpdatedRef.current) {
+                    setStorageCleanupComplete()
+                    cleanupStatusUpdatedRef.current = true
+                    console.log('Image cleanup complete, storage status updated')
+                }
+            } catch (error) {
+                console.error('Error during storage cleanup:', error)
+
+                // Update the loadingStatus even on error
+                if (!cleanupStatusUpdatedRef.current) {
+                    setStorageCleanupComplete()
+                    cleanupStatusUpdatedRef.current = true
+                    console.log('Image cleanup failed, storage status updated anyway')
+                }
+            }
+        }
+
+        // Start cleanup
+        runCleanup()
+    }, [setStorageCleanupComplete])
 
     return (
         <Container maxWidth={false} sx={{ pt: 3 }}>

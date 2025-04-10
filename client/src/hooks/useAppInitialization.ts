@@ -14,6 +14,7 @@ export interface AppInitializationResult {
     toggleReaderMode: () => Promise<void>
     updateViewPreference: (moduleType: ModuleTypes, isTableView: boolean) => void
     handleLoaderComplete: () => void
+    setStorageCleanupComplete: () => void
 }
 
 export const useAppInitialization = (): AppInitializationResult => {
@@ -30,7 +31,9 @@ export const useAppInitialization = (): AppInitializationResult => {
         viewPreferences: false,
         buildingsData: false,
         gangsData: false,
+        fixerJobsData: false,
         systemInit: false,
+        storageCleanup: false,
     })
 
     // Load preferences and reader mode from IndexedDB
@@ -65,12 +68,14 @@ export const useAppInitialization = (): AppInitializationResult => {
                 ...prev,
                 buildingsData: true,
                 gangsData: true,
+                fixerJobsData: true,
             }))
         } else {
             setLoadingStatus((prev) => ({
                 ...prev,
                 buildingsData: false,
                 gangsData: false,
+                fixerJobsData: false,
             }))
         }
     }, [isLoading])
@@ -134,6 +139,13 @@ export const useAppInitialization = (): AppInitializationResult => {
         setIsInitialized(true)
     }
 
+    const setStorageCleanupComplete = () => {
+        setLoadingStatus((prev) => ({
+            ...prev,
+            storageCleanup: true,
+        }))
+    }
+
     return {
         readerMode,
         viewPreferences,
@@ -144,5 +156,6 @@ export const useAppInitialization = (): AppInitializationResult => {
         toggleReaderMode,
         updateViewPreference,
         handleLoaderComplete,
+        setStorageCleanupComplete,
     }
 }

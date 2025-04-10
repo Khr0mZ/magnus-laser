@@ -222,10 +222,9 @@ body.reader-mode .MuiCard-root {
     border-radius: 8px;
     overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
-    color: white;
 }
 
-body.reader-mode .MuiCard-root:hover {
+body .MuiCard-root:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     background-color: lightgrey;
@@ -242,11 +241,6 @@ body.reader-mode .MuiCardHeader-root {
 
 body.reader-mode .MuiCardHeader-title {
     font-weight: 600;
-    color: white;
-}
-
-body.reader-mode .MuiCardHeader-subheader {
-    color: rgba(255, 255, 255, 0.8);
 }
 
 body.reader-mode .MuiCardContent-root {

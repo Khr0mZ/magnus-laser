@@ -2,8 +2,8 @@ import { Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/materia
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
-import { JobDifficulty } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
 import { pulseGlowGreen, pulseGlowRed, pulseGlowYellow } from './Animations'
 

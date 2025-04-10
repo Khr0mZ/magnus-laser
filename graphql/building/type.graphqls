@@ -10,11 +10,11 @@ type Building {
   backupLights: Boolean!
   landingPad: Boolean!
   secretOrAltEntrance: Boolean!
-  ownership: Ownership!
-  securityPersonnel: SecurityPersonnel!
-  style: Style!
-  event: Event!
-  secret: Secret!
+  ownership: BuildingOwnership!
+  securityPersonnel: BuildingSecurityPersonnel!
+  style: BuildingStyle!
+  event: BuildingEvent!
+  secret: BuildingSecret!
   isAbandoned: Boolean!
   image: String!
 }

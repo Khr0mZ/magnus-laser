@@ -4,7 +4,7 @@ import { useSnackbar } from 'notistack'
 import { useContext } from 'react'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
-import { APP_STORAGE_KEYS } from '../../utils/constants.ts'
+import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
 import { notifyDataImported } from '../../utils/storage'
 import { flicker, neonColorCycle, neonPulse, pulseGlowCyan } from '../common/Animations.tsx'
 
@@ -37,7 +37,7 @@ const DataButton = ({ type, showLabel = true, id }: DataButtonProps): JSX.Elemen
             }
 
             // Create a JSON file to download
-            const fileName = `cyber-manager-data-${new Date().toISOString().split('T')[0]}.json`
+            const fileName = `magnus-laser-data-${new Date().toISOString().split('T')[0]}.json`
             const dataStr = JSON.stringify(data, null, 2)
             const dataBlob = new Blob([dataStr], { type: 'application/json' })
 

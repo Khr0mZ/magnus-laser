@@ -1,0 +1,592 @@
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Typography } from '@mui/material'
+import { Dispatch, SetStateAction, useContext, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ReaderModeContext } from '../../../contexts/ReaderModeContext'
+import { Building, FixerJob, Gang } from '../../../graphql/types'
+import colors from '../../../utils/colors'
+import { ModuleTypes } from '../../../utils/constants'
+import { deleteImageBlob } from '../../../utils/storage'
+import CustomScrollbar from '../../CustomScrollbar'
+import { pulseGlowBlue, pulseGlowCyan } from '../Animations'
+import { WarningDialog } from '../WarningDialog'
+import { FormBuilding } from './FormBuilding'
+import FormFixerJob from './FormFixerJob'
+import FormGang from './FormGang'
+
+type EditDialogProps = {
+    open: boolean
+    onClose: () => void
+    onSave: (item: Gang | Building | FixerJob) => void
+    item: Gang | Building | FixerJob | null
+    moduleType: ModuleTypes
+    setIsSaving: (isSaving: boolean) => void
+    isGeneratingImage?: boolean
+    setIsGeneratingImage?: (isGenerating: boolean) => void
+    setBuildings?: Dispatch<SetStateAction<Building[]>>
+    setBuildingToEdit?: Dispatch<SetStateAction<Building | null>>
+    setGangs?: Dispatch<SetStateAction<Gang[]>>
+    setGangToEdit?: Dispatch<SetStateAction<Gang | null>>
+    setFixerJobs?: Dispatch<SetStateAction<FixerJob[]>>
+    setFixerJobToEdit?: Dispatch<SetStateAction<FixerJob | null>>
+}
+
+// Helper function to get nested value safely
+const getNestedValue = (obj: unknown, path: string): unknown => {
+    if (!obj) return undefined
+    // Make sure path is a string before splitting
+    if (typeof path !== 'string') return undefined
+    const parts = path.split('.')
+    let current = obj as Record<string, unknown>
+
+    for (const part of parts) {
+        if (!current || typeof current !== 'object') return undefined
+        current = current[part] as Record<string, unknown>
+    }
+
+    return current
+}
+
+export const EditDialog = (props: EditDialogProps) => {
+    const {
+        open,
+        onClose,
+        onSave,
+        item,
+        moduleType,
+        setIsGeneratingImage,
+        setIsSaving,
+        isGeneratingImage,
+        setBuildings,
+        setBuildingToEdit,
+        setGangs,
+        setGangToEdit,
+        setFixerJobs,
+        setFixerJobToEdit,
+    } = props
+    const { t } = useTranslation()
+    const { readerMode } = useContext(ReaderModeContext)
+    const [editedItem, setEditedItem] = useState<Gang | Building | FixerJob | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [deleteImageDialogOpen, setDeleteImageDialogOpen] = useState(false)
+    const [fullscreenImage, setFullscreenImage] = useState(false)
+    const [currentImageField, setCurrentImageField] = useState<string>('image')
+
+    // Moved function definition before usage to fix linter error
+    const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                handleChange(currentImageField, reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        }
+        // Reset file input value so the same file can be selected again
+        if (event.target) {
+            event.target.value = ''
+        }
+    }
+
+    // Reusable Select style
+    const selectStyle = {
+        color: readerMode ? '#333' : '#fff',
+        '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: readerMode ? 'rgba(0, 0, 0, 0.23)' : 'rgba(0, 255, 255, 0.3)',
+        },
+        '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: readerMode ? 'rgba(0, 0, 0, 0.5)' : colors.neons.cyan.default,
+        },
+        '& .MuiSvgIcon-root': {
+            color: readerMode ? 'rgba(0, 0, 0, 0.54)' : '#fff',
+        },
+    }
+
+    // Reusable FormControl style with hover animations for InputLabels
+    const formControlStyle = {
+        '&:hover .MuiInputLabel-root': {
+            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
+        },
+        '& .MuiInputBase-root.Mui-focused + .MuiInputLabel-root': {
+            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
+        },
+    }
+
+    // InputLabel style
+    const inputLabelStyle = {
+        color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
+        borderRadius: '4px',
+        bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+        p: 0.5,
+        py: 0.25,
+        border: readerMode ? '1px solid rgba(0, 0, 0, 0.23)' : `1px solid ${colors.neons.cyan.default}`,
+    }
+
+    // Reusable TextField styles
+    const textFieldOutlinedStyle = {
+        '& .MuiOutlinedInput-root': {
+            color: readerMode ? '#333' : '#fff',
+            '& fieldset': {
+                borderColor: readerMode ? 'rgba(0, 0, 0, 0.23)' : 'rgba(0, 255, 255, 0.3)',
+            },
+            '&:hover fieldset': {
+                borderColor: readerMode ? 'rgba(0, 0, 0, 0.5)' : colors.neons.cyan.default,
+            },
+        },
+        '& .MuiInputLabel-root': {
+            color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
+            borderRadius: '4px',
+            bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+            p: 0.5,
+            py: 0.25,
+            border: readerMode ? '1px solid rgba(0, 0, 0, 0.23)' : `1px solid ${colors.neons.cyan.default}`,
+        },
+        '&:hover .MuiInputLabel-root': {
+            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
+        },
+    }
+
+    // Hidden file input element (moved down)
+    const hiddenFileInput = (
+        <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelected}
+            style={{ display: 'none' }}
+            accept="image/*"
+        />
+    )
+
+    useEffect(() => {
+        if (item) {
+            setEditedItem({ ...item })
+        }
+    }, [item])
+
+    const handleChange = (field: string, value: unknown) => {
+        setEditedItem((prev) => {
+            if (!prev) return prev
+
+            // Function to handle nested path updates
+            const setNestedProperty = (
+                obj: Record<string, unknown>,
+                path: string,
+                value: unknown
+            ): Record<string, unknown> => {
+                // Make sure path is a string before using includes
+                if (typeof path !== 'string') {
+                    return { ...obj } // Return a copy of the object unchanged
+                }
+
+                if (!path.includes('.')) {
+                    // For top-level fields, update directly
+                    return {
+                        ...obj,
+                        [path]: value,
+                    }
+                }
+
+                // For nested fields, traverse the path
+                const parts = path.split('.')
+                const result = { ...obj }
+                let current = result
+
+                for (let i = 0; i < parts.length - 1; i++) {
+                    const part = parts[i]
+                    if (!(part in current)) {
+                        current[part] = {}
+                    } else {
+                        current[part] = { ...(current[part] as Record<string, unknown>) }
+                    }
+                    current = current[part] as Record<string, unknown>
+                }
+
+                current[parts[parts.length - 1]] = value
+                return result
+            }
+
+            return setNestedProperty(prev as Record<string, unknown>, field, value) as typeof prev
+        })
+    }
+
+    const handleSave = async () => {
+        if (editedItem && item) {
+            // Check for deleted images that need to be removed from storage
+            const checkAndDeleteImage = async (fieldPath: string) => {
+                const originalImage = getNestedValue(item, fieldPath) as string | null | undefined
+                const newImage = getNestedValue(editedItem, fieldPath) as string | null | undefined
+
+                // If image was removed (exists in original but not in edited or is null/empty in edited)
+                if (
+                    originalImage &&
+                    typeof originalImage === 'string' &&
+                    !originalImage.startsWith('data:') &&
+                    (!newImage || newImage === '')
+                ) {
+                    try {
+                        await deleteImageBlob(originalImage)
+                    } catch (error) {
+                        console.error(`Error deleting image blob: ${error}`)
+                    }
+                }
+            }
+
+            // Check main image field
+            await checkAndDeleteImage('image')
+
+            // Add more image fields here if needed based on your data structure
+            // e.g., for nested image fields
+            // await checkAndDeleteImage('someObject.image')
+
+            onSave(editedItem)
+
+            // Now set the saving flag to true to trigger the notification
+            setIsSaving(true)
+        }
+        onClose()
+    }
+
+    // --- Image Handlers ---
+
+    const handleImageUploadClick = (targetField: string = 'image') => {
+        setCurrentImageField(targetField)
+        fileInputRef.current?.click()
+    }
+
+    const handleImageRemove = async (targetField: string = 'image') => {
+        if (!editedItem) return
+
+        // Note: We're no longer deleting the blob immediately. This will happen when Save is clicked.
+
+        // Update the field to null in the local state only
+        handleChange(targetField, null)
+
+        // We're no longer calling setIsSaving(true) here to prevent notistack notification
+        // The saving will happen when the user clicks the Save button
+    }
+
+    const openDeleteImageDialog = (targetField: string = 'image') => {
+        setCurrentImageField(targetField) // Set which field we're updating
+        setDeleteImageDialogOpen(true)
+    }
+
+    // Add a handler to toggle fullscreen image
+    const toggleFullscreenImage = (targetField: string = 'image') => {
+        setCurrentImageField(targetField) // Set which field to show in fullscreen
+        setFullscreenImage(!fullscreenImage)
+    }
+
+    if (!editedItem) return null
+
+    return (
+        <>
+            <Dialog
+                open={open}
+                onClose={onClose}
+                maxWidth="xl"
+                fullWidth
+                PaperProps={{
+                    sx: readerMode
+                        ? {
+                              bgcolor: '#ffffff',
+                              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                              color: '#333',
+                          }
+                        : {
+                              bgcolor: 'rgba(10, 15, 30, 0.95)',
+                              backdropFilter: 'blur(4px)',
+                              border: `1px solid ${colors.neons.cyan.default}40`,
+                              boxShadow: `0 0 20px ${colors.neons.cyan.default}40`,
+                              color: '#fff',
+                              position: 'relative',
+                              '&::before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  backgroundImage:
+                                      'linear-gradient(to right, rgba(0, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 255, 255, 0.03) 1px, transparent 1px)',
+                                  backgroundSize: '20px 20px',
+                                  pointerEvents: 'none',
+                                  opacity: 0.5,
+                              },
+                          },
+                }}
+            >
+                <DialogTitle
+                    sx={
+                        readerMode
+                            ? {
+                                  color: '#0288d1',
+                                  borderBottom: '1px solid #eee',
+                              }
+                            : {
+                                  color: colors.neons.cyan.default,
+                                  textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                                  fontFamily: '"Orbitron", monospace',
+                                  borderBottom: `1px solid ${colors.neons.cyan.default}40`,
+                                  position: 'relative',
+                                  '&::after': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      bottom: 0,
+                                      left: '10%',
+                                      width: '80%',
+                                      height: '1px',
+                                      background: `linear-gradient(90deg, transparent, ${colors.neons.cyan.default}, transparent)`,
+                                  },
+                              }
+                    }
+                >
+                    <Typography
+                        variant="h3"
+                        className="glitch-text"
+                        component="div"
+                        data-text={
+                            moduleType === ModuleTypes.GANG
+                                ? t('gangs.editTitle')
+                                : moduleType === ModuleTypes.BUILDING
+                                ? t('buildings.editTitle')
+                                : t('fixerJobs.editTitle')
+                        }
+                        sx={{
+                            color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
+                            textShadow: `0 0 10px ${colors.neons.cyan.default}`,
+                        }}
+                    >
+                        {moduleType === ModuleTypes.GANG
+                            ? t('gangs.editTitle')
+                            : moduleType === ModuleTypes.BUILDING
+                            ? t('buildings.editTitle')
+                            : t('fixerJobs.editTitle')}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent
+                    sx={{
+                        py: 3,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: '80vh',
+                        pr: 0,
+                    }}
+                >
+                    <CustomScrollbar scrollDirection="vertical" height="100%">
+                        <Grid container spacing={2} sx={{ pr: 3, mt: 0 }}>
+                            {moduleType === ModuleTypes.GANG ? (
+                                <FormGang
+                                    editedItem={editedItem as Gang}
+                                    moduleType={moduleType}
+                                    setIsSaving={setIsSaving}
+                                    isGeneratingImage={isGeneratingImage}
+                                    setIsGeneratingImage={setIsGeneratingImage}
+                                    setGangs={setGangs}
+                                    setGangToEdit={setGangToEdit}
+                                    formControlStyle={formControlStyle}
+                                    inputLabelStyle={inputLabelStyle}
+                                    selectStyle={selectStyle}
+                                    hiddenFileInput={hiddenFileInput}
+                                    handleChange={handleChange}
+                                    handleImageUploadClick={handleImageUploadClick}
+                                    openDeleteImageDialog={openDeleteImageDialog}
+                                    toggleFullscreenImage={toggleFullscreenImage}
+                                    textFieldOutlinedStyle={textFieldOutlinedStyle}
+                                />
+                            ) : moduleType === ModuleTypes.BUILDING ? (
+                                <FormBuilding
+                                    editedItem={editedItem as Building}
+                                    moduleType={moduleType}
+                                    setIsSaving={setIsSaving}
+                                    isGeneratingImage={isGeneratingImage}
+                                    setIsGeneratingImage={setIsGeneratingImage}
+                                    setBuildings={setBuildings}
+                                    setBuildingToEdit={setBuildingToEdit}
+                                    formControlStyle={formControlStyle}
+                                    inputLabelStyle={inputLabelStyle}
+                                    selectStyle={selectStyle}
+                                    hiddenFileInput={hiddenFileInput}
+                                    handleChange={handleChange}
+                                    handleImageUploadClick={handleImageUploadClick}
+                                    openDeleteImageDialog={openDeleteImageDialog}
+                                    toggleFullscreenImage={toggleFullscreenImage}
+                                    textFieldOutlinedStyle={textFieldOutlinedStyle}
+                                />
+                            ) : (
+                                <FormFixerJob
+                                    editedItem={editedItem as FixerJob}
+                                    moduleType={moduleType}
+                                    setIsSaving={setIsSaving}
+                                    isGeneratingImage={isGeneratingImage}
+                                    setIsGeneratingImage={setIsGeneratingImage}
+                                    setFixerJobs={setFixerJobs}
+                                    setFixerJobToEdit={setFixerJobToEdit}
+                                    formControlStyle={formControlStyle}
+                                    inputLabelStyle={inputLabelStyle}
+                                    selectStyle={selectStyle}
+                                    hiddenFileInput={hiddenFileInput}
+                                    handleChange={handleChange}
+                                    handleImageUploadClick={handleImageUploadClick}
+                                    openDeleteImageDialog={openDeleteImageDialog}
+                                    toggleFullscreenImage={toggleFullscreenImage}
+                                    textFieldOutlinedStyle={textFieldOutlinedStyle}
+                                />
+                            )}
+                        </Grid>
+                    </CustomScrollbar>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        onClick={onClose}
+                        sx={
+                            readerMode
+                                ? {
+                                      color: '#0288d1',
+                                  }
+                                : {
+                                      bgcolor: 'rgba(10, 20, 30, 0.6)',
+                                      color: colors.neons.cyan.default,
+                                      border: `1px solid ${colors.neons.cyan.default}40`,
+                                      '&:hover': {
+                                          bgcolor: 'rgba(0, 30, 60, 0.8)',
+                                          boxShadow: `0 0 10px ${colors.neons.cyan.default}40`,
+                                      },
+                                  }
+                        }
+                    >
+                        {t('common.cancel')}
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        sx={
+                            readerMode
+                                ? {
+                                      color: colors.neons.green.dark,
+                                  }
+                                : {
+                                      bgcolor: 'rgba(0, 20, 40, 0.6)',
+                                      color: colors.neons.green.default,
+                                      border: `1px solid ${colors.neons.green.default}40`,
+                                      '&:hover': {
+                                          bgcolor: 'rgba(0, 40, 20, 0.8)',
+                                          color: colors.neons.green.light,
+                                          boxShadow: `0 0 10px ${colors.neons.green.default}60`,
+                                          textShadow: `0 0 5px ${colors.neons.green.default}`,
+                                          border: `1px solid ${colors.neons.green.default}70`,
+                                      },
+                                  }
+                        }
+                    >
+                        {t('common.save')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Image Delete Confirmation Dialog */}
+            <WarningDialog
+                open={deleteImageDialogOpen}
+                onClose={() => setDeleteImageDialogOpen(false)}
+                onConfirm={async () => {
+                    await handleImageRemove(currentImageField)
+                    setDeleteImageDialogOpen(false)
+                }}
+                title={t('common.deleteConfirmTitle')}
+                message={t('common.deleteImageConfirmation')}
+                confirmColor="red"
+                confirmText={t('common.delete')}
+            />
+
+            {/* Fullscreen Image Dialog */}
+            <Dialog
+                open={fullscreenImage}
+                onClose={() => setFullscreenImage(false)}
+                maxWidth={false}
+                fullScreen
+                aria-labelledby="fullscreen-image-title"
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                        backdropFilter: 'blur(10px)',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        padding: 0,
+                        margin: 0,
+                        cursor: 'pointer',
+                    },
+                }}
+                onClick={() => setFullscreenImage(false)}
+                keepMounted={false}
+                disablePortal={false}
+                disableEnforceFocus={false}
+                disableAutoFocus={false}
+            >
+                <Box
+                    sx={{
+                        width: '100vw',
+                        height: '100vh',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        padding: 0,
+                        margin: 0,
+                        position: 'relative',
+                        overflowY: 'hidden',
+                        '&::after': !readerMode
+                            ? {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  background:
+                                      'radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.9) 100%)',
+                                  pointerEvents: 'none',
+                                  zIndex: 1,
+                              }
+                            : {},
+                    }}
+                >
+                    <Box
+                        component="img"
+                        src={editedItem && (getNestedValue(editedItem, currentImageField) as string | undefined)}
+                        alt={editedItem?.name}
+                        id="fullscreen-image-title"
+                        tabIndex={0}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            position: 'absolute',
+                            padding: 0,
+                            top: 0,
+                            left: 0,
+                        }}
+                    />
+                </Box>
+                <Typography
+                    variant="caption"
+                    sx={{
+                        position: 'absolute',
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        textAlign: 'center',
+                        color: readerMode ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.7)',
+                        zIndex: 10,
+                        textShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
+                        padding: '8px 16px',
+                        backdropFilter: 'blur(5px)',
+                        backgroundColor: readerMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+                        margin: '0 auto',
+                        width: 'fit-content',
+                        borderRadius: '4px',
+                    }}
+                >
+                    {t('common.clickToClose')}
+                </Typography>
+            </Dialog>
+        </>
+    )
+}
+
+export default EditDialog

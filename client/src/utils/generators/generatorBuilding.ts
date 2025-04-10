@@ -1,130 +1,19 @@
 // Random name components
 import { TFunction } from 'i18next'
 import { v4 as uuidv4 } from 'uuid'
-import { Building, BuildingType, Event, Ownership, Secret, SecurityPersonnel, Style } from '../graphql/types'
-import { blobToBase64, generateHuggingFaceDescription, generateHuggingFaceImage } from './apiUtils.tsx'
-import { buildingNameData, commonNameElements, ModuleTypes } from './constants'
-import { getRandomElement, getRandomInt } from './functions'
-
-/**
- * Internal function to generate a building name
- * @param type - The type of building
- * @param style - The style of the building
- * @param ownership - The ownership of the building
- * @param isAbandoned - Whether the building is abandoned
- * @returns A building name
- */
-function generateBuildingName(type: BuildingType, style: Style, ownership: Ownership, isAbandoned: boolean): string {
-    // Add abandoned qualifier if applicable
-    const abandonedPrefix = isAbandoned
-        ? `${getRandomElement(buildingNameData[BuildingType.ABANDONED_BUILDING].buildingTypeWords || [])} `
-        : ''
-
-    // Get appropriate naming patterns for this building type
-    const appropriatePatterns = buildingNameData[type].preferredPatterns || [1, 2, 3]
-    const namingPattern = getRandomElement(appropriatePatterns)
-
-    // Check if this building has corporate affiliation based on type and ownership
-    const hasCorpoAffiliation =
-        buildingNameData[type].corpoAffiliation || buildingNameData[ownership]?.corpoAffiliation || false
-
-    // Corpo prefix for corporate affiliated buildings
-    const corpoName = hasCorpoAffiliation ? getRandomElement(commonNameElements.corpoPrefixes) : ''
-
-    // Style-specific naming
-    const styleWord = getRandomElement(buildingNameData[style].styleAdjectives || [])
-
-    // Type-specific terminology
-    const typeWord = getRandomElement(buildingNameData[type].buildingTypeWords || [])
-
-    // Suffix options
-    const buildingSuffix = getRandomElement(commonNameElements.buildingSuffixes)
-
-    // District names for location-based naming
-    const districtName = getRandomElement(commonNameElements.districtNames)
-
-    // Numbers for addresses or building numbers
-    const buildingNumber = getRandomInt(1, 999)
-
-    // Street names
-    const streetName = `${getRandomElement(commonNameElements.landmarkPrefixes)} ${getRandomInt(
-        1,
-        50
-    )} ${getRandomElement(commonNameElements.streetSuffixes)}`
-
-    // Name generation patterns
-    let name = ''
-
-    switch (namingPattern) {
-        case 1: // Simple style + type + suffix: "Minimalist Tower Complex"
-            name = `${styleWord} ${typeWord} ${buildingSuffix}`
-            break
-        case 2: // Corpo-owned naming: "Arasaka Executive Tower"
-            name = corpoName
-                ? `${corpoName} ${styleWord} ${buildingSuffix}`
-                : `${styleWord} ${typeWord} ${buildingSuffix}`
-            break
-        case 3: // District-based naming: "Watson Heights"
-            name = `${districtName} ${buildingSuffix}`
-            break
-        case 4: // Numbered building: "Block 403"
-            name = `${typeWord} ${buildingNumber}`
-            break
-        case 5: // Address-style: "21 North Oak Boulevard"
-            name = `${buildingNumber} ${districtName} ${getRandomElement(commonNameElements.streetSuffixes)}`
-            break
-        case 6: // Landmark style: "Central Plaza Hub"
-            name = `${getRandomElement(commonNameElements.landmarkPrefixes)} ${typeWord} ${buildingSuffix}`
-            break
-        case 7: // The + adjective + suffix: "The Radiant Tower"
-            name = `The ${styleWord} ${buildingSuffix}`
-            break
-        case 8: // Possessive naming: "Freeman's Market" or "Rodriguez Arcade"
-            // For small businesses, sometimes use "Surname BusinessType" format instead of possessive
-            if (ownership === Ownership.SMALL_BUSINESS && Math.random() < 0.6) {
-                name = `${getRandomElement(commonNameElements.surnames)} ${typeWord}`
-            } else {
-                name = `${getRandomElement(commonNameElements.surnames)}'s ${typeWord}`
-            }
-            break
-        case 9: // Compound names: "NightGlow Center"
-            name = `${getRandomElement(commonNameElements.compoundPrefixes)}${getRandomElement(
-                commonNameElements.compoundSuffixes
-            )} ${buildingSuffix}`
-            break
-        case 10: // Street address: "21 North Oak Building"
-            name = `${buildingNumber} ${streetName} ${buildingSuffix}`
-            break
-        case 11: // Style + district: "Luxury North Oak"
-            name = `${styleWord} ${districtName}`
-            break
-        case 12: // For abandoned or construction: "Former Arasaka Research Facility"
-            if (isAbandoned) {
-                name = `Former ${corpoName ? corpoName + ' ' : ''}${typeWord} ${buildingSuffix}`
-            } else if (type === BuildingType.VACANT_LOT_CONSTRUCTION_SITE) {
-                name = `${corpoName ? corpoName + ' ' : ''}${typeWord} Site ${buildingNumber}`
-            } else {
-                name = `${styleWord} ${typeWord} ${buildingSuffix}`
-            }
-            break
-        default:
-            name = `${styleWord} ${typeWord} ${buildingSuffix}`
-    }
-
-    // Apply style-specific modifications to make names more natural
-    const nameModifier = buildingNameData[style].nameModifier
-    if (nameModifier) {
-        name = nameModifier(name, typeWord, buildingSuffix)
-    }
-
-    // Add abandoned prefix if applicable
-    name = abandonedPrefix + name.trim()
-
-    // Clean up excess spaces
-    name = name.replace(/\s+/g, ' ').trim()
-
-    return name
-}
+import {
+    Building,
+    BuildingEvent,
+    BuildingOwnership,
+    BuildingSecret,
+    BuildingSecurityPersonnel,
+    BuildingStyle,
+    BuildingType,
+} from '../../graphql/types'
+import { blobToBase64, generateHuggingFaceImage, generateHuggingFaceText } from '../apiUtils'
+import { ModuleTypes } from '../constants'
+import { getRandomElement, getRandomInt } from '../functions'
+import { buildingNameData, commonNameElements, TextGenerationType } from './constantsGenerators'
 
 /**
  * Generate a random building
@@ -147,12 +36,12 @@ export const generateRandomBuilding = async (
     // - Emergency Exit
     // - Backup Lights
     // - Landing Pad
-    // - Secret Or Alt Entrance
-    // - Ownership
+    // - BuildingSecret Or Alt Entrance
+    // - BuildingOwnership
     // - Security Personnel
-    // - Style
-    // - Event
-    // - Secret
+    // - BuildingStyle
+    // - BuildingEvent
+    // - BuildingSecret
     // - Name
     // - Description (now generated via API or locally if API fails)
     // - Image (now generated via API or locally if API fails)
@@ -220,7 +109,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV9
             // Backup Lights DV8
             // Landing Pad DV8
-            // Secret Or Alt Entrance DV3
+            // BuildingSecret Or Alt Entrance DV3
             elevators = getRandomInt(1, 10) <= 8
             parking = getRandomInt(1, 10) <= 6
             gatehouseFrontDesk = getRandomInt(1, 10) <= 8
@@ -236,7 +125,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV7
             // Backup Lights DV7
             // Landing Pad DV9
-            // Secret Or Alt Entrance DV6
+            // BuildingSecret Or Alt Entrance DV6
             elevators = getRandomInt(1, 10) <= 6
             parking = getRandomInt(1, 10) <= 6
             gatehouseFrontDesk = getRandomInt(1, 10) <= 4
@@ -252,7 +141,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV9
             // Backup Lights DV8
             // Landing Pad DV7
-            // Secret Or Alt Entrance DV2
+            // BuildingSecret Or Alt Entrance DV2
             elevators = getRandomInt(1, 10) <= 8
             parking = getRandomInt(1, 10) <= 8
             gatehouseFrontDesk = getRandomInt(1, 10) <= 6
@@ -268,7 +157,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV8
             // Backup Lights DV7
             // Landing Pad DV9
-            // Secret Or Alt Entrance DV5
+            // BuildingSecret Or Alt Entrance DV5
             elevators = getRandomInt(1, 10) <= 8
             parking = getRandomInt(1, 10) <= 6
             gatehouseFrontDesk = getRandomInt(1, 10) <= 9
@@ -284,7 +173,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV6
             // Backup Lights DV7
             // Landing Pad DV8
-            // Secret Or Alt Entrance DV7
+            // BuildingSecret Or Alt Entrance DV7
             elevators = getRandomInt(1, 10) <= 6
             parking = getRandomInt(1, 10) <= 7
             gatehouseFrontDesk = getRandomInt(1, 10) <= 8
@@ -300,7 +189,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV3
             // Backup Lights DV4
             // Landing Pad DV4
-            // Secret Or Alt Entrance DV5
+            // BuildingSecret Or Alt Entrance DV5
             elevators = getRandomInt(1, 10) <= 1
             parking = getRandomInt(1, 10) <= 5
             gatehouseFrontDesk = getRandomInt(1, 10) <= 7
@@ -316,7 +205,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV5
             // Backup Lights DV3
             // Landing Pad DV8
-            // Secret Or Alt Entrance DV4
+            // BuildingSecret Or Alt Entrance DV4
             elevators = getRandomInt(1, 10) <= 6
             parking = getRandomInt(1, 10) <= 4
             gatehouseFrontDesk = getRandomInt(1, 10) <= 6
@@ -332,7 +221,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV4
             // Backup Lights DV2
             // Landing Pad DV2
-            // Secret Or Alt Entrance DV8
+            // BuildingSecret Or Alt Entrance DV8
             elevators = getRandomInt(1, 10) <= 4
             parking = getRandomInt(1, 10) <= 3
             gatehouseFrontDesk = getRandomInt(1, 10) <= 3
@@ -348,7 +237,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV6
             // Backup Lights DV4
             // Landing Pad DV3
-            // Secret Or Alt Entrance DV9
+            // BuildingSecret Or Alt Entrance DV9
             elevators = getRandomInt(1, 10) <= 7
             parking = getRandomInt(1, 10) <= 9
             gatehouseFrontDesk = getRandomInt(1, 10) <= 4
@@ -364,7 +253,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV5
             // Backup Lights DV6
             // Landing Pad DV5
-            // Secret Or Alt Entrance DV7
+            // BuildingSecret Or Alt Entrance DV7
             elevators = getRandomInt(1, 10) <= 5
             parking = getRandomInt(1, 10) <= 3
             gatehouseFrontDesk = getRandomInt(1, 10) <= 2
@@ -380,7 +269,7 @@ export const generateRandomBuilding = async (
             // Emergency Exit DV4
             // Backup Lights DV1
             // Landing Pad DV1
-            // Secret Or Alt Entrance DV7
+            // BuildingSecret Or Alt Entrance DV7
             elevators = true
             parking = getRandomInt(1, 10) <= 2
             gatehouseFrontDesk = true
@@ -394,231 +283,229 @@ export const generateRandomBuilding = async (
     }
     // Generate ownership
     const ownershipRoll = getRandomInt(1, 10) + jobDifficultyModifier
-    let ownership: Ownership
+    let ownership: BuildingOwnership
     switch (ownershipRoll) {
         case 1:
-            ownership = Ownership.NO_ONE_SCAVS
+            ownership = BuildingOwnership.NO_ONE_SCAVS
             break
         case 2:
-            ownership = Ownership.LOW_LEVEL_GONKS
+            ownership = BuildingOwnership.LOW_LEVEL_GONKS
             break
         case 3:
-            ownership = Ownership.GANG_MAFIA
+            ownership = BuildingOwnership.GANG_MAFIA
             break
         case 4:
-            ownership = Ownership.POSERGANG
+            ownership = BuildingOwnership.POSERGANG
             break
         case 5:
-            ownership = Ownership.BYSTANDER
+            ownership = BuildingOwnership.BYSTANDER
             break
         case 6:
-            ownership = Ownership.FIXER
+            ownership = BuildingOwnership.FIXER
             break
         case 7:
-            ownership = Ownership.SMALL_BUSINESS
+            ownership = BuildingOwnership.SMALL_BUSINESS
             break
         case 8:
-            ownership = Ownership.LOCAL_GOV
+            ownership = BuildingOwnership.LOCAL_GOV
             break
         case 9:
-            ownership = Ownership.CORPO
+            ownership = BuildingOwnership.CORPO
             break
         case 10:
-            ownership = Ownership.MILITARISTIC_GANG
+            ownership = BuildingOwnership.MILITARISTIC_GANG
             break
         case 11:
-            ownership = Ownership.GOVERNMENT
+            ownership = BuildingOwnership.GOVERNMENT
             break
         case 12:
-            ownership = Ownership.MEGA_CORPO
+            ownership = BuildingOwnership.MEGA_CORPO
             break
         default:
-            ownership = Ownership.NO_ONE_SCAVS
+            ownership = BuildingOwnership.NO_ONE_SCAVS
             break
     }
     // Generate security personnel based on ownership and building type
     const securityPersonnelRoll = getRandomInt(1, 10) + jobDifficultyModifier
-    let securityPersonnel: SecurityPersonnel
+    let securityPersonnel: BuildingSecurityPersonnel
     switch (securityPersonnelRoll) {
         case 1:
-            securityPersonnel = SecurityPersonnel.NONE
+            securityPersonnel = BuildingSecurityPersonnel.NONE
             break
         case 2:
-            securityPersonnel = SecurityPersonnel.LOCALS_TENNANTS
+            securityPersonnel = BuildingSecurityPersonnel.LOCALS_TENNANTS
             break
         case 3:
-            securityPersonnel = SecurityPersonnel.LOCAL_SEC_GANG
+            securityPersonnel = BuildingSecurityPersonnel.LOCAL_SEC_GANG
             break
         case 4:
-            securityPersonnel = SecurityPersonnel.VEHICLES
+            securityPersonnel = BuildingSecurityPersonnel.VEHICLES
             break
         case 5:
-            securityPersonnel = SecurityPersonnel.CITY_SEC
+            securityPersonnel = BuildingSecurityPersonnel.CITY_SEC
             break
         case 6:
-            securityPersonnel = SecurityPersonnel.CORPO_SEC
+            securityPersonnel = BuildingSecurityPersonnel.CORPO_SEC
             break
         case 7:
-            securityPersonnel = SecurityPersonnel.RESPONSE_BACKUP
+            securityPersonnel = BuildingSecurityPersonnel.RESPONSE_BACKUP
             break
         case 8:
-            securityPersonnel = SecurityPersonnel.HEAVY_WEAPONS
+            securityPersonnel = BuildingSecurityPersonnel.HEAVY_WEAPONS
             break
         case 9:
-            securityPersonnel = SecurityPersonnel.HEAVY_VEHICLES
+            securityPersonnel = BuildingSecurityPersonnel.HEAVY_VEHICLES
             break
         case 10:
-            securityPersonnel = SecurityPersonnel.FAST_RESPONSE_BACKUP
+            securityPersonnel = BuildingSecurityPersonnel.FAST_RESPONSE_BACKUP
             break
         case 11:
-            securityPersonnel = SecurityPersonnel.ELITE_TROOPS
+            securityPersonnel = BuildingSecurityPersonnel.ELITE_TROOPS
             break
         case 12:
-            securityPersonnel = SecurityPersonnel.BORG
+            securityPersonnel = BuildingSecurityPersonnel.BORG
             break
         default:
-            securityPersonnel = SecurityPersonnel.NONE
+            securityPersonnel = BuildingSecurityPersonnel.NONE
             break
     }
-    // Generate Style
+    // Generate BuildingStyle
     const styleRoll = getRandomInt(1, 10) + jobDifficultyModifier
-    let style: Style
+    let style: BuildingStyle
     switch (styleRoll) {
         case 1:
-            style = Style.AUSTERE
+            style = BuildingStyle.AUSTERE
             break
         case 2:
-            style = Style.SOVIETIC
+            style = BuildingStyle.SOVIETIC
             break
         case 3:
-            style = Style.URBAN_GRAFFITI
+            style = BuildingStyle.URBAN_GRAFFITI
             break
         case 4:
-            style = Style.MODERN
+            style = BuildingStyle.MODERN
             break
         case 5:
-            style = Style.TRIBAL
+            style = BuildingStyle.TRIBAL
             break
         case 6:
-            style = Style.NEON_FEST
+            style = BuildingStyle.NEON_FEST
             break
         case 7:
-            style = Style.EUROPEAN
+            style = BuildingStyle.EUROPEAN
             break
         case 8:
-            style = Style.MILITARISTIC
+            style = BuildingStyle.MILITARISTIC
             break
         case 9:
-            style = Style.CORPORATE
+            style = BuildingStyle.CORPORATE
             break
         case 10:
-            style = Style.ORIENTAL
+            style = BuildingStyle.ORIENTAL
             break
         case 11:
-            style = Style.EXOTIC
+            style = BuildingStyle.EXOTIC
             break
         case 12:
-            style = Style.LUXURIOUS
+            style = BuildingStyle.LUXURIOUS
             break
         default:
-            style = Style.AUSTERE
+            style = BuildingStyle.AUSTERE
             break
     }
     // Generate random event
     const eventRoll = getRandomInt(1, 10) + jobDifficultyModifier
-    let event: Event
+    let event: BuildingEvent
     switch (eventRoll) {
         case 1:
-            event = Event.CRUMBLING_DEMOLITION
+            event = BuildingEvent.CRUMBLING_DEMOLITION
             break
         case 2:
-            event = Event.WORKERS_REMODELING
+            event = BuildingEvent.WORKERS_REMODELING
             break
         case 3:
-            event = Event.MAINTENANCE_PROBLEM
+            event = BuildingEvent.MAINTENANCE_PROBLEM
             break
         case 4:
-            event = Event.STRIKE
+            event = BuildingEvent.STRIKE
             break
         case 5:
-            event = Event.PRIVATE_INVESTIGATOR
+            event = BuildingEvent.PRIVATE_INVESTIGATOR
             break
         case 6:
-            event = Event.ONGOING_KIDNAP
+            event = BuildingEvent.ONGOING_KIDNAP
             break
         case 7:
-            event = Event.NETRUNNER_MESSING_WITH_SYSTEMS
+            event = BuildingEvent.NETRUNNER_MESSING_WITH_SYSTEMS
             break
         case 8:
-            event = Event.GUN_FIGHT
+            event = BuildingEvent.GUN_FIGHT
             break
         case 9:
-            event = Event.OWNERS_COLLECTING_RENT
+            event = BuildingEvent.OWNERS_COLLECTING_RENT
             break
         case 10:
-            event = Event.EDGERUNNERS_GOING_SAME_PLACE
+            event = BuildingEvent.EDGERUNNERS_GOING_SAME_PLACE
             break
         case 11:
-            event = Event.STRONG_SECURITY_PRESENCE
+            event = BuildingEvent.STRONG_SECURITY_PRESENCE
             break
         case 12:
-            event = Event.ELITE_CREW_VISITING
+            event = BuildingEvent.ELITE_CREW_VISITING
             break
         default:
-            event = Event.CRUMBLING_DEMOLITION
+            event = BuildingEvent.CRUMBLING_DEMOLITION
             break
     }
     // Generate secret
     const secretRoll = getRandomInt(1, 10) + jobDifficultyModifier
-    let secret: Secret
+    let secret: BuildingSecret
     switch (secretRoll) {
         case 1:
-            secret = Secret.PARTY
+            secret = BuildingSecret.PARTY
             break
         case 2:
-            secret = Secret.DRUG_STASH
+            secret = BuildingSecret.DRUG_STASH
             break
         case 3:
-            secret = Secret.FIXER_ARRANGEMENT
+            secret = BuildingSecret.FIXER_ARRANGEMENT
             break
         case 4:
-            secret = Secret.DRUG_LAB
+            secret = BuildingSecret.DRUG_LAB
             break
         case 5:
-            secret = Secret.SOMEONE_KIDNAPPED
+            secret = BuildingSecret.SOMEONE_KIDNAPPED
             break
         case 6:
-            secret = Secret.WEAPON_STASH
+            secret = BuildingSecret.WEAPON_STASH
             break
         case 7:
-            secret = Secret.DATA_STORE_NETRUNNER_DEN
+            secret = BuildingSecret.DATA_STORE_NETRUNNER_DEN
             break
         case 8:
-            secret = Secret.MEDIA_INVESTIGATION
+            secret = BuildingSecret.MEDIA_INVESTIGATION
             break
         case 9:
-            secret = Secret.ACTIVIST_SABOTAGE
+            secret = BuildingSecret.ACTIVIST_SABOTAGE
             break
         case 10:
-            secret = Secret.SAFE_HOUSE
+            secret = BuildingSecret.SAFE_HOUSE
             break
         case 11:
-            secret = Secret.COVERT_OP_MEETING_POINT
+            secret = BuildingSecret.COVERT_OP_MEETING_POINT
             break
         case 12:
-            secret = Secret.SECRET_SCIENCE_LAB
+            secret = BuildingSecret.SECRET_SCIENCE_LAB
             break
         default:
-            secret = Secret.PARTY
+            secret = BuildingSecret.PARTY
             break
     }
-    // Generate building name
-    const name = generateBuildingName(type, style, ownership, isAbandoned)
 
     // Construct the base building object
     const newBuilding: Building = {
         ID: uuidv4(),
-        name,
+        name: '',
         description: '',
         type,
         isAbandoned,
@@ -638,9 +525,34 @@ export const generateRandomBuilding = async (
         ...building,
     }
 
+    // --- Generate Name using API ---
+    try {
+        const generatedName = await generateHuggingFaceText(
+            newBuilding,
+            ModuleTypes.BUILDING,
+            t,
+            TextGenerationType.NAME
+        )
+        if (generatedName) {
+            newBuilding.name = generatedName
+        } else {
+            console.warn(`API name generation failed for building ${newBuilding.name}. Using local fallback.`)
+            newBuilding.name = generateLocalBuildingName(type, style, ownership, isAbandoned) // Use fallback function
+        }
+    } catch (error) {
+        console.error(`Error generating API name for building ${newBuilding.name}:`, error)
+        console.warn(`Using local fallback name generation for building ${newBuilding.name}.`)
+        newBuilding.name = generateLocalBuildingName(type, style, ownership, isAbandoned) // Use fallback function
+    }
+
     // --- Generate Description using API ---
     try {
-        const generatedDesc = await generateHuggingFaceDescription(newBuilding, ModuleTypes.BUILDING, t)
+        const generatedDesc = await generateHuggingFaceText(
+            newBuilding,
+            ModuleTypes.BUILDING,
+            t,
+            TextGenerationType.DESCRIPTION
+        )
         if (generatedDesc) {
             newBuilding.description = generatedDesc
         } else {
@@ -656,7 +568,11 @@ export const generateRandomBuilding = async (
     // --- Generate Image using API (if description exists) ---
     if (newBuilding.description) {
         try {
-            const imageBlob = await generateHuggingFaceImage(newBuilding.description, newBuilding.name)
+            const imageBlob = await generateHuggingFaceImage(
+                newBuilding.description,
+                newBuilding.name,
+                ModuleTypes.BUILDING
+            )
             if (imageBlob) {
                 newBuilding.image = await blobToBase64(imageBlob)
             } else {
@@ -672,6 +588,132 @@ export const generateRandomBuilding = async (
     }
 
     return newBuilding
+}
+
+/**
+ * Internal function to generate a name for a building based on its properties.
+ * It is used as a fallback if the API name generation fails.
+ * @param type - The type of building
+ * @param style - The style of the building
+ * @param ownership - The ownership of the building
+ * @param isAbandoned - Whether the building is abandoned
+ * @returns A building name
+ */
+function generateLocalBuildingName(
+    type: BuildingType,
+    style: BuildingStyle,
+    ownership: BuildingOwnership,
+    isAbandoned: boolean
+): string {
+    // Add abandoned qualifier if applicable
+    const abandonedPrefix = isAbandoned
+        ? `${getRandomElement(buildingNameData[BuildingType.ABANDONED_BUILDING].buildingTypeWords || [])} `
+        : ''
+
+    // Get appropriate naming patterns for this building type
+    const appropriatePatterns = buildingNameData[type].preferredPatterns || [1, 2, 3]
+    const namingPattern = getRandomElement(appropriatePatterns)
+
+    // Check if this building has corporate affiliation based on type and ownership
+    const hasCorpoAffiliation =
+        buildingNameData[type].corpoAffiliation || buildingNameData[ownership]?.corpoAffiliation || false
+
+    // Corpo prefix for corporate affiliated buildings
+    const corpoName = hasCorpoAffiliation ? getRandomElement(commonNameElements.corpoPrefixes) : ''
+
+    // BuildingStyle-specific naming
+    const styleWord = getRandomElement(buildingNameData[style].styleAdjectives || [])
+
+    // Type-specific terminology
+    const typeWord = getRandomElement(buildingNameData[type].buildingTypeWords || [])
+
+    // Suffix options
+    const buildingSuffix = getRandomElement(commonNameElements.buildingSuffixes)
+
+    // District names for location-based naming
+    const districtName = getRandomElement(commonNameElements.districtNames)
+
+    // Numbers for addresses or building numbers
+    const buildingNumber = getRandomInt(1, 999)
+
+    // Street names
+    const streetName = `${getRandomElement(commonNameElements.landmarkPrefixes)} ${getRandomInt(
+        1,
+        50
+    )} ${getRandomElement(commonNameElements.streetSuffixes)}`
+
+    // Name generation patterns
+    let name = ''
+
+    switch (namingPattern) {
+        case 1: // Simple style + type + suffix: "Minimalist Tower Complex"
+            name = `${styleWord} ${typeWord} ${buildingSuffix}`
+            break
+        case 2: // Corpo-owned naming: "Arasaka Executive Tower"
+            name = corpoName
+                ? `${corpoName} ${styleWord} ${buildingSuffix}`
+                : `${styleWord} ${typeWord} ${buildingSuffix}`
+            break
+        case 3: // District-based naming: "Watson Heights"
+            name = `${districtName} ${buildingSuffix}`
+            break
+        case 4: // Numbered building: "Block 403"
+            name = `${typeWord} ${buildingNumber}`
+            break
+        case 5: // Address-style: "21 North Oak Boulevard"
+            name = `${buildingNumber} ${districtName} ${getRandomElement(commonNameElements.streetSuffixes)}`
+            break
+        case 6: // Landmark style: "Central Plaza Hub"
+            name = `${getRandomElement(commonNameElements.landmarkPrefixes)} ${typeWord} ${buildingSuffix}`
+            break
+        case 7: // The + adjective + suffix: "The Radiant Tower"
+            name = `The ${styleWord} ${buildingSuffix}`
+            break
+        case 8: // Possessive naming: "Freeman's Market" or "Rodriguez Arcade"
+            // For small businesses, sometimes use "Surname BusinessType" format instead of possessive
+            if (ownership === BuildingOwnership.SMALL_BUSINESS && Math.random() < 0.6) {
+                name = `${getRandomElement(commonNameElements.surnames)} ${typeWord}`
+            } else {
+                name = `${getRandomElement(commonNameElements.surnames)}'s ${typeWord}`
+            }
+            break
+        case 9: // Compound names: "NightGlow Center"
+            name = `${getRandomElement(commonNameElements.compoundPrefixes)}${getRandomElement(
+                commonNameElements.compoundSuffixes
+            )} ${buildingSuffix}`
+            break
+        case 10: // Street address: "21 North Oak Building"
+            name = `${buildingNumber} ${streetName} ${buildingSuffix}`
+            break
+        case 11: // BuildingStyle + district: "Luxury North Oak"
+            name = `${styleWord} ${districtName}`
+            break
+        case 12: // For abandoned or construction: "Former Arasaka Research Facility"
+            if (isAbandoned) {
+                name = `Former ${corpoName ? corpoName + ' ' : ''}${typeWord} ${buildingSuffix}`
+            } else if (type === BuildingType.VACANT_LOT_CONSTRUCTION_SITE) {
+                name = `${corpoName ? corpoName + ' ' : ''}${typeWord} Site ${buildingNumber}`
+            } else {
+                name = `${styleWord} ${typeWord} ${buildingSuffix}`
+            }
+            break
+        default:
+            name = `${styleWord} ${typeWord} ${buildingSuffix}`
+    }
+
+    // Apply style-specific modifications to make names more natural
+    const nameModifier = buildingNameData[style].nameModifier
+    if (nameModifier) {
+        name = nameModifier(name, typeWord, buildingSuffix)
+    }
+
+    // Add abandoned prefix if applicable
+    name = abandonedPrefix + name.trim()
+
+    // Clean up excess spaces
+    name = name.replace(/\s+/g, ' ').trim()
+
+    return name
 }
 
 /**
@@ -753,51 +795,51 @@ const generateLocalBuildingDescription = (t: TFunction, building: Building): str
 
         // Add ownership information with variation
         const ownershipDescriptions = {
-            [Ownership.NO_ONE_SCAVS]: [
+            [BuildingOwnership.NO_ONE_SCAVS]: [
                 t('buildings.description.ownership.noOneScavs'),
                 t('buildings.description.ownership.noOneScavsAlt'),
             ],
-            [Ownership.LOW_LEVEL_GONKS]: [
+            [BuildingOwnership.LOW_LEVEL_GONKS]: [
                 t('buildings.description.ownership.lowLevelGonks'),
                 t('buildings.description.ownership.lowLevelGonksAlt'),
             ],
-            [Ownership.GANG_MAFIA]: [
+            [BuildingOwnership.GANG_MAFIA]: [
                 t('buildings.description.ownership.gangMafia'),
                 t('buildings.description.ownership.gangMafiaAlt'),
             ],
-            [Ownership.POSERGANG]: [
+            [BuildingOwnership.POSERGANG]: [
                 t('buildings.description.ownership.posergang'),
                 t('buildings.description.ownership.posergangAlt'),
             ],
-            [Ownership.BYSTANDER]: [
+            [BuildingOwnership.BYSTANDER]: [
                 t('buildings.description.ownership.bystander'),
                 t('buildings.description.ownership.bystanderAlt'),
             ],
-            [Ownership.FIXER]: [
+            [BuildingOwnership.FIXER]: [
                 t('buildings.description.ownership.fixer'),
                 t('buildings.description.ownership.fixerAlt'),
             ],
-            [Ownership.SMALL_BUSINESS]: [
+            [BuildingOwnership.SMALL_BUSINESS]: [
                 t('buildings.description.ownership.smallBusiness'),
                 t('buildings.description.ownership.smallBusinessAlt'),
             ],
-            [Ownership.LOCAL_GOV]: [
+            [BuildingOwnership.LOCAL_GOV]: [
                 t('buildings.description.ownership.localGov'),
                 t('buildings.description.ownership.localGovAlt'),
             ],
-            [Ownership.CORPO]: [
+            [BuildingOwnership.CORPO]: [
                 t('buildings.description.ownership.corpo'),
                 t('buildings.description.ownership.corpoAlt'),
             ],
-            [Ownership.MILITARISTIC_GANG]: [
+            [BuildingOwnership.MILITARISTIC_GANG]: [
                 t('buildings.description.ownership.militaristicGang'),
                 t('buildings.description.ownership.militaristicGangAlt'),
             ],
-            [Ownership.GOVERNMENT]: [
+            [BuildingOwnership.GOVERNMENT]: [
                 t('buildings.description.ownership.government'),
                 t('buildings.description.ownership.governmentAlt'),
             ],
-            [Ownership.MEGA_CORPO]: [
+            [BuildingOwnership.MEGA_CORPO]: [
                 t('buildings.description.ownership.megaCorpo'),
                 t('buildings.description.ownership.megaCorpoAlt'),
             ],
@@ -828,7 +870,7 @@ const generateLocalBuildingDescription = (t: TFunction, building: Building): str
         physicalDesc = getRandomElement(featurePatterns)
     }
 
-    // Secret entrance description with variation
+    // BuildingSecret entrance description with variation
     if (secretOrAltEntrance) {
         const secretEntranceOptions = [
             t('buildings.description.secretEntrance'),
@@ -858,51 +900,51 @@ const generateLocalBuildingDescription = (t: TFunction, building: Building): str
 
     // Security personnel descriptions with variation
     const securityDescriptions = {
-        [SecurityPersonnel.NONE]: [
+        [BuildingSecurityPersonnel.NONE]: [
             t('buildings.description.security.none'),
             t('buildings.description.security.noneAlt'),
         ],
-        [SecurityPersonnel.LOCALS_TENNANTS]: [
+        [BuildingSecurityPersonnel.LOCALS_TENNANTS]: [
             t('buildings.description.security.localsTenants'),
             t('buildings.description.security.localsTenantsAlt'),
         ],
-        [SecurityPersonnel.LOCAL_SEC_GANG]: [
+        [BuildingSecurityPersonnel.LOCAL_SEC_GANG]: [
             t('buildings.description.security.localSecGang'),
             t('buildings.description.security.localSecGangAlt'),
         ],
-        [SecurityPersonnel.VEHICLES]: [
+        [BuildingSecurityPersonnel.VEHICLES]: [
             t('buildings.description.security.vehicles'),
             t('buildings.description.security.vehiclesAlt'),
         ],
-        [SecurityPersonnel.CITY_SEC]: [
+        [BuildingSecurityPersonnel.CITY_SEC]: [
             t('buildings.description.security.citySec'),
             t('buildings.description.security.citySecAlt'),
         ],
-        [SecurityPersonnel.CORPO_SEC]: [
+        [BuildingSecurityPersonnel.CORPO_SEC]: [
             t('buildings.description.security.corpoSec'),
             t('buildings.description.security.corpoSecAlt'),
         ],
-        [SecurityPersonnel.RESPONSE_BACKUP]: [
+        [BuildingSecurityPersonnel.RESPONSE_BACKUP]: [
             t('buildings.description.security.responseBackup'),
             t('buildings.description.security.responseBackupAlt'),
         ],
-        [SecurityPersonnel.HEAVY_WEAPONS]: [
+        [BuildingSecurityPersonnel.HEAVY_WEAPONS]: [
             t('buildings.description.security.heavyWeapons'),
             t('buildings.description.security.heavyWeaponsAlt'),
         ],
-        [SecurityPersonnel.HEAVY_VEHICLES]: [
+        [BuildingSecurityPersonnel.HEAVY_VEHICLES]: [
             t('buildings.description.security.heavyVehicles'),
             t('buildings.description.security.heavyVehiclesAlt'),
         ],
-        [SecurityPersonnel.FAST_RESPONSE_BACKUP]: [
+        [BuildingSecurityPersonnel.FAST_RESPONSE_BACKUP]: [
             t('buildings.description.security.fastResponseBackup'),
             t('buildings.description.security.fastResponseBackupAlt'),
         ],
-        [SecurityPersonnel.ELITE_TROOPS]: [
+        [BuildingSecurityPersonnel.ELITE_TROOPS]: [
             t('buildings.description.security.eliteTroops'),
             t('buildings.description.security.eliteTroopsAlt'),
         ],
-        [SecurityPersonnel.BORG]: [
+        [BuildingSecurityPersonnel.BORG]: [
             t('buildings.description.security.borg'),
             t('buildings.description.security.borgAlt'),
         ],
@@ -933,7 +975,7 @@ const generateLocalBuildingDescription = (t: TFunction, building: Building): str
         currentHappeningsDesc = getRandomElement(eventPatterns)
     }
 
-    // Secret information with variation
+    // BuildingSecret information with variation
     if (secret) {
         const secretText = t(`buildings.secret.${secret}`).toLowerCase()
         const secretPatterns = [
@@ -946,18 +988,18 @@ const generateLocalBuildingDescription = (t: TFunction, building: Building): str
 
     // Generate random atmospheric details based on building style
     const atmosphereByStyle = {
-        [Style.AUSTERE]: t('buildings.atmosphere.austere'),
-        [Style.SOVIETIC]: t('buildings.atmosphere.sovietic'),
-        [Style.URBAN_GRAFFITI]: t('buildings.atmosphere.urbanGraffiti'),
-        [Style.MODERN]: t('buildings.atmosphere.modern'),
-        [Style.TRIBAL]: t('buildings.atmosphere.tribal'),
-        [Style.NEON_FEST]: t('buildings.atmosphere.neonFest'),
-        [Style.EUROPEAN]: t('buildings.atmosphere.european'),
-        [Style.MILITARISTIC]: t('buildings.atmosphere.militaristic'),
-        [Style.CORPORATE]: t('buildings.atmosphere.corporate'),
-        [Style.ORIENTAL]: t('buildings.atmosphere.oriental'),
-        [Style.EXOTIC]: t('buildings.atmosphere.exotic'),
-        [Style.LUXURIOUS]: t('buildings.atmosphere.luxurious'),
+        [BuildingStyle.AUSTERE]: t('buildings.atmosphere.austere'),
+        [BuildingStyle.SOVIETIC]: t('buildings.atmosphere.sovietic'),
+        [BuildingStyle.URBAN_GRAFFITI]: t('buildings.atmosphere.urbanGraffiti'),
+        [BuildingStyle.MODERN]: t('buildings.atmosphere.modern'),
+        [BuildingStyle.TRIBAL]: t('buildings.atmosphere.tribal'),
+        [BuildingStyle.NEON_FEST]: t('buildings.atmosphere.neonFest'),
+        [BuildingStyle.EUROPEAN]: t('buildings.atmosphere.european'),
+        [BuildingStyle.MILITARISTIC]: t('buildings.atmosphere.militaristic'),
+        [BuildingStyle.CORPORATE]: t('buildings.atmosphere.corporate'),
+        [BuildingStyle.ORIENTAL]: t('buildings.atmosphere.oriental'),
+        [BuildingStyle.EXOTIC]: t('buildings.atmosphere.exotic'),
+        [BuildingStyle.LUXURIOUS]: t('buildings.atmosphere.luxurious'),
     }
 
     atmosphereDesc = atmosphereByStyle[style] || t('buildings.atmosphere.generic')

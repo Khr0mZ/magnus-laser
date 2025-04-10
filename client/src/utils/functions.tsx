@@ -6,7 +6,7 @@ import {
     Close,
     GpsFixed,
     Groups3,
-    LiveHelp,
+    Hub,
     Nightlife,
     Settings,
 } from '@mui/icons-material'
@@ -59,7 +59,7 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
         )
     if (module === ModuleTypes.FIXER_JOB)
         return (
-            <LiveHelp
+            <Hub
                 sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />

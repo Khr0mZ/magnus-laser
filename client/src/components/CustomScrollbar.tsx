@@ -10,8 +10,8 @@ interface CustomScrollbarProps {
     height?: string | number
 }
 
-// Track created instances for global refreshes
-const scrollbarInstances: Set<Scrollbar> = new Set()
+// Track created instances for global refreshes - make this a weak set to allow garbage collection
+const scrollbarInstances = new WeakSet<Scrollbar>()
 
 const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
     children,
@@ -26,6 +26,11 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
     const [needsScrolling, setNeedsScrolling] = useState(false)
     const [paddingRight, setPaddingRight] = useState(0)
     const [paddingBottom, setPaddingBottom] = useState(0)
+
+    // Store references to observers for cleanup
+    const resizeObserverRef = useRef<ResizeObserver | null>(null)
+    const mutationObserverRef = useRef<MutationObserver | null>(null)
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Use refs to track state without causing re-renders
     const thumbSizeRef = useRef(isLight ? 16 : 8)
@@ -134,13 +139,11 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
             }
         })
 
-        // Update all scrollbar instances
-        scrollbarInstances.forEach((instance) => {
-            if (instance && typeof instance.update === 'function') {
-                instance.update()
-            }
-        })
-    }, [isHorizontal])
+        // Update all scrollbar instances to ensure smooth scrolling works
+        if (scrollbarInstance && typeof scrollbarInstance.update === 'function') {
+            scrollbarInstance.update()
+        }
+    }, [isHorizontal, scrollbarInstance])
 
     // Check if content requires scrolling
     const checkIfScrollingNeeded = useCallback(() => {
@@ -170,6 +173,26 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
         return needsScroll
     }, [needsScrolling, updateContainerPadding, isHorizontal])
 
+    // Cleanup function to ensure all resources are released
+    const cleanupResources = useCallback(() => {
+        // Clear any pending timers
+        if (timerRef.current) {
+            clearTimeout(timerRef.current)
+            timerRef.current = null
+        }
+
+        // Disconnect observers
+        if (resizeObserverRef.current) {
+            resizeObserverRef.current.disconnect()
+            resizeObserverRef.current = null
+        }
+
+        if (mutationObserverRef.current) {
+            mutationObserverRef.current.disconnect()
+            mutationObserverRef.current = null
+        }
+    }, [])
+
     // Update theme-dependent values and styles
     useEffect(() => {
         // Update thumb size based on theme
@@ -184,24 +207,48 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
         if (scrollbarInstance) {
             scrollbarInstance.update()
 
-            // Apply updates after delays to ensure everything takes effect
-            setTimeout(() => {
+            // Apply updates after delay to ensure everything takes effect
+            timerRef.current = setTimeout(() => {
                 updateContainerPadding()
                 applyScrollbarStyles()
                 scrollbarInstance.update()
             }, 50)
+        }
 
-            setTimeout(() => {
-                updateContainerPadding()
-                applyScrollbarStyles()
-                scrollbarInstance.update()
-            }, 200)
+        // Clean up timeout when effect runs again
+        return () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current)
+                timerRef.current = null
+            }
         }
     }, [isLight, applyScrollbarStyles, scrollbarInstance, updateContainerPadding])
 
     // Initialize scrollbar
     useEffect(() => {
         if (typeof window === 'undefined' || !scrollbarRef.current) return
+
+        // Clean up previous observers and timers, but don't destroy the scrollbar here
+        if (resizeObserverRef.current) {
+            resizeObserverRef.current.disconnect()
+            resizeObserverRef.current = null
+        }
+
+        if (mutationObserverRef.current) {
+            mutationObserverRef.current.disconnect()
+            mutationObserverRef.current = null
+        }
+
+        if (timerRef.current) {
+            clearTimeout(timerRef.current)
+            timerRef.current = null
+        }
+
+        // If we already have a scrollbar instance, just update it
+        if (scrollbarInstance) {
+            scrollbarInstance.update()
+            return
+        }
 
         try {
             const options = {
@@ -223,9 +270,10 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
                 applyScrollbarStyles()
                 scrollbar.update()
             })
+            resizeObserverRef.current = resizeObserver
 
             // Apply initial styles after short delay
-            setTimeout(() => {
+            timerRef.current = setTimeout(() => {
                 checkIfScrollingNeeded()
                 applyScrollbarStyles()
                 scrollbar.update()
@@ -240,34 +288,44 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
                 }
             }
 
-            // Cleanup
+            // Only cleanup observers and timers when component unmounts, not the scrollbar
             return () => {
-                scrollbarInstances.delete(scrollbar)
-                resizeObserver.disconnect()
-                scrollbar.destroy()
+                if (resizeObserverRef.current) {
+                    resizeObserverRef.current.disconnect()
+                    resizeObserverRef.current = null
+                }
+
+                if (timerRef.current) {
+                    clearTimeout(timerRef.current)
+                    timerRef.current = null
+                }
             }
         } catch (error) {
             console.error('Error initializing smooth-scrollbar:', error)
         }
-    }, [applyScrollbarStyles, checkIfScrollingNeeded])
+    }, [applyScrollbarStyles, checkIfScrollingNeeded, scrollbarInstance])
 
     // Update on children/route/page change
     useEffect(() => {
         if (!scrollbarInstance) return
 
-        const updateTimer = setTimeout(() => {
+        // Clear existing timer
+        if (timerRef.current) {
+            clearTimeout(timerRef.current)
+        }
+
+        timerRef.current = setTimeout(() => {
             checkIfScrollingNeeded()
             applyScrollbarStyles()
             scrollbarInstance.update()
-
-            setTimeout(() => {
-                checkIfScrollingNeeded()
-                applyScrollbarStyles()
-                scrollbarInstance.update()
-            }, 300)
         }, 100)
 
-        return () => clearTimeout(updateTimer)
+        return () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current)
+                timerRef.current = null
+            }
+        }
     }, [children, scrollbarInstance, applyScrollbarStyles, checkIfScrollingNeeded])
 
     // Force update on mount and whenever component updates
@@ -286,14 +344,25 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
         const contentElement = scrollbarRef.current.querySelector('.scroll-content')
         if (!contentElement) return
 
+        // Clean up previous mutation observer if it exists
+        if (mutationObserverRef.current) {
+            mutationObserverRef.current.disconnect()
+        }
+
         const observer = new MutationObserver(() => {
-            setTimeout(() => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current)
+            }
+
+            timerRef.current = setTimeout(() => {
                 checkIfScrollingNeeded()
                 updateContainerPadding()
                 applyScrollbarStyles()
                 scrollbarInstance.update()
             }, 50)
         })
+
+        mutationObserverRef.current = observer
 
         observer.observe(contentElement, {
             childList: true,
@@ -302,8 +371,26 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
             characterData: true,
         })
 
-        return () => observer.disconnect()
+        return () => {
+            if (observer) {
+                observer.disconnect()
+            }
+            if (timerRef.current) {
+                clearTimeout(timerRef.current)
+                timerRef.current = null
+            }
+        }
     }, [scrollbarInstance, applyScrollbarStyles, checkIfScrollingNeeded, updateContainerPadding])
+
+    // Final cleanup when component unmounts - destroy scrollbar instance only on unmount
+    useEffect(() => {
+        return () => {
+            cleanupResources()
+            if (scrollbarInstance) {
+                scrollbarInstance.destroy()
+            }
+        }
+    }, [cleanupResources, scrollbarInstance])
 
     return (
         <div

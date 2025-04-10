@@ -177,7 +177,7 @@ export const translateGangNews = (t: TFunction, news: string): string => {
  * @param module The module (buildings or gangs)
  * @returns Translated string
  */
-export const translateLabel = (t: TFunction, key: string, module: 'buildings' | 'gangs'): string => {
+export const translateLabel = (t: TFunction, key: string, module: 'buildings' | 'gangs' | 'fixerJobs'): string => {
     return t(`${module}.labels.${key}`)
 }
 

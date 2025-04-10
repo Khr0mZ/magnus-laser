@@ -40,20 +40,95 @@ export type Building = {
   description: Scalars['String']['output'];
   elevators: Scalars['Boolean']['output'];
   emergencyExit: Scalars['Boolean']['output'];
-  event: Event;
+  event: BuildingEvent;
   gatehouseFrontDesk: Scalars['Boolean']['output'];
   image: Scalars['String']['output'];
   isAbandoned: Scalars['Boolean']['output'];
   landingPad: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
-  ownership: Ownership;
+  ownership: BuildingOwnership;
   parking: Scalars['Boolean']['output'];
-  secret: Secret;
+  secret: BuildingSecret;
   secretOrAltEntrance: Scalars['Boolean']['output'];
-  securityPersonnel: SecurityPersonnel;
-  style: Style;
+  securityPersonnel: BuildingSecurityPersonnel;
+  style: BuildingStyle;
   type: BuildingType;
 };
+
+export enum BuildingEvent {
+  CRUMBLING_DEMOLITION = 'CRUMBLING_DEMOLITION',
+  EDGERUNNERS_GOING_SAME_PLACE = 'EDGERUNNERS_GOING_SAME_PLACE',
+  ELITE_CREW_VISITING = 'ELITE_CREW_VISITING',
+  GUN_FIGHT = 'GUN_FIGHT',
+  MAINTENANCE_PROBLEM = 'MAINTENANCE_PROBLEM',
+  NETRUNNER_MESSING_WITH_SYSTEMS = 'NETRUNNER_MESSING_WITH_SYSTEMS',
+  ONGOING_KIDNAP = 'ONGOING_KIDNAP',
+  OWNERS_COLLECTING_RENT = 'OWNERS_COLLECTING_RENT',
+  PRIVATE_INVESTIGATOR = 'PRIVATE_INVESTIGATOR',
+  STRIKE = 'STRIKE',
+  STRONG_SECURITY_PRESENCE = 'STRONG_SECURITY_PRESENCE',
+  WORKERS_REMODELING = 'WORKERS_REMODELING'
+}
+
+export enum BuildingOwnership {
+  BYSTANDER = 'BYSTANDER',
+  CORPO = 'CORPO',
+  FIXER = 'FIXER',
+  GANG_MAFIA = 'GANG_MAFIA',
+  GOVERNMENT = 'GOVERNMENT',
+  LOCAL_GOV = 'LOCAL_GOV',
+  LOW_LEVEL_GONKS = 'LOW_LEVEL_GONKS',
+  MEGA_CORPO = 'MEGA_CORPO',
+  MILITARISTIC_GANG = 'MILITARISTIC_GANG',
+  NO_ONE_SCAVS = 'NO_ONE_SCAVS',
+  POSERGANG = 'POSERGANG',
+  SMALL_BUSINESS = 'SMALL_BUSINESS'
+}
+
+export enum BuildingSecret {
+  ACTIVIST_SABOTAGE = 'ACTIVIST_SABOTAGE',
+  COVERT_OP_MEETING_POINT = 'COVERT_OP_MEETING_POINT',
+  DATA_STORE_NETRUNNER_DEN = 'DATA_STORE_NETRUNNER_DEN',
+  DRUG_LAB = 'DRUG_LAB',
+  DRUG_STASH = 'DRUG_STASH',
+  FIXER_ARRANGEMENT = 'FIXER_ARRANGEMENT',
+  MEDIA_INVESTIGATION = 'MEDIA_INVESTIGATION',
+  PARTY = 'PARTY',
+  SAFE_HOUSE = 'SAFE_HOUSE',
+  SECRET_SCIENCE_LAB = 'SECRET_SCIENCE_LAB',
+  SOMEONE_KIDNAPPED = 'SOMEONE_KIDNAPPED',
+  WEAPON_STASH = 'WEAPON_STASH'
+}
+
+export enum BuildingSecurityPersonnel {
+  BORG = 'BORG',
+  CITY_SEC = 'CITY_SEC',
+  CORPO_SEC = 'CORPO_SEC',
+  ELITE_TROOPS = 'ELITE_TROOPS',
+  FAST_RESPONSE_BACKUP = 'FAST_RESPONSE_BACKUP',
+  HEAVY_VEHICLES = 'HEAVY_VEHICLES',
+  HEAVY_WEAPONS = 'HEAVY_WEAPONS',
+  LOCALS_TENNANTS = 'LOCALS_TENNANTS',
+  LOCAL_SEC_GANG = 'LOCAL_SEC_GANG',
+  NONE = 'NONE',
+  RESPONSE_BACKUP = 'RESPONSE_BACKUP',
+  VEHICLES = 'VEHICLES'
+}
+
+export enum BuildingStyle {
+  AUSTERE = 'AUSTERE',
+  CORPORATE = 'CORPORATE',
+  EUROPEAN = 'EUROPEAN',
+  EXOTIC = 'EXOTIC',
+  LUXURIOUS = 'LUXURIOUS',
+  MILITARISTIC = 'MILITARISTIC',
+  MODERN = 'MODERN',
+  NEON_FEST = 'NEON_FEST',
+  ORIENTAL = 'ORIENTAL',
+  SOVIETIC = 'SOVIETIC',
+  TRIBAL = 'TRIBAL',
+  URBAN_GRAFFITI = 'URBAN_GRAFFITI'
+}
 
 export enum BuildingType {
   ABANDONED_BUILDING = 'ABANDONED_BUILDING',
@@ -87,20 +162,15 @@ export type Dices = {
   d100?: Maybe<Scalars['Int']['output']>;
 };
 
-export enum Event {
-  CRUMBLING_DEMOLITION = 'CRUMBLING_DEMOLITION',
-  EDGERUNNERS_GOING_SAME_PLACE = 'EDGERUNNERS_GOING_SAME_PLACE',
-  ELITE_CREW_VISITING = 'ELITE_CREW_VISITING',
-  GUN_FIGHT = 'GUN_FIGHT',
-  MAINTENANCE_PROBLEM = 'MAINTENANCE_PROBLEM',
-  NETRUNNER_MESSING_WITH_SYSTEMS = 'NETRUNNER_MESSING_WITH_SYSTEMS',
-  ONGOING_KIDNAP = 'ONGOING_KIDNAP',
-  OWNERS_COLLECTING_RENT = 'OWNERS_COLLECTING_RENT',
-  PRIVATE_INVESTIGATOR = 'PRIVATE_INVESTIGATOR',
-  STRIKE = 'STRIKE',
-  STRONG_SECURITY_PRESENCE = 'STRONG_SECURITY_PRESENCE',
-  WORKERS_REMODELING = 'WORKERS_REMODELING'
-}
+export type FixerJob = {
+  __typename?: 'FixerJob';
+  ID: Scalars['ID']['output'];
+  description: Scalars['String']['output'];
+  difficulty: JobDifficulty;
+  image: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  plot: Plot;
+};
 
 export enum Flaw {
   AMMO_WEAPON_SHORTAGE = 'AMMO_WEAPON_SHORTAGE',
@@ -147,6 +217,13 @@ export enum GangColor {
   WHITE = 'WHITE',
   YELLOW = 'YELLOW'
 }
+
+export type GangComplication = {
+  __typename?: 'GangComplication';
+  character?: Maybe<PlotCharacter>;
+  item?: Maybe<PlotItem>;
+  type: PlotGangComplicationType;
+};
 
 export enum GangNameType {
   ADJECTIVE = 'ADJECTIVE',
@@ -199,6 +276,12 @@ export enum GangType {
   YO = 'YO'
 }
 
+export enum JobDifficulty {
+  DANGEROUS = 'DANGEROUS',
+  EASY = 'EASY',
+  TYPICAL = 'TYPICAL'
+}
+
 export type KnownFor = {
   __typename?: 'KnownFor';
   knownForPart1: KnownForPart1;
@@ -231,50 +314,214 @@ export enum KnownForPart2 {
   WEAPONS = 'WEAPONS'
 }
 
-export enum Ownership {
-  BYSTANDER = 'BYSTANDER',
-  CORPO = 'CORPO',
-  FIXER = 'FIXER',
-  GANG_MAFIA = 'GANG_MAFIA',
-  GOVERNMENT = 'GOVERNMENT',
-  LOCAL_GOV = 'LOCAL_GOV',
-  LOW_LEVEL_GONKS = 'LOW_LEVEL_GONKS',
-  MEGA_CORPO = 'MEGA_CORPO',
-  MILITARISTIC_GANG = 'MILITARISTIC_GANG',
-  NO_ONE_SCAVS = 'NO_ONE_SCAVS',
-  POSERGANG = 'POSERGANG',
-  SMALL_BUSINESS = 'SMALL_BUSINESS'
+export type PlaceComplication = {
+  __typename?: 'PlaceComplication';
+  character?: Maybe<PlotCharacter>;
+  gang?: Maybe<PlotGang>;
+  item?: Maybe<PlotItem>;
+  type: PlotPlaceComplicationType;
+};
+
+export type Plot = {
+  __typename?: 'Plot';
+  complication?: Maybe<PlotComplication>;
+  plotPlace: PlotPlace;
+  subjectIfNotPlace?: Maybe<PlotSubject>;
+  verb: PlotVerb;
+};
+
+export type PlotCharacter = {
+  __typename?: 'PlotCharacter';
+  attitude: PlotCharacterAttitude;
+  image: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  type: PlotCharacterType;
+};
+
+export enum PlotCharacterAttitude {
+  COLD_AND_PROFESSIONAL = 'COLD_AND_PROFESSIONAL',
+  CONSIDERS_A_CREW_MEMBER_A_GOOD_FRIEND = 'CONSIDERS_A_CREW_MEMBER_A_GOOD_FRIEND',
+  CONSIDERS_A_CREW_MEMBER_A_PARTNER = 'CONSIDERS_A_CREW_MEMBER_A_PARTNER',
+  DOESN_T_TRUST_THE_CREW = 'DOESN_T_TRUST_THE_CREW',
+  GENERALLY_DISLIKES_THE_CREW = 'GENERALLY_DISLIKES_THE_CREW',
+  NEUTRAL_ATTITUDE_TOWARDS_THE_CREW = 'NEUTRAL_ATTITUDE_TOWARDS_THE_CREW',
+  THINKS_THE_CREW_COULD_BE_POTENTIAL_ALLIES = 'THINKS_THE_CREW_COULD_BE_POTENTIAL_ALLIES',
+  TRUSTS_IN_THE_CREW_S_DECISIONS = 'TRUSTS_IN_THE_CREW_S_DECISIONS',
+  WANTS_A_CREW_MEMBER_DEAD = 'WANTS_A_CREW_MEMBER_DEAD',
+  WORSHIPS_A_CREW_MEMBER = 'WORSHIPS_A_CREW_MEMBER'
 }
 
-export enum Secret {
-  ACTIVIST_SABOTAGE = 'ACTIVIST_SABOTAGE',
-  COVERT_OP_MEETING_POINT = 'COVERT_OP_MEETING_POINT',
-  DATA_STORE_NETRUNNER_DEN = 'DATA_STORE_NETRUNNER_DEN',
-  DRUG_LAB = 'DRUG_LAB',
-  DRUG_STASH = 'DRUG_STASH',
-  FIXER_ARRANGEMENT = 'FIXER_ARRANGEMENT',
-  MEDIA_INVESTIGATION = 'MEDIA_INVESTIGATION',
-  PARTY = 'PARTY',
-  SAFE_HOUSE = 'SAFE_HOUSE',
-  SECRET_SCIENCE_LAB = 'SECRET_SCIENCE_LAB',
-  SOMEONE_KIDNAPPED = 'SOMEONE_KIDNAPPED',
-  WEAPON_STASH = 'WEAPON_STASH'
+export enum PlotCharacterType {
+  AVERAGE_CITIZEN_STREETRAT = 'AVERAGE_CITIZEN_STREETRAT',
+  CELEBRITY = 'CELEBRITY',
+  COP_LAWMAN = 'COP_LAWMAN',
+  CORPORATE_EXEC = 'CORPORATE_EXEC',
+  GANG_LEADER = 'GANG_LEADER',
+  GOVERNMENT_OFFICIAL = 'GOVERNMENT_OFFICIAL',
+  MERCENARY_FREELANCER_ASSASSIN = 'MERCENARY_FREELANCER_ASSASSIN',
+  NETRUNNER_HACKER = 'NETRUNNER_HACKER',
+  NOMAD = 'NOMAD',
+  POLITICIAN = 'POLITICIAN',
+  POP_STAR = 'POP_STAR',
+  RELIGIOUS_FIGURE = 'RELIGIOUS_FIGURE',
+  RIPPERDOC = 'RIPPERDOC',
+  TECH = 'TECH'
 }
 
-export enum SecurityPersonnel {
-  BORG = 'BORG',
-  CITY_SEC = 'CITY_SEC',
-  CORPO_SEC = 'CORPO_SEC',
-  ELITE_TROOPS = 'ELITE_TROOPS',
-  FAST_RESPONSE_BACKUP = 'FAST_RESPONSE_BACKUP',
-  HEAVY_VEHICLES = 'HEAVY_VEHICLES',
-  HEAVY_WEAPONS = 'HEAVY_WEAPONS',
-  LOCALS_TENNANTS = 'LOCALS_TENNANTS',
-  LOCAL_SEC_GANG = 'LOCAL_SEC_GANG',
-  NONE = 'NONE',
-  RESPONSE_BACKUP = 'RESPONSE_BACKUP',
-  VEHICLES = 'VEHICLES'
+export enum PlotCharacterVerb {
+  ESCORT = 'ESCORT',
+  INTERROGATE = 'INTERROGATE',
+  INTIMIDATE = 'INTIMIDATE',
+  INVESTIGATE = 'INVESTIGATE',
+  KILL = 'KILL',
+  RECRUIT = 'RECRUIT',
+  RESCUE = 'RESCUE',
+  ROB = 'ROB',
+  SPY_ON = 'SPY_ON'
 }
+
+export type PlotCharacterVerbWrapper = Verb & {
+  __typename?: 'PlotCharacterVerbWrapper';
+  value: PlotCharacterVerb;
+};
+
+export type PlotComplication = {
+  __typename?: 'PlotComplication';
+  character?: Maybe<PlotCharacter>;
+  gang?: Maybe<PlotGang>;
+  item?: Maybe<PlotItem>;
+  type: PlotComplicationType;
+};
+
+export enum PlotComplicationType {
+  AREA_IS_A_COMMON_DRUG_SALE_ZONE_FOR_GANG = 'AREA_IS_A_COMMON_DRUG_SALE_ZONE_FOR_GANG',
+  AREA_IS_PATROLLED_BY_POLICE = 'AREA_IS_PATROLLED_BY_POLICE',
+  AREA_SUFFERS_A_POWER_OUTAGE = 'AREA_SUFFERS_A_POWER_OUTAGE',
+  CHARACTER_HUNTING_CREW = 'CHARACTER_HUNTING_CREW',
+  FLASH_FLOOD_HEAVY_RAIN_HEAVY_FOG = 'FLASH_FLOOD_HEAVY_RAIN_HEAVY_FOG',
+  HEAVY_WELL_ARMED_SECURITY_FOR_ITEM = 'HEAVY_WELL_ARMED_SECURITY_FOR_ITEM',
+  INNOCENT_BYSTANDERS = 'INNOCENT_BYSTANDERS',
+  THEY_KNOW_THE_CREW_IS_COMING = 'THEY_KNOW_THE_CREW_IS_COMING',
+  THE_CREW_DOESN_T_GET_PAID_STIFFED = 'THE_CREW_DOESN_T_GET_PAID_STIFFED',
+  THE_CREW_IS_ON_THEIR_OWN = 'THE_CREW_IS_ON_THEIR_OWN'
+}
+
+export type PlotGang = {
+  __typename?: 'PlotGang';
+  complication: GangComplication;
+  gang: Gang;
+};
+
+export enum PlotGangComplicationType {
+  BEING_SABOTAGED = 'BEING_SABOTAGED',
+  BLACKMAILED_BY_CHARACTER = 'BLACKMAILED_BY_CHARACTER',
+  BUILT_AROUND_CHARACTER = 'BUILT_AROUND_CHARACTER',
+  COPS_RAIDING = 'COPS_RAIDING',
+  LEADER_IS_CHARACTER = 'LEADER_IS_CHARACTER',
+  RECENTLY_LOST_CONTROL = 'RECENTLY_LOST_CONTROL',
+  REVERES_AI_CONTAINED_IN_ITEM_AS_RELIGIOUS_SYMBOL = 'REVERES_AI_CONTAINED_IN_ITEM_AS_RELIGIOUS_SYMBOL',
+  RUNNING_SMUGGLING_FOR_ITEM = 'RUNNING_SMUGGLING_FOR_ITEM',
+  SPLIT_OVER_IDEOLOGY_PUSHED_BY_CHARACTER = 'SPLIT_OVER_IDEOLOGY_PUSHED_BY_CHARACTER'
+}
+
+export enum PlotGangVerb {
+  ALLY_WITH = 'ALLY_WITH',
+  CHALLENGE = 'CHALLENGE',
+  INFILTRATE = 'INFILTRATE',
+  NEGOTIATE_WITH = 'NEGOTIATE_WITH',
+  SABOTAGE = 'SABOTAGE',
+  SPY_ON = 'SPY_ON'
+}
+
+export type PlotGangVerbWrapper = Verb & {
+  __typename?: 'PlotGangVerbWrapper';
+  value: PlotGangVerb;
+};
+
+export type PlotItem = {
+  __typename?: 'PlotItem';
+  condition: PlotItemCondition;
+  image: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  type: PlotItemType;
+};
+
+export enum PlotItemCondition {
+  AVERAGE_QUALITY = 'AVERAGE_QUALITY',
+  BELOW_AVERAGE_QUALITY = 'BELOW_AVERAGE_QUALITY',
+  BRAND_NEW_AND_IN_GREAT_CONDITION = 'BRAND_NEW_AND_IN_GREAT_CONDITION',
+  BROKEN_AND_IN_PIECES = 'BROKEN_AND_IN_PIECES',
+  COLLECTORS_ITEM_FEW_IN_EXISTENCE = 'COLLECTORS_ITEM_FEW_IN_EXISTENCE',
+  ENHANCED_IN_SOME_WAY_AND_SOUGHT_AFTER = 'ENHANCED_IN_SOME_WAY_AND_SOUGHT_AFTER',
+  FUNCTIONAL_AND_UTILITARIAN = 'FUNCTIONAL_AND_UTILITARIAN',
+  GOOD_CONDITION_BUT_USED = 'GOOD_CONDITION_BUT_USED',
+  LOW_GRADE_CHEAP_MATERIALS = 'LOW_GRADE_CHEAP_MATERIALS',
+  ONE_OF_A_KIND_ITEM_TOP_QUALITY = 'ONE_OF_A_KIND_ITEM_TOP_QUALITY'
+}
+
+export enum PlotItemType {
+  AI_ROBOT_DRONE = 'AI_ROBOT_DRONE',
+  BIOLOGICAL_SAMPLES = 'BIOLOGICAL_SAMPLES',
+  CYBERWARE = 'CYBERWARE',
+  DIGITAL_FILES = 'DIGITAL_FILES',
+  DRUGS_ILLEGAL_CONTRABAND = 'DRUGS_ILLEGAL_CONTRABAND',
+  EXOTIC_ANIMAL = 'EXOTIC_ANIMAL',
+  FOOD_FUELS_SUPPLIES = 'FOOD_FUELS_SUPPLIES',
+  MONEY = 'MONEY',
+  VEHICLE = 'VEHICLE',
+  WEAPONS = 'WEAPONS'
+}
+
+export enum PlotItemVerb {
+  DELIVER = 'DELIVER',
+  DESTROY = 'DESTROY',
+  HIDE = 'HIDE',
+  MODIFY = 'MODIFY',
+  STEAL = 'STEAL',
+  TRADE = 'TRADE',
+  USE = 'USE'
+}
+
+export type PlotItemVerbWrapper = Verb & {
+  __typename?: 'PlotItemVerbWrapper';
+  value: PlotItemVerb;
+};
+
+export type PlotPlace = {
+  __typename?: 'PlotPlace';
+  building: Building;
+  complication: PlaceComplication;
+};
+
+export enum PlotPlaceComplicationType {
+  ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM = 'ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM',
+  CCTV_POLICE_SURVEILLANCE_IS_HEAVY = 'CCTV_POLICE_SURVEILLANCE_IS_HEAVY',
+  CONCERT_HOSTED_BY_CHARACTER = 'CONCERT_HOSTED_BY_CHARACTER',
+  FORTIFIED_POSITIONS_BY_SECURITY_PERSONNEL_BECAUSE_OF_ITEM = 'FORTIFIED_POSITIONS_BY_SECURITY_PERSONNEL_BECAUSE_OF_ITEM',
+  HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG = 'HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG',
+  HEAVY_TRAFFIC_CAUSED_BY_GANG = 'HEAVY_TRAFFIC_CAUSED_BY_GANG',
+  NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER = 'NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER',
+  NO_GUN_ZONE = 'NO_GUN_ZONE',
+  PLACE_RECENTLY_TAGGED_AND_LOOTED_BY_GANG = 'PLACE_RECENTLY_TAGGED_AND_LOOTED_BY_GANG',
+  SHOOTOUT_WITH_POLICE_AND_THIRD_PARTY = 'SHOOTOUT_WITH_POLICE_AND_THIRD_PARTY'
+}
+
+export enum PlotPlaceVerb {
+  DEFEND = 'DEFEND',
+  INVESTIGATE = 'INVESTIGATE',
+  LOOT = 'LOOT',
+  OCCUPY = 'OCCUPY',
+  VANDALIZE = 'VANDALIZE'
+}
+
+export type PlotPlaceVerbWrapper = Verb & {
+  __typename?: 'PlotPlaceVerbWrapper';
+  value: PlotPlaceVerb;
+};
+
+export type PlotSubject = PlotCharacter | PlotGang | PlotItem;
+
+export type PlotVerb = PlotCharacterVerbWrapper | PlotGangVerbWrapper | PlotItemVerbWrapper | PlotPlaceVerbWrapper;
 
 export enum Sin {
   ENVY = 'ENVY',
@@ -287,17 +534,6 @@ export enum Sin {
   WRATH = 'WRATH'
 }
 
-export enum Style {
-  AUSTERE = 'AUSTERE',
-  CORPORATE = 'CORPORATE',
-  EUROPEAN = 'EUROPEAN',
-  EXOTIC = 'EXOTIC',
-  LUXURIOUS = 'LUXURIOUS',
-  MILITARISTIC = 'MILITARISTIC',
-  MODERN = 'MODERN',
-  NEON_FEST = 'NEON_FEST',
-  ORIENTAL = 'ORIENTAL',
-  SOVIETIC = 'SOVIETIC',
-  TRIBAL = 'TRIBAL',
-  URBAN_GRAFFITI = 'URBAN_GRAFFITI'
-}
+export type Verb = {
+  value: Scalars['String']['output'];
+};
