@@ -10,7 +10,7 @@ import CustomScrollbar from '../../CustomScrollbar'
 import { pulseGlowBlue, pulseGlowCyan } from '../Animations'
 import { WarningDialog } from '../WarningDialog'
 import { FormBuilding } from './FormBuilding'
-import FormFixerJob from './FormFixerJob'
+import FormFixerJob from './FormFixerJob/FormFixerJob'
 import FormGang from './FormGang'
 
 type EditDialogProps = {

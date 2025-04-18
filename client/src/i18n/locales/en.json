@@ -29,6 +29,7 @@
         "imageGenerationFailed": "Optics render failed.",
         "imageGenerationError": "Glitch occurred during optics render.",
         "uploadImage": "Upload Optics",
+        "downloadImage": "Download Optics",
         "removeImage": "Scrub Optics",
         "regenerateImage": "Re-render Optics",
         "enterDescriptionFirstForImage": "Slot an intel brief before rendering optics.",
@@ -51,7 +52,7 @@
         "GANG": "Gang",
         "GANG_DESCRIPTION": "Gangs are groups your edgerunners can interface with.",
         "BUILDING": "Building",
-        "BUILDING_DESCRIPTION": "Buildings are locations your edgerunners can infiltrate or explore.",
+        "BUILDING_DESCRIPTION": "Buildings are buildings your edgerunners can infiltrate or explore.",
         "CORPORATION": "Corpo",
         "CORPORATION_DESCRIPTION": "Corpos are the suits your edgerunners might cross paths with.",
         "FIXER_JOB": "Gig",
@@ -63,7 +64,7 @@
         "BOUNTY": "Bounty",
         "BOUNTY_DESCRIPTION": "Bounties are jobs your edgerunners can pull off for eddies.",
         "CLUB": "Club",
-        "CLUB_DESCRIPTION": "Clubs are locations your edgerunners can visit for fun."
+        "CLUB_DESCRIPTION": "Clubs are buildings your edgerunners can visit for fun."
     },
     "dashboard": {
         "exportData": "Dump Data",
@@ -76,6 +77,7 @@
     "gangs": {
         "title": "Street Gang Intel Feed",
         "editTitle": "Gang Prefs",
+        "gangSelector": "Gang",
         "type": {
             "BOOSTER": "Booster gang",
             "EDGERUNNER": "Edgerunner team",
@@ -136,8 +138,7 @@
             "LUST": "Lust",
             "PRIDE": "Pride",
             "SLOTH": "Sloth",
-            "WRATH": "Wrath",
-            "NONE": "None"
+            "WRATH": "Wrath"
         },
         "knownForPart1": {
             "CHEAP": "Cheap",
@@ -290,6 +291,7 @@
         },
         "labels": {
             "type": "Type",
+            "description": "Intel Brief",
             "cyberwareQuality": "Cyberware Quality",
             "skill": "Skill",
             "weapons": "Weapons",
@@ -302,12 +304,15 @@
             "knownFor": "Known for",
             "flaw": "Quirk/Flaw",
             "currentAttitude": "Attitude",
-            "newsTheLeaderIsReceiving": "News the leader is getting"
+            "newsTheLeaderIsReceiving": "News the leader is getting",
+            "image": "Gang Optics",
+            "complication": "Gang Complication"
         }
     },
     "buildings": {
         "title": "Architectural Database Access",
         "editTitle": "Building Prefs",
+        "buildingSelector": "Building",
         "type": {
             "ABANDONED_BUILDING": "Abandoned",
             "COMMERCIAL_BUILDING": "Commercial building (Small businesses)",
@@ -382,7 +387,7 @@
                 "posergangAlt": "Style-obsessed posers made this their showcase HQ. ",
                 "bystander": "Owned by regular civvies just surviving Night City. ",
                 "bystanderAlt": "Working-class folks call this place home, keeping clear of street politics. ",
-                "fixer": "A connected fixer uses this location for their network. ",
+                "fixer": "A connected fixer uses this building for their network. ",
                 "fixerAlt": "Serves as an ops center for a fixer's deals. ",
                 "smallBusiness": "Houses a small independent biz trying to make eddies in a corpo world. ",
                 "smallBusinessAlt": "Entrepreneurial spirit keeps this small biz running against the odds. ",
@@ -390,7 +395,7 @@
                 "localGovAlt": "Local bureaucracy operates here, managing district affairs. ",
                 "corpo": "Owned by corpo interests, showing their signature control. ",
                 "corpoAlt": "Corpo branding and security make ownership clear. ",
-                "militaristicGang": "A heavily-armed, mil-spec crew fortified this location. ",
+                "militaristicGang": "A heavily-armed, mil-spec crew fortified this building. ",
                 "militaristicGangAlt": "Functions as a fortress for a well-armed crew with military dreams. ",
                 "government": "High-security gov installation, rarely welcomes visitors. ",
                 "governmentAlt": "Government authority radiates from this monitored facility. ",
@@ -445,7 +450,7 @@
             "gatehouse": " A manned front desk or gatehouse controls access.",
             "gatehouseDetailed": " Access control managed via staffed checkpoint or reception.",
             "gatehouseImportant": " Crucial security checkpoint monitors all entry/exit.",
-            "event": "Currently, {{event}} is going down at the location. ",
+            "event": "Currently, {{event}} is going down at the building. ",
             "eventCurrent": "Right now, the structure's experiencing {{event}}. ",
             "eventRumor": "Recent intel indicates {{event}} has been happening here. ",
             "secret": "What few realize: {{secret}} is hidden within.",
@@ -496,6 +501,7 @@
             "WEAPON_STASH": "Weapon stash"
         },
         "labels": {
+            "description": "Intel Brief",
             "type": "Type",
             "elevators": "Elevators",
             "parking": "Parking",
@@ -510,29 +516,15 @@
             "event": "Event",
             "secret": "Secret",
             "name": "Name",
-            "isAbandoned": "Is Abandoned?"
+            "isAbandoned": "Abandoned",
+            "complication": "Building Complication"
         }
     },
     "fixerJobs": {
-        "title": "Fixer Contracts Allocation Framework",
+        "title": "Fixer Contracts Building Framework",
         "editTitle": "Edit Job",
         "useExistingBuildings": "Use Existing Buildings",
         "useExistingGangs": "Use Existing Gangs",
-        "subjectCategory": "Subject Classification",
-        "categories": {
-            "character": "Character",
-            "item": "Item",
-            "gang": "Gang",
-            "location": "Location"
-        },
-        "sections": {
-            "plotDetails": "Mission Specs",
-            "characterDetails": "Character Details",
-            "itemDetails": "Item Details",
-            "gangDetails": "Gang Details",
-            "location": "Location Details",
-            "mainComplication": "Mission Variables"
-        },
         "type": {
             "CORPORATE": "Corporate",
             "CRIME": "Crime",
@@ -645,7 +637,7 @@
             "BEING_SABOTAGED": "Being sabotaged",
             "COPS_RAIDING": "Cops raiding"
         },
-        "location": {
+        "building": {
             "ABANDONED_BUILDING": "Abandoned building",
             "COMMERCIAL_BUILDING": "Commercial building",
             "CORPO_BUILDING": "Corpo building",
@@ -659,7 +651,7 @@
             "SKYSCRAPER_MEGABUILDING": "Skyscraper/Megabuilding",
             "VACANT_LOT_CONSTRUCTION_SITE": "Vacant lot/Construction site"
         },
-        "locationComplication": {
+        "buildingComplication": {
             "HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG": "Heavily fenced perimeter controlled by gang",
             "NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER": "Need ID/password to get in (held by character)",
             "HEAVY_TRAFFIC_CAUSED_BY_GANG": "Heavy traffic caused by gang",
@@ -672,59 +664,41 @@
             "ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM": "Accident zone (involves item shipment)"
         },
         "labels": {
+            "plotCategory": {
+                "character": "Character",
+                "item": "Item",
+                "gang": "Gang",
+                "building": "Building"
+            },
             "name": "Name",
             "description": "Description",
-            "plot.verb.value": "Objective",
-            "plot.complication.type": "Twist",
-            "plot.complication.character.name": "Twist Character",
-            "plot.complication.character.type": "Twist Character Type",
-            "plot.complication.item.name": "Twist Item",
-            "plot.complication.item.type": "Twist Item Type",
-            "plot.complication.gang.name": "Twist Gang",
-            "plot.complication.gang.gang.name": "Twist Gang",
-            "plot.complication.gang.gang.type": "Twist Gang Type",
-            "plot.place.type": "Locale",
-            "plot.place.complication.type": "Location Complication",
-            "plot.place.complication.character.type": "Location Complication Character",
-            "plot.place.complication.character.name": "Location Complication Character Name",
-            "plot.place.complication.item.type": "Location Complication Item",
-            "plot.place.complication.item.name": "Location Complication Item Name",
-            "plot.place.complication.gang.name": "Location Complication Gang",
-            "plot.place.complication.gang.gang.name": "Location Complication Gang",
-            "plot.place.complication.gang.gang.type": "Location Complication Gang Type",
-            "plot.character.type": "Target Type",
-            "plot.character.attitude": "Target Attitude",
-            "plot.character.name": "Target Name",
-            "plot.item.type": "Item Type",
-            "plot.item.condition": "Item Condition",
-            "plot.item.name": "Item Name",
-            "plot.gang.type": "Gang Type",
-            "plot.gang.name": "Gang Name",
-            "plot.gang.complication.type": "Gang Complication",
-            "plot.plotPlace.building.name": "Location",
-            "plot.plotPlace.building.type": "Locale",
-            "plot.plotPlace.building.style": "Style",
-            "plot.plotPlace.building.ownership": "Owner",
-            "plot.plotPlace.building.securityPersonnel": "Security",
-            "plot.plotPlace.building.image": "Location Image",
-            "plot.plotPlace.complication.type": "Location Complication",
-            "plot.plotPlace.complication.character.name": "Location Character",
-            "plot.plotPlace.complication.character.type": "Location Character Type",
-            "plot.plotPlace.complication.item.name": "Location Item",
-            "plot.plotPlace.complication.item.type": "Location Item Type",
-            "plot.plotPlace.complication.gang.gang.name": "Location Gang",
-            "plot.plotPlace.complication.gang.gang.type": "Location Gang Type",
-            "plot.subjectIfNotPlace.name": "Subject Name",
-            "plot.subjectIfNotPlace.type": "Subject Category",
-            "plot.subjectIfNotPlace.attitude": "Attitude",
-            "plot.subjectIfNotPlace.condition": "Condition",
-            "plot.subjectIfNotPlace.image": "Subject Image",
-            "plot.subjectIfNotPlace.gang.name": "Gang Name",
-            "plot.subjectIfNotPlace.gang.type": "Gang Type",
-            "plot.subjectIfNotPlace.gang.image": "Gang Image",
-            "plot.subjectIfNotPlace.gang.complication.type": "Gang Complication",
-            "plot.subjectIfNotPlace.gang.complication.character.name": "Gang Char",
-            "plot.subjectIfNotPlace.gang.complication.item.name": "Gang Item"
+            "plotDetails": "Mission Specs",
+            "mainComplication": "Mission Complication",
+            "complicationType": "Complication Type",
+            "subjectCategory": "Target Classification",
+            "verb": "Course of Action",
+            "character": {
+                "title": "Character Details",
+                "name": "Name",
+                "type": "Type",
+                "attitude": "Attitude",
+                "image": "Character Optics"
+            },
+            "item": {
+                "title": "Item Details",
+                "name": "Name",
+                "type": "Type",
+                "condition": "Condition",
+                "image": "Item Optics"
+            },
+            "gang": {
+                "complication": "Gang Complication",
+                "details": "Gang Details"
+            },
+            "building": {
+                "complication": "Building Complication",
+                "details": "Building Details"
+            }
         },
         "generator": {
             "defaultSubject": "the mark",
@@ -737,16 +711,16 @@
             "subjectCharDetail": "{{name}}, a known {{type}} who {{attitude}}.",
             "subjectItemDetail": "{{name}}, identified as {{type}} in {{condition}} condition.",
             "subjectGangDetail": "{{name}}, a {{type}} crew. Intel suggests {{complication}}.",
-            "locationSentence1a": "Operation zone is {{building}}.",
-            "locationSentence1b": "Proceed to {{building}} for engagement.",
-            "locationSentence2a": "The op takes place at {{building}}, a known {{type}}.",
-            "locationSentence2b": "Location identified as {{building}} ({{type}} classification).",
-            "locationSentence3a": "Rendezvous at {{building}}, easily recognized by its {{style}} design.",
-            "locationSentence3b": "The {{style}} structure known as {{building}} is the target locale.",
+            "buildingSentence1a": "Operation zone is {{building}}.",
+            "buildingSentence1b": "Proceed to {{building}} for engagement.",
+            "buildingSentence2a": "The op takes place at {{building}}, a known {{type}}.",
+            "buildingSentence2b": "Building identified as {{building}} ({{type}} classification).",
+            "buildingSentence3a": "Rendezvous at {{building}}, easily recognized by its {{style}} design.",
+            "buildingSentence3b": "The {{style}} structure known as {{building}} is the target locale.",
             "mainComplicationSentenceA": "Intel flags a major complication: {{complication}}. {{specifics}}.",
             "mainComplicationSentenceB": "Watch your back; expect interference related to {{complication}}. {{specifics}}.",
             "placeComplicationSentenceA": "The site itself introduces a twist: {{complication}}. {{specifics}}.",
-            "placeComplicationSentenceB": "Be advised, the location features {{complication}}. {{specifics}}.",
+            "placeComplicationSentenceB": "Be advised, the building features {{complication}}. {{specifics}}.",
             "complicationDetailChar": "Specifically, {{name}} is involved.",
             "complicationDetailItem": "The complication centers around {{name}}.",
             "complicationDetailGang": "Watch out for the {{name}} crew.",
@@ -767,9 +741,9 @@
             "namePatternBasic4": "The {{verb}} Protocol",
             "namePatternSubject1": "The {{subjectType}} {{verb}}",
             "namePatternSubject2": "{{subjectType}} {{noun}}",
-            "namePatternLocation1": "The {{locationName}} {{verb}}",
-            "namePatternLocation2": "{{locationStyle}} {{verb}}",
-            "namePatternLocation3": "{{locationStyle}} {{noun}}",
+            "namePatternBuilding1": "The {{buildingName}} {{verb}}",
+            "namePatternBuilding2": "{{buildingStyle}} {{verb}}",
+            "namePatternBuilding3": "{{buildingStyle}} {{noun}}",
             "namePatternComplication1": "The {{complicationType}} {{noun}}",
             "namePatternAdjNoun": "{{adjective}} {{noun}}",
             "namePatternCorpo1": "{{corpo}} {{verb}}",
@@ -782,16 +756,26 @@
             "namePatternAdjNounVerb": "The {{adjective}} {{noun}} {{verb}}",
             "namePatternAdjGangNoun": "{{adjective}} {{gangWord}} {{noun}}",
             "namePatternCorpoAdjNoun": "{{corpo}} {{adjective}} {{noun}}",
-            "namePatternLocationNounVerb": "The {{locationStyle}} {{noun}} {{verb}}"
+            "namePatternBuildingNounVerb": "The {{buildingStyle}} {{noun}} {{verb}}"
         }
     },
     "settings": {
+        "title": "System Kernel Prefs",
         "apiKeys": "API Keys",
         "huggingFaceApiKey": "Hugging Face API Key",
-        "huggingFaceApiKeyDescription": "Slot your own Hugging Face API key to generate intel briefs and optics. If empty, app uses default key if available.",
+        "huggingFaceApiKeyDescription": "Slot your own Hugging Face API key to generate intel briefs and optics.",
+        "openAIApiKey": "OpenAI API Key",
+        "openAIApiKeyDescription": "Slot your own OpenAI API key as backup when Hugging Face is offline.",
+        "openAIApiKeyLabel": "OpenAI Key",
+        "geminiApiKey": "Gemini API Key",
+        "geminiApiKeyDescription": "Slot your own Gemini API key for primary content generation.",
+        "geminiApiKeyLabel": "Gemini Key",
         "apiKeyLabel": "API Key",
         "apiKeyPlaceholder": "Enter your Hugging Face API key",
-        "apiKeySecurityNote": "Your API key is stored locally on your rig and never sent to our servers."
+        "apiKeySecurityNote": "Your API key is stored locally on your rig and never sent to our servers.",
+        "display": "Display",
+        "readerMode": "Reader Mode",
+        "enableAnimations": "Visual FX"
     },
     "loader": {
         "title": "Magnus Laser HQ v2.0.77",

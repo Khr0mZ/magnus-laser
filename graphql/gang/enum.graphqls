@@ -64,7 +64,6 @@ enum Sin {
   WRATH
   ENVY
   PRIDE
-  NONE
 }
 
 enum KnownForPart1 {
@@ -102,7 +101,6 @@ enum Flaw {
   NAIVE
   ILLITERATE_UNEDUCATED
   INEXPERIENCED_NEGOTIATORS
-  NONE
 }
 
 enum Attitude {
@@ -115,7 +113,6 @@ enum Attitude {
   BRIBING
   PARTING
   AGGRESSIVE
-  NONE
 }
 
 enum GangNews {
@@ -127,5 +124,4 @@ enum GangNews {
   BEING_SABOTAGED
   COP_RAIDING
   JOB_BLEW_UP
-  NONE
 }

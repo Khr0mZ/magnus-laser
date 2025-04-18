@@ -268,17 +268,13 @@ const CyberpunkLoader = ({
     useEffect(() => {
         // Check if the timer has elapsed
         if (!isTimerElapsed) {
-            console.log('Timer not elapsed yet, waiting...')
             return // Wait for the minimum display time
         }
 
         // Check if all loading status flags are true
-        console.log('Current loading status:', loadingStatus)
         const allLoaded = Object.values(loadingStatus).every((status) => status === true)
-        console.log('All loaded?', allLoaded)
 
         if (allLoaded) {
-            console.log('Loading complete, calling onLoadComplete')
             onLoadComplete() // Signal to parent component
         }
     }, [isTimerElapsed, loadingStatus, onLoadComplete])
@@ -294,7 +290,6 @@ const CyberpunkLoader = ({
                 if (!cleanupStatusUpdatedRef.current) {
                     setStorageCleanupComplete()
                     cleanupStatusUpdatedRef.current = true
-                    console.log('Image cleanup complete, storage status updated')
                 }
             } catch (error) {
                 console.error('Error during storage cleanup:', error)
@@ -303,7 +298,6 @@ const CyberpunkLoader = ({
                 if (!cleanupStatusUpdatedRef.current) {
                     setStorageCleanupComplete()
                     cleanupStatusUpdatedRef.current = true
-                    console.log('Image cleanup failed, storage status updated anyway')
                 }
             }
         }

@@ -1,5 +1,5 @@
 import { useTheme } from '@mui/material'
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Scrollbar from 'smooth-scrollbar'
 import colors from '../utils/colors'
 
@@ -23,21 +23,44 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
     const isLight = theme.palette.mode === 'light'
     const scrollbarRef = useRef<HTMLDivElement>(null)
     const [scrollbarInstance, setScrollbarInstance] = useState<Scrollbar | null>(null)
-    const [needsScrolling, setNeedsScrolling] = useState(false)
-    const [paddingRight, setPaddingRight] = useState(0)
-    const [paddingBottom, setPaddingBottom] = useState(0)
 
-    // Store references to observers for cleanup
+    // Use refs instead of state for values that shouldn't trigger re-renders
+    const needsScrollingRef = useRef(false)
+    const paddingRightRef = useRef(0)
+    const paddingBottomRef = useRef(0)
+    const thumbSizeRef = useRef(isLight ? 16 : 8)
+
+    // Store references to observers and timers for cleanup
     const resizeObserverRef = useRef<ResizeObserver | null>(null)
     const mutationObserverRef = useRef<MutationObserver | null>(null)
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const updatePendingRef = useRef(false)
 
-    // Use refs to track state without causing re-renders
-    const thumbSizeRef = useRef(isLight ? 16 : 8)
-    const needsScrollingRef = useRef(false)
     const isHorizontal = scrollDirection === 'horizontal'
 
-    // Update padding helper function
+    // Check if content requires scrolling
+    const checkIfScrollingNeeded = useCallback(() => {
+        if (!scrollbarRef.current) return false
+
+        const container = scrollbarRef.current
+        const content = container.querySelector('.scroll-content') as HTMLElement
+
+        if (!content) return false
+
+        const contentHeight = content.scrollHeight
+        const contentWidth = content.scrollWidth
+        const containerHeight = container.clientHeight
+        const containerWidth = container.clientWidth
+
+        const needsScroll = isHorizontal ? contentWidth > containerWidth : contentHeight > containerHeight
+
+        // Update ref only
+        needsScrollingRef.current = needsScroll
+
+        return needsScroll
+    }, [isHorizontal])
+
+    // Update padding helper function - now only updates DOM directly without state
     const updateContainerPadding = useCallback(() => {
         if (!scrollbarRef.current) return
 
@@ -45,10 +68,10 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
         const newPadding = needsScrolling ? thumbSizeRef.current : 0
 
         if (isHorizontal) {
-            setPaddingBottom(newPadding)
+            paddingBottomRef.current = newPadding
             scrollbarRef.current.style.paddingBottom = `${newPadding}px`
         } else {
-            setPaddingRight(newPadding)
+            paddingRightRef.current = newPadding
             scrollbarRef.current.style.paddingRight = `${newPadding}px`
         }
     }, [isHorizontal])
@@ -72,6 +95,7 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
                 width: ${currentThumbSize}px;
                 opacity: 1;
                 background: linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default});
+                display: ${isHorizontal ? 'none' : 'block'};
             }
             
             .scrollbar-thumb-y {
@@ -87,6 +111,7 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
                 height: ${currentThumbSize}px;
                 opacity: 1;
                 background: linear-gradient(to right, ${colors.neons.purple.default}, ${colors.neons.yellow.default});
+                display: ${isHorizontal ? 'block' : 'none'};
             }
             
             .scrollbar-thumb-x {
@@ -97,81 +122,35 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
                 min-width: 100px;
             }
         `
+    }, [isHorizontal])
 
-        // Apply styles directly to DOM elements for immediate effect
-        document.querySelectorAll('.scrollbar-track-y').forEach((track) => {
-            if (track instanceof HTMLElement) {
-                track.style.width = `${currentThumbSize}px`
-                track.style.right = '0'
-                track.style.background = `linear-gradient(to bottom, ${colors.neons.purple.default}, ${colors.neons.yellow.default})`
-                track.style.opacity = '1'
-                track.style.display = isHorizontal ? 'none' : 'block'
+    // Unified update function to prevent multiple overlapping updates
+    const updateScrollbar = useCallback(() => {
+        // Don't schedule another update if one is already pending
+        if (updatePendingRef.current) return
+
+        updatePendingRef.current = true
+
+        // Use requestAnimationFrame instead of setTimeout for smoother updates
+        requestAnimationFrame(() => {
+            if (!scrollbarInstance) {
+                updatePendingRef.current = false
+                return
             }
-        })
 
-        document.querySelectorAll('.scrollbar-thumb-y').forEach((thumb) => {
-            if (thumb instanceof HTMLElement) {
-                thumb.style.width = `${currentThumbSize}px`
-                thumb.style.background = `linear-gradient(to bottom, ${colors.neons.cyan.default}, ${colors.neons.pink.default})`
-                thumb.style.borderRadius = '4px'
-                thumb.style.boxShadow = `0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4)`
-                thumb.style.minHeight = '100px'
+            checkIfScrollingNeeded()
+            updateContainerPadding()
+            applyScrollbarStyles()
+
+            try {
+                scrollbarInstance.update()
+            } catch (error) {
+                console.error('Error updating scrollbar:', error)
             }
+
+            updatePendingRef.current = false
         })
-
-        document.querySelectorAll('.scrollbar-track-x').forEach((track) => {
-            if (track instanceof HTMLElement) {
-                track.style.height = `${currentThumbSize}px`
-                track.style.bottom = '0'
-                track.style.background = `linear-gradient(to right, ${colors.neons.purple.default}, ${colors.neons.yellow.default})`
-                track.style.opacity = '1'
-                track.style.display = isHorizontal ? 'block' : 'none'
-            }
-        })
-
-        document.querySelectorAll('.scrollbar-thumb-x').forEach((thumb) => {
-            if (thumb instanceof HTMLElement) {
-                thumb.style.height = `${currentThumbSize}px`
-                thumb.style.background = `linear-gradient(to right, ${colors.neons.cyan.default}, ${colors.neons.pink.default})`
-                thumb.style.borderRadius = '4px'
-                thumb.style.boxShadow = `0 0 8px ${colors.neons.cyan.default}, 0 0 15px rgba(0, 255, 255, 0.4)`
-                thumb.style.minWidth = '100px'
-            }
-        })
-
-        // Update all scrollbar instances to ensure smooth scrolling works
-        if (scrollbarInstance && typeof scrollbarInstance.update === 'function') {
-            scrollbarInstance.update()
-        }
-    }, [isHorizontal, scrollbarInstance])
-
-    // Check if content requires scrolling
-    const checkIfScrollingNeeded = useCallback(() => {
-        if (!scrollbarRef.current) return false
-
-        const container = scrollbarRef.current
-        const content = container.querySelector('.scroll-content') as HTMLElement
-
-        if (!content) return false
-
-        const contentHeight = content.scrollHeight
-        const contentWidth = content.scrollWidth
-        const containerHeight = container.clientHeight
-        const containerWidth = container.clientWidth
-
-        const needsScroll = isHorizontal ? contentWidth > containerWidth : contentHeight > containerHeight
-
-        // Update local refs and state
-        needsScrollingRef.current = needsScroll
-        if (needsScroll !== needsScrolling) {
-            setNeedsScrolling(needsScroll)
-        }
-
-        // Update padding immediately
-        updateContainerPadding()
-
-        return needsScroll
-    }, [needsScrolling, updateContainerPadding, isHorizontal])
+    }, [scrollbarInstance, checkIfScrollingNeeded, updateContainerPadding, applyScrollbarStyles])
 
     // Cleanup function to ensure all resources are released
     const cleanupResources = useCallback(() => {
@@ -193,62 +172,20 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
         }
     }, [])
 
-    // Update theme-dependent values and styles
+    // Update theme-dependent values
     useEffect(() => {
         // Update thumb size based on theme
         thumbSizeRef.current = isLight ? 16 : 8
 
-        // Force immediate container padding update since theme changed
-        updateContainerPadding()
-
-        // Apply all styles
-        applyScrollbarStyles()
-
+        // Only update if scrollbar is already initialized
         if (scrollbarInstance) {
-            scrollbarInstance.update()
-
-            // Apply updates after delay to ensure everything takes effect
-            timerRef.current = setTimeout(() => {
-                updateContainerPadding()
-                applyScrollbarStyles()
-                scrollbarInstance.update()
-            }, 50)
+            updateScrollbar()
         }
+    }, [isLight, scrollbarInstance, updateScrollbar])
 
-        // Clean up timeout when effect runs again
-        return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current)
-                timerRef.current = null
-            }
-        }
-    }, [isLight, applyScrollbarStyles, scrollbarInstance, updateContainerPadding])
-
-    // Initialize scrollbar
+    // Initialize scrollbar - only runs once when component mounts and when required refs are available
     useEffect(() => {
-        if (typeof window === 'undefined' || !scrollbarRef.current) return
-
-        // Clean up previous observers and timers, but don't destroy the scrollbar here
-        if (resizeObserverRef.current) {
-            resizeObserverRef.current.disconnect()
-            resizeObserverRef.current = null
-        }
-
-        if (mutationObserverRef.current) {
-            mutationObserverRef.current.disconnect()
-            mutationObserverRef.current = null
-        }
-
-        if (timerRef.current) {
-            clearTimeout(timerRef.current)
-            timerRef.current = null
-        }
-
-        // If we already have a scrollbar instance, just update it
-        if (scrollbarInstance) {
-            scrollbarInstance.update()
-            return
-        }
+        if (typeof window === 'undefined' || !scrollbarRef.current || scrollbarInstance) return
 
         try {
             const options = {
@@ -264,125 +201,69 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
             setScrollbarInstance(scrollbar)
             scrollbarInstances.add(scrollbar)
 
-            // Setup resize observer
-            const resizeObserver = new ResizeObserver(() => {
-                checkIfScrollingNeeded()
-                applyScrollbarStyles()
-                scrollbar.update()
-            })
-            resizeObserverRef.current = resizeObserver
-
-            // Apply initial styles after short delay
-            timerRef.current = setTimeout(() => {
-                checkIfScrollingNeeded()
-                applyScrollbarStyles()
-                scrollbar.update()
-            }, 50)
-
-            // Observe container and content
-            if (scrollbarRef.current) {
-                resizeObserver.observe(scrollbarRef.current)
-                const content = scrollbarRef.current.querySelector('.scroll-content')
-                if (content) {
-                    resizeObserver.observe(content)
-                }
-            }
-
-            // Only cleanup observers and timers when component unmounts, not the scrollbar
-            return () => {
-                if (resizeObserverRef.current) {
-                    resizeObserverRef.current.disconnect()
-                    resizeObserverRef.current = null
-                }
-
-                if (timerRef.current) {
-                    clearTimeout(timerRef.current)
-                    timerRef.current = null
-                }
-            }
+            // Apply initial styles and update
+            applyScrollbarStyles()
+            checkIfScrollingNeeded()
+            updateContainerPadding()
         } catch (error) {
             console.error('Error initializing smooth-scrollbar:', error)
         }
-    }, [applyScrollbarStyles, checkIfScrollingNeeded, scrollbarInstance])
+    }, [applyScrollbarStyles, checkIfScrollingNeeded, updateContainerPadding, scrollbarInstance])
 
-    // Update on children/route/page change
-    useEffect(() => {
-        if (!scrollbarInstance) return
-
-        // Clear existing timer
-        if (timerRef.current) {
-            clearTimeout(timerRef.current)
-        }
-
-        timerRef.current = setTimeout(() => {
-            checkIfScrollingNeeded()
-            applyScrollbarStyles()
-            scrollbarInstance.update()
-        }, 100)
-
-        return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current)
-                timerRef.current = null
-            }
-        }
-    }, [children, scrollbarInstance, applyScrollbarStyles, checkIfScrollingNeeded])
-
-    // Force update on mount and whenever component updates
-    useLayoutEffect(() => {
-        if (scrollbarInstance) {
-            updateContainerPadding()
-            applyScrollbarStyles()
-            scrollbarInstance.update()
-        }
-    }, [scrollbarInstance, applyScrollbarStyles, updateContainerPadding])
-
-    // Monitor DOM changes
+    // Set up observers after scrollbar is initialized
     useEffect(() => {
         if (!scrollbarRef.current || !scrollbarInstance) return
 
+        // Clean up previous observers
+        cleanupResources()
+
+        // Setup resize observer
+        const resizeObserver = new ResizeObserver(() => {
+            updateScrollbar()
+        })
+        resizeObserverRef.current = resizeObserver
+
+        // Observe container and content
+        resizeObserver.observe(scrollbarRef.current)
+        const content = scrollbarRef.current.querySelector('.scroll-content')
+        if (content) {
+            resizeObserver.observe(content)
+        }
+
+        // Setup mutation observer for content changes
         const contentElement = scrollbarRef.current.querySelector('.scroll-content')
-        if (!contentElement) return
+        if (contentElement) {
+            const observer = new MutationObserver(() => {
+                updateScrollbar()
+            })
 
-        // Clean up previous mutation observer if it exists
-        if (mutationObserverRef.current) {
-            mutationObserverRef.current.disconnect()
+            mutationObserverRef.current = observer
+
+            observer.observe(contentElement, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                characterData: true,
+            })
         }
 
-        const observer = new MutationObserver(() => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current)
-            }
+        // Initial update
+        updateScrollbar()
 
-            timerRef.current = setTimeout(() => {
-                checkIfScrollingNeeded()
-                updateContainerPadding()
-                applyScrollbarStyles()
-                scrollbarInstance.update()
-            }, 50)
-        })
+        return cleanupResources
+    }, [scrollbarInstance, updateScrollbar, cleanupResources])
 
-        mutationObserverRef.current = observer
+    // Update when children change
+    useEffect(() => {
+        if (!scrollbarInstance) return
 
-        observer.observe(contentElement, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            characterData: true,
-        })
-
-        return () => {
-            if (observer) {
-                observer.disconnect()
-            }
-            if (timerRef.current) {
-                clearTimeout(timerRef.current)
-                timerRef.current = null
-            }
+        // Use RAF to batch updates and avoid calling too frequently
+        if (!updatePendingRef.current) {
+            updateScrollbar()
         }
-    }, [scrollbarInstance, applyScrollbarStyles, checkIfScrollingNeeded, updateContainerPadding])
+    }, [children, scrollbarInstance, updateScrollbar])
 
-    // Final cleanup when component unmounts - destroy scrollbar instance only on unmount
+    // Final cleanup when component unmounts
     useEffect(() => {
         return () => {
             cleanupResources()
@@ -401,8 +282,8 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
                 height: height || (isHorizontal ? 'auto' : 'calc(100vh - 92px)'),
                 overflow: 'hidden',
                 position: 'relative',
-                paddingRight: isHorizontal ? 0 : paddingRight,
-                paddingBottom: isHorizontal ? paddingBottom : 0,
+                paddingRight: isHorizontal ? 0 : paddingRightRef.current,
+                paddingBottom: isHorizontal ? paddingBottomRef.current : 0,
             }}
         >
             <div className="scroll-content">{children}</div>

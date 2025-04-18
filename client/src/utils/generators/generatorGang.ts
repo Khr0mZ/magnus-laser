@@ -16,7 +16,7 @@ import {
     KnownForPart2,
     Sin,
 } from '../../graphql/types'
-import { blobToBase64, generateHuggingFaceImage, generateHuggingFaceText } from '../apiUtils.tsx'
+import { blobToBase64, generateImageWithFallback, generateTextWithFallback } from '../apiUtils.tsx'
 import { ModuleTypes } from '../constants'
 import { getRandomElement, getRandomInt } from '../functions'
 import {
@@ -282,152 +282,16 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
     // Generate Color
     const color = getRandomElement(Object.values(GangColor))
     // Generate Sin
-    const sinRoll = getRandomInt(1, 10)
-    let sin: Sin
-    switch (sinRoll) {
-        case 1:
-            sin = Sin.LUST
-            break
-        case 2:
-            sin = Sin.GLUTTONY
-            break
-        case 3:
-            sin = Sin.GREED
-            break
-        case 4:
-            sin = Sin.SLOTH
-            break
-        case 5:
-            sin = Sin.WRATH
-            break
-        case 6:
-            sin = Sin.ENVY
-            break
-        case 7:
-            sin = Sin.PRIDE
-            break
-        case 8:
-        case 9:
-        case 10:
-            sin = Sin.NONE
-            break
-        default:
-            sin = Sin.NONE
-            break
-    }
+    const sin = getRandomElement(Object.values(Sin))
     // Generate Known For
     const knownForPart1 = getRandomElement(Object.values(KnownForPart1))
     const knownForPart2 = getRandomElement(Object.values(KnownForPart2))
     // Generate Flaw
-    const flawRoll = getRandomInt(1, 10)
-    let flaw: Flaw
-    switch (flawRoll) {
-        case 1:
-            flaw = Flaw.LACKLUSTER_LEADERSHIP
-            break
-        case 2:
-            flaw = Flaw.DRUG_ADDICTS
-            break
-        case 3:
-            flaw = Flaw.DEBT_LACK_OF_INCOME
-            break
-        case 4:
-            flaw = Flaw.LACK_OF_RECRUITS
-            break
-        case 5:
-            flaw = Flaw.AMMO_WEAPON_SHORTAGE
-            break
-        case 6:
-            flaw = Flaw.NAIVE
-            break
-        case 7:
-            flaw = Flaw.ILLITERATE_UNEDUCATED
-            break
-        case 8:
-            flaw = Flaw.INEXPERIENCED_NEGOTIATORS
-            break
-        case 9:
-        case 10:
-            flaw = Flaw.NONE
-            break
-        default:
-            flaw = Flaw.NONE
-            break
-    }
+    const flaw = getRandomElement(Object.values(Flaw))
     // Generate Current Attitude
-    const currentAttitudeRoll = getRandomInt(1, 10)
-    let currentAttitude: Attitude
-    switch (currentAttitudeRoll) {
-        case 1:
-            currentAttitude = Attitude.FOCUSED_ON_SOMETHING_ELSE
-            break
-        case 2:
-            currentAttitude = Attitude.FEARFUL
-            break
-        case 3:
-            currentAttitude = Attitude.INFIGHTING
-            break
-        case 4:
-            currentAttitude = Attitude.PLANNING
-            break
-        case 5:
-            currentAttitude = Attitude.PROVISIONING
-            break
-        case 6:
-            currentAttitude = Attitude.ROBBING_ASSAULTING
-            break
-        case 7:
-            currentAttitude = Attitude.BRIBING
-            break
-        case 8:
-            currentAttitude = Attitude.PARTING
-            break
-        case 9:
-            currentAttitude = Attitude.NONE
-            break
-        case 10:
-            currentAttitude = Attitude.AGGRESSIVE
-            break
-        default:
-            currentAttitude = Attitude.NONE
-            break
-    }
+    const currentAttitude = getRandomElement(Object.values(Attitude))
     // Generate News The Leader Is Receiving
-    const newsTheLeaderIsReceivingRoll = getRandomInt(1, 10)
-    let newsTheLeaderIsReceiving: GangNews
-    switch (newsTheLeaderIsReceivingRoll) {
-        case 1:
-            newsTheLeaderIsReceiving = GangNews.POLICE_COMING
-            break
-        case 2:
-            newsTheLeaderIsReceiving = GangNews.TEAM_RELEASED
-            break
-        case 3:
-            newsTheLeaderIsReceiving = GangNews.LAB_STASH_ROBBED
-            break
-        case 4:
-            newsTheLeaderIsReceiving = GangNews.GAINED_TERRITORY
-            break
-        case 5:
-            newsTheLeaderIsReceiving = GangNews.BEING_SABOTAGED
-            break
-        case 6:
-            newsTheLeaderIsReceiving = GangNews.COP_RAIDING
-            break
-        case 7:
-            newsTheLeaderIsReceiving = GangNews.JOB_BLEW_UP
-            break
-        case 8:
-            newsTheLeaderIsReceiving = GangNews.NEW_ENEMY
-            break
-        case 9:
-        case 10:
-            newsTheLeaderIsReceiving = GangNews.NONE
-            break
-        default:
-            newsTheLeaderIsReceiving = GangNews.NONE
-            break
-    }
+    const newsTheLeaderIsReceiving = getRandomElement(Object.values(GangNews))
 
     // Construct the base gang object
     const newGang: Gang = {
@@ -456,22 +320,20 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
 
     // --- Generate Name using API ---
     try {
-        const generatedName = await generateHuggingFaceText(newGang, ModuleTypes.GANG, t, TextGenerationType.NAME)
+        const generatedName = await generateTextWithFallback(newGang, ModuleTypes.GANG, t, TextGenerationType.NAME)
         if (generatedName) {
             newGang.name = generatedName
         } else {
-            console.warn(`API name generation failed for gang ${newGang.name}. Using local fallback.`)
             newGang.name = generateLocalGangName(t, type, color) // Use fallback function
         }
     } catch (error) {
         console.error(`Error generating API name for gang ${newGang.name}:`, error)
-        console.warn(`Using local fallback name generation for gang ${newGang.name}.`)
         newGang.name = generateLocalGangName(t, type, color) // Use fallback function
     }
 
     // --- Generate Description using API ---
     try {
-        const generatedDesc = await generateHuggingFaceText(
+        const generatedDesc = await generateTextWithFallback(
             newGang,
             ModuleTypes.GANG,
             t,
@@ -480,23 +342,20 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
         if (generatedDesc) {
             newGang.description = generatedDesc
         } else {
-            console.warn(`API description generation failed for gang ${newGang.name}. Using local fallback.`)
             newGang.description = generateLocalGangDescription(t, newGang) // Fallback
         }
     } catch (error) {
         console.error(`Error generating API description for gang ${newGang.name}:`, error)
-        console.warn(`Using local fallback description generation for gang ${newGang.name}.`)
         newGang.description = generateLocalGangDescription(t, newGang) // Fallback
     }
 
     // --- Generate Image using API (if description exists) ---
     if (newGang.description) {
         try {
-            const imageBlob = await generateHuggingFaceImage(newGang.description, newGang.name, ModuleTypes.GANG)
+            const imageBlob = await generateImageWithFallback(newGang.description, newGang.name, ModuleTypes.GANG)
             if (imageBlob) {
                 newGang.image = await blobToBase64(imageBlob)
             } else {
-                console.warn(`API image generation returned null for gang ${newGang.name}, leaving empty.`)
                 newGang.image = '' // Ensure it's an empty string on failure
             }
         } catch (error) {
@@ -552,7 +411,7 @@ function generateLocalGangName(t: TFunction, type: GangType, gangColor: GangColo
         case 2: // Compound with suffix: "Crimson Dragons Crew"
             name = `${color} ${animal} ${suffix}`
             break
-        case 3: // Location-based: "Westbrook Rippers"
+        case 3: // Building-based: "Westbrook Rippers"
             name = `${neighborhood} ${profession}`
             break
         case 4: // Body parts: "Iron Fists"
@@ -849,46 +708,39 @@ const generateLocalGangDescription = (t: TFunction, gang: Gang): string => {
     }
 
     // Add sin information if present
-    if (sin && sin !== Sin.NONE) {
-        const sinText = t(`gangs.sin.${sin}`).toLowerCase()
-        const sinPatterns = [
-            t('gangs.description.sin', { sin: sinText }),
-            t('gangs.description.sinAlt', { sin: sinText }),
-            t('gangs.description.sinEmphasis', { sin: sinText }),
-        ]
 
-        reputationDesc += getRandomElement(sinPatterns)
-    }
+    const sinText = t(`gangs.sin.${sin}`).toLowerCase()
+    const sinPatterns = [
+        t('gangs.description.sin', { sin: sinText }),
+        t('gangs.description.sinAlt', { sin: sinText }),
+        t('gangs.description.sinEmphasis', { sin: sinText }),
+    ]
+
+    reputationDesc += getRandomElement(sinPatterns)
 
     // Add flaw information if present
-    if (flaw && flaw !== Flaw.NONE) {
-        const flawText = t(`gangs.flaw.${flaw}`).toLowerCase()
-        weaknessDesc = getRandomElement([
-            t('gangs.description.flaw', { flaw: flawText }),
-            t('gangs.description.flawAlt', { flaw: flawText }),
-            t('gangs.description.flawHidden', { flaw: flawText }),
-        ])
-    }
+    const flawText = t(`gangs.flaw.${flaw}`).toLowerCase()
+    weaknessDesc = getRandomElement([
+        t('gangs.description.flaw', { flaw: flawText }),
+        t('gangs.description.flawAlt', { flaw: flawText }),
+        t('gangs.description.flawHidden', { flaw: flawText }),
+    ])
 
     // Build current activities section
-    if (currentAttitude && currentAttitude !== Attitude.NONE) {
-        const attitudeText = t(`gangs.attitude.${currentAttitude}`).toLowerCase()
-        activityDesc = getRandomElement([
-            t('gangs.description.currentAttitude', { attitude: attitudeText }),
-            t('gangs.description.currentAttitudeAlt', { attitude: attitudeText }),
-            t('gangs.description.currentAttitudeRumor', { attitude: attitudeText }),
-        ])
-    }
+    const attitudeText = t(`gangs.attitude.${currentAttitude}`).toLowerCase()
+    activityDesc = getRandomElement([
+        t('gangs.description.currentAttitude', { attitude: attitudeText }),
+        t('gangs.description.currentAttitudeAlt', { attitude: attitudeText }),
+        t('gangs.description.currentAttitudeRumor', { attitude: attitudeText }),
+    ])
 
     // Add news if present
-    if (newsTheLeaderIsReceiving && newsTheLeaderIsReceiving !== GangNews.NONE) {
-        const newsText = t(`gangs.news.${newsTheLeaderIsReceiving}`).toLowerCase()
-        newsDesc = getRandomElement([
-            t('gangs.description.news', { news: newsText }),
-            t('gangs.description.newsUrgent', { news: newsText }),
-            t('gangs.description.newsRumor', { news: newsText }),
-        ])
-    }
+    const newsText = t(`gangs.news.${newsTheLeaderIsReceiving}`).toLowerCase()
+    newsDesc = getRandomElement([
+        t('gangs.description.news', { news: newsText }),
+        t('gangs.description.newsUrgent', { news: newsText }),
+        t('gangs.description.newsRumor', { news: newsText }),
+    ])
 
     // Generate random atmospheric details based on gang type and status
     const atmosphereOptions = [

@@ -254,3 +254,76 @@ body.reader-mode .MuiCardContent-root:last-child {
 .prosemirror-editor {
     outline: none !important;
 }
+
+/* No Animations Mode */
+body.no-animations
+    *:not(
+        .scrollbar-track-y,
+        .scrollbar-track-x,
+        .scrollbar-thumb-y,
+        .scrollbar-thumb-x,
+        .scroll-content,
+        .custom-scrollbar,
+        .custom-scrollbar-thumb
+    ),
+body.no-animations
+    *:not(
+        .scrollbar-track-y,
+        .scrollbar-track-x,
+        .scrollbar-thumb-y,
+        .scrollbar-thumb-x,
+        .scroll-content,
+        .custom-scrollbar,
+        .custom-scrollbar-thumb
+    )::before,
+body.no-animations
+    *:not(
+        .scrollbar-track-y,
+        .scrollbar-track-x,
+        .scrollbar-thumb-y,
+        .scrollbar-thumb-x,
+        .scroll-content,
+        .custom-scrollbar,
+        .custom-scrollbar-thumb
+    )::after {
+    animation: none !important;
+    transition: none !important;
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    -o-animation: none !important;
+    -ms-animation: none !important;
+    /* transform: none !important; */
+    transition-property: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Additional rule to ensure hover animations don't run */
+body.no-animations
+    *:not(
+        .scrollbar-track-y,
+        .scrollbar-track-x,
+        .scrollbar-thumb-y,
+        .scrollbar-thumb-x,
+        .scroll-content,
+        .custom-scrollbar,
+        .custom-scrollbar-thumb
+    ) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+}
+
+/* Specific scrollbar elements that should still animate */
+body.no-animations .scrollbar-track-y,
+body.no-animations .scrollbar-track-x,
+body.no-animations .scrollbar-thumb-y,
+body.no-animations .scrollbar-thumb-x,
+body.no-animations .scroll-content,
+body.no-animations .custom-scrollbar,
+body.no-animations .custom-scrollbar-thumb {
+    transition: all 0s ease !important;
+}

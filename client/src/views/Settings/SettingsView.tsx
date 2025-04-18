@@ -7,8 +7,10 @@ import {
     CardContent,
     Container,
     Divider,
+    FormControlLabel,
     Grid,
     Stack,
+    Switch,
     TextField,
     Typography,
 } from '@mui/material'
@@ -31,42 +33,97 @@ import {
 } from '../../components/common/Animations'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
+import { useAnimations } from '../../contexts/AnimationsContextTypes'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import colors from '../../utils/colors'
 import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
-import { loadHuggingFaceApiKey, notifyDataImported, saveHuggingFaceApiKey } from '../../utils/storage'
+import {
+    loadGeminiApiKey,
+    loadHuggingFaceApiKey,
+    loadOpenAIApiKey,
+    notifyDataImported,
+    saveGeminiApiKey,
+    saveHuggingFaceApiKey,
+    saveOpenAIApiKey,
+} from '../../utils/storage'
 
 const SettingsView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('common.settings')}`)
     const { readerMode } = useContext(ReaderModeContext)
+    const { animationsEnabled, toggleAnimations } = useAnimations()
     const { enqueueSnackbar, closeSnackbar } = useSnackbar()
     const [importDialogOpen, setImportDialogOpen] = useState(false)
 
-    const [apiKey, setApiKey] = useState('')
+    const [huggingFaceApiKey, setHuggingFaceApiKey] = useState('')
+    const [openAIApiKey, setOpenAIApiKey] = useState('')
+    const [geminiApiKey, setGeminiApiKey] = useState('')
     const [isSaving, setIsSaving] = useState(false)
 
-    // Load API key on component mount
+    // Load API keys on component mount
     useEffect(() => {
-        const loadApiKey = async () => {
+        const loadApiKeys = async () => {
             try {
-                const savedApiKey = await loadHuggingFaceApiKey()
-                setApiKey(savedApiKey)
+                const savedHuggingFaceApiKey = await loadHuggingFaceApiKey()
+                setHuggingFaceApiKey(savedHuggingFaceApiKey)
+
+                const savedOpenAIApiKey = await loadOpenAIApiKey()
+                setOpenAIApiKey(savedOpenAIApiKey)
+
+                const savedGeminiApiKey = await loadGeminiApiKey()
+                setGeminiApiKey(savedGeminiApiKey)
             } catch (error) {
-                console.error('Error loading API key:', error)
+                console.error('Error loading API keys:', error)
             }
         }
 
-        loadApiKey()
+        loadApiKeys()
     }, [])
 
-    const handleApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setApiKey(event.target.value)
+    const handleHuggingFaceApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setHuggingFaceApiKey(event.target.value)
     }
 
-    const handleSaveApiKey = async () => {
-        await saveHuggingFaceApiKey(apiKey)
+    const handleOpenAIApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setOpenAIApiKey(event.target.value)
+    }
+
+    const handleGeminiApiKeyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setGeminiApiKey(event.target.value)
+    }
+
+    const handleSaveApiKeys = async () => {
+        await saveHuggingFaceApiKey(huggingFaceApiKey)
+        await saveOpenAIApiKey(openAIApiKey)
+        await saveGeminiApiKey(geminiApiKey)
         setIsSaving(true)
+
+        // Show success notification
+        enqueueSnackbar('', {
+            variant: 'success',
+            autoHideDuration: 3000,
+            anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+            content: (key) => (
+                <Alert
+                    severity="success"
+                    sx={{
+                        bgcolor: readerMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(10, 15, 30, 0.9)',
+                        color: readerMode ? '#333' : '#fff',
+                        borderLeft: '4px solid',
+                        borderColor: 'success.main',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    }}
+                    onClose={() => closeSnackbar(key)}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Save sx={{ mr: 1 }} />
+                        <Typography variant="body2">API keys saved successfully</Typography>
+                    </Box>
+                </Alert>
+            ),
+        })
+
+        setTimeout(() => setIsSaving(false), 1000)
     }
 
     // Function to handle data export
@@ -310,7 +367,7 @@ const SettingsView = () => {
     }
 
     return (
-        <Container maxWidth={false} sx={{ pt: 3 }}>
+        <Container maxWidth={false} sx={{ py: 3 }}>
             {/* Import Warning Dialog */}
             <WarningDialog
                 open={importDialogOpen}
@@ -332,8 +389,7 @@ const SettingsView = () => {
                     textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                 }}
             >
-                {t('modules.SETTINGS')}
-                {t('common.settings')}
+                {t('settings.title')}
             </Typography>
             <Typography
                 variant="h4"
@@ -347,172 +403,8 @@ const SettingsView = () => {
             </Typography>
 
             <Grid container spacing={3} sx={{ position: 'relative', zIndex: 3 }}>
-                {/* API Keys Card */}
-                <Grid item xs={12}>
-                    <Card
-                        sx={{
-                            position: 'relative',
-                            borderRadius: '4px',
-                            overflow: 'hidden',
-                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                            height: '100%',
-                            border: readerMode
-                                ? '1px solid rgba(0, 180, 180, 0.2)'
-                                : '1px solid rgba(0, 255, 255, 0.2)',
-                            backdropFilter: 'blur(5px)',
-                            boxShadow: `0 0 5px ${colors.neons.cyan.default}`,
-                        }}
-                    >
-                        <CardContent
-                            sx={{
-                                minHeight: '200px',
-                                position: 'relative',
-                                zIndex: 4,
-                                padding: 3,
-                                backgroundColor: readerMode ? colors.neons.blue.dark + '99' : 'rgba(5, 7, 24, 0.6)',
-                                backdropFilter: 'blur(5px)',
-                                height: '100%',
-                            }}
-                        >
-                            <Typography variant="h2" sx={{ mb: 2 }}>
-                                {t('settings.apiKeys')}
-                            </Typography>
-
-                            <Divider sx={{ mb: 3 }} />
-
-                            <Box sx={{ mb: 3 }}>
-                                <Typography variant="h3" sx={{ mb: 1 }}>
-                                    {t('settings.huggingFaceApiKey')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ mb: 2 }}>
-                                    {t('settings.huggingFaceApiKeyDescription')}
-                                </Typography>
-
-                                <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} alignItems={{ sm: 'center' }}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('settings.apiKeyLabel')}
-                                        value={apiKey}
-                                        onChange={handleApiKeyChange}
-                                        type="password"
-                                        variant="outlined"
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                color: readerMode ? '#333' : '#fff',
-                                                '& fieldset': {
-                                                    borderColor: readerMode
-                                                        ? 'rgba(0, 0, 0, 0.23)'
-                                                        : 'rgba(0, 255, 255, 0.3)',
-                                                },
-                                                '&:hover fieldset': {
-                                                    borderColor: readerMode
-                                                        ? 'rgba(0, 0, 0, 0.5)'
-                                                        : colors.neons.cyan.default,
-                                                },
-                                            },
-                                            '& .MuiInputLabel-root': {
-                                                color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
-                                                borderRadius: '4px',
-                                                bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
-                                                p: 0.5,
-                                                py: 0.25,
-                                                border: readerMode
-                                                    ? '1px solid rgba(0, 0, 0, 0.23)'
-                                                    : `1px solid ${colors.neons.cyan.default}`,
-                                            },
-                                            '&:hover .MuiInputLabel-root': {
-                                                animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
-                                            },
-                                        }}
-                                    />
-                                    <Button
-                                        variant="contained"
-                                        color="primary"
-                                        onClick={handleSaveApiKey}
-                                        sx={{
-                                            height: '56px',
-                                            position: 'relative',
-                                            bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',
-                                            borderColor: readerMode ? '#2e7d32' : colors.neons.green.default,
-                                            color: readerMode ? '#1b7d2e' : colors.neons.green.default,
-                                            textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.green.light}`,
-                                            fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                                            letterSpacing: readerMode ? 'normal' : '0.05em',
-                                            overflow: 'hidden',
-                                            padding: '6px 16px',
-                                            border: readerMode
-                                                ? '1px solid #2e7d32'
-                                                : `1px solid ${colors.neons.green.default}80`,
-                                            transition: 'all 0.3s',
-                                            animation: readerMode ? 'none' : `${pulseGlowGreen} 3s infinite`,
-                                            boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
-                                            ...(readerMode
-                                                ? {
-                                                      '&:hover': {
-                                                          bgcolor: '#d7edd7',
-                                                          boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)',
-                                                          transform: 'translateY(-1px)',
-                                                      },
-                                                      '&.Mui-disabled': {
-                                                          bgcolor: '#f5f5f5',
-                                                          color: 'rgba(0, 0, 0, 0.38)',
-                                                          border: '1px solid rgba(0, 0, 0, 0.12)',
-                                                      },
-                                                  }
-                                                : {
-                                                      '&::before': {
-                                                          content: '""',
-                                                          position: 'absolute',
-                                                          top: 0,
-                                                          left: 0,
-                                                          width: '100%',
-                                                          height: '100%',
-                                                          opacity: 0.2,
-                                                          zIndex: -1,
-                                                          background: `linear-gradient(135deg, transparent 0%, ${colors.neons.green.default}50 50%, transparent 100%)`,
-                                                          backgroundSize: '200% 200%',
-                                                          animation: `${scanlineFlow} 3s ease infinite`,
-                                                      },
-                                                      '&::after': {
-                                                          content: '""',
-                                                          position: 'absolute',
-                                                          top: 0,
-                                                          left: 0,
-                                                          width: '100%',
-                                                          height: '100%',
-                                                          background: 'rgba(0, 255, 0, 0.1)',
-                                                          opacity: 0,
-                                                          transition: 'all 0.3s',
-                                                      },
-                                                      '&:hover': {
-                                                          backgroundColor: 'rgba(0, 60, 0, 0.6)',
-                                                          transform: 'translateY(-2px) scale(1.05)',
-                                                          boxShadow: `0 0 15px ${colors.neons.green.default}, inset 0 0 15px ${colors.neons.green.default}30`,
-                                                          color: colors.neons.green.light,
-                                                          textShadow: `0 0 8px ${colors.neons.green.light}`,
-                                                          '&::after': {
-                                                              opacity: 0.2,
-                                                          },
-                                                          '.generate-text': {
-                                                              animation: `${buttonGlitch} 0.3s ease both`,
-                                                          },
-                                                      },
-                                                  }),
-                                        }}
-                                    >
-                                        {t('common.save')}
-                                    </Button>
-                                </Stack>
-                            </Box>
-
-                            <Typography variant="body2" color="textSecondary" sx={{ mt: 3 }}>
-                                {t('settings.apiKeySecurityNote')}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
                 {/* Export Data Card */}
-                <Grid item xs={12} md={6} lg={6} xl={6} xxl={6}>
+                <Grid item xs={12} md={6}>
                     <Card
                         onClick={handleExport}
                         sx={{
@@ -594,13 +486,17 @@ const SettingsView = () => {
                         </Box>
                         <CardContent
                             sx={{
-                                minHeight: '200px',
+                                minHeight: '180px',
                                 position: 'relative',
                                 zIndex: 4,
                                 padding: 3,
                                 backgroundColor: readerMode ? colors.neons.blue.dark + '99' : 'rgba(5, 7, 24, 0.6)',
                                 backdropFilter: 'blur(5px)',
                                 height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
                             }}
                         >
                             <Typography
@@ -672,9 +568,8 @@ const SettingsView = () => {
                         </CardContent>
                     </Card>
                 </Grid>
-
                 {/* Import Data Card */}
-                <Grid item xs={12} md={6} lg={6} xl={6} xxl={6}>
+                <Grid item xs={12} md={6}>
                     <Card
                         onClick={handleImportClick}
                         sx={{
@@ -834,6 +729,413 @@ const SettingsView = () => {
                                 }}
                             >
                                 {t('dashboard.importDescription')}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                {/* Display Card */}
+                <Grid item xs={12} md={3}>
+                    <Card
+                        sx={{
+                            position: 'relative',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            height: '100%',
+                            border: readerMode
+                                ? '1px solid rgba(0, 180, 180, 0.2)'
+                                : '1px solid rgba(0, 255, 255, 0.2)',
+                            backdropFilter: 'blur(5px)',
+                            boxShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                        }}
+                    >
+                        <CardContent
+                            sx={{
+                                minHeight: '200px',
+                                position: 'relative',
+                                zIndex: 4,
+                                padding: 3,
+                                backgroundColor: readerMode ? colors.neons.blue.dark + '99' : 'rgba(5, 7, 24, 0.6)',
+                                backdropFilter: 'blur(5px)',
+                                height: '100%',
+                            }}
+                        >
+                            <Typography
+                                variant="h4"
+                                className="card-title"
+                                data-text={t('settings.display')}
+                                sx={{
+                                    color: colors.neons.cyan.default,
+                                    transition: 'all 0.3s',
+                                    textShadow: `0 0 5px ${colors.neons.cyan.dark}, 0 0 10px rgba(0,0,0,0.8)`,
+                                    mb: 3,
+                                    textAlign: 'center',
+                                    fontSize: '1.7rem',
+                                    fontWeight: 600,
+                                    letterSpacing: '0.05em',
+                                    position: 'relative',
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        bottom: '-10px',
+                                        left: '25%',
+                                        width: '50%',
+                                        height: '1px',
+                                        background: `linear-gradient(to right, transparent, ${colors.neons.yellow.default}, transparent)`,
+                                        boxShadow: `0 0 5px ${colors.neons.yellow.default}`,
+                                    },
+                                    '&::before': {
+                                        content: 'attr(data-text)',
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        color: readerMode ? colors.grays.gray900 : colors.neons.blue.default,
+                                        opacity: readerMode ? 1 : 0.5,
+                                        filter: readerMode ? 'none' : 'blur(1px)',
+                                        animation: readerMode ? 'none' : `${severeGlitch} 5s infinite`,
+                                        display: 'block',
+                                    },
+                                    '&:hover::before': {
+                                        opacity: readerMode ? 1 : 0.7,
+                                    },
+                                }}
+                            >
+                                {t('settings.display')}
+                            </Typography>
+
+                            <Divider sx={{ mb: 3 }} />
+                            <Stack direction="row" alignItems="center" spacing={2}>
+                                <Typography variant="body1">{t('settings.enableAnimations')}</Typography>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size="small"
+                                            checked={animationsEnabled}
+                                            onChange={toggleAnimations}
+                                            sx={{
+                                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                                    color: colors.neons.green.default,
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(25, 220, 140, 0.08)',
+                                                    },
+                                                },
+                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                    backgroundColor: colors.neons.green.dark,
+                                                },
+                                            }}
+                                        />
+                                    }
+                                    label={
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: readerMode ? colors.grays.gray000 : colors.grays.gray500,
+                                                fontWeight: 500,
+                                            }}
+                                        >
+                                            {animationsEnabled ? 'Enabled' : 'Disabled'}
+                                        </Typography>
+                                    }
+                                    labelPlacement="end"
+                                />
+                            </Stack>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                {/* API Keys Card */}
+                <Grid item xs={12} md={9}>
+                    <Card
+                        sx={{
+                            position: 'relative',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            height: '100%',
+                            border: readerMode
+                                ? '1px solid rgba(0, 180, 180, 0.2)'
+                                : '1px solid rgba(0, 255, 255, 0.2)',
+                            backdropFilter: 'blur(5px)',
+                            boxShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                        }}
+                    >
+                        <CardContent
+                            sx={{
+                                minHeight: '200px',
+                                position: 'relative',
+                                zIndex: 4,
+                                padding: 3,
+                                backgroundColor: readerMode ? colors.neons.blue.dark + '99' : 'rgba(5, 7, 24, 0.6)',
+                                backdropFilter: 'blur(5px)',
+                                height: '100%',
+                            }}
+                        >
+                            <Typography
+                                variant="h4"
+                                className="card-title"
+                                data-text={t('settings.apiKeys')}
+                                sx={{
+                                    color: colors.neons.cyan.default,
+                                    transition: 'all 0.3s',
+                                    textShadow: `0 0 5px ${colors.neons.cyan.dark}, 0 0 10px rgba(0,0,0,0.8)`,
+                                    mb: 3,
+                                    textAlign: 'center',
+                                    fontSize: '1.7rem',
+                                    fontWeight: 600,
+                                    letterSpacing: '0.05em',
+                                    position: 'relative',
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        bottom: '-10px',
+                                        left: '25%',
+                                        width: '50%',
+                                        height: '1px',
+                                        background: `linear-gradient(to right, transparent, ${colors.neons.yellow.default}, transparent)`,
+                                        boxShadow: `0 0 5px ${colors.neons.yellow.default}`,
+                                    },
+                                    '&::before': {
+                                        content: 'attr(data-text)',
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        color: readerMode ? colors.grays.gray900 : colors.neons.blue.default,
+                                        opacity: readerMode ? 1 : 0.5,
+                                        filter: readerMode ? 'none' : 'blur(1px)',
+                                        animation: readerMode ? 'none' : `${severeGlitch} 5s infinite`,
+                                        display: 'block',
+                                    },
+                                    '&:hover::before': {
+                                        opacity: readerMode ? 1 : 0.7,
+                                    },
+                                }}
+                            >
+                                {t('settings.apiKeys')}
+                            </Typography>
+
+                            <Divider sx={{ mb: 3 }} />
+
+                            <Box sx={{ mb: 3 }}>
+                                <Typography variant="body1" sx={{ mb: 1 }}>
+                                    {t('settings.huggingFaceApiKey')}
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2 }}>
+                                    {t('settings.huggingFaceApiKeyDescription')}
+                                </Typography>
+
+                                <TextField
+                                    fullWidth
+                                    label={t('settings.apiKeyLabel')}
+                                    value={huggingFaceApiKey}
+                                    onChange={handleHuggingFaceApiKeyChange}
+                                    type="password"
+                                    variant="outlined"
+                                    sx={{
+                                        mb: 3,
+                                        '& .MuiOutlinedInput-root': {
+                                            color: readerMode ? '#333' : '#fff',
+                                            '& fieldset': {
+                                                borderColor: readerMode
+                                                    ? 'rgba(0, 0, 0, 0.23)'
+                                                    : 'rgba(0, 255, 255, 0.3)',
+                                            },
+                                            '&:hover fieldset': {
+                                                borderColor: readerMode
+                                                    ? 'rgba(0, 0, 0, 0.5)'
+                                                    : colors.neons.cyan.default,
+                                            },
+                                        },
+                                        '& .MuiInputLabel-root': {
+                                            color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
+                                            borderRadius: '4px',
+                                            bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+                                            p: 0.5,
+                                            py: 0.25,
+                                            border: readerMode
+                                                ? '1px solid rgba(0, 0, 0, 0.23)'
+                                                : `1px solid ${colors.neons.cyan.default}`,
+                                        },
+                                        '&:hover .MuiInputLabel-root': {
+                                            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
+                                        },
+                                    }}
+                                />
+
+                                <Typography variant="body1" sx={{ mb: 1 }}>
+                                    {t('settings.openAIApiKey')}
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2 }}>
+                                    {t('settings.openAIApiKeyDescription')}
+                                </Typography>
+
+                                <TextField
+                                    fullWidth
+                                    label={t('settings.openAIApiKeyLabel')}
+                                    value={openAIApiKey}
+                                    onChange={handleOpenAIApiKeyChange}
+                                    type="password"
+                                    variant="outlined"
+                                    sx={{
+                                        mb: 3,
+                                        '& .MuiOutlinedInput-root': {
+                                            color: readerMode ? '#333' : '#fff',
+                                            '& fieldset': {
+                                                borderColor: readerMode
+                                                    ? 'rgba(0, 0, 0, 0.23)'
+                                                    : 'rgba(0, 255, 255, 0.3)',
+                                            },
+                                            '&:hover fieldset': {
+                                                borderColor: readerMode
+                                                    ? 'rgba(0, 0, 0, 0.5)'
+                                                    : colors.neons.cyan.default,
+                                            },
+                                        },
+                                        '& .MuiInputLabel-root': {
+                                            color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
+                                            borderRadius: '4px',
+                                            bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+                                            p: 0.5,
+                                            py: 0.25,
+                                            border: readerMode
+                                                ? '1px solid rgba(0, 0, 0, 0.23)'
+                                                : `1px solid ${colors.neons.cyan.default}`,
+                                        },
+                                        '&:hover .MuiInputLabel-root': {
+                                            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
+                                        },
+                                    }}
+                                />
+
+                                <Typography variant="body1" sx={{ mb: 1 }}>
+                                    {t('settings.geminiApiKey')}
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2 }}>
+                                    {t('settings.geminiApiKeyDescription')}
+                                </Typography>
+
+                                <TextField
+                                    fullWidth
+                                    label={t('settings.geminiApiKeyLabel')}
+                                    value={geminiApiKey}
+                                    onChange={handleGeminiApiKeyChange}
+                                    type="password"
+                                    variant="outlined"
+                                    sx={{
+                                        mb: 3,
+                                        '& .MuiOutlinedInput-root': {
+                                            color: readerMode ? '#333' : '#fff',
+                                            '& fieldset': {
+                                                borderColor: readerMode
+                                                    ? 'rgba(0, 0, 0, 0.23)'
+                                                    : 'rgba(0, 255, 255, 0.3)',
+                                            },
+                                            '&:hover fieldset': {
+                                                borderColor: readerMode
+                                                    ? 'rgba(0, 0, 0, 0.5)'
+                                                    : colors.neons.cyan.default,
+                                            },
+                                        },
+                                        '& .MuiInputLabel-root': {
+                                            color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
+                                            borderRadius: '4px',
+                                            bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+                                            p: 0.5,
+                                            py: 0.25,
+                                            border: readerMode
+                                                ? '1px solid rgba(0, 0, 0, 0.23)'
+                                                : `1px solid ${colors.neons.cyan.default}`,
+                                        },
+                                        '&:hover .MuiInputLabel-root': {
+                                            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
+                                        },
+                                    }}
+                                />
+
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={handleSaveApiKeys}
+                                    sx={{
+                                        height: '56px',
+                                        position: 'relative',
+                                        bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',
+                                        borderColor: readerMode ? '#2e7d32' : colors.neons.green.default,
+                                        color: readerMode ? '#1b7d2e' : colors.neons.green.default,
+                                        textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.green.light}`,
+                                        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                        letterSpacing: readerMode ? 'normal' : '0.05em',
+                                        overflow: 'hidden',
+                                        padding: '6px 16px',
+                                        border: readerMode
+                                            ? '1px solid #2e7d32'
+                                            : `1px solid ${colors.neons.green.default}80`,
+                                        transition: 'all 0.3s',
+                                        animation: readerMode ? 'none' : `${pulseGlowGreen} 3s infinite`,
+                                        boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
+                                        ...(readerMode
+                                            ? {
+                                                  '&:hover': {
+                                                      bgcolor: '#d7edd7',
+                                                      boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)',
+                                                      transform: 'translateY(-1px)',
+                                                  },
+                                                  '&.Mui-disabled': {
+                                                      bgcolor: '#f5f5f5',
+                                                      color: 'rgba(0, 0, 0, 0.38)',
+                                                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                                                  },
+                                              }
+                                            : {
+                                                  '&::before': {
+                                                      content: '""',
+                                                      position: 'absolute',
+                                                      top: 0,
+                                                      left: 0,
+                                                      width: '100%',
+                                                      height: '100%',
+                                                      opacity: 0.2,
+                                                      zIndex: -1,
+                                                      background: `linear-gradient(135deg, transparent 0%, ${colors.neons.green.default}50 50%, transparent 100%)`,
+                                                      backgroundSize: '200% 200%',
+                                                      animation: `${scanlineFlow} 3s ease infinite`,
+                                                  },
+                                                  '&::after': {
+                                                      content: '""',
+                                                      position: 'absolute',
+                                                      top: 0,
+                                                      left: 0,
+                                                      width: '100%',
+                                                      height: '100%',
+                                                      background: 'rgba(0, 255, 0, 0.1)',
+                                                      opacity: 0,
+                                                      transition: 'all 0.3s',
+                                                  },
+                                                  '&:hover': {
+                                                      backgroundColor: 'rgba(0, 60, 0, 0.6)',
+                                                      transform: 'translateY(-2px) scale(1.05)',
+                                                      boxShadow: `0 0 15px ${colors.neons.green.default}, inset 0 0 15px ${colors.neons.green.default}30`,
+                                                      color: colors.neons.green.light,
+                                                      textShadow: `0 0 8px ${colors.neons.green.light}`,
+                                                      '&::after': {
+                                                          opacity: 0.2,
+                                                      },
+                                                      '.generate-text': {
+                                                          animation: `${buttonGlitch} 0.3s ease both`,
+                                                      },
+                                                  },
+                                              }),
+                                    }}
+                                >
+                                    {t('common.save')}
+                                </Button>
+                            </Box>
+
+                            <Typography variant="body2" color="textSecondary" sx={{ mt: 3 }}>
+                                {t('settings.apiKeySecurityNote')}
                             </Typography>
                         </CardContent>
                     </Card>

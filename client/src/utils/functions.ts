@@ -67,7 +67,6 @@ export const hexToRgb = (hex: string): [number, number, number] => {
 
     // If parsing fails, return a default color
     if (!result) {
-        console.warn(`Invalid color format: ${hex}, using fallback color`)
         return [128, 128, 128] // Default to gray
     }
 
@@ -92,7 +91,7 @@ export const getComplementaryColor = (color: string): string => {
             .padStart(6, '0')}`
         return complementaryHex
     } catch (error) {
-        console.warn(`Error calculating complementary color for: ${color}`, error)
+        console.error(`Error calculating complementary color for: ${color}`, error)
         return '#7f7f7f' // Return a neutral gray as fallback
     }
 }
@@ -384,22 +383,22 @@ export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TF
             'plot.verb.value': 'fixerJobs.verb',
 
             // Types for various entities
-            'plot.subjectIfNotPlace.type': 'fixerJobs.character', // Default to character, special case for item below
+            'plot.plotSubject.type': 'fixerJobs.character', // Default to character, special case for item below
             'plot.complication.type': 'fixerJobs.complication',
             'plot.complication.character.type': 'fixerJobs.character',
             'plot.complication.item.type': 'fixerJobs.item',
             'plot.item.type': 'fixerJobs.item',
-            'plot.plotPlace.building.type': 'fixerJobs.location',
-            'plot.plotPlace.complication.type': 'fixerJobs.locationComplication',
+            'plot.plotBuilding.building.type': 'fixerJobs.building',
+            'plot.plotBuilding.complication.type': 'fixerJobs.buildingComplication',
 
             // Attitude and condition fields
-            'plot.subjectIfNotPlace.attitude': 'fixerJobs.characterAttitude',
-            'plot.subjectIfNotPlace.condition': 'fixerJobs.itemCondition',
+            'plot.plotSubject.attitude': 'fixerJobs.characterAttitude',
+            'plot.plotSubject.condition': 'fixerJobs.itemCondition',
 
             // Building related fields
-            'plot.plotPlace.building.style': 'buildings.style',
-            'plot.plotPlace.building.ownership': 'buildings.ownership',
-            'plot.plotPlace.building.securityPersonnel': 'buildings.securityPersonnel',
+            'plot.plotBuilding.building.style': 'buildings.style',
+            'plot.plotBuilding.building.ownership': 'buildings.ownership',
+            'plot.plotBuilding.building.securityPersonnel': 'buildings.securityPersonnel',
         }
 
         // Special case for gang types
@@ -409,7 +408,7 @@ export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TF
 
         // Special case for item types (including AI_ROBOT_DRONE)
         if (
-            (key === 'plot.subjectIfNotPlace.type' || key === 'plot.item.type') &&
+            (key === 'plot.plotSubject.type' || key === 'plot.item.type') &&
             (item === 'AI_ROBOT_DRONE' ||
                 item === 'BIOLOGICAL_SAMPLES' ||
                 item === 'CYBERWARE' ||

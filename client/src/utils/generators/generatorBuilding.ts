@@ -10,7 +10,7 @@ import {
     BuildingStyle,
     BuildingType,
 } from '../../graphql/types'
-import { blobToBase64, generateHuggingFaceImage, generateHuggingFaceText } from '../apiUtils'
+import { blobToBase64, generateImageWithFallback, generateTextWithFallback } from '../apiUtils'
 import { ModuleTypes } from '../constants'
 import { getRandomElement, getRandomInt } from '../functions'
 import { buildingNameData, commonNameElements, TextGenerationType } from './constantsGenerators'
@@ -36,13 +36,13 @@ export const generateRandomBuilding = async (
     // - Emergency Exit
     // - Backup Lights
     // - Landing Pad
-    // - BuildingSecret Or Alt Entrance
-    // - BuildingOwnership
+    // - Secret Or Alt Entrance
+    // - Ownership
     // - Security Personnel
-    // - BuildingStyle
-    // - BuildingEvent
-    // - BuildingSecret
-    // - Name
+    // - Style
+    // - Event
+    // - Secret
+    // - Name (now generated via API or locally if API fails)
     // - Description (now generated via API or locally if API fails)
     // - Image (now generated via API or locally if API fails)
 
@@ -527,7 +527,7 @@ export const generateRandomBuilding = async (
 
     // --- Generate Name using API ---
     try {
-        const generatedName = await generateHuggingFaceText(
+        const generatedName = await generateTextWithFallback(
             newBuilding,
             ModuleTypes.BUILDING,
             t,
@@ -536,18 +536,16 @@ export const generateRandomBuilding = async (
         if (generatedName) {
             newBuilding.name = generatedName
         } else {
-            console.warn(`API name generation failed for building ${newBuilding.name}. Using local fallback.`)
             newBuilding.name = generateLocalBuildingName(type, style, ownership, isAbandoned) // Use fallback function
         }
     } catch (error) {
         console.error(`Error generating API name for building ${newBuilding.name}:`, error)
-        console.warn(`Using local fallback name generation for building ${newBuilding.name}.`)
         newBuilding.name = generateLocalBuildingName(type, style, ownership, isAbandoned) // Use fallback function
     }
 
     // --- Generate Description using API ---
     try {
-        const generatedDesc = await generateHuggingFaceText(
+        const generatedDesc = await generateTextWithFallback(
             newBuilding,
             ModuleTypes.BUILDING,
             t,
@@ -556,19 +554,17 @@ export const generateRandomBuilding = async (
         if (generatedDesc) {
             newBuilding.description = generatedDesc
         } else {
-            console.warn(`API description generation failed for building ${newBuilding.name}. Using local fallback.`)
             newBuilding.description = generateLocalBuildingDescription(t, newBuilding) // Use fallback function
         }
     } catch (error) {
         console.error(`Error generating API description for building ${newBuilding.name}:`, error)
-        console.warn(`Using local fallback description generation for building ${newBuilding.name}.`)
         newBuilding.description = generateLocalBuildingDescription(t, newBuilding) // Use fallback function
     }
 
     // --- Generate Image using API (if description exists) ---
     if (newBuilding.description) {
         try {
-            const imageBlob = await generateHuggingFaceImage(
+            const imageBlob = await generateImageWithFallback(
                 newBuilding.description,
                 newBuilding.name,
                 ModuleTypes.BUILDING
@@ -576,7 +572,6 @@ export const generateRandomBuilding = async (
             if (imageBlob) {
                 newBuilding.image = await blobToBase64(imageBlob)
             } else {
-                console.warn(`API image generation returned null for building ${newBuilding.name}, leaving empty.`)
                 newBuilding.image = '' // Ensure it's an empty string on failure
             }
         } catch (error) {
@@ -630,7 +625,7 @@ function generateLocalBuildingName(
     // Suffix options
     const buildingSuffix = getRandomElement(commonNameElements.buildingSuffixes)
 
-    // District names for location-based naming
+    // District names for building-based naming
     const districtName = getRandomElement(commonNameElements.districtNames)
 
     // Numbers for addresses or building numbers

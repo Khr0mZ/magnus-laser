@@ -27,7 +27,7 @@ enum PlotGangVerb {
   SABOTAGE
   SPY_ON
 }
-enum PlotPlaceVerb {
+enum PlotBuildingVerb {
   INVESTIGATE
   OCCUPY
   DEFEND
@@ -118,9 +118,9 @@ enum PlotGangComplicationType {
   COPS_RAIDING
 }
 
-# PLACE COMPLICATIONS
-# There is no PlotPlaceType because it is a Building
-enum PlotPlaceComplicationType {
+# BUILDING COMPLICATIONS
+# There is no PlotBuildingType because it is a Building
+enum PlotBuildingComplicationType {
   HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG # GANG
   NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER # CHARACTER
   HEAVY_TRAFFIC_CAUSED_BY_GANG # GANG

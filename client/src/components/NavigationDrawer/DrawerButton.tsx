@@ -2,6 +2,7 @@ import { Box, Button, FormControlLabel, Typography } from '@mui/material'
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useAnimations } from '../../contexts/AnimationsContextTypes.ts'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import NavigationPaths from '../../navigation'
 import colors from '../../utils/colors'
@@ -18,6 +19,7 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
     const { pathname } = useLocation()
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
+    const { animationsEnabled } = useAnimations()
 
     const pickColor = (navigationPath: NavigationPaths) => {
         return pathname.startsWith(navigationPath)
@@ -69,26 +71,28 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
                           // Cyberpunk button styles
                           '&:hover': {
                               animation: `${neonColorCycle} 3s linear infinite`,
-                              '& .MuiTypography-root': {
-                                  position: 'relative',
-                                  animation: `${neonColorCycle} 3s linear infinite`,
-                                  '&::before': {
-                                      content: 'attr(data-text)',
-                                      position: 'absolute',
-                                      left: -2,
-                                      top: 0,
-                                      opacity: 0.8,
-                                      animation: `${glitch} 2s ease-out infinite alternate-reverse, ${neonColorCycle} 3s linear infinite`,
+                              ...(animationsEnabled && {
+                                  '& .MuiTypography-root': {
+                                      position: 'relative',
+                                      animation: `${neonColorCycle} 3s linear infinite`,
+                                      '&::before': {
+                                          content: 'attr(data-text)',
+                                          position: 'absolute',
+                                          left: -2,
+                                          top: 0,
+                                          opacity: 0.8,
+                                          animation: `${glitch} 2s ease-out infinite alternate-reverse, ${neonColorCycle} 3s linear infinite`,
+                                      },
+                                      '&::after': {
+                                          content: 'attr(data-text)',
+                                          position: 'absolute',
+                                          left: 2,
+                                          top: 0,
+                                          opacity: 0.8,
+                                          animation: `${glitch} 3s ease-in infinite alternate, ${neonColorCycle} 3s linear infinite`,
+                                      },
                                   },
-                                  '&::after': {
-                                      content: 'attr(data-text)',
-                                      position: 'absolute',
-                                      left: 2,
-                                      top: 0,
-                                      opacity: 0.8,
-                                      animation: `${glitch} 3s ease-in infinite alternate, ${neonColorCycle} 3s linear infinite`,
-                                  },
-                              },
+                              }),
                               '& .icon-glitch': {
                                   animation: `${severeGlitch} 0.5s cubic-bezier(.25,.46,.45,.94) both infinite`,
                                   '&::after': {
@@ -98,7 +102,9 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
                                       left: -2,
                                       right: -2,
                                       bottom: -2,
-                                      background: `linear-gradient(45deg, ${colors.neons.pink.default}50 25%, transparent 25%, transparent 50%, ${colors.neons.cyan.default}50 50%, ${colors.neons.cyan.default}50 75%, transparent 75%, transparent)`,
+                                      background: animationsEnabled
+                                          ? `linear-gradient(45deg, ${colors.neons.pink.default}50 25%, transparent 25%, transparent 50%, ${colors.neons.cyan.default}50 50%, ${colors.neons.cyan.default}50 75%, transparent 75%, transparent)`
+                                          : 'none',
                                       backgroundSize: '6px 6px',
                                       zIndex: -1,
                                       opacity: 0.5,
@@ -195,30 +201,31 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
                                       }),
                                   }
                                 : {
-                                      fontFamily: active ? '"Courier New", monospace' : 'inherit',
+                                      fontWeight: active ? 800 : 400,
                                       letterSpacing: active ? '1px' : 'inherit',
-                                      ...(active && {
-                                          color: colors.neons.cyan.default,
-                                          textShadow: `0 0 8px ${colors.neons.cyan.default}`,
-                                          '&::before': {
-                                              content: 'attr(data-text)',
-                                              position: 'absolute',
-                                              left: -2,
-                                              top: 0,
-                                              color: colors.neons.pink.default,
-                                              opacity: 0.8,
-                                              animation: `${glitch} 2s ease-out infinite alternate-reverse`,
-                                          },
-                                          '&::after': {
-                                              content: 'attr(data-text)',
-                                              position: 'absolute',
-                                              left: 2,
-                                              top: 0,
-                                              color: colors.neons.green.default,
-                                              opacity: 0.8,
-                                              animation: `${glitch} 3s ease-in infinite alternate`,
-                                          },
-                                      }),
+                                      ...(active &&
+                                          animationsEnabled && {
+                                              color: colors.neons.cyan.default,
+                                              textShadow: `0 0 8px ${colors.neons.cyan.default}`,
+                                              '&::before': {
+                                                  content: 'attr(data-text)',
+                                                  position: 'absolute',
+                                                  left: -2,
+                                                  top: 0,
+                                                  color: colors.neons.pink.default,
+                                                  opacity: 0.8,
+                                                  animation: `${glitch} 2s ease-out infinite alternate-reverse`,
+                                              },
+                                              '&::after': {
+                                                  content: 'attr(data-text)',
+                                                  position: 'absolute',
+                                                  left: 2,
+                                                  top: 0,
+                                                  color: colors.neons.green.default,
+                                                  opacity: 0.8,
+                                                  animation: `${glitch} 3s ease-in infinite alternate`,
+                                              },
+                                          }),
                                   }),
                         }}
                         data-text={t(`modules.${module}`)}

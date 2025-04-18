@@ -1,11 +1,12 @@
 import { ThemeProvider } from '@emotion/react'
-import { createTheme, CssBaseline } from '@mui/material'
+import { CssBaseline, createTheme as muiCreateTheme } from '@mui/material'
 import { SnackbarProvider } from 'notistack'
 import { Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import CustomScrollbar from './components/CustomScrollbar'
 import CyberpunkLoader from './components/CyberpunkLoader'
 import NavigationDrawer from './components/NavigationDrawer/NavigationDrawer'
+import { AnimationsProvider } from './contexts/AnimationsContext'
 import { DataProvider } from './contexts/DataContext'
 import { ReaderModeContext } from './contexts/ReaderModeContext'
 import UserProvider from './contexts/UserContext'
@@ -57,7 +58,7 @@ const AppContent = (): JSX.Element => {
     return (
         <ViewPreferencesContext.Provider value={{ viewPreferences, viewPrefsLoaded, updateViewPreference }}>
             <ReaderModeContext.Provider value={{ readerMode, toggleReaderMode }}>
-                <ThemeProvider theme={createTheme(getDesignTokens(readerMode ? 'light' : 'dark'))}>
+                <ThemeProvider theme={muiCreateTheme(getDesignTokens(readerMode ? 'light' : 'dark'))}>
                     <CssBaseline />
                     <SnackbarProvider maxSnack={5}>
                         <BrowserRouter>
@@ -87,7 +88,9 @@ const App = (): JSX.Element => {
     return (
         <UserProvider>
             <DataProvider>
-                <AppContent />
+                <AnimationsProvider>
+                    <AppContent />
+                </AnimationsProvider>
             </DataProvider>
         </UserProvider>
     )

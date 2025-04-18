@@ -1,25 +1,17 @@
-import {
-    Box,
-    Button,
-    Checkbox,
-    CircularProgress,
-    Container,
-    FormControlLabel,
-    Grid,
-    Stack,
-    styled,
-    Typography,
-} from '@mui/material'
+import { Box, CircularProgress, Container, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { buttonGlitch, pulseGlowGreen, pulseGlowRed, scanlineFlow } from '../../components/common/Animations'
+import ClearAllButton from '../../components/ClearAllButton'
 import EditDialog from '../../components/common/EditDialog/EditDialog'
 import GridView from '../../components/common/GridView'
 import JobDifficultySelector from '../../components/common/JobDifficultySelector'
 import TableView from '../../components/common/TableView'
 import ViewToggle from '../../components/common/ViewToggle'
 import { WarningDialog } from '../../components/common/WarningDialog'
+import CyberpunkCheckbox from '../../components/CyberpunkCheckbox'
+import CyberpunkFormControlLabel from '../../components/CyberpunkFormControlLabel'
+import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
@@ -36,56 +28,6 @@ declare global {
         fixerJobsDataLoaded?: boolean
     }
 }
-
-// Define interface for the custom props
-interface CyberpunkProps {
-    readerMode?: boolean
-}
-
-// Custom cyberpunk styled checkbox
-const CyberpunkCheckbox = styled(Checkbox, {
-    shouldForwardProp: (prop) => prop !== 'readerMode',
-})<CyberpunkProps>(({ readerMode }) => ({
-    color: readerMode ? colors.neons.pink.default : colors.neons.cyan.default,
-    '&.Mui-disabled': {
-        color: readerMode ? 'unset' : `${colors.neons.cyan.dark}50`,
-    },
-    '&.Mui-checked': {
-        color: readerMode ? colors.neons.pink.default : colors.neons.green.default,
-    },
-    '&:hover': {
-        backgroundColor: readerMode ? 'rgba(46, 125, 50, 0.04)' : `${colors.neons.cyan.default}20`,
-    },
-    '& .MuiSvgIcon-root': {
-        filter: readerMode ? 'none' : `drop-shadow(0 0 2px ${colors.neons.cyan.default})`,
-        transition: 'all 0.3s',
-    },
-    '&.Mui-checked .MuiSvgIcon-root': {
-        filter: readerMode ? 'none' : `drop-shadow(0 0 3px ${colors.neons.green.default})`,
-        animation: readerMode ? 'none' : `${pulseGlowGreen} 3s infinite`,
-    },
-}))
-
-// Cyberpunk styled checkbox label
-const CyberpunkFormControlLabel = styled(FormControlLabel, {
-    shouldForwardProp: (prop) => prop !== 'readerMode',
-})<CyberpunkProps>(({ readerMode }) => ({
-    '.MuiFormControlLabel-label': {
-        color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
-        textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
-        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-        fontSize: '0.85rem',
-        letterSpacing: '0.5px',
-        transition: 'all 0.3s',
-    },
-    '&:hover .MuiFormControlLabel-label': {
-        color: readerMode ? colors.neons.pink.default : colors.neons.green.default,
-        '&.Mui-disabled': {
-            color: readerMode ? colors.grays.gray500 : `${colors.neons.cyan.dark}20`,
-        },
-        textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}`,
-    },
-}))
 
 const FixerJobView = () => {
     const { t } = useTranslation()
@@ -202,11 +144,16 @@ const FixerJobView = () => {
                 fixerJob: newFixerJob,
                 newGangs,
                 newBuildings,
-            } = await generateRandomFixerJob(t, gangs, buildings, undefined, undefined, {
+            } = await generateRandomFixerJob(
+                t,
+                gangs,
+                buildings,
+                undefined,
+                undefined,
                 preferExistingBuilding,
                 preferExistingGang,
-                jobDifficulty,
-            })
+                jobDifficulty
+            )
 
             // Process any new buildings if needed
             const processedNewBuildings = newBuildings.map((building) => {
@@ -296,62 +243,58 @@ const FixerJobView = () => {
 
                     // Clean up plot place building image
                     if (
-                        plot.plotPlace?.building?.image &&
-                        typeof plot.plotPlace.building.image === 'string' &&
-                        !plot.plotPlace.building.image.startsWith('data:')
+                        plot.plotBuilding?.building?.image &&
+                        typeof plot.plotBuilding.building.image === 'string' &&
+                        !plot.plotBuilding.building.image.startsWith('data:')
                     ) {
-                        await deleteImageBlob(plot.plotPlace.building.image)
+                        await deleteImageBlob(plot.plotBuilding.building.image)
                     }
 
                     // Clean up place complication images
                     if (
-                        plot.plotPlace?.complication?.character?.image &&
-                        typeof plot.plotPlace.complication.character.image === 'string' &&
-                        !plot.plotPlace.complication.character.image.startsWith('data:')
+                        plot.plotBuilding?.complication?.character?.image &&
+                        typeof plot.plotBuilding.complication.character.image === 'string' &&
+                        !plot.plotBuilding.complication.character.image.startsWith('data:')
                     ) {
-                        await deleteImageBlob(plot.plotPlace.complication.character.image)
+                        await deleteImageBlob(plot.plotBuilding.complication.character.image)
                     }
 
                     if (
-                        plot.plotPlace?.complication?.item?.image &&
-                        typeof plot.plotPlace.complication.item.image === 'string' &&
-                        !plot.plotPlace.complication.item.image.startsWith('data:')
+                        plot.plotBuilding?.complication?.item?.image &&
+                        typeof plot.plotBuilding.complication.item.image === 'string' &&
+                        !plot.plotBuilding.complication.item.image.startsWith('data:')
                     ) {
-                        await deleteImageBlob(plot.plotPlace.complication.item.image)
+                        await deleteImageBlob(plot.plotBuilding.complication.item.image)
                     }
 
                     if (
-                        plot.plotPlace?.complication?.gang?.gang?.image &&
-                        typeof plot.plotPlace.complication.gang.gang.image === 'string' &&
-                        !plot.plotPlace.complication.gang.gang.image.startsWith('data:')
+                        plot.plotBuilding?.complication?.gang?.gang?.image &&
+                        typeof plot.plotBuilding.complication.gang.gang.image === 'string' &&
+                        !plot.plotBuilding.complication.gang.gang.image.startsWith('data:')
                     ) {
-                        await deleteImageBlob(plot.plotPlace.complication.gang.gang.image)
+                        await deleteImageBlob(plot.plotBuilding.complication.gang.gang.image)
                     }
 
                     // Clean up subject images
-                    if (plot.subjectIfNotPlace) {
+                    if (plot.plotSubject) {
                         // Check if subject is a character
-                        if (
-                            'type' in plot.subjectIfNotPlace &&
-                            'name' in plot.subjectIfNotPlace &&
-                            'image' in plot.subjectIfNotPlace
-                        ) {
+                        if ('type' in plot.plotSubject && 'name' in plot.plotSubject && 'image' in plot.plotSubject) {
                             if (
-                                plot.subjectIfNotPlace.image &&
-                                typeof plot.subjectIfNotPlace.image === 'string' &&
-                                !plot.subjectIfNotPlace.image.startsWith('data:')
+                                plot.plotSubject.image &&
+                                typeof plot.plotSubject.image === 'string' &&
+                                !plot.plotSubject.image.startsWith('data:')
                             ) {
-                                await deleteImageBlob(plot.subjectIfNotPlace.image)
+                                await deleteImageBlob(plot.plotSubject.image)
                             }
                         }
 
                         // Check if subject is a gang
-                        if ('gang' in plot.subjectIfNotPlace && plot.subjectIfNotPlace.gang?.image) {
+                        if ('gang' in plot.plotSubject && plot.plotSubject.gang?.image) {
                             if (
-                                typeof plot.subjectIfNotPlace.gang.image === 'string' &&
-                                !plot.subjectIfNotPlace.gang.image.startsWith('data:')
+                                typeof plot.plotSubject.gang.image === 'string' &&
+                                !plot.plotSubject.gang.image.startsWith('data:')
                             ) {
-                                await deleteImageBlob(plot.subjectIfNotPlace.gang.image)
+                                await deleteImageBlob(plot.plotSubject.gang.image)
                             }
                         }
                     }
@@ -457,7 +400,7 @@ const FixerJobView = () => {
     return (
         <Container maxWidth={false} sx={{ pt: 3 }}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={2} mr={1.5}>
                 <Typography
                     variant="h3"
                     className="glitch-text"
@@ -498,81 +441,7 @@ const FixerJobView = () => {
             </Typography>
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleGenerateFixerJob}
-                        disabled={isGenerating}
-                        sx={{
-                            position: 'relative',
-                            bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',
-                            borderColor: readerMode ? '#2e7d32' : colors.neons.green.default,
-                            color: readerMode ? '#1b7d2e' : colors.neons.green.default,
-                            textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.green.light}`,
-                            fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                            letterSpacing: readerMode ? 'normal' : '0.05em',
-                            overflow: 'hidden',
-                            padding: '6px 16px',
-                            border: readerMode ? '1px solid #2e7d32' : `1px solid ${colors.neons.green.default}80`,
-                            transition: 'all 0.3s',
-                            animation: readerMode ? 'none' : `${pulseGlowGreen} 3s infinite`,
-                            boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
-                            ...(readerMode
-                                ? {
-                                      '&:hover': {
-                                          bgcolor: '#d7edd7',
-                                          boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)',
-                                          transform: 'translateY(-1px)',
-                                      },
-                                      '&.Mui-disabled': {
-                                          bgcolor: '#f5f5f5',
-                                          color: 'rgba(0, 0, 0, 0.38)',
-                                          border: '1px solid rgba(0, 0, 0, 0.12)',
-                                      },
-                                  }
-                                : {
-                                      '&::before': {
-                                          content: '""',
-                                          position: 'absolute',
-                                          top: 0,
-                                          left: 0,
-                                          width: '100%',
-                                          height: '100%',
-                                          opacity: 0.2,
-                                          zIndex: -1,
-                                          background: `linear-gradient(135deg, transparent 0%, ${colors.neons.green.default}50 50%, transparent 100%)`,
-                                          backgroundSize: '200% 200%',
-                                          animation: `${scanlineFlow} 3s ease infinite`,
-                                      },
-                                      '&::after': {
-                                          content: '""',
-                                          position: 'absolute',
-                                          top: 0,
-                                          left: 0,
-                                          width: '100%',
-                                          height: '100%',
-                                          background: 'rgba(0, 255, 0, 0.1)',
-                                          opacity: 0,
-                                          transition: 'all 0.3s',
-                                      },
-                                      '&:hover': {
-                                          backgroundColor: 'rgba(0, 60, 0, 0.6)',
-                                          transform: 'translateY(-2px) scale(1.05)',
-                                          boxShadow: `0 0 15px ${colors.neons.green.default}, inset 0 0 15px ${colors.neons.green.default}30`,
-                                          color: colors.neons.green.light,
-                                          textShadow: `0 0 8px ${colors.neons.green.light}`,
-                                          '&::after': {
-                                              opacity: 0.2,
-                                          },
-                                          '.generate-text': {
-                                              animation: `${buttonGlitch} 0.3s ease both`,
-                                          },
-                                      },
-                                  }),
-                        }}
-                    >
-                        {isGenerating ? t('common.generating') : t('common.generate')}
-                    </Button>
+                    <GenerateButton isGenerating={isGenerating} handleGenerate={handleGenerateFixerJob} />
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                         <CyberpunkFormControlLabel
@@ -603,103 +472,7 @@ const FixerJobView = () => {
                         />
                     </Stack>
                 </Box>
-
-                <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={handleClearAllClick}
-                    disabled={fixerJobs.length === 0}
-                    sx={{
-                        position: 'relative',
-                        bgcolor: readerMode ? '#ffebee' : 'rgba(40, 0, 0, 0.8)',
-                        borderColor: readerMode ? '#c2161a' : colors.neons.red.default,
-                        color: readerMode ? '#a01017' : colors.neons.red.default,
-                        textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.red.default}`,
-                        fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                        letterSpacing: readerMode ? 'normal' : '0.05em',
-                        overflow: 'hidden',
-                        padding: '6px 16px',
-                        border: readerMode ? '1px solid #c2161a' : `1px solid ${colors.neons.red.default}80`,
-                        transition: 'all 0.3s',
-                        animation: readerMode ? 'none' : `${pulseGlowRed} 3s infinite`,
-                        boxShadow: readerMode ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none',
-                        ...(readerMode
-                            ? {
-                                  '&:hover': {
-                                      bgcolor: '#fde2e4',
-                                      boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)',
-                                      transform: 'translateY(-1px)',
-                                  },
-                                  '&.Mui-disabled': {
-                                      bgcolor: '#f5f5f5',
-                                      color: 'rgba(0, 0, 0, 0.38)',
-                                      border: '1px solid rgba(0, 0, 0, 0.12)',
-                                  },
-                              }
-                            : {
-                                  '&::before': {
-                                      content: '""',
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      opacity: 0.2,
-                                      zIndex: -1,
-                                      background: `linear-gradient(135deg, transparent 0%, ${colors.neons.red.default}50 50%, transparent 100%)`,
-                                      backgroundSize: '200% 200%',
-                                      animation: `${scanlineFlow} 3s ease infinite`,
-                                  },
-                                  '&::after': {
-                                      content: '""',
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      background: 'rgba(255, 0, 0, 0.1)',
-                                      opacity: 0,
-                                      transition: 'all 0.3s',
-                                  },
-                                  '&.Mui-disabled': {
-                                      borderColor: 'rgba(255, 0, 0, 0.3)',
-                                      color: 'rgba(255, 0, 0, 0.5)',
-                                      bgcolor: 'rgba(40, 10, 10, 0.4)',
-                                      animation: `${pulseGlowRed} 4s infinite`,
-                                      boxShadow: '0 0 8px rgba(255, 0, 0, 0.2)',
-                                      textShadow: `0 0 3px rgba(255, 0, 0, 0.3)`,
-                                      opacity: 0.8,
-                                      '&::before': {
-                                          opacity: 0.1,
-                                          animation: `${scanlineFlow} 6s ease infinite`,
-                                      },
-                                      '&::after': {
-                                          opacity: 0.05,
-                                      },
-                                      '.button-text': {
-                                          opacity: 0.8,
-                                          textShadow: `0 0 5px rgba(255, 0, 0, 0.4)`,
-                                      },
-                                  },
-                                  '&:hover': {
-                                      borderColor: colors.neons.red.light,
-                                      color: colors.neons.red.light,
-                                      backgroundColor: 'rgba(60, 0, 0, 0.6)',
-                                      animation: `${buttonGlitch} 0.3s cubic-bezier(.25,.46,.45,.94) both infinite`,
-                                      boxShadow: `0 0 15px ${colors.neons.red.default}, inset 0 0 15px ${colors.neons.red.default}30`,
-                                      transform: 'translateY(-2px) scale(1.05)',
-                                      '&::after': {
-                                          opacity: 0.2,
-                                      },
-                                      '.button-text': {
-                                          animation: `${buttonGlitch} 0.3s ease infinite`,
-                                      },
-                                  },
-                              }),
-                    }}
-                >
-                    {t('common.clear')}
-                </Button>
+                <ClearAllButton handleClearAllClick={handleClearAllClick} disabled={fixerJobs.length === 0} />
             </Stack>
 
             {fixerJobs.length === 0 ? (
@@ -728,18 +501,12 @@ const FixerJobView = () => {
                     onEdit={handleEditClick}
                 />
             ) : (
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                    {fixerJobs.map((fixerJob, index) => (
-                        <GridView
-                            key={index}
-                            item={fixerJob}
-                            index={index}
-                            onDelete={handleDeleteClick}
-                            moduleType={ModuleTypes.FIXER_JOB}
-                            onEdit={handleEditClick}
-                        />
-                    ))}
-                </Grid>
+                <GridView
+                    items={fixerJobs}
+                    onDelete={handleDeleteClick}
+                    moduleType={ModuleTypes.FIXER_JOB}
+                    onEdit={handleEditClick}
+                />
             )}
 
             {/* Confirmation dialogs */}

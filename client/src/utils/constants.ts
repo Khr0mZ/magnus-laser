@@ -51,30 +51,30 @@ export const buildingColumns: TableColumn[] = [
 export const fixerJobColumns: TableColumn[] = [
     { key: 'name', label: 'name' },
     { key: 'plot.verb.value', label: 'plot.verb.value' },
-    { key: 'plot.subjectIfNotPlace.name', label: 'plot.subjectIfNotPlace.name' },
-    { key: 'plot.subjectIfNotPlace.type', label: 'plot.subjectIfNotPlace.type' },
-    { key: 'plot.subjectIfNotPlace.attitude', label: 'plot.subjectIfNotPlace.attitude' },
-    { key: 'plot.subjectIfNotPlace.condition', label: 'plot.subjectIfNotPlace.condition' },
-    { key: 'plot.subjectIfNotPlace.gang.name', label: 'plot.subjectIfNotPlace.gang.name' },
-    { key: 'plot.subjectIfNotPlace.gang.type', label: 'plot.subjectIfNotPlace.gang.type' },
-    { key: 'plot.subjectIfNotPlace.gang.complication.type', label: 'plot.subjectIfNotPlace.gang.complication.type' },
+    { key: 'plot.plotSubject.name', label: 'plot.plotSubject.name' },
+    { key: 'plot.plotSubject.type', label: 'plot.plotSubject.type' },
+    { key: 'plot.plotSubject.attitude', label: 'plot.plotSubject.attitude' },
+    { key: 'plot.plotSubject.condition', label: 'plot.plotSubject.condition' },
+    { key: 'plot.plotSubject.gang.name', label: 'plot.plotSubject.gang.name' },
+    { key: 'plot.plotSubject.gang.type', label: 'plot.plotSubject.gang.type' },
+    { key: 'plot.plotSubject.gang.complication.type', label: 'plot.plotSubject.gang.complication.type' },
     {
-        key: 'plot.subjectIfNotPlace.gang.complication.character.name',
-        label: 'plot.subjectIfNotPlace.gang.complication.character.name',
+        key: 'plot.plotSubject.gang.complication.character.name',
+        label: 'plot.plotSubject.gang.complication.character.name',
     },
     {
-        key: 'plot.subjectIfNotPlace.gang.complication.item.name',
-        label: 'plot.subjectIfNotPlace.gang.complication.item.name',
+        key: 'plot.plotSubject.gang.complication.item.name',
+        label: 'plot.plotSubject.gang.complication.item.name',
     },
-    { key: 'plot.plotPlace.building.name', label: 'plot.plotPlace.building.name' },
-    { key: 'plot.plotPlace.building.type', label: 'plot.plotPlace.building.type' },
-    { key: 'plot.plotPlace.building.style', label: 'plot.plotPlace.building.style' },
-    { key: 'plot.plotPlace.building.ownership', label: 'plot.plotPlace.building.ownership' },
-    { key: 'plot.plotPlace.building.securityPersonnel', label: 'plot.plotPlace.building.securityPersonnel' },
-    { key: 'plot.plotPlace.complication.type', label: 'plot.plotPlace.complication.type' },
-    { key: 'plot.plotPlace.complication.character.name', label: 'plot.plotPlace.complication.character.name' },
-    { key: 'plot.plotPlace.complication.item.name', label: 'plot.plotPlace.complication.item.name' },
-    { key: 'plot.plotPlace.complication.gang.gang.name', label: 'plot.plotPlace.complication.gang.gang.name' },
+    { key: 'plot.plotBuilding.building.name', label: 'plot.plotBuilding.building.name' },
+    { key: 'plot.plotBuilding.building.type', label: 'plot.plotBuilding.building.type' },
+    { key: 'plot.plotBuilding.building.style', label: 'plot.plotBuilding.building.style' },
+    { key: 'plot.plotBuilding.building.ownership', label: 'plot.plotBuilding.building.ownership' },
+    { key: 'plot.plotBuilding.building.securityPersonnel', label: 'plot.plotBuilding.building.securityPersonnel' },
+    { key: 'plot.plotBuilding.complication.type', label: 'plot.plotBuilding.complication.type' },
+    { key: 'plot.plotBuilding.complication.character.name', label: 'plot.plotBuilding.complication.character.name' },
+    { key: 'plot.plotBuilding.complication.item.name', label: 'plot.plotBuilding.complication.item.name' },
+    { key: 'plot.plotBuilding.complication.gang.gang.name', label: 'plot.plotBuilding.complication.gang.gang.name' },
     { key: 'plot.complication.type', label: 'plot.complication.type' },
     { key: 'plot.complication.character.name', label: 'plot.complication.character.name' },
     { key: 'plot.complication.character.type', label: 'plot.complication.character.type' },
@@ -82,3 +82,27 @@ export const fixerJobColumns: TableColumn[] = [
     { key: 'plot.complication.item.type', label: 'plot.complication.item.type' },
     { key: 'plot.complication.gang.gang.name', label: 'plot.complication.gang.gang.name' },
 ]
+
+// Fixer job image fields
+export enum ImageFields {
+    // The image of the fixer job
+    main = 'image',
+    // The image of the plot building complication if character
+    mainComplicationCharacter = 'plot.complication.character.image',
+    // The image of the plot building complication if item
+    mainComplicationItem = 'plot.complication.item.image',
+    // The image of the plot subject if character or item
+    characterOrItem = 'plot.plotSubject.image',
+    // The image of the plot subject if gang
+    gang = 'plot.plotSubject.gang.image',
+    // The image of the plot gang complication if character
+    gangComplicationCharacter = 'plot.plotSubject.gang.complication.character.image',
+    // The image of the plot gang complication if item
+    gangComplicationItem = 'plot.plotSubject.gang.complication.item.image',
+    // The image of the plot building
+    building = 'plot.plotBuilding.building.image',
+    // The image of the plot building complication if character
+    buildingComplicationCharacterOrItem = 'plot.plotBuilding.complication.character.image',
+    // The image of the plot building complication if item
+    buildingComplicationItem = 'plot.plotBuilding.complication.item.image',
+}

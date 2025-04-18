@@ -14,16 +14,16 @@ type PlotItemVerbWrapper implements Verb {
 type PlotGangVerbWrapper implements Verb {
   value: PlotGangVerb!
 }
-# Wrapper for PlotPlaceVerb enum values.
-type PlotPlaceVerbWrapper implements Verb {
-  value: PlotPlaceVerb!
+# Wrapper for PlotBuildingVerb enum values.
+type PlotBuildingVerbWrapper implements Verb {
+  value: PlotBuildingVerb!
 }
 # The PlotVerb union aggregates all verb wrapper types.
 union PlotVerb =
     PlotCharacterVerbWrapper
   | PlotItemVerbWrapper
   | PlotGangVerbWrapper
-  | PlotPlaceVerbWrapper
+  | PlotBuildingVerbWrapper
 
 # The FixerJob type represents a job or mission within the narrative.
 type FixerJob {
@@ -39,12 +39,12 @@ type FixerJob {
 type Plot {
   # The verb indicates the main action to take.
   verb: PlotVerb!
-  # plotPlace represents the location where the plot takes place.
-  plotPlace: PlotPlace!
-  # If the focus is not on the place, subjectIfNotPlace will represent either a character, an item, or a gang.
-  subjectIfNotPlace: PlotSubject
+  # plotBuilding represents the building where the plot takes place.
+  plotBuilding: PlotBuilding!
+  # If the focus is not on the building, plotSubject will represent either a character, an item, or a gang.
+  plotSubject: PlotSubject
   # Complication describes what complicates the plot.
-  complication: PlotComplication
+  complication: PlotComplication!
 }
 
 # The PlotSubject union represents the possible subjects of the plot.
@@ -72,10 +72,10 @@ type PlotGang {
   complication: GangComplication!
 }
 
-# The PlotPlace type represents a building or location where the plot occurs.
-type PlotPlace {
+# The PlotBuilding type represents a building where the plot occurs.
+type PlotBuilding {
   building: Building!
-  complication: PlaceComplication!
+  complication: BuildingComplication!
 }
 
 # The PlotComplication type describes an obstacle or complication in the plot.
@@ -95,10 +95,10 @@ type GangComplication {
   item: PlotItem
 }
 
-# PlaceComplication gives details about complications involving the plot location/building.
-type PlaceComplication {
-  type: PlotPlaceComplicationType!
-  # Details about the character, item, or gang involved in the place complication.
+# BuildingComplication gives details about complications involving the plot building.
+type BuildingComplication {
+  type: PlotBuildingComplicationType!
+  # Details about the character, item, or gang involved in the building complication.
   character: PlotCharacter
   item: PlotItem
   gang: PlotGang

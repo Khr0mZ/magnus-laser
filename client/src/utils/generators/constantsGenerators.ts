@@ -389,7 +389,7 @@ export const buildingSuffixes = [
     'Facility',
 ]
 
-// District names for location context
+// District names for building context
 export const districtNames = [
     'Watson',
     'Westbrook',
@@ -559,7 +559,7 @@ export const compoundSuffixes = [
 
 // Common name elements
 export const commonNameElements = {
-    // Location elements
+    // Building elements
     districtNames,
     streetSuffixes,
     landmarkPrefixes,
@@ -1225,14 +1225,7 @@ export const buildingNameData: Record<BuildingType | BuildingStyle | BuildingOwn
 
 // Storage keys used in the application for module data
 // Note: User settings like view preferences and reader mode are deliberately excluded
-export const APP_STORAGE_KEYS = [
-    'magnus-laser-gangs',
-    'magnus-laser-buildings',
-    'magnus-laser-fixer-jobs',
-    'magnus-laser-view-preferences',
-    'magnus-laser-reader-mode',
-    'magnus-laser-huggingface-api-key',
-]
+export const APP_STORAGE_KEYS = ['magnus-laser-gangs', 'magnus-laser-buildings', 'magnus-laser-fixer-jobs']
 
 export const personNames = [
     'Adela',

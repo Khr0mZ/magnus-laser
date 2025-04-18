@@ -180,14 +180,3 @@ export const translateGangNews = (t: TFunction, news: string): string => {
 export const translateLabel = (t: TFunction, key: string, module: 'buildings' | 'gangs' | 'fixerJobs'): string => {
     return t(`${module}.labels.${key}`)
 }
-
-/**
- * Translate any enum value from a namespace
- * @param t Translation function
- * @param key The enum key
- * @param namespace The namespace (e.g., 'buildings.type', 'gangs.color')
- * @returns Translated string
- */
-export const translateEnum = (t: TFunction, key: string, namespace: string): string => {
-    return t(`${namespace}.${key}`)
-}

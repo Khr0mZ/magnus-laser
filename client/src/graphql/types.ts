@@ -26,7 +26,6 @@ export enum Attitude {
   FEARFUL = 'FEARFUL',
   FOCUSED_ON_SOMETHING_ELSE = 'FOCUSED_ON_SOMETHING_ELSE',
   INFIGHTING = 'INFIGHTING',
-  NONE = 'NONE',
   PARTING = 'PARTING',
   PLANNING = 'PLANNING',
   PROVISIONING = 'PROVISIONING',
@@ -53,6 +52,14 @@ export type Building = {
   securityPersonnel: BuildingSecurityPersonnel;
   style: BuildingStyle;
   type: BuildingType;
+};
+
+export type BuildingComplication = {
+  __typename?: 'BuildingComplication';
+  character?: Maybe<PlotCharacter>;
+  gang?: Maybe<PlotGang>;
+  item?: Maybe<PlotItem>;
+  type: PlotBuildingComplicationType;
 };
 
 export enum BuildingEvent {
@@ -180,8 +187,7 @@ export enum Flaw {
   INEXPERIENCED_NEGOTIATORS = 'INEXPERIENCED_NEGOTIATORS',
   LACKLUSTER_LEADERSHIP = 'LACKLUSTER_LEADERSHIP',
   LACK_OF_RECRUITS = 'LACK_OF_RECRUITS',
-  NAIVE = 'NAIVE',
-  NONE = 'NONE'
+  NAIVE = 'NAIVE'
 }
 
 export type Gang = {
@@ -245,7 +251,6 @@ export enum GangNews {
   JOB_BLEW_UP = 'JOB_BLEW_UP',
   LAB_STASH_ROBBED = 'LAB_STASH_ROBBED',
   NEW_ENEMY = 'NEW_ENEMY',
-  NONE = 'NONE',
   POLICE_COMING = 'POLICE_COMING',
   TEAM_RELEASED = 'TEAM_RELEASED'
 }
@@ -314,20 +319,44 @@ export enum KnownForPart2 {
   WEAPONS = 'WEAPONS'
 }
 
-export type PlaceComplication = {
-  __typename?: 'PlaceComplication';
-  character?: Maybe<PlotCharacter>;
-  gang?: Maybe<PlotGang>;
-  item?: Maybe<PlotItem>;
-  type: PlotPlaceComplicationType;
-};
-
 export type Plot = {
   __typename?: 'Plot';
-  complication?: Maybe<PlotComplication>;
-  plotPlace: PlotPlace;
-  subjectIfNotPlace?: Maybe<PlotSubject>;
+  complication: PlotComplication;
+  plotBuilding: PlotBuilding;
+  plotSubject?: Maybe<PlotSubject>;
   verb: PlotVerb;
+};
+
+export type PlotBuilding = {
+  __typename?: 'PlotBuilding';
+  building: Building;
+  complication: BuildingComplication;
+};
+
+export enum PlotBuildingComplicationType {
+  ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM = 'ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM',
+  CCTV_POLICE_SURVEILLANCE_IS_HEAVY = 'CCTV_POLICE_SURVEILLANCE_IS_HEAVY',
+  CONCERT_HOSTED_BY_CHARACTER = 'CONCERT_HOSTED_BY_CHARACTER',
+  FORTIFIED_POSITIONS_BY_SECURITY_PERSONNEL_BECAUSE_OF_ITEM = 'FORTIFIED_POSITIONS_BY_SECURITY_PERSONNEL_BECAUSE_OF_ITEM',
+  HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG = 'HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG',
+  HEAVY_TRAFFIC_CAUSED_BY_GANG = 'HEAVY_TRAFFIC_CAUSED_BY_GANG',
+  NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER = 'NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER',
+  NO_GUN_ZONE = 'NO_GUN_ZONE',
+  PLACE_RECENTLY_TAGGED_AND_LOOTED_BY_GANG = 'PLACE_RECENTLY_TAGGED_AND_LOOTED_BY_GANG',
+  SHOOTOUT_WITH_POLICE_AND_THIRD_PARTY = 'SHOOTOUT_WITH_POLICE_AND_THIRD_PARTY'
+}
+
+export enum PlotBuildingVerb {
+  DEFEND = 'DEFEND',
+  INVESTIGATE = 'INVESTIGATE',
+  LOOT = 'LOOT',
+  OCCUPY = 'OCCUPY',
+  VANDALIZE = 'VANDALIZE'
+}
+
+export type PlotBuildingVerbWrapper = Verb & {
+  __typename?: 'PlotBuildingVerbWrapper';
+  value: PlotBuildingVerb;
 };
 
 export type PlotCharacter = {
@@ -487,48 +516,15 @@ export type PlotItemVerbWrapper = Verb & {
   value: PlotItemVerb;
 };
 
-export type PlotPlace = {
-  __typename?: 'PlotPlace';
-  building: Building;
-  complication: PlaceComplication;
-};
-
-export enum PlotPlaceComplicationType {
-  ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM = 'ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM',
-  CCTV_POLICE_SURVEILLANCE_IS_HEAVY = 'CCTV_POLICE_SURVEILLANCE_IS_HEAVY',
-  CONCERT_HOSTED_BY_CHARACTER = 'CONCERT_HOSTED_BY_CHARACTER',
-  FORTIFIED_POSITIONS_BY_SECURITY_PERSONNEL_BECAUSE_OF_ITEM = 'FORTIFIED_POSITIONS_BY_SECURITY_PERSONNEL_BECAUSE_OF_ITEM',
-  HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG = 'HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG',
-  HEAVY_TRAFFIC_CAUSED_BY_GANG = 'HEAVY_TRAFFIC_CAUSED_BY_GANG',
-  NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER = 'NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER',
-  NO_GUN_ZONE = 'NO_GUN_ZONE',
-  PLACE_RECENTLY_TAGGED_AND_LOOTED_BY_GANG = 'PLACE_RECENTLY_TAGGED_AND_LOOTED_BY_GANG',
-  SHOOTOUT_WITH_POLICE_AND_THIRD_PARTY = 'SHOOTOUT_WITH_POLICE_AND_THIRD_PARTY'
-}
-
-export enum PlotPlaceVerb {
-  DEFEND = 'DEFEND',
-  INVESTIGATE = 'INVESTIGATE',
-  LOOT = 'LOOT',
-  OCCUPY = 'OCCUPY',
-  VANDALIZE = 'VANDALIZE'
-}
-
-export type PlotPlaceVerbWrapper = Verb & {
-  __typename?: 'PlotPlaceVerbWrapper';
-  value: PlotPlaceVerb;
-};
-
 export type PlotSubject = PlotCharacter | PlotGang | PlotItem;
 
-export type PlotVerb = PlotCharacterVerbWrapper | PlotGangVerbWrapper | PlotItemVerbWrapper | PlotPlaceVerbWrapper;
+export type PlotVerb = PlotBuildingVerbWrapper | PlotCharacterVerbWrapper | PlotGangVerbWrapper | PlotItemVerbWrapper;
 
 export enum Sin {
   ENVY = 'ENVY',
   GLUTTONY = 'GLUTTONY',
   GREED = 'GREED',
   LUST = 'LUST',
-  NONE = 'NONE',
   PRIDE = 'PRIDE',
   SLOTH = 'SLOTH',
   WRATH = 'WRATH'

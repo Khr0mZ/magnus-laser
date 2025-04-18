@@ -14,6 +14,8 @@ const VIEW_PREFERENCES_KEY = 'magnus-laser-view-preferences'
 const READER_MODE_KEY = 'magnus-laser-reader-mode'
 const ANIMATIONS_ENABLED_KEY = 'magnus-laser-animations-enabled'
 const HUGGING_FACE_API_KEY = 'magnus-laser-huggingface-api-key'
+const OPENAI_API_KEY = 'magnus-laser-openai-api-key'
+const GEMINI_API_KEY = 'magnus-laser-gemini-api-key'
 // Image storage keys
 const IMAGE_STORAGE_KEY_PREFIX = 'magnus-laser-image-'
 
@@ -134,6 +136,7 @@ export const deleteImageBlob = async (imageId: string): Promise<void> => {
 /**
  * Process entity to store images as blobs
  * This function extracts base64 images, stores them as blobs, and replaces them with imageIds
+ * For FixerJobs, it also replaces Gang and Building objects with just their IDs in nested structures
  * @param entity The entity to process
  * @returns A processed entity with images replaced by imageIds
  */
@@ -154,6 +157,57 @@ export const processEntityForStorage = async <T extends Record<string, unknown>>
                 } catch (error) {
                     console.error(`Error processing image at path ${currentPath}:`, error)
                     // Keep the original value in case of error
+                }
+            }
+            // Handle Gang and Building objects in any property that contains them
+            else if (value && typeof value === 'object' && !Array.isArray(value) && 'ID' in value) {
+                // If the value is a Gang or Building with an ID and we're in a property called building or gang
+                if ((key === 'building' || key === 'gang') && !path.startsWith('plot')) {
+                    obj[key] = (value as { ID: string }).ID
+                }
+            }
+            // Also handle plotBuilding building reference nested in plot
+            else if (
+                key === 'plotBuilding' &&
+                value &&
+                typeof value === 'object' &&
+                'building' in value &&
+                typeof (value as { building: unknown }).building === 'object' &&
+                'ID' in (value as { building: Record<string, unknown> }).building
+            ) {
+                const plotBuilding = value as { building: { ID: string } }
+                const buildingId = plotBuilding.building.ID
+                ;(obj[key] as Record<string, unknown>).building = buildingId
+            }
+            // Handle PlotGang gang reference nested in plot complications
+            else if (
+                key === 'gang' &&
+                value &&
+                typeof value === 'object' &&
+                'gang' in value &&
+                typeof (value as { gang: unknown }).gang === 'object' &&
+                'ID' in (value as { gang: Record<string, unknown> }).gang
+            ) {
+                const plotGang = value as { gang: { ID: string } }
+                const gangId = plotGang.gang.ID
+                ;(obj[key] as Record<string, unknown>).gang = gangId
+            }
+            // Handle PlotComplication gang reference nested in plot
+            else if (
+                key === 'complication' &&
+                value &&
+                typeof value === 'object' &&
+                'gang' in value &&
+                typeof (value as { gang: unknown }).gang === 'object'
+            ) {
+                const complication = value as { gang: Record<string, unknown> }
+                const gangObj = complication.gang
+                if (
+                    'gang' in gangObj &&
+                    typeof gangObj.gang === 'object' &&
+                    'ID' in (gangObj.gang as Record<string, unknown>)
+                ) {
+                    gangObj.gang = (gangObj.gang as { ID: string }).ID
                 }
             }
             // If it's a nested object, process it recursively
@@ -177,6 +231,7 @@ export const processEntityForStorage = async <T extends Record<string, unknown>>
 
 /**
  * Process entity loaded from storage to convert imageIds to data URLs for display
+ * For FixerJobs, it also replaces Building and Gang IDs with the full objects in nested structures
  * @param entity The entity loaded from storage
  * @returns A processed entity with imageIds replaced by data URLs
  */
@@ -184,6 +239,23 @@ export const processEntityForDisplay = async <T extends Record<string, unknown>>
     if (!entity) return entity
 
     const processedEntity = { ...entity }
+
+    // Pre-load buildings and gangs if needed for reference resolution
+    let buildings: Building[] | null = null
+    let gangs: Gang[] | null = null
+
+    // Check if this is a FixerJob-like entity that might need building/gang resolution
+    const needsReferenceResolution = 'plot' in entity // FixerJob has nested references in plot
+
+    if (needsReferenceResolution) {
+        buildings = (await localforage.getItem<Building[]>(BUILDINGS_STORAGE_KEY)) || []
+        gangs = (await localforage.getItem<Gang[]>(GANGS_STORAGE_KEY)) || []
+    }
+
+    // Helper function to find a gang by ID
+    const findGangById = (gangId: string): Gang | undefined => {
+        return gangs?.find((g) => g.ID === gangId)
+    }
 
     // Process an object recursively to find and replace imageIds with data URLs
     const processObject = async (obj: Record<string, unknown>, path: string = ''): Promise<void> => {
@@ -201,6 +273,116 @@ export const processEntityForDisplay = async <T extends Record<string, unknown>>
                 } catch (error) {
                     console.error(`Error processing image at path ${currentPath}:`, error)
                     // Keep the original value in case of error
+                }
+            }
+            // Handle Building and Gang references in properties called building or gang
+            else if (
+                (key === 'building' || key === 'gang') &&
+                typeof value === 'string' &&
+                !path.startsWith('plot') &&
+                (buildings || gangs)
+            ) {
+                if (key === 'building' && buildings) {
+                    const buildingId = value
+                    const building = buildings.find((b) => b.ID === buildingId)
+                    if (building) {
+                        obj[key] = await processEntityForDisplay(building)
+                    }
+                } else if (key === 'gang' && gangs) {
+                    const gangId = value
+                    const gang = gangs.find((g) => g.ID === gangId)
+                    if (gang) {
+                        obj[key] = await processEntityForDisplay(gang)
+                    }
+                }
+            }
+            // Handle the special case for plotSubject in plot structure
+            else if (key === 'plotSubject' && value && typeof value === 'object') {
+                const subject = value as Record<string, unknown>
+
+                // Handle nested gang object in plotSubject
+                if ('gang' in subject) {
+                    // The gang could be an ID (string) or a partial gang object
+                    if (typeof subject.gang === 'string') {
+                        // If it's a gang ID, find the complete gang object
+                        const gangId = subject.gang
+                        const gang = findGangById(gangId)
+                        if (gang) {
+                            // Replace the ID with the processed gang object
+                            subject.gang = await processEntityForDisplay(gang)
+                        }
+                    } else if (subject.gang && typeof subject.gang === 'object') {
+                        // If it's already a gang object, check if it has just an ID or is complete
+                        const gangObj = subject.gang as Record<string, unknown>
+
+                        if ('ID' in gangObj && Object.keys(gangObj).length === 1) {
+                            // If it's just an ID object, replace with full gang
+                            const gangId = gangObj.ID as string
+                            const gang = findGangById(gangId)
+                            if (gang) {
+                                subject.gang = await processEntityForDisplay(gang)
+                            }
+                        } else {
+                            // It's a more complete gang object, just process it in place
+                            await processObject(gangObj, `${currentPath}.gang`)
+                        }
+                    }
+                }
+
+                // Continue processing other properties within subject
+                if (typeof subject === 'object' && !Array.isArray(subject)) {
+                    await processObject(subject, currentPath)
+                }
+            }
+            // Handle plotBuilding building reference nested in plot
+            else if (
+                key === 'plotBuilding' &&
+                value &&
+                typeof value === 'object' &&
+                'building' in value &&
+                typeof (value as { building: unknown }).building === 'string' &&
+                buildings
+            ) {
+                const plotBuilding = value as Record<string, unknown>
+                const buildingId = plotBuilding.building as string
+                const building = buildings.find((b) => b.ID === buildingId)
+                if (building) {
+                    plotBuilding.building = await processEntityForDisplay(building)
+                }
+            }
+            // Handle PlotGang gang reference nested in plot
+            else if (
+                key === 'gang' &&
+                value &&
+                typeof value === 'object' &&
+                'gang' in value &&
+                typeof (value as { gang: unknown }).gang === 'string' &&
+                gangs
+            ) {
+                const plotGang = value as Record<string, unknown>
+                const gangId = plotGang.gang as string
+                const gang = gangs.find((g) => g.ID === gangId)
+                if (gang) {
+                    plotGang.gang = await processEntityForDisplay(gang)
+                }
+            }
+            // Handle PlotComplication gang reference nested in plot
+            else if (
+                key === 'complication' &&
+                value &&
+                typeof value === 'object' &&
+                'gang' in value &&
+                typeof (value as { gang: unknown }).gang === 'object' &&
+                'gang' in (value as { gang: Record<string, unknown> }).gang &&
+                typeof (value as { gang: Record<string, unknown> }).gang.gang === 'string' &&
+                gangs
+            ) {
+                const complication = value as Record<string, Record<string, unknown>>
+                const gangObj = complication.gang
+                const gangId = gangObj.gang as string
+                const gang = gangs.find((g) => g.ID === gangId)
+                if (gang) {
+                    gangObj.gang = await processEntityForDisplay(gang)
                 }
             }
             // If it's a nested object, process it recursively
@@ -340,16 +522,111 @@ export const clearBuildings = async (): Promise<void> => {
 
 /**
  * Save fixer jobs to IndexedDB
+ * Also saves any referenced buildings and gangs that don't exist yet
  * @param fixerJobs Array of fixer jobs to save
  */
 export const saveFixerJobs = async (fixerJobs: FixerJob[]): Promise<void> => {
     try {
+        // Extract buildings and gangs from fixer jobs before processing
+        await extractAndSaveReferences(fixerJobs)
+
         // Process fixer jobs to store images as blobs
         const processedFixerJobs = await Promise.all(fixerJobs.map((job) => processEntityForStorage(job)))
         await localforage.setItem(FIXER_JOBS_STORAGE_KEY, processedFixerJobs)
     } catch (error) {
         console.error('Error saving fixer jobs to storage:', error)
     }
+}
+
+/**
+ * Extract and save buildings and gangs referenced in fixer jobs
+ * @param fixerJobs The fixer jobs to extract references from
+ */
+const extractAndSaveReferences = async (fixerJobs: FixerJob[]): Promise<void> => {
+    // Collect all buildings and gangs from the fixer jobs
+    const buildings: Building[] = []
+    const gangs: Gang[] = []
+
+    // Extract buildings and gangs from plot structure
+    fixerJobs.forEach((job) => {
+        // Extract from plot structure if it exists
+        if (job.plot) {
+            // Extract from plotBuilding
+            if (
+                job.plot.plotBuilding &&
+                job.plot.plotBuilding.building &&
+                typeof job.plot.plotBuilding.building === 'object'
+            ) {
+                buildings.push(job.plot.plotBuilding.building as Building)
+            }
+
+            // Extract from complication if it exists
+            if (job.plot.complication) {
+                // Extract gang from complication
+                if (
+                    job.plot.complication.gang &&
+                    job.plot.complication.gang.gang &&
+                    typeof job.plot.complication.gang.gang === 'object'
+                ) {
+                    gangs.push(job.plot.complication.gang.gang as Gang)
+                }
+            }
+
+            // Extract from PlaceComplication if exists
+            if (
+                job.plot.plotBuilding &&
+                job.plot.plotBuilding.complication &&
+                job.plot.plotBuilding.complication.gang &&
+                job.plot.plotBuilding.complication.gang.gang &&
+                typeof job.plot.plotBuilding.complication.gang.gang === 'object'
+            ) {
+                gangs.push(job.plot.plotBuilding.complication.gang.gang as Gang)
+            }
+
+            // Extract from plotSubject if it exists and is a PlotGang
+            if (
+                job.plot.plotSubject &&
+                'gang' in job.plot.plotSubject &&
+                job.plot.plotSubject.gang &&
+                typeof job.plot.plotSubject.gang === 'object'
+            ) {
+                gangs.push(job.plot.plotSubject.gang as Gang)
+            }
+        }
+    })
+
+    // If we found buildings or gangs, merge them with existing ones and save
+    if (buildings.length > 0) {
+        const existingBuildings = await loadBuildings()
+        const uniqueBuildings = mergeEntities(existingBuildings, buildings)
+        await saveBuildings(uniqueBuildings)
+    }
+
+    if (gangs.length > 0) {
+        const existingGangs = await loadGangs()
+        const uniqueGangs = mergeEntities(existingGangs, gangs)
+        await saveGangs(uniqueGangs)
+    }
+}
+
+/**
+ * Merge existing entities with new ones, avoiding duplicates by ID
+ * @param existing Existing entities
+ * @param newEntities New entities to merge
+ * @returns Merged list with duplicates removed (newer versions preferred)
+ */
+const mergeEntities = <T extends { ID: string }>(existing: T[], newEntities: T[]): T[] => {
+    const merged = [...existing]
+    const existingIds = new Set(existing.map((e) => e.ID))
+
+    for (const entity of newEntities) {
+        if (!existingIds.has(entity.ID)) {
+            merged.push(entity)
+            existingIds.add(entity.ID)
+        }
+    }
+
+    return merged
 }
 
 /**
@@ -515,27 +792,79 @@ export const loadAnimationsEnabled = async (): Promise<boolean> => {
 }
 
 /**
- * Save Hugging Face API key to storage
+ * Save Hugging Face API key to IndexedDB
  * @param apiKey The API key to save
  */
 export const saveHuggingFaceApiKey = async (apiKey: string): Promise<void> => {
     try {
         await localforage.setItem(HUGGING_FACE_API_KEY, apiKey)
     } catch (error) {
-        console.error('Error saving Hugging Face API key to storage:', error)
+        console.error('Error saving Hugging Face API key:', error)
     }
 }
 
 /**
- * Load Hugging Face API key from storage
- * @returns The API key, or empty string if not found
+ * Load Hugging Face API key from IndexedDB
+ * @returns The API key if found, empty string otherwise
  */
 export const loadHuggingFaceApiKey = async (): Promise<string> => {
     try {
         const apiKey = await localforage.getItem<string>(HUGGING_FACE_API_KEY)
         return apiKey || ''
     } catch (error) {
-        console.error('Error loading Hugging Face API key from storage:', error)
+        console.error('Error loading Hugging Face API key:', error)
+        return ''
+    }
+}
+
+/**
+ * Save OpenAI API key to IndexedDB
+ * @param apiKey The API key to save
+ */
+export const saveOpenAIApiKey = async (apiKey: string): Promise<void> => {
+    try {
+        await localforage.setItem(OPENAI_API_KEY, apiKey)
+    } catch (error) {
+        console.error('Error saving OpenAI API key:', error)
+    }
+}
+
+/**
+ * Load OpenAI API key from IndexedDB
+ * @returns The API key if found, empty string otherwise
+ */
+export const loadOpenAIApiKey = async (): Promise<string> => {
+    try {
+        const apiKey = await localforage.getItem<string>(OPENAI_API_KEY)
+        return apiKey || ''
+    } catch (error) {
+        console.error('Error loading OpenAI API key:', error)
+        return ''
+    }
+}
+
+/**
+ * Save Gemini API key to IndexedDB
+ * @param apiKey The API key to save
+ */
+export const saveGeminiApiKey = async (apiKey: string): Promise<void> => {
+    try {
+        await localforage.setItem(GEMINI_API_KEY, apiKey)
+    } catch (error) {
+        console.error('Error saving Gemini API key:', error)
+    }
+}
+
+/**
+ * Load Gemini API key from IndexedDB
+ * @returns The API key if found, empty string otherwise
+ */
+export const loadGeminiApiKey = async (): Promise<string> => {
+    try {
+        const apiKey = await localforage.getItem<string>(GEMINI_API_KEY)
+        return apiKey || ''
+    } catch (error) {
+        console.error('Error loading Gemini API key:', error)
         return ''
     }
 }
@@ -634,45 +963,13 @@ export const cleanupOrphanedImages = async (): Promise<void> => {
         })
 
         // Step 4: Delete all images that aren't in use
-        let deletedCount = 0
         for (const key of allKeys) {
             const imageId = key.replace(IMAGE_STORAGE_KEY_PREFIX, '')
             if (!usedImageIds.has(imageId)) {
                 await localforage.removeItem(key)
-                deletedCount++
             }
         }
-
-        console.log(`Cleanup complete: ${deletedCount} orphaned images removed`)
     } catch (error) {
         console.error('Error during image cleanup:', error)
-    }
-}
-
-/**
- * FOR TESTING ONLY: Creates orphaned image entries to test the cleanup function
- * @param count Number of orphaned images to create (default: 5)
- * @returns Promise that resolves when complete
- */
-export const createTestOrphanedImages = async (count: number = 5): Promise<void> => {
-    try {
-        // Create a simple 1x1 transparent PNG as test data
-        const transparentPixel =
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
-        const blob = await dataUrlToBlob(transparentPixel)
-
-        console.log(`Creating ${count} orphaned test images...`)
-
-        // Create the specified number of orphaned images
-        for (let i = 0; i < count; i++) {
-            const imageId = generateImageId()
-            const key = `${IMAGE_STORAGE_KEY_PREFIX}${imageId}`
-            await localforage.setItem(key, blob)
-            console.log(`Created orphaned test image: ${imageId}`)
-        }
-
-        console.log('Test orphaned images created successfully')
-    } catch (error) {
-        console.error('Error creating test orphaned images:', error)
     }
 }
