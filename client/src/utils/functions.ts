@@ -328,7 +328,32 @@ export const getOrderedFixerJobData = (
                 continue
             }
 
+            // Special cases for gang and building references that could be IDs or objects
+            if ((part === 'gang' || part === 'building') && current[part]) {
+                // If it's just a string ID, we can't go deeper
+                if (typeof current[part] === 'string') {
+                    return current[part]
+                }
+                // If it's an object, we can continue traversing
+                if (typeof current[part] === 'object') {
+                    current = current[part] as Record<string, unknown>
+                    continue
+                }
+            }
+
             current = current[part] as Record<string, unknown>
+        }
+
+        // Handle the case where gang or building references could be objects
+        if (current && typeof current === 'object') {
+            // If we're looking for a name and the object has a name property, return it
+            if ('name' in current) {
+                return current.name
+            }
+            // If we're looking for a type and the object has a type property, return it
+            if ('type' in current) {
+                return current.type
+            }
         }
 
         return current
@@ -366,13 +391,61 @@ export const getOrderedFixerJobData = (
  */
 export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TFunction): string => {
     // Skip the typename property that GraphQL adds
-    if (key === '__typename') {
-        return ''
+    if (key.includes('__typename')) {
+        return t(`fixerJobs.labels.verbType.${item}`)
+    }
+
+    if (key === 'difficulty') {
+        return t(`common.jobDifficultySelector.${String(item).toLowerCase()}`)
+    }
+    if (key.includes('plotComplication') && item) {
+        return t(`fixerJobs.complication.${item}`)
+    }
+    if (key.includes('buildingComplication') && item) {
+        return t(`fixerJobs.buildingComplication.${item}`)
     }
 
     // If a direct value was passed instead of the full fixer job
     if (item === undefined || item === null) {
         return ''
+    }
+
+    // Handle special cases for object references (gang and building)
+    if (typeof item === 'object' && item !== null) {
+        // Special case for plot.plotSubject.gang references
+        if (key === 'plot.plotSubject.gang' || key.includes('gang.gang')) {
+            if ('name' in (item as Record<string, unknown>)) {
+                return (item as Record<string, unknown>).name as string
+            } else if ('ID' in (item as Record<string, unknown>)) {
+                return `Gang ID: ${(item as Record<string, unknown>).ID}`
+            }
+        }
+
+        // Special case for plot.plotBuilding.building references
+        if (key === 'plot.plotBuilding.building' || key.includes('building.building')) {
+            if ('name' in (item as Record<string, unknown>)) {
+                return (item as Record<string, unknown>).name as string
+            } else if ('ID' in (item as Record<string, unknown>)) {
+                return `Building ID: ${(item as Record<string, unknown>).ID}`
+            }
+        }
+
+        // If the object has a type property that should be translated
+        if ('type' in (item as Record<string, unknown>)) {
+            const type = (item as Record<string, unknown>).type as string
+
+            // Determine the namespace based on the key
+            if (key.includes('gang')) {
+                return t(`gangs.type.${type}`, String(type))
+            } else if (key.includes('building')) {
+                return t(`buildings.type.${type}`, String(type))
+            }
+
+            return String(type)
+        }
+
+        // For any other objects, try to convert them meaningfully
+        return JSON.stringify(item)
     }
 
     // Simple mapping for enums
@@ -381,7 +454,6 @@ export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TF
         const keyNamespaceMap: Record<string, string> = {
             // Verb fields
             'plot.verb.value': 'fixerJobs.verb',
-
             // Types for various entities
             'plot.plotSubject.type': 'fixerJobs.character', // Default to character, special case for item below
             'plot.complication.type': 'fixerJobs.complication',
@@ -390,11 +462,10 @@ export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TF
             'plot.item.type': 'fixerJobs.item',
             'plot.plotBuilding.building.type': 'fixerJobs.building',
             'plot.plotBuilding.complication.type': 'fixerJobs.buildingComplication',
-
+            'plot.plotSubject.complication.type': 'fixerJobs.gangComplication',
             // Attitude and condition fields
             'plot.plotSubject.attitude': 'fixerJobs.characterAttitude',
             'plot.plotSubject.condition': 'fixerJobs.itemCondition',
-
             // Building related fields
             'plot.plotBuilding.building.style': 'buildings.style',
             'plot.plotBuilding.building.ownership': 'buildings.ownership',

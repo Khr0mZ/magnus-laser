@@ -50,59 +50,42 @@ export const buildingColumns: TableColumn[] = [
 // Fixer job columns used in the fixer job table view
 export const fixerJobColumns: TableColumn[] = [
     { key: 'name', label: 'name' },
-    { key: 'plot.verb.value', label: 'plot.verb.value' },
-    { key: 'plot.plotSubject.name', label: 'plot.plotSubject.name' },
-    { key: 'plot.plotSubject.type', label: 'plot.plotSubject.type' },
-    { key: 'plot.plotSubject.attitude', label: 'plot.plotSubject.attitude' },
-    { key: 'plot.plotSubject.condition', label: 'plot.plotSubject.condition' },
-    { key: 'plot.plotSubject.gang.name', label: 'plot.plotSubject.gang.name' },
-    { key: 'plot.plotSubject.gang.type', label: 'plot.plotSubject.gang.type' },
-    { key: 'plot.plotSubject.gang.complication.type', label: 'plot.plotSubject.gang.complication.type' },
+    { key: 'difficulty', label: 'difficulty' },
+    { key: 'plot.verb.value', label: 'verb' },
+    { key: 'plot.verb.__typename', label: 'subjectCategory' },
+    { key: 'plot.plotSubject.name', label: 'plotCategory.characterOrItem' },
+    { key: 'plot.plotSubject.gang.name', label: 'plotCategory.gang' },
+    { key: 'plot.plotSubject.complication.type', label: 'gangComplication' },
     {
-        key: 'plot.plotSubject.gang.complication.character.name',
-        label: 'plot.plotSubject.gang.complication.character.name',
+        key: 'plot.plotSubject.complication.character.name',
+        label: 'plotCategory.character',
     },
     {
-        key: 'plot.plotSubject.gang.complication.item.name',
-        label: 'plot.plotSubject.gang.complication.item.name',
+        key: 'plot.plotSubject.complication.item.name',
+        label: 'plotCategory.item',
     },
-    { key: 'plot.plotBuilding.building.name', label: 'plot.plotBuilding.building.name' },
-    { key: 'plot.plotBuilding.building.type', label: 'plot.plotBuilding.building.type' },
-    { key: 'plot.plotBuilding.building.style', label: 'plot.plotBuilding.building.style' },
-    { key: 'plot.plotBuilding.building.ownership', label: 'plot.plotBuilding.building.ownership' },
-    { key: 'plot.plotBuilding.building.securityPersonnel', label: 'plot.plotBuilding.building.securityPersonnel' },
-    { key: 'plot.plotBuilding.complication.type', label: 'plot.plotBuilding.complication.type' },
-    { key: 'plot.plotBuilding.complication.character.name', label: 'plot.plotBuilding.complication.character.name' },
-    { key: 'plot.plotBuilding.complication.item.name', label: 'plot.plotBuilding.complication.item.name' },
-    { key: 'plot.plotBuilding.complication.gang.gang.name', label: 'plot.plotBuilding.complication.gang.gang.name' },
-    { key: 'plot.complication.type', label: 'plot.complication.type' },
-    { key: 'plot.complication.character.name', label: 'plot.complication.character.name' },
-    { key: 'plot.complication.character.type', label: 'plot.complication.character.type' },
-    { key: 'plot.complication.item.name', label: 'plot.complication.item.name' },
-    { key: 'plot.complication.item.type', label: 'plot.complication.item.type' },
-    { key: 'plot.complication.gang.gang.name', label: 'plot.complication.gang.gang.name' },
+
+    { key: 'plot.plotBuilding.building.name', label: 'plotCategory.building' },
+    { key: 'plot.plotBuilding.complication.type', label: 'buildingComplication' },
+    { key: 'plot.plotBuilding.complication.character.name', label: 'plotCategory.character' },
+    { key: 'plot.plotBuilding.complication.item.name', label: 'plotCategory.item' },
+
+    { key: 'plot.plotComplication.type', label: 'mainComplication' },
+    { key: 'plot.plotComplication.character.name', label: 'plotCategory.character' },
+    { key: 'plot.plotComplication.item.name', label: 'plotCategory.item' },
 ]
 
 // Fixer job image fields
 export enum ImageFields {
-    // The image of the fixer job
     main = 'image',
-    // The image of the plot building complication if character
-    mainComplicationCharacter = 'plot.complication.character.image',
-    // The image of the plot building complication if item
-    mainComplicationItem = 'plot.complication.item.image',
-    // The image of the plot subject if character or item
-    characterOrItem = 'plot.plotSubject.image',
-    // The image of the plot subject if gang
-    gang = 'plot.plotSubject.gang.image',
-    // The image of the plot gang complication if character
-    gangComplicationCharacter = 'plot.plotSubject.gang.complication.character.image',
-    // The image of the plot gang complication if item
-    gangComplicationItem = 'plot.plotSubject.gang.complication.item.image',
-    // The image of the plot building
+    mainComplicationCharacter = 'plot.plotComplication.character.image',
+    mainComplicationItem = 'plot.plotComplication.item.image',
+
     building = 'plot.plotBuilding.building.image',
-    // The image of the plot building complication if character
-    buildingComplicationCharacterOrItem = 'plot.plotBuilding.complication.character.image',
-    // The image of the plot building complication if item
+    buildingComplicationCharacter = 'plot.plotBuilding.complication.character.image',
     buildingComplicationItem = 'plot.plotBuilding.complication.item.image',
+    characterOrItem = 'plot.plotSubject.image',
+    gang = 'plot.plotSubject.gang.image',
+    gangComplicationCharacter = 'plot.plotSubject.complication.character.image',
+    gangComplicationItem = 'plot.plotSubject.complication.item.image',
 }

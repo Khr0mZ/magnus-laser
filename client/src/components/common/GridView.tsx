@@ -13,6 +13,7 @@ import {
 } from '@mui/material'
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useData } from '../../contexts/dataHooks'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Building, FixerJob, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
@@ -46,8 +47,21 @@ const GridView = (props: GridViewProps) => {
     const { items, onDelete, moduleType, onEdit } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
+    const { buildings, gangs } = useData()
 
-    // Get ordered gang data for display
+    // Helper function to resolve gang references
+    const resolveGangReference = (gangId: string) => {
+        if (!gangId) return null
+        return gangs.find((g) => g.ID === gangId)
+    }
+
+    // Helper function to resolve building references
+    const resolveBuildingReference = (buildingId: string) => {
+        if (!buildingId) return null
+        return buildings.find((b) => b.ID === buildingId)
+    }
+
+    // Helper function to process ordered data with reference resolution
     const getOrderedData = (item: Gang | Building | FixerJob) => {
         let itemData: { key: string; label: string; value: unknown }[] = []
         let color: string = ''
@@ -63,6 +77,54 @@ const GridView = (props: GridViewProps) => {
             case ModuleTypes.FIXER_JOB:
                 itemData = getOrderedFixerJobData(item as FixerJob, t)
                 color = getFixerJobDifficultyColor((item as FixerJob).difficulty)
+                // Special processing for FixerJob values to resolve references
+                itemData = itemData.map((entry) => {
+                    if (entry.value === undefined || entry.value === null) {
+                        return entry
+                    }
+
+                    // For gang references
+                    if (
+                        typeof entry.value === 'string' &&
+                        (entry.key.includes('gang') || entry.key.includes('gang.gang'))
+                    ) {
+                        const gangRef = resolveGangReference(entry.value)
+                        if (gangRef) {
+                            if (entry.key.includes('name')) {
+                                return { ...entry, value: gangRef.name }
+                            } else if (entry.key.includes('type')) {
+                                return { ...entry, value: gangRef.type }
+                            }
+                            // For other properties, use the most meaningful representation
+                            return { ...entry, value: gangRef }
+                        }
+                    }
+
+                    // For building references
+                    if (
+                        typeof entry.value === 'string' &&
+                        (entry.key.includes('building') || entry.key.includes('building.building'))
+                    ) {
+                        const buildingRef = resolveBuildingReference(entry.value)
+                        if (buildingRef) {
+                            if (entry.key.includes('name')) {
+                                return { ...entry, value: buildingRef.name }
+                            } else if (entry.key.includes('type')) {
+                                return { ...entry, value: buildingRef.type }
+                            } else if (entry.key.includes('style')) {
+                                return { ...entry, value: buildingRef.style }
+                            } else if (entry.key.includes('ownership')) {
+                                return { ...entry, value: buildingRef.ownership }
+                            } else if (entry.key.includes('securityPersonnel')) {
+                                return { ...entry, value: buildingRef.securityPersonnel }
+                            }
+                            // For other properties, use the most meaningful representation
+                            return { ...entry, value: buildingRef }
+                        }
+                    }
+
+                    return entry
+                })
                 break
         }
         return {
@@ -262,7 +324,13 @@ const GridView = (props: GridViewProps) => {
                                         alignItems: 'center',
                                         maxHeight: '300px',
                                         justifyContent: 'center',
-                                        bgcolor: `${getGangColorValue((item as Gang).color)}70`,
+                                        bgcolor: `${
+                                            'color' in item
+                                                ? getGangColorValue((item as Gang).color)
+                                                : 'difficulty' in item
+                                                ? getFixerJobDifficultyColor((item as FixerJob).difficulty)
+                                                : getBuildingColor((item as Building).type)
+                                        }70`,
                                         transition: 'all 0.3s ease',
                                         p: 0.5,
                                         borderBottom: `1px solid ${color}40`,
@@ -394,18 +462,30 @@ const GridView = (props: GridViewProps) => {
                                                     className="cell-content"
                                                 >
                                                     <Typography
-                                                        title={
+                                                        title={`${
                                                             moduleType === ModuleTypes.GANG
                                                                 ? processGangValueForDisplay(entry.key, entry.value, t)
-                                                                : moduleType === ModuleTypes.BUILDING
-                                                                ? (processBuildingValueForDisplay(
+                                                                : ''
+                                                        }${
+                                                            moduleType === ModuleTypes.BUILDING
+                                                                ? processBuildingValueForDisplay(
                                                                       entry.key,
                                                                       entry.value,
                                                                       t,
                                                                       'isAbandoned' in item ? item.isAbandoned : false
-                                                                  ) as string)
-                                                                : '—'
-                                                        }
+                                                                  )
+                                                                : ''
+                                                        }${
+                                                            moduleType === ModuleTypes.FIXER_JOB
+                                                                ? entry.value !== undefined
+                                                                    ? processFixerJobValueForDisplay(
+                                                                          entry.key,
+                                                                          entry.value,
+                                                                          t
+                                                                      )
+                                                                    : '—'
+                                                                : ''
+                                                        }`}
                                                         variant="body2"
                                                         noWrap
                                                         sx={{

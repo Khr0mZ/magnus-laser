@@ -13,15 +13,16 @@
         "deleteImageConfirmation": "Are you sure you want to scrub these optics?",
         "jobDifficultySelector": {
             "title": "Gig Difficulty:",
-            "easy": "EASY",
-            "typical": "TYPICAL",
-            "dangerous": "DANGEROUS"
+            "easy": "Easy",
+            "typical": "Typical",
+            "dangerous": "Dangerous"
         },
         "viewToggle": {
             "title": "View Mode:",
             "tableView": "Datastream",
             "detailedView": "Grid"
         },
+        "name": "Name",
         "description": "Intel Brief",
         "missingInfoForImage": "Need name and intel brief before rendering optics.",
         "generatingImage": "Rendering optics...",
@@ -305,8 +306,7 @@
             "flaw": "Quirk/Flaw",
             "currentAttitude": "Attitude",
             "newsTheLeaderIsReceiving": "News the leader is getting",
-            "image": "Gang Optics",
-            "complication": "Gang Complication"
+            "image": "Gang Optics"
         }
     },
     "buildings": {
@@ -517,7 +517,7 @@
             "secret": "Secret",
             "name": "Name",
             "isAbandoned": "Abandoned",
-            "complication": "Building Complication"
+            "image": "Building Optics"
         }
     },
     "fixerJobs": {
@@ -568,21 +568,21 @@
             "HEAVY_WELL_ARMED_SECURITY_FOR_ITEM": "Heavy, well-armed security for item",
             "THE_CREW_IS_ON_THEIR_OWN": "The crew is on their own",
             "AREA_IS_PATROLLED_BY_POLICE": "Area is patrolled by police",
-            "AREA_IS_A_COMMON_DRUG_SALE_ZONE_FOR_GANG": "Area is a common drug sale zone for gang",
+            "AREA_IS_A_COMMON_DRUG_SALE_ZONE": "Area is a common drug sale zone",
             "THE_CREW_DOESN_T_GET_PAID_STIFFED": "The crew doesn't get paid (stiffed)",
             "AREA_SUFFERS_A_POWER_OUTAGE": "Area suffers a power outage",
             "FLASH_FLOOD_HEAVY_RAIN_HEAVY_FOG": "Flash flood/heavy rain/heavy fog",
             "INNOCENT_BYSTANDERS": "Innocent bystanders"
         },
         "character": {
-            "COP_LAWMAN": "Cop/Lawman",
+            "POLICE_LAWMAN": "Police/Lawman",
             "TECH": "Tech",
             "NETRUNNER_HACKER": "Netrunner/Hacker",
             "CORPORATE_EXEC": "Corporate Exec",
             "AVERAGE_CITIZEN_STREETRAT": "Average Citizen/Streetrat",
             "CELEBRITY": "Celebrity",
             "GOVERNMENT_OFFICIAL": "Government Official",
-            "GANG_LEADER": "Gang Leader",
+            "KNOWN_TERRORIST": "Known Terrorist",
             "MERCENARY_FREELANCER_ASSASSIN": "Mercenary/Freelancer/Assassin",
             "NOMAD": "Nomad",
             "POP_STAR": "Pop Star",
@@ -634,8 +634,8 @@
             "BLACKMAILED_BY_CHARACTER": "Blackmailed by character",
             "REVERES_AI_CONTAINED_IN_ITEM_AS_RELIGIOUS_SYMBOL": "Reveres AI contained in item as religious symbol",
             "BUILT_AROUND_CHARACTER": "Built around character",
-            "BEING_SABOTAGED": "Being sabotaged",
-            "COPS_RAIDING": "Cops raiding"
+            "BEING_SABOTAGED_BY_CHARACTER": "Being sabotaged by character",
+            "POLICE_RAIDING": "Police raiding"
         },
         "building": {
             "ABANDONED_BUILDING": "Abandoned building",
@@ -652,21 +652,29 @@
             "VACANT_LOT_CONSTRUCTION_SITE": "Vacant lot/Construction site"
         },
         "buildingComplication": {
-            "HEAVILY_FENCED_PERIMETER_CONTROLLED_BY_GANG": "Heavily fenced perimeter controlled by gang",
+            "TRAUMA_TEAM_ON_THE_SCENE": "Trauma team on the scene",
             "NEED_ID_PASSWORD_TO_GET_IN_HELD_BY_CHARACTER": "Need ID/password to get in (held by character)",
-            "HEAVY_TRAFFIC_CAUSED_BY_GANG": "Heavy traffic caused by gang",
-            "PLACE_RECENTLY_TAGGED_AND_LOOTED_BY_GANG": "Recently tagged/looted by gang",
+            "HEAVY_TRAFFIC": "Heavy traffic",
+            "RECENTLY_TAGGED_AND_LOOTED": "Recently tagged/looted",
             "FORTIFIED_POSITIONS_BY_SECURITY_PERSONNEL_BECAUSE_OF_ITEM": "Fortified positions (security protecting item)",
             "NO_GUN_ZONE": "No gun zone",
-            "SHOOTOUT_WITH_POLICE_AND_THIRD_PARTY": "Shootout with police and third party",
+            "SHOOTOUT_WITH_POLICE_AND_CYBERPSYCHO_CHARACTER": "Shootout with police and cyberpsycho character",
             "CCTV_POLICE_SURVEILLANCE_IS_HEAVY": "Heavy CCTV/Police surveillance",
             "CONCERT_HOSTED_BY_CHARACTER": "Concert hosted by character",
             "ACCIDENT_ZONE_INVOLVES_SHIPMENT_OF_ITEM": "Accident zone (involves item shipment)"
         },
         "labels": {
+            "difficulty": "Gig Difficulty",
+            "verbType": {
+                "PlotGangVerbWrapper": "Gang",
+                "PlotBuildingVerbWrapper": "Building",
+                "PlotCharacterVerbWrapper": "Character",
+                "PlotItemVerbWrapper": "Item"
+            },
             "plotCategory": {
                 "character": "Character",
                 "item": "Item",
+                "characterOrItem": "Character or Item",
                 "gang": "Gang",
                 "building": "Building"
             },
@@ -676,6 +684,8 @@
             "mainComplication": "Mission Complication",
             "complicationType": "Complication Type",
             "subjectCategory": "Target Classification",
+            "gangComplication": "Gang Complication",
+            "buildingComplication": "Building Complication",
             "verb": "Course of Action",
             "character": {
                 "title": "Character Details",
@@ -697,7 +707,8 @@
             },
             "building": {
                 "complication": "Building Complication",
-                "details": "Building Details"
+                "details": "Building Details",
+                "image": "Building Optics"
             }
         },
         "generator": {
@@ -775,7 +786,8 @@
         "apiKeySecurityNote": "Your API key is stored locally on your rig and never sent to our servers.",
         "display": "Display",
         "readerMode": "Reader Mode",
-        "enableAnimations": "Visual FX"
+        "enableAnimations": "Visual FX",
+        "enableLoader": "App Loader"
     },
     "loader": {
         "title": "Magnus Laser HQ v2.0.77",

@@ -1,5 +1,6 @@
 import { CircularProgress, Container, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
+import { isEqual } from 'lodash'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ClearAllButton from '../../components/ClearAllButton'
@@ -91,8 +92,7 @@ const GangView = () => {
         if (syncingFromContextRef.current) return
 
         // Check if the data has actually changed to avoid unnecessary saves
-        const hasChanged = JSON.stringify(gangs) !== JSON.stringify(prevGangsDataRef.current)
-        if (!hasChanged) return
+        if (isEqual(gangs, prevGangsDataRef.current)) return
 
         // Set updating context flag
         updatingContextRef.current = true

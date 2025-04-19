@@ -138,8 +138,10 @@ const buildPromptDetails = (
                     : ''
             }
             ${
-                fixerJob.plot.complication
-                    ? `Plot Complication: ${t(`fixerJobs.complicationTypes.${fixerJob.plot.complication.type || ''}`)},`
+                fixerJob.plot.plotComplication
+                    ? `Plot Complication: ${t(
+                          `fixerJobs.complicationTypes.${fixerJob.plot.plotComplication.type || ''}`
+                      )},`
                     : ''
             }
         `
@@ -233,7 +235,7 @@ export const generateHuggingFaceText = async (
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
-            console.error('Hugging Face Text API Error:', response.status, errorData)
+            console.warn('Hugging Face Text API Error:', response.status, errorData)
             throw new Error(`API Error: ${response.status} - ${errorData?.error || 'Unknown error'}`)
         }
 
@@ -244,11 +246,11 @@ export const generateHuggingFaceText = async (
         if (generatedText) {
             return generatedText
         } else {
-            console.error('Could not extract generated text from Hugging Face response:', data)
+            console.warn('Could not extract generated text from Hugging Face response:', data)
             throw new Error('Failed to parse generated text from HF API response.')
         }
     } catch (error) {
-        console.error('Failed to generate description via Hugging Face API:', error)
+        console.warn('Failed to generate description via Hugging Face API:', error)
         return null // Return null on error
     }
 }
@@ -344,7 +346,7 @@ export const generateOpenAIText = async (
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
-            console.error('OpenAI API Error:', response.status, errorData)
+            console.warn('OpenAI API Error:', response.status, errorData)
             throw new Error(`API Error: ${response.status} - ${errorData?.error?.message || 'Unknown error'}`)
         }
 
@@ -354,11 +356,11 @@ export const generateOpenAIText = async (
         if (generatedText) {
             return generatedText
         } else {
-            console.error('Could not extract generated text from OpenAI response:', data)
+            console.warn('Could not extract generated text from OpenAI response:', data)
             throw new Error('Failed to parse generated text from OpenAI API response.')
         }
     } catch (error) {
-        console.error('Failed to generate description via OpenAI API:', error)
+        console.warn('Failed to generate description via OpenAI API:', error)
         return null // Return null on error
     }
 }
@@ -438,11 +440,11 @@ export const generateGeminiText = async (
             const generatedText = result.response.text()
             return generatedText
         } else {
-            console.error('Could not extract generated text from Gemini response:', result)
+            console.warn('Could not extract generated text from Gemini response:', result)
             throw new Error('Failed to parse generated text from Gemini API response.')
         }
     } catch (error) {
-        console.error('Failed to generate description via Gemini API:', error)
+        console.warn('Failed to generate description via Gemini API:', error)
         return null // Return null on error
     }
 }
@@ -582,12 +584,12 @@ export const generateHuggingFaceImage = async (
     const isGang = moduleType === ModuleTypes.GANG
 
     if (!HUGGINGFACE_API_TOKEN) {
-        console.error('Hugging Face token is missing, cannot generate image.')
+        console.warn('Hugging Face token is missing, cannot generate image.')
         return null
     }
 
     if (!description || !name) {
-        console.error('Description and name are required for image generation.')
+        console.warn('Description and name are required for image generation.')
         return null
     }
 
@@ -632,10 +634,10 @@ export const generateHuggingFaceImage = async (
                 const errorData = await response.json()
                 errorDetails = errorData?.error || JSON.stringify(errorData)
             } catch (e) {
-                console.error(`Hugging Face API Error: ${e}`)
+                console.warn(`Hugging Face API Error: ${e}`)
                 // If it's not JSON, just continue
             }
-            console.error(`Hugging Face API Error: ${response.status} - ${errorDetails}`)
+            console.warn(`Hugging Face API Error: ${response.status} - ${errorDetails}`)
             throw new Error(`API Error: ${response.status} - ${errorDetails}`)
         }
 
@@ -643,7 +645,7 @@ export const generateHuggingFaceImage = async (
         const imageBlob = await response.blob()
         return imageBlob
     } catch (error) {
-        console.error('Failed to generate image via Hugging Face API:', error)
+        console.warn('Failed to generate image via Hugging Face API:', error)
         return null // Return null on error
     }
 }
@@ -665,12 +667,12 @@ export const generateOpenAIImage = async (
     const isGang = moduleType === ModuleTypes.GANG
 
     if (!OPENAI_API_KEY) {
-        console.error('OpenAI token is missing, cannot generate image.')
+        console.warn('OpenAI token is missing, cannot generate image.')
         return null
     }
 
     if (!description || !name) {
-        console.error('Description and name are required for image generation.')
+        console.warn('Description and name are required for image generation.')
         return null
     }
 
@@ -712,7 +714,7 @@ export const generateOpenAIImage = async (
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
-            console.error('OpenAI API Error:', response.status, errorData)
+            console.warn('OpenAI API Error:', response.status, errorData)
             throw new Error(`API Error: ${response.status} - ${errorData?.error?.message || 'Unknown error'}`)
         }
 
@@ -720,7 +722,7 @@ export const generateOpenAIImage = async (
         const imageUrl = data?.data?.[0]?.url
 
         if (!imageUrl) {
-            console.error('No image URL received from OpenAI:', data)
+            console.warn('No image URL received from OpenAI:', data)
             throw new Error('Failed to get image URL from OpenAI API response.')
         }
 
@@ -734,7 +736,7 @@ export const generateOpenAIImage = async (
         const imageBlob = await imageResponse.blob()
         return imageBlob
     } catch (error) {
-        console.error('Failed to generate image via OpenAI API:', error)
+        console.warn('Failed to generate image via OpenAI API:', error)
         return null // Return null on error
     }
 }
@@ -756,12 +758,12 @@ export const generateGeminiImage = async (
     const isGang = moduleType === ModuleTypes.GANG
 
     if (!GEMINI_API_KEY) {
-        console.error('Gemini token is missing, cannot generate image.')
+        console.warn('Gemini token is missing, cannot generate image.')
         return null
     }
 
     if (!description || !name) {
-        console.error('Description and name are required for image generation.')
+        console.warn('Description and name are required for image generation.')
         return null
     }
 
@@ -808,7 +810,7 @@ export const generateGeminiImage = async (
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
-            console.error('Imagen API Error:', response.status, errorData)
+            console.warn('Imagen API Error:', response.status, errorData)
             throw new Error(`API Error: ${response.status} - ${JSON.stringify(errorData)}`)
         }
 
@@ -839,10 +841,10 @@ export const generateGeminiImage = async (
             return imageBlob
         }
 
-        console.error('No image data received from Imagen API:', data)
+        console.warn('No image data received from Imagen API:', data)
         throw new Error('Failed to get image data from Imagen API response.')
     } catch (error) {
-        console.error('Failed to generate image via Imagen API:', error)
+        console.warn('Failed to generate image via Imagen API:', error)
         return null // Return null on error
     }
 }
@@ -1104,7 +1106,7 @@ export const handleRegenerateImage = async (
         // Reset saving state after updates complete
         setTimeout(() => setIsSaving(false), 1000)
     } catch (error) {
-        console.error('Error during image regeneration:', error)
+        console.warn('Error during image regeneration:', error)
         // Show error message
         enqueueSnackbar(
             <Alert severity="error">

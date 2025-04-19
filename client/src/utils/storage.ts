@@ -13,6 +13,7 @@ const FIXER_JOBS_STORAGE_KEY = 'magnus-laser-fixer-jobs'
 const VIEW_PREFERENCES_KEY = 'magnus-laser-view-preferences'
 const READER_MODE_KEY = 'magnus-laser-reader-mode'
 const ANIMATIONS_ENABLED_KEY = 'magnus-laser-animations-enabled'
+const LOADER_ENABLED_KEY = 'magnus-laser-loader-enabled'
 const HUGGING_FACE_API_KEY = 'magnus-laser-huggingface-api-key'
 const OPENAI_API_KEY = 'magnus-laser-openai-api-key'
 const GEMINI_API_KEY = 'magnus-laser-gemini-api-key'
@@ -148,6 +149,20 @@ export const processEntityForStorage = async <T extends Record<string, unknown>>
         for (const [key, value] of Object.entries(obj)) {
             const currentPath = path ? `${path}.${key}` : key
 
+            // --- START Special handling for plotSubject ---
+            if (key === 'plotSubject' && value && typeof value === 'object') {
+                const subject = value as Record<string, unknown>
+                // Handle PlotGang specifically
+                if ('gang' in subject && subject.gang && typeof subject.gang === 'object') {
+                    // If subject.gang is an object (Gang), convert it to an ID
+                    const gangObj = subject.gang as Record<string, unknown>
+                    if ('ID' in gangObj) {
+                        subject.gang = gangObj.ID
+                    }
+                }
+            }
+            // --- END Special handling for plotSubject ---
+
             // If the property is called "image" and contains a base64 data URL
             if (key === 'image' && typeof value === 'string' && value.startsWith('data:')) {
                 try {
@@ -166,20 +181,47 @@ export const processEntityForStorage = async <T extends Record<string, unknown>>
                     obj[key] = (value as { ID: string }).ID
                 }
             }
-            // Also handle plotBuilding building reference nested in plot
+            // Handle plotBuilding building reference nested in plot
             else if (
                 key === 'plotBuilding' &&
                 value &&
                 typeof value === 'object' &&
                 'building' in value &&
                 typeof (value as { building: unknown }).building === 'object' &&
+                (value as { building: Record<string, unknown> }).building !== null && // Ensure not null
                 'ID' in (value as { building: Record<string, unknown> }).building
             ) {
-                const plotBuilding = value as { building: { ID: string } }
+                const plotBuilding = value as { building: { ID: string }; complication?: unknown } // Added optional complication
                 const buildingId = plotBuilding.building.ID
                 ;(obj[key] as Record<string, unknown>).building = buildingId
+                // Ensure we still recurse into plotBuilding complications if they exist
+                if (
+                    Object.prototype.hasOwnProperty.call(plotBuilding, 'complication') &&
+                    typeof plotBuilding.complication === 'object' &&
+                    plotBuilding.complication !== null
+                ) {
+                    const complication = plotBuilding.complication as Record<string, unknown>
+                    // Process character images if present
+                    if (
+                        'character' in complication &&
+                        complication.character &&
+                        typeof complication.character === 'object'
+                    ) {
+                        const character = complication.character as Record<string, unknown>
+                        await processObject(character, `${currentPath}.complication.character`)
+                    }
+
+                    // Process item images if present
+                    if ('item' in complication && complication.item && typeof complication.item === 'object') {
+                        const item = complication.item as Record<string, unknown>
+                        await processObject(item, `${currentPath}.complication.item`)
+                    }
+
+                    // Also process the complication object itself to catch any other properties
+                    await processObject(complication, `${currentPath}.complication`)
+                }
             }
-            // Handle PlotGang gang reference nested in plot complications
+            // Handle PlotGang gang reference nested in plot
             else if (
                 key === 'gang' &&
                 value &&
@@ -191,6 +233,17 @@ export const processEntityForStorage = async <T extends Record<string, unknown>>
                 const plotGang = value as { gang: { ID: string } }
                 const gangId = plotGang.gang.ID
                 ;(obj[key] as Record<string, unknown>).gang = gangId
+            }
+            // Handle direct gang reference in plotSubject
+            else if (
+                path === 'plot.plotSubject' &&
+                key === 'gang' &&
+                value &&
+                typeof value === 'object' &&
+                'ID' in (value as Record<string, unknown>)
+            ) {
+                const gangObj = value as { ID: string }
+                obj[key] = gangObj.ID
             }
             // Handle PlotComplication gang reference nested in plot
             else if (
@@ -235,21 +288,30 @@ export const processEntityForStorage = async <T extends Record<string, unknown>>
  * @param entity The entity loaded from storage
  * @returns A processed entity with imageIds replaced by data URLs
  */
-export const processEntityForDisplay = async <T extends Record<string, unknown>>(entity: T): Promise<T> => {
+export const processEntityForDisplay = async <T extends Record<string, unknown>>(
+    entity: T,
+    preloadedGangs?: Gang[] | null, // Optional preloaded gangs
+    preloadedBuildings?: Building[] | null // Optional preloaded buildings
+): Promise<T> => {
     if (!entity) return entity
 
     const processedEntity = { ...entity }
 
     // Pre-load buildings and gangs if needed for reference resolution
-    let buildings: Building[] | null = null
-    let gangs: Gang[] | null = null
+    let gangs: Gang[] | null = preloadedGangs || null
+    let buildings: Building[] | null = preloadedBuildings || null
 
     // Check if this is a FixerJob-like entity that might need building/gang resolution
     const needsReferenceResolution = 'plot' in entity // FixerJob has nested references in plot
 
+    // Load from storage only if not preloaded and resolution is needed
     if (needsReferenceResolution) {
-        buildings = (await localforage.getItem<Building[]>(BUILDINGS_STORAGE_KEY)) || []
-        gangs = (await localforage.getItem<Gang[]>(GANGS_STORAGE_KEY)) || []
+        if (!gangs) {
+            gangs = (await localforage.getItem<Gang[]>(GANGS_STORAGE_KEY)) || []
+        }
+        if (!buildings) {
+            buildings = (await localforage.getItem<Building[]>(BUILDINGS_STORAGE_KEY)) || []
+        }
     }
 
     // Helper function to find a gang by ID
@@ -263,17 +325,30 @@ export const processEntityForDisplay = async <T extends Record<string, unknown>>
             const currentPath = path ? `${path}.${key}` : key
 
             // If the property is called "image" and contains an imageId (string but not a data URL)
-            if (key === 'image' && typeof value === 'string' && !value.startsWith('data:')) {
-                try {
-                    const blob = await getImageBlob(value)
-                    if (blob) {
-                        const dataUrl = await blobToDataUrl(blob)
-                        obj[key] = dataUrl
+            if (key === 'image') {
+                if (typeof value === 'string' && !value.startsWith('data:') && value !== '') {
+                    try {
+                        const blob = await getImageBlob(value)
+                        if (blob) {
+                            const dataUrl = await blobToDataUrl(blob)
+                            obj[key] = dataUrl
+                        } else {
+                            // If blob is null (not found), set image to null
+                            obj[key] = null
+                            console.warn(
+                                `Image blob not found for ID: ${value} at path ${currentPath}. Setting to null.`
+                            )
+                        }
+                    } catch (error) {
+                        console.error(`Error processing image at path ${currentPath}:`, error)
+                        // Keep the original value in case of error? No, better to set to null.
+                        obj[key] = null
                     }
-                } catch (error) {
-                    console.error(`Error processing image at path ${currentPath}:`, error)
-                    // Keep the original value in case of error
+                } else if (value === '') {
+                    // Explicitly convert empty string loaded from storage to null
+                    obj[key] = null
                 }
+                // If value is already null or a data URL, leave it as is.
             }
             // Handle Building and Gang references in properties called building or gang
             else if (
@@ -310,6 +385,8 @@ export const processEntityForDisplay = async <T extends Record<string, unknown>>
                         if (gang) {
                             // Replace the ID with the processed gang object
                             subject.gang = await processEntityForDisplay(gang)
+                        } else {
+                            console.warn(`Gang not found for ID: ${gangId}`)
                         }
                     } else if (subject.gang && typeof subject.gang === 'object') {
                         // If it's already a gang object, check if it has just an ID or is complete
@@ -321,6 +398,8 @@ export const processEntityForDisplay = async <T extends Record<string, unknown>>
                             const gang = findGangById(gangId)
                             if (gang) {
                                 subject.gang = await processEntityForDisplay(gang)
+                            } else {
+                                console.warn(`Gang not found for ID: ${gangId}`)
                             }
                         } else {
                             // It's a more complete gang object, just process it in place
@@ -348,6 +427,31 @@ export const processEntityForDisplay = async <T extends Record<string, unknown>>
                 const building = buildings.find((b) => b.ID === buildingId)
                 if (building) {
                     plotBuilding.building = await processEntityForDisplay(building)
+                }
+
+                // Explicitly process the complication object within plotBuilding
+                if (
+                    'complication' in plotBuilding &&
+                    plotBuilding.complication &&
+                    typeof plotBuilding.complication === 'object'
+                ) {
+                    const complication = plotBuilding.complication as Record<string, unknown>
+
+                    // Process character images if present
+                    if (
+                        'character' in complication &&
+                        complication.character &&
+                        typeof complication.character === 'object'
+                    ) {
+                        const character = complication.character as Record<string, unknown>
+                        await processObject(character, `${currentPath}.complication.character`)
+                    }
+
+                    // Process item images if present
+                    if ('item' in complication && complication.item && typeof complication.item === 'object') {
+                        const item = complication.item as Record<string, unknown>
+                        await processObject(item, `${currentPath}.complication.item`)
+                    }
                 }
             }
             // Handle PlotGang gang reference nested in plot
@@ -525,16 +629,20 @@ export const clearBuildings = async (): Promise<void> => {
  * Also saves any referenced buildings and gangs that don't exist yet
  * @param fixerJobs Array of fixer jobs to save
  */
-export const saveFixerJobs = async (fixerJobs: FixerJob[]): Promise<void> => {
+export const saveFixerJobs = async (fixerJobs: FixerJob[]): Promise<FixerJob[]> => {
     try {
         // Extract buildings and gangs from fixer jobs before processing
         await extractAndSaveReferences(fixerJobs)
 
-        // Process fixer jobs to store images as blobs
+        // Process fixer jobs to store images as blobs and replace nested objects with IDs
         const processedFixerJobs = await Promise.all(fixerJobs.map((job) => processEntityForStorage(job)))
         await localforage.setItem(FIXER_JOBS_STORAGE_KEY, processedFixerJobs)
+        // Return the processed jobs so the caller can update context correctly
+        return processedFixerJobs
     } catch (error) {
         console.error('Error saving fixer jobs to storage:', error)
+        // Return the original array on error?
+        return fixerJobs // Or throw error? Returning original might mask issues.
     }
 }
 
@@ -559,38 +667,15 @@ const extractAndSaveReferences = async (fixerJobs: FixerJob[]): Promise<void> =>
             ) {
                 buildings.push(job.plot.plotBuilding.building as Building)
             }
-
-            // Extract from complication if it exists
-            if (job.plot.complication) {
-                // Extract gang from complication
-                if (
-                    job.plot.complication.gang &&
-                    job.plot.complication.gang.gang &&
-                    typeof job.plot.complication.gang.gang === 'object'
-                ) {
-                    gangs.push(job.plot.complication.gang.gang as Gang)
-                }
-            }
-
-            // Extract from PlaceComplication if exists
-            if (
-                job.plot.plotBuilding &&
-                job.plot.plotBuilding.complication &&
-                job.plot.plotBuilding.complication.gang &&
-                job.plot.plotBuilding.complication.gang.gang &&
-                typeof job.plot.plotBuilding.complication.gang.gang === 'object'
-            ) {
-                gangs.push(job.plot.plotBuilding.complication.gang.gang as Gang)
-            }
-
             // Extract from plotSubject if it exists and is a PlotGang
-            if (
-                job.plot.plotSubject &&
-                'gang' in job.plot.plotSubject &&
-                job.plot.plotSubject.gang &&
-                typeof job.plot.plotSubject.gang === 'object'
-            ) {
-                gangs.push(job.plot.plotSubject.gang as Gang)
+            if (job.plot.plotSubject && 'gang' in job.plot.plotSubject) {
+                // Handle both when gang is an object and when it's a reference
+                if (job.plot.plotSubject.gang && typeof job.plot.plotSubject.gang === 'object') {
+                    gangs.push(job.plot.plotSubject.gang as Gang)
+                } else if (typeof job.plot.plotSubject.gang === 'string') {
+                    // Skip ID references as they are already in the database
+                    // We only need to extract and save new gang objects
+                }
             }
         }
     })
@@ -866,6 +951,34 @@ export const loadGeminiApiKey = async (): Promise<string> => {
     } catch (error) {
         console.error('Error loading Gemini API key:', error)
         return ''
+    }
+}
+
+/**
+ * Save loader enabled preference
+ * @param enabled Whether loader is enabled
+ */
+export const saveLoaderEnabled = async (enabled: boolean): Promise<void> => {
+    try {
+        await localforage.setItem(LOADER_ENABLED_KEY, enabled)
+    } catch (error) {
+        console.error('Error saving loader preference:', error)
+        throw error
+    }
+}
+
+/**
+ * Load loader enabled preference
+ * @returns Whether loader is enabled
+ */
+export const loadLoaderEnabled = async (): Promise<boolean> => {
+    try {
+        const loaderEnabled = await localforage.getItem<boolean | null>(LOADER_ENABLED_KEY)
+        // Default to true if no preference is set yet
+        return loaderEnabled === null ? true : loaderEnabled
+    } catch (error) {
+        console.error('Error loading loader preference:', error)
+        return true // Default to true in case of error
     }
 }
 

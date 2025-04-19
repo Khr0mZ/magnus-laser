@@ -44,7 +44,7 @@ type Plot {
   # If the focus is not on the building, plotSubject will represent either a character, an item, or a gang.
   plotSubject: PlotSubject
   # Complication describes what complicates the plot.
-  complication: PlotComplication!
+  plotComplication: PlotComplication!
 }
 
 # The PlotSubject union represents the possible subjects of the plot.
@@ -84,13 +84,12 @@ type PlotComplication {
   # The following fields are conditionally set based on the complication type.
   character: PlotCharacter
   item: PlotItem
-  gang: PlotGang
 }
 
 # GangComplication gives details about complications involving a gang.
 type GangComplication {
   type: PlotGangComplicationType!
-  # Details about the character and/or item involved in the gang complication.
+  # The following fields are conditionally set based on the complication type.
   character: PlotCharacter
   item: PlotItem
 }
@@ -98,8 +97,7 @@ type GangComplication {
 # BuildingComplication gives details about complications involving the plot building.
 type BuildingComplication {
   type: PlotBuildingComplicationType!
-  # Details about the character, item, or gang involved in the building complication.
+  # The following fields are conditionally set based on the complication type.
   character: PlotCharacter
   item: PlotItem
-  gang: PlotGang
 }

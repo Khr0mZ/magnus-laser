@@ -20,10 +20,15 @@ import {
     PlotBuilding,
     PlotBuildingVerb,
     PlotCharacter,
+    PlotCharacterAttitude,
+    PlotCharacterType,
     PlotCharacterVerb,
     PlotGang,
+    PlotGangComplicationType,
     PlotGangVerb,
     PlotItem,
+    PlotItemCondition,
+    PlotItemType,
     PlotItemVerb,
 } from '../../../../graphql/types'
 import { handleRegenerateImage } from '../../../../utils/apiUtils'
@@ -77,14 +82,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
     } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
-    const { fixerJobs } = useData()
-    // Safe getters for plot property values
-    const getPlotVerbValue = () => {
-        if (editedItem.plot?.verb && 'value' in editedItem.plot.verb) {
-            return editedItem.plot.verb.value
-        }
-        return ''
-    }
+    const { fixerJobs, gangs, buildings } = useData()
 
     const getSubjectType = (): string => {
         const subject = editedItem.plot?.plotSubject
@@ -151,8 +149,8 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
             } else {
                 handleChange('plot.plotSubject', {
                     name: '',
-                    type: undefined,
-                    attitude: undefined,
+                    type: Object.values(PlotCharacterType)[0],
+                    attitude: Object.values(PlotCharacterAttitude)[0],
                     image: '',
                 })
                 handleChange('plot.verb', {
@@ -167,8 +165,8 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
             } else {
                 handleChange('plot.plotSubject', {
                     name: '',
-                    type: undefined,
-                    condition: undefined,
+                    type: Object.values(PlotItemType)[0],
+                    condition: Object.values(PlotItemCondition)[0],
                     image: '',
                 })
                 handleChange('plot.verb', {
@@ -181,7 +179,30 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
                 handleChange('plot.verb', fixerJob.plot.verb)
             } else {
-                handleChange('plot.plotSubject', null)
+                // Get the first gang or undefined if no gangs
+                const firstGang = gangs.length > 0 ? gangs[0] : undefined
+                const gangId = firstGang?.ID
+
+                // Store gang reference structure with ID for storage compatibility
+                handleChange('plot.plotSubject', {
+                    gang: gangId,
+                    complication: {
+                        type: Object.values(PlotGangComplicationType)[0],
+                    },
+                })
+
+                // After the ID reference is set, update with the full object for display
+                if (firstGang) {
+                    setTimeout(() => {
+                        handleChange('plot.plotSubject', {
+                            gang: firstGang,
+                            complication: {
+                                type: Object.values(PlotGangComplicationType)[0],
+                            },
+                        })
+                    }, 0)
+                }
+
                 handleChange('plot.verb', {
                     __typename: 'PlotGangVerbWrapper',
                     value: Object.values(PlotGangVerb)[0],
@@ -197,6 +218,29 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     __typename: 'PlotBuildingVerbWrapper',
                     value: Object.values(PlotBuildingVerb)[0],
                 })
+
+                // Get the first building or undefined if no buildings
+                const firstBuilding = buildings.length > 0 ? buildings[0] : undefined
+                const buildingId = firstBuilding?.ID
+
+                // Set default building as ID reference for storage compatibility
+                if (buildingId) {
+                    handleChange('plot.plotBuilding.building', buildingId)
+
+                    // After the ID reference is set, update with the full object for display
+                    if (firstBuilding) {
+                        setTimeout(() => {
+                            // Get the current plotBuilding value first
+                            const plotBuilding = fixerJob.plot.plotBuilding || {}
+
+                            // Update with the full building object
+                            handleChange('plot.plotBuilding', {
+                                ...plotBuilding,
+                                building: firstBuilding,
+                            })
+                        }, 0)
+                    }
+                }
             }
         }
     }
@@ -274,7 +318,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                             </InputLabel>
                             <Select
                                 labelId="plot-verb-label"
-                                value={getPlotVerbValue()}
+                                value={editedItem.plot.verb.value}
                                 onChange={(e) => {
                                     handleChange('plot.verb.value', e.target.value)
                                 }}
@@ -401,6 +445,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     gang={{
                         main: true,
                         handleGangChangeTarget: 'plot.plotSubject.gang',
+                        // (editedItem.plot.plotSubject as PlotGang).complication.character?.image
                         handleChangeGangComplicationCharacterTarget: 'plot.plotSubject.complication.character',
                         handleChangeGangComplicationItemTarget: 'plot.plotSubject.complication.item',
                         handleChangeGangComplicationTypeTarget: 'plot.plotSubject.complication.type',
@@ -493,7 +538,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                         .plotBuilding as PlotBuilding,
                     character: {
                         check: editedItem.plot.plotBuilding.complication.type.includes('CHARACTER') || false,
-                        imageField: ImageFields.buildingComplicationCharacterOrItem,
+                        imageField: ImageFields.buildingComplicationCharacter,
                         name: {
                             value: editedItem.plot.plotBuilding.complication.character?.name || '',
                             onChange: (e) =>
@@ -543,105 +588,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                                 !!editedItem.plot.plotBuilding.complication.item?.type,
                         },
                     },
-                    gang: {
-                        main: false,
-                        check: editedItem.plot.plotBuilding.complication.type.includes('GANG') || false,
-                        handleGangChangeTarget: 'plot.plotBuilding.complication.gang',
-                        handleChangeGangComplicationCharacterTarget: 'plot.plotBuilding.complication.character',
-                        handleChangeGangComplicationItemTarget: 'plot.plotBuilding.complication.item',
-                        handleChangeGangComplicationTypeTarget: 'plot.plotBuilding.complication.type',
-                        chainStarter: editedItem.plot.plotBuilding.complication.gang as PlotGang,
-                        originalChainStarter: fixerJobs.find((job) => job.ID === editedItem.ID)?.plot.plotBuilding
-                            .complication.gang as PlotGang,
-                        character: {
-                            check:
-                                (
-                                    editedItem.plot.plotBuilding.complication.gang as PlotGang
-                                )?.complication?.type?.includes('CHARACTER') || false,
-                            imageField: ImageFields.gangComplicationCharacter,
-                            name: {
-                                value:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication
-                                        ?.character?.name || '',
-                                onChange: (e) => {
-                                    handleChange('plot.plotBuilding.complication.gang.character.name', e.target.value)
-                                },
-                            },
-                            type: {
-                                value:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication
-                                        ?.character?.type || '',
-                                onChange: (e) => {
-                                    handleChange('plot.plotBuilding.complication.gang.character.type', e.target.value)
-                                },
-                            },
-                            attitude: {
-                                value:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication
-                                        ?.character?.attitude || '',
-                                onChange: (e) => {
-                                    handleChange(
-                                        'plot.plotBuilding.complication.gang.character.attitude',
-                                        e.target.value
-                                    )
-                                },
-                            },
-                            image: {
-                                main: false,
-                                image:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication
-                                        ?.character?.image || '',
-                                canRegenerate:
-                                    !!(editedItem.plot?.plotBuilding.complication.gang as PlotGang)?.complication
-                                        ?.character?.name &&
-                                    !!(editedItem.plot?.plotBuilding.complication.gang as PlotGang)?.complication
-                                        ?.character?.attitude &&
-                                    !!(editedItem.plot?.plotBuilding.complication.gang as PlotGang)?.complication
-                                        ?.character?.type,
-                            },
-                        },
-                        item: {
-                            check:
-                                (
-                                    editedItem.plot.plotBuilding.complication.gang as PlotGang
-                                )?.complication?.type?.includes('ITEM') || false,
-                            imageField: ImageFields.gangComplicationItem,
-                            name: {
-                                value:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication?.item
-                                        ?.name || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotBuilding.complication.gang.item.name', e.target.value),
-                            },
-                            type: {
-                                value:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication?.item
-                                        ?.type || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotBuilding.complication.gang.item.type', e.target.value),
-                            },
-                            condition: {
-                                value:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication?.item
-                                        ?.condition || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotBuilding.complication.gang.item.condition', e.target.value),
-                            },
-                            image: {
-                                image:
-                                    (editedItem.plot.plotBuilding.complication.gang as PlotGang)?.complication?.item
-                                        ?.image || '',
-                                main: false,
-                                canRegenerate:
-                                    !!(editedItem.plot?.plotBuilding.complication.gang as PlotGang)?.complication?.item
-                                        ?.name &&
-                                    !!(editedItem.plot?.plotBuilding.complication.gang as PlotGang)?.complication?.item
-                                        ?.condition &&
-                                    !!(editedItem.plot?.plotBuilding.complication.gang as PlotGang)?.complication?.item
-                                        ?.type,
-                            },
-                        },
-                    },
                 }}
             />
 
@@ -661,138 +607,51 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 handleRegenerateClick={handleRegenerateClick}
                 complication={{
                     character: {
-                        check: editedItem.plot.complication.type.includes('CHARACTER') || false,
-                        imageField: ImageFields.buildingComplicationCharacterOrItem,
+                        check: editedItem.plot.plotComplication.type.includes('CHARACTER') || false,
+                        imageField: ImageFields.mainComplicationCharacter,
                         name: {
-                            value: editedItem.plot.complication.character?.name || '',
-                            onChange: (e) => handleChange('plot.complication.character.name', e.target.value),
+                            value: editedItem.plot.plotComplication.character?.name || '',
+                            onChange: (e) => handleChange('plot.plotComplication.character.name', e.target.value),
                         },
                         type: {
-                            value: editedItem.plot.complication.character?.type || '',
-                            onChange: (e) => handleChange('plot.complication.character.type', e.target.value),
+                            value: editedItem.plot.plotComplication.character?.type || '',
+                            onChange: (e) => handleChange('plot.plotComplication.character.type', e.target.value),
                         },
                         attitude: {
-                            value: editedItem.plot.complication.character?.attitude || '',
-                            onChange: (e) => handleChange('plot.complication.character.attitude', e.target.value),
+                            value: editedItem.plot.plotComplication.character?.attitude || '',
+                            onChange: (e) => handleChange('plot.plotComplication.character.attitude', e.target.value),
                         },
                         image: {
                             main: false,
-                            image: editedItem.plot.complication.character?.image || '',
+                            image: editedItem.plot.plotComplication.character?.image || '',
                             canRegenerate:
-                                !!editedItem.plot.complication.character?.name &&
-                                !!editedItem.plot.complication.character?.attitude &&
-                                !!editedItem.plot.complication.character?.type,
+                                !!editedItem.plot.plotComplication.character?.name &&
+                                !!editedItem.plot.plotComplication.character?.attitude &&
+                                !!editedItem.plot.plotComplication.character?.type,
                         },
                     },
                     item: {
-                        check: editedItem.plot.complication.type.includes('ITEM') || false,
-                        imageField: ImageFields.buildingComplicationItem,
+                        check: editedItem.plot.plotComplication.type.includes('ITEM') || false,
+                        imageField: ImageFields.mainComplicationItem,
                         name: {
-                            value: editedItem.plot.complication.item?.name || '',
-                            onChange: (e) => handleChange('plot.complication.item.name', e.target.value),
+                            value: editedItem.plot.plotComplication.item?.name || '',
+                            onChange: (e) => handleChange('plot.plotComplication.item.name', e.target.value),
                         },
                         type: {
-                            value: editedItem.plot.complication.item?.type || '',
-                            onChange: (e) => handleChange('plot.complication.item.type', e.target.value),
+                            value: editedItem.plot.plotComplication.item?.type || '',
+                            onChange: (e) => handleChange('plot.plotComplication.item.type', e.target.value),
                         },
                         condition: {
-                            value: editedItem.plot.complication.item?.condition || '',
-                            onChange: (e) => handleChange('plot.complication.item.condition', e.target.value),
+                            value: editedItem.plot.plotComplication.item?.condition || '',
+                            onChange: (e) => handleChange('plot.plotComplication.item.condition', e.target.value),
                         },
                         image: {
                             main: false,
-                            image: editedItem.plot.complication.item?.image || '',
+                            image: editedItem.plot.plotComplication.item?.image || '',
                             canRegenerate:
-                                !!editedItem.plot.complication.item?.name &&
-                                !!editedItem.plot.complication.item?.condition &&
-                                !!editedItem.plot.complication.item?.type,
-                        },
-                    },
-                    gang: {
-                        main: false,
-                        check: editedItem.plot.complication.type.includes('GANG') || false,
-                        handleGangChangeTarget: 'plot.complication.gang.complication',
-                        handleChangeGangComplicationCharacterTarget: 'plot.complication.gang.complication.character',
-                        handleChangeGangComplicationItemTarget: 'plot.complication.gang.complication.item',
-                        handleChangeGangComplicationTypeTarget: 'plot.complication.gang.complication.type',
-                        chainStarter: editedItem.plot.complication.gang as PlotGang,
-                        originalChainStarter: fixerJobs.find((job) => job.ID === editedItem.ID)?.plot.complication
-                            .gang as PlotGang,
-                        character: {
-                            check:
-                                (editedItem.plot.complication.gang as PlotGang)?.complication?.type?.includes(
-                                    'CHARACTER'
-                                ) || false,
-                            imageField: ImageFields.gangComplicationCharacter,
-                            name: {
-                                value:
-                                    (editedItem.plot.complication.gang as PlotGang)?.complication?.character?.name ||
-                                    '',
-                                onChange: (e) => {
-                                    handleChange('plot.complication.gang.complication.character.name', e.target.value)
-                                },
-                            },
-                            type: {
-                                value:
-                                    (editedItem.plot.complication.gang as PlotGang)?.complication?.character?.type ||
-                                    '',
-                                onChange: (e) => {
-                                    handleChange('plot.complication.gang.complication.character.type', e.target.value)
-                                },
-                            },
-                            attitude: {
-                                value:
-                                    (editedItem.plot.complication.gang as PlotGang)?.complication?.character
-                                        ?.attitude || '',
-                                onChange: (e) => {
-                                    handleChange(
-                                        'plot.complication.gang.complication.character.attitude',
-                                        e.target.value
-                                    )
-                                },
-                            },
-                            image: {
-                                main: false,
-                                image:
-                                    (editedItem.plot.complication.gang as PlotGang)?.complication?.character?.image ||
-                                    '',
-                                canRegenerate:
-                                    !!(editedItem.plot?.complication.gang as PlotGang)?.complication?.character?.name &&
-                                    !!(editedItem.plot?.complication.gang as PlotGang)?.complication?.character
-                                        ?.attitude &&
-                                    !!(editedItem.plot?.complication.gang as PlotGang)?.complication?.character?.type,
-                            },
-                        },
-                        item: {
-                            check:
-                                (editedItem.plot.complication.gang as PlotGang)?.complication?.type?.includes('ITEM') ||
-                                false,
-                            imageField: ImageFields.gangComplicationItem,
-                            name: {
-                                value: (editedItem.plot.complication.gang as PlotGang)?.complication?.item?.name || '',
-                                onChange: (e) =>
-                                    handleChange('plot.complication.gang.complication.item.name', e.target.value),
-                            },
-                            type: {
-                                value: (editedItem.plot.complication.gang as PlotGang)?.complication?.item?.type || '',
-                                onChange: (e) =>
-                                    handleChange('plot.complication.gang.complication.item.type', e.target.value),
-                            },
-                            condition: {
-                                value:
-                                    (editedItem.plot.complication.gang as PlotGang)?.complication?.item?.condition ||
-                                    '',
-                                onChange: (e) =>
-                                    handleChange('plot.complication.gang.complication.item.condition', e.target.value),
-                            },
-                            image: {
-                                image: (editedItem.plot.complication.gang as PlotGang)?.complication?.item?.image || '',
-                                main: false,
-                                canRegenerate:
-                                    !!(editedItem.plot?.complication.gang as PlotGang)?.complication?.item?.name &&
-                                    !!(editedItem.plot?.complication.gang as PlotGang)?.complication?.item?.condition &&
-                                    !!(editedItem.plot?.complication.gang as PlotGang)?.complication?.item?.type,
-                            },
+                                !!editedItem.plot.plotComplication.item?.name &&
+                                !!editedItem.plot.plotComplication.item?.condition &&
+                                !!editedItem.plot.plotComplication.item?.type,
                         },
                     },
                 }}

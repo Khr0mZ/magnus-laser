@@ -82,13 +82,66 @@ const CardGang = (props: CardGangProps) => {
     } = props
     const { t } = useTranslation()
     const { gangs, fixerJobs } = useData()
-    const [selectedGang, setSelectedGang] = useState<Gang | null>(gang.originalChainStarter?.gang || null)
+    const [selectedGang, setSelectedGang] = useState<Gang>(() => {
+        // Get the gang from chainStarter based on ID or direct reference
+        const gangRef = gang.chainStarter?.gang
+        if (typeof gangRef === 'string') {
+            // If gang is stored as ID, find the gang object
+            return gangs.find((g) => g.ID === gangRef) || gangs[0] || null
+        }
+        // Otherwise it's already a gang object
+        return gangRef || gangs[0] || null
+    })
 
     const handleChangeGang = (e: SelectChangeEvent<string>) => {
-        const selectedGang = gangs.find((g) => g.ID === e.target.value)
-        if (selectedGang) {
-            setSelectedGang(selectedGang)
-            handleChange(gang.handleGangChangeTarget, selectedGang)
+        const gangId = e.target.value
+        const sg = gangs.find((g) => g.ID === gangId)
+        if (sg) {
+            setSelectedGang(sg)
+
+            // Store both the ID for storage compatibility and the gang object for immediate display
+            if (gang.chainStarter && 'gang' in gang.chainStarter) {
+                // First update the ID reference for storage
+                handleChange(gang.handleGangChangeTarget, gangId)
+
+                // Now update the actual display object
+                // This is a separate update to ensure the UI shows the full gang object
+                // We need to use a timeout to ensure the first change is processed
+                setTimeout(() => {
+                    // For plotSubject.gang, we need to update the gang property directly
+                    // Look at the original object path and update appropriately
+                    if (gang.handleGangChangeTarget === 'plot.plotSubject.gang') {
+                        const plotSubject = editedItem.plot?.plotSubject
+                        if (plotSubject && 'gang' in plotSubject) {
+                            // Replace the string ID with the full gang object for display
+                            handleChange('plot.plotSubject', {
+                                ...plotSubject,
+                                gang: sg,
+                            })
+                        }
+                    } else if (gang.handleGangChangeTarget.includes('complication')) {
+                        // For complications with gang references, similar approach
+                        const parts = gang.handleGangChangeTarget.split('.')
+                        const complicationPath = parts.slice(0, -1).join('.')
+                        if (
+                            complicationPath &&
+                            editedItem.plot?.plotSubject &&
+                            'complication' in editedItem.plot.plotSubject
+                        ) {
+                            const plotGang = editedItem.plot.plotSubject as unknown as {
+                                complication: { gang?: unknown }
+                            }
+                            const complication = plotGang.complication
+                            if (complication && 'gang' in complication) {
+                                handleChange('plot.plotSubject.complication', {
+                                    ...complication,
+                                    gang: sg,
+                                })
+                            }
+                        }
+                    }
+                }, 0)
+            }
         }
     }
 
@@ -148,7 +201,7 @@ const CardGang = (props: CardGangProps) => {
                         </InputLabel>
                         <Select
                             labelId="gang-label"
-                            value={selectedGang?.ID || ''}
+                            value={selectedGang?.ID}
                             onChange={(e) => handleChangeGang(e)}
                             sx={selectStyle}
                         >
@@ -161,18 +214,20 @@ const CardGang = (props: CardGangProps) => {
                     </FormControl>
                     {/* Gang Basic Info */}
                     <Grid item container xs={12} spacing={2}>
+                        {/* Name */}
+                        <Grid item container xs={12}>
+                            <TextField
+                                fullWidth
+                                label={t('gangs.labels.name')}
+                                value={selectedGang.name}
+                                variant="outlined"
+                                sx={textFieldOutlinedStyle}
+                                disabled
+                            />
+                        </Grid>
                         <Grid item container xs={12} md={8}>
                             <Stack spacing={2} sx={{ width: '100%' }}>
                                 <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
-                                    {/* Name */}
-                                    <TextField
-                                        fullWidth
-                                        label={t('gangs.labels.name')}
-                                        value={selectedGang?.name || ''}
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                        disabled
-                                    />
                                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                                         {/* Skill */}
                                         <TextField
@@ -339,7 +394,7 @@ const CardGang = (props: CardGangProps) => {
                                     handleRegenerateClick={() => {}}
                                     canRegenerate={false}
                                     isGeneratingImage={false}
-                                    disabled={true}
+                                    disabled
                                 />
                             </FormControl>
                         </Grid>
@@ -378,11 +433,14 @@ const CardGang = (props: CardGangProps) => {
                                     </InputLabel>
                                     <Select
                                         labelId="gang-complication-label"
-                                        value={gang.chainStarter?.complication?.type || ''}
+                                        value={
+                                            gang.chainStarter?.complication?.type ||
+                                            PlotGangComplicationType.POLICE_RAIDING
+                                        }
                                         onChange={handleChangeGangComplication}
                                         sx={selectStyle}
                                     >
-                                        {Object.values(PlotGangComplicationType || {}).map((type) => (
+                                        {Object.values(PlotGangComplicationType).map((type) => (
                                             <MenuItem key={type} value={type}>
                                                 {t(`fixerJobs.gangComplication.${type}`)}
                                             </MenuItem>

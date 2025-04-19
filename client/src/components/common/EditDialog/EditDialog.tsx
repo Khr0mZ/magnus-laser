@@ -78,13 +78,18 @@ export const EditDialog = (props: EditDialogProps) => {
             const reader = new FileReader()
             reader.onloadend = () => {
                 handleChange(currentImageField, reader.result as string)
+                // Reset file input value using the ref AFTER processing is done
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '' // Or null
+                }
             }
             reader.readAsDataURL(file)
         }
         // Reset file input value so the same file can be selected again
-        if (event.target) {
-            event.target.value = ''
-        }
+        // Moved the reset logic into onloadend to ensure it happens after processing
+        // if (event.target) {
+        //     event.target.value = ''
+        // }
     }
 
     // Reusable Select style
@@ -166,45 +171,25 @@ export const EditDialog = (props: EditDialogProps) => {
         setEditedItem((prev) => {
             if (!prev) return prev
 
-            // Function to handle nested path updates
-            const setNestedProperty = (
-                obj: Record<string, unknown>,
-                path: string,
-                value: unknown
-            ): Record<string, unknown> => {
-                // Make sure path is a string before using includes
-                if (typeof path !== 'string') {
-                    return { ...obj } // Return a copy of the object unchanged
+            // --- Custom Deep Update Logic ---
+            const newState = JSON.parse(JSON.stringify(prev)) // Start with a deep clone
+            const parts = field.split('.')
+            let current = newState
+
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i]
+                // Ensure the intermediate path exists and is an object
+                if (current[part] === undefined || current[part] === null || typeof current[part] !== 'object') {
+                    current[part] = {} // Create if not exists or not an object
                 }
-
-                if (!path.includes('.')) {
-                    // For top-level fields, update directly
-                    return {
-                        ...obj,
-                        [path]: value,
-                    }
-                }
-
-                // For nested fields, traverse the path
-                const parts = path.split('.')
-                const result = { ...obj }
-                let current = result
-
-                for (let i = 0; i < parts.length - 1; i++) {
-                    const part = parts[i]
-                    if (!(part in current)) {
-                        current[part] = {}
-                    } else {
-                        current[part] = { ...(current[part] as Record<string, unknown>) }
-                    }
-                    current = current[part] as Record<string, unknown>
-                }
-
-                current[parts[parts.length - 1]] = value
-                return result
+                // Move to the next level
+                current = current[part]
             }
 
-            return setNestedProperty(prev as Record<string, unknown>, field, value) as typeof prev
+            // Set the value at the final part of the path
+            current[parts[parts.length - 1]] = value
+            return newState
+            // --- End Custom Deep Update Logic ---
         })
     }
 
@@ -287,7 +272,7 @@ export const EditDialog = (props: EditDialogProps) => {
                 PaperProps={{
                     sx: readerMode
                         ? {
-                              bgcolor: '#ffffff',
+                              bgcolor: colors.grays.gray800 + ' !important',
                               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
                               color: '#333',
                           }

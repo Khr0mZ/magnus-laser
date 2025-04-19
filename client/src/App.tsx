@@ -32,6 +32,7 @@ const AppContent = (): JSX.Element => {
         isInitialized,
         isLoadingPreferences,
         loadingStatus,
+        loaderEnabled,
         toggleReaderMode,
         updateViewPreference,
         handleLoaderComplete,
@@ -45,6 +46,14 @@ const AppContent = (): JSX.Element => {
 
     // Show loading screen while initializing (after preferences are loaded)
     if (!isInitialized) {
+        // If loader is disabled, skip the loader and go directly to the initialized state
+        if (!loaderEnabled) {
+            // We need to call these to ensure the app is properly initialized
+            handleLoaderComplete()
+            setStorageCleanupComplete()
+            return <></>
+        }
+
         return (
             <CyberpunkLoader
                 loadingStatus={loadingStatus}

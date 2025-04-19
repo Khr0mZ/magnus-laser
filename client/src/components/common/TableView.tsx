@@ -3,6 +3,7 @@ import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRo
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import CustomScrollbar from '../../components/CustomScrollbar'
+import { useData } from '../../contexts/dataHooks'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
 import { Building, FixerJob, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
@@ -35,6 +36,57 @@ const TableView = (props: TableViewProps) => {
     const { items, onDelete, moduleType, onEdit } = props
     const { t } = useTranslation()
     const { readerMode } = useContext(ReaderModeContext)
+    const { buildings, gangs } = useData()
+
+    const resolveGangReference = (gangId: string) => {
+        if (!gangId) return null
+        return gangs.find((g) => g.ID === gangId)
+    }
+
+    const resolveBuildingReference = (buildingId: string) => {
+        if (!buildingId) return null
+        return buildings.find((b) => b.ID === buildingId)
+    }
+
+    const getValueByPath = (item: Record<string, unknown>, path: string): unknown => {
+        const parts = path.split('.')
+        let current = item as Record<string, unknown>
+
+        for (const part of parts) {
+            if (!current || typeof current !== 'object') return undefined
+
+            if (part === 'verb' && current.verb && typeof current.verb === 'object') {
+                current = current.verb as Record<string, unknown>
+                continue
+            }
+
+            if (part === 'gang' && current[part]) {
+                if (typeof current[part] === 'string') {
+                    const gangRef = resolveGangReference(current[part] as string)
+                    if (gangRef) {
+                        current = gangRef as unknown as Record<string, unknown>
+                        continue
+                    }
+                    return current[part]
+                }
+            }
+
+            if (part === 'building' && current[part]) {
+                if (typeof current[part] === 'string') {
+                    const buildingRef = resolveBuildingReference(current[part] as string)
+                    if (buildingRef) {
+                        current = buildingRef as unknown as Record<string, unknown>
+                        continue
+                    }
+                    return current[part]
+                }
+            }
+
+            current = current[part] as Record<string, unknown>
+        }
+
+        return current
+    }
 
     if (items.length === 0) return null
 
@@ -231,32 +283,10 @@ const TableView = (props: TableViewProps) => {
                                             {moduleType === ModuleTypes.FIXER_JOB && (
                                                 <>
                                                     {column.key === 'name' && item.name}
-                                                    {column.key.startsWith('plot.') &&
+                                                    {column.key !== 'name' &&
                                                         processFixerJobValueForDisplay(
                                                             column.key,
-                                                            (() => {
-                                                                const parts = column.key.split('.')
-                                                                let value = item as Record<string, unknown>
-
-                                                                for (const part of parts) {
-                                                                    if (!value || typeof value !== 'object')
-                                                                        return undefined
-
-                                                                    // Special case for verb which is a union type
-                                                                    if (
-                                                                        part === 'verb' &&
-                                                                        value.verb &&
-                                                                        typeof value.verb === 'object'
-                                                                    ) {
-                                                                        value = value.verb as Record<string, unknown>
-                                                                        continue
-                                                                    }
-
-                                                                    value = value[part] as Record<string, unknown>
-                                                                }
-
-                                                                return value
-                                                            })(),
+                                                            getValueByPath(item as Record<string, unknown>, column.key),
                                                             t
                                                         )}
                                                 </>

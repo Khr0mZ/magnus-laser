@@ -12,11 +12,10 @@ import {
     Typography,
 } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { FixerJob, PlotComplicationType, PlotGang } from '../../../../graphql/types'
+import { FixerJob, PlotComplicationType } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
 import { ImageFields } from '../../../../utils/constants'
 import CardCharacter, { FieldProps, ImageFieldProps } from './CardCharacter'
-import CardGang from './CardGang'
 import CardItem from './CardItem'
 
 export type CardMainComplicationProps = {
@@ -48,32 +47,6 @@ export type CardMainComplicationProps = {
             type: FieldProps
             condition: FieldProps
             image: ImageFieldProps
-        }
-        gang: {
-            main: boolean
-            check: boolean
-            handleGangChangeTarget: string
-            handleChangeGangComplicationCharacterTarget: string
-            handleChangeGangComplicationItemTarget: string
-            handleChangeGangComplicationTypeTarget: string
-            chainStarter: PlotGang
-            originalChainStarter: PlotGang
-            character: {
-                check: boolean
-                imageField: ImageFields
-                name: FieldProps
-                type: FieldProps
-                attitude: FieldProps
-                image: ImageFieldProps
-            }
-            item: {
-                check: boolean
-                imageField: ImageFields
-                name: FieldProps
-                type: FieldProps
-                condition: FieldProps
-                image: ImageFieldProps
-            }
         }
     }
 }
@@ -122,8 +95,8 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
                             </InputLabel>
                             <Select
                                 labelId="complication-label"
-                                value={editedItem.plot?.complication?.type || ''}
-                                onChange={(e) => handleChange('plot.complication.type', e.target.value)}
+                                value={editedItem.plot?.plotComplication?.type || ''}
+                                onChange={(e) => handleChange('plot.plotComplication.type', e.target.value)}
                                 label={t('fixerJobs.labels.complicationType')}
                                 sx={selectStyle}
                             >
@@ -170,27 +143,6 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
                             hiddenFileInput={hiddenFileInput}
                             item={{
                                 ...complication.item,
-                            }}
-                        />
-                    )}
-
-                    {/* Gang Complication */}
-                    {complication.gang.check && (
-                        <CardGang
-                            editedItem={editedItem}
-                            isGeneratingImage={isGeneratingImage}
-                            textFieldOutlinedStyle={textFieldOutlinedStyle}
-                            handleChange={handleChange}
-                            handleImageUploadClick={handleImageUploadClick}
-                            openDeleteImageDialog={openDeleteImageDialog}
-                            toggleFullscreenImage={toggleFullscreenImage}
-                            handleRegenerateClick={handleRegenerateClick}
-                            formControlStyle={formControlStyle}
-                            inputLabelStyle={inputLabelStyle}
-                            selectStyle={selectStyle}
-                            hiddenFileInput={hiddenFileInput}
-                            gang={{
-                                ...complication.gang,
                             }}
                         />
                     )}

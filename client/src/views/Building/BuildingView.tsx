@@ -1,5 +1,6 @@
 import { CircularProgress, Container, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
+import { isEqual } from 'lodash'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ClearAllButton from '../../components/ClearAllButton'
@@ -94,8 +95,7 @@ const BuildingView = () => {
         if (syncingFromContextRef.current) return
 
         // Check if the data has actually changed to avoid unnecessary saves
-        const hasChanged = JSON.stringify(buildings) !== JSON.stringify(prevBuildingsDataRef.current)
-        if (!hasChanged) return
+        if (isEqual(buildings, prevBuildingsDataRef.current)) return
 
         // Set updating context flag
         updatingContextRef.current = true

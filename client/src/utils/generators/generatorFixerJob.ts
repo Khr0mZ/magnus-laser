@@ -50,7 +50,10 @@ import {
  * @param buildings - Array of existing Building objects.
  * @param fixerJob - Optional FixerJob overrides.
  * @param presetBuilding - Optional preset building for plotBuilding.
- * @param options - Optional generator options.
+ * @param preferExistingBuilding - Optional flag to prefer existing buildings.
+ * @param preferExistingGang - Optional flag to prefer existing gangs.
+ * @param jobDifficulty - Optional job difficulty.
+ * @param presetGang - Optional preset gang for plotSubject.
  * @returns A complete FixerJob object along with any newly created gangs and buildings.
  */
 export const generateRandomFixerJob = async (
@@ -58,14 +61,15 @@ export const generateRandomFixerJob = async (
     gangs: Gang[],
     buildings: Building[],
     fixerJob?: Partial<FixerJob>,
-    presetBuilding?: Building,
     preferExistingBuilding?: boolean,
     preferExistingGang?: boolean,
-    jobDifficulty?: JobDifficulty
-): Promise<{ fixerJob: FixerJob; newGangs: Gang[]; newBuildings: Building[] }> => {
+    jobDifficulty?: JobDifficulty,
+    presetBuilding?: Building,
+    presetGang?: Gang
+): Promise<{ newFixerJob: FixerJob; newGang: Maybe<Gang>; newBuilding: Maybe<Building> }> => {
     // Arrays to collect newly created entities
-    const newGangs: Gang[] = []
-    const newBuildings: Building[] = []
+    let newGang: Maybe<Gang> = undefined
+    let newBuilding: Maybe<Building> = undefined
     // Things to generate
     // - PlotBuilding
     // - Verb
@@ -77,42 +81,10 @@ export const generateRandomFixerJob = async (
 
     // Generate PlotBuilding
     const difficulty = jobDifficulty ?? JobDifficulty.TYPICAL
-    const building =
-        presetBuilding ?? preferExistingBuilding
-            ? getRandomElement(buildings)
-            : await generateRandomBuilding(t, getJobDifficultyModifier(difficulty), undefined)
-    const buildingComplicationType = getRandomElement(Object.values(PlotBuildingComplicationType))
-    let buildingComplication: BuildingComplication = {
-        type: buildingComplicationType,
-    }
-    if (buildingComplicationType.toString().includes('CHARACTER')) {
-        buildingComplication = {
-            ...buildingComplication,
-            character: await generateRandomCharacter(),
-        }
-    } else if (buildingComplicationType.toString().includes('ITEM')) {
-        buildingComplication = {
-            ...buildingComplication,
-            item: await generateRandomItem(t),
-        }
-    } else if (buildingComplicationType.toString().includes('GANG')) {
-        const plotGang = await generatePlotGang(t, gangs, preferExistingGang)
-        // If there are no gangs, or the gang not an existing gang, add it to the array of new gangs
-        if (gangs.length === 0 || (plotGang.gang && !preferExistingGang && gangs.length > 0)) {
-            newGangs.push(plotGang.gang)
-        }
-        buildingComplication = {
-            ...buildingComplication,
-            gang: plotGang,
-        }
-    }
+    const plotBuilding = await generatePlotBuilding(t, buildings, preferExistingBuilding, difficulty, presetBuilding)
     // If there are no buildings, or the building is not a preset or existing building, add it to the array of new buildings
-    if (buildings.length === 0 || (building && !presetBuilding && !preferExistingBuilding && buildings.length > 0)) {
-        newBuildings.push(building)
-    }
-    const plotBuilding: PlotBuilding = {
-        building,
-        complication: buildingComplication,
+    if (buildings.length === 0 || (!presetBuilding && !preferExistingBuilding && buildings.length > 0)) {
+        newBuilding = plotBuilding.building
     }
 
     // Generate Verb
@@ -156,10 +128,10 @@ export const generateRandomFixerJob = async (
             plotSubject = await generateRandomItem(t)
             break
         case 'PlotGangVerbWrapper':
-            plotSubject = await generatePlotGang(t, gangs, preferExistingGang)
+            plotSubject = await generatePlotGang(t, gangs, preferExistingGang, presetGang)
             // If there are no gangs, or the gang not an existing gang, add it to the array of new gangs
-            if (gangs.length === 0 || (!preferExistingGang && gangs.length > 0)) {
-                newGangs.push(plotSubject.gang)
+            if (gangs.length === 0 || (!presetGang && !preferExistingGang && gangs.length > 0)) {
+                newGang = plotSubject.gang
             }
             break
         case 'PlotBuildingVerbWrapper':
@@ -176,18 +148,13 @@ export const generateRandomFixerJob = async (
         plotComplication.character = await generateRandomCharacter()
     } else if (plotComplication.type.toString().includes('ITEM')) {
         plotComplication.item = await generateRandomItem(t)
-    } else if (plotComplication.type.toString().includes('GANG')) {
-        plotComplication.gang = await generatePlotGang(t, gangs, preferExistingGang)
-        if (gangs.length === 0 || (!preferExistingGang && gangs.length > 0)) {
-            newGangs.push(plotComplication.gang.gang)
-        }
     }
 
     const plot: Plot = {
         verb,
-        plotBuilding,
         plotSubject, // PlotSubject
-        complication: plotComplication, // PlotComplication
+        plotComplication, // PlotComplication
+        plotBuilding,
     }
 
     const newFixerJob: FixerJob = {
@@ -242,9 +209,9 @@ export const generateRandomFixerJob = async (
     }
 
     return {
-        fixerJob: newFixerJob,
-        newGangs,
-        newBuildings,
+        newFixerJob,
+        newGang,
+        newBuilding,
     }
 }
 
@@ -252,7 +219,7 @@ export const generateRandomFixerJob = async (
  * Fallback function to generate a more detailed and varied neon-noir styled FixerJob description.
  */
 const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): string => {
-    const { verb, plotSubject, plotBuilding, complication } = fixerJob.plot
+    const { verb, plotSubject, plotBuilding, plotComplication } = fixerJob.plot
     const building = plotBuilding.building
 
     // --- Translate Core Elements ---
@@ -307,21 +274,17 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
 
     // --- Translate Complication Details ---
     let mainCompDetails = ''
-    const mainCompType = complication?.type
+    const mainCompType = plotComplication?.type
     if (mainCompType) {
         const translatedMainComp = t(`fixerJobs.complication.${mainCompType}`)
         let specifics = ''
-        if (complication.character)
+        if (plotComplication.character)
             specifics = t(getRandomElement(['fixerJobs.generator.complicationDetailChar']), {
-                name: complication.character.name,
+                name: plotComplication.character.name,
             })
-        else if (complication.item)
+        else if (plotComplication.item)
             specifics = t(getRandomElement(['fixerJobs.generator.complicationDetailItem']), {
-                name: complication.item.name,
-            })
-        else if (complication.gang?.gang)
-            specifics = t(getRandomElement(['fixerJobs.generator.complicationDetailGang']), {
-                name: complication.gang.gang.name,
+                name: plotComplication.item.name,
             })
         mainCompDetails = t(
             getRandomElement([
@@ -345,10 +308,6 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
         else if (plotBuilding.complication.item)
             specifics = t(getRandomElement(['fixerJobs.generator.complicationDetailItem']), {
                 name: plotBuilding.complication.item.name,
-            })
-        else if (plotBuilding.complication.gang?.gang)
-            specifics = t(getRandomElement(['fixerJobs.generator.complicationDetailGang']), {
-                name: plotBuilding.complication.gang.gang.name,
             })
         placeCompDetails = t(
             getRandomElement([
@@ -468,7 +427,7 @@ const generateLocalFixerJobName = (t: TFunction, fixerJob: FixerJob): string => 
     const verbValue = verb.value
     const subject = fixerJob.plot.plotSubject
     const building = fixerJob.plot.plotBuilding.building
-    const complicationType = fixerJob.plot.complication?.type
+    const complicationType = fixerJob.plot.plotComplication?.type
 
     // Translate relevant parts
     const translatedVerb = t(`fixerJobs.verb.${verbValue}`)
@@ -741,10 +700,27 @@ const generateRandomItemNameWithFallback = async (
 const generateLocalRandomItemName = (itemType: PlotItemType): string => {
     switch (itemType) {
         case PlotItemType.MONEY:
-            return `CredStack ${getRandomInt(10, 99)}`
+            return `CredStack ${getRandomInt(100, 1000)}`
         case PlotItemType.WEAPONS: {
             const adjectives = ['Neon', 'Chrome', 'Cyber', 'Plasma', 'Quantum', 'Hyper', 'Vapor']
-            const nouns = ['Pulse Rifle', 'Blade', 'Laser Rifle', 'Railgun', 'Disruptor', 'Cannon', 'Fury']
+            const nouns = [
+                'Medium Pistol',
+                'Heavy Pistol',
+                'Very Heavy Pistol',
+                'Submachine Gun',
+                'Heavy Submachine Gun',
+                'Shotgun',
+                'Assault Rifle',
+                'Sniper Rifle',
+                'Bow and Crossbow',
+                'Grenade Launcher',
+                'Rocket Launcher',
+                'Light Melee Weapon',
+                'Medium Melee Weapon',
+                'Heavy Melee Weapon',
+                'Very Heavy Melee Weapon',
+                'Thrown Weapon',
+            ]
             let name = `${getRandomElement(adjectives)} ${getRandomElement(nouns)} ${getRandomInt(100, 999)}`
             const chance = Math.random()
             if (chance < 0.3) {
@@ -837,8 +813,14 @@ const generateLocalRandomItemName = (itemType: PlotItemType): string => {
  * Uses the imported generateRandomGang function to create a new gang if needed.
  * Returns both the PlotGang and a flag indicating if a new gang was created.
  */
-const generatePlotGang = async (t: TFunction, gangs: Gang[], preferExisting: boolean = true): Promise<PlotGang> => {
-    const gang = preferExisting && gangs.length > 0 ? getRandomElement(gangs) : await generateRandomGang(t)
+const generatePlotGang = async (
+    t: TFunction,
+    gangs: Gang[],
+    preferExisting: boolean = true,
+    presetGang?: Gang
+): Promise<PlotGang> => {
+    const gang =
+        presetGang || (preferExisting && gangs.length > 0 ? getRandomElement(gangs) : await generateRandomGang(t))
     const complicationType = getRandomElement(Object.values(PlotGangComplicationType))
     let complication: GangComplication = {
         type: complicationType,
@@ -861,4 +843,45 @@ const generatePlotGang = async (t: TFunction, gangs: Gang[], preferExisting: boo
     }
 
     return plotGang
+}
+
+/**
+ * Generates a PlotBuilding (of type PlotBuilding) using existing buildings if desired.
+ * Uses the imported generateRandomBuilding function to create a new building if needed.
+ * Returns both the PlotBuilding and a flag indicating if a new building was created.
+ */
+const generatePlotBuilding = async (
+    t: TFunction,
+    buildings: Building[],
+    preferExisting: boolean = true,
+    difficulty: JobDifficulty,
+    presetBuilding?: Building
+): Promise<PlotBuilding> => {
+    const building =
+        presetBuilding ||
+        (preferExisting && buildings.length > 0
+            ? getRandomElement(buildings)
+            : await generateRandomBuilding(t, getJobDifficultyModifier(difficulty)))
+    const complicationType = getRandomElement(Object.values(PlotBuildingComplicationType))
+    let complication: BuildingComplication = {
+        type: complicationType,
+    }
+    if (complicationType.toString().includes('CHARACTER')) {
+        complication = {
+            ...complication,
+            character: await generateRandomCharacter(),
+        }
+    } else if (complicationType.toString().includes('ITEM')) {
+        complication = {
+            ...complication,
+            item: await generateRandomItem(t),
+        }
+    }
+
+    const plotBuilding: PlotBuilding = {
+        building,
+        complication,
+    }
+
+    return plotBuilding
 }

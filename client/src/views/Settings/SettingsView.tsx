@@ -35,6 +35,7 @@ import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
 import { useAnimations } from '../../contexts/AnimationsContextTypes'
 import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useAppInitialization } from '../../hooks/useAppInitialization'
 import colors from '../../utils/colors'
 import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
 import {
@@ -52,6 +53,7 @@ const SettingsView = () => {
     useDocumentTitle(`Magnus Laser - ${t('common.settings')}`)
     const { readerMode } = useContext(ReaderModeContext)
     const { animationsEnabled, toggleAnimations } = useAnimations()
+    const { loaderEnabled, toggleLoader } = useAppInitialization()
     const { enqueueSnackbar, closeSnackbar } = useSnackbar()
     const [importDialogOpen, setImportDialogOpen] = useState(false)
 
@@ -806,7 +808,7 @@ const SettingsView = () => {
                             </Typography>
 
                             <Divider sx={{ mb: 3 }} />
-                            <Stack direction="row" alignItems="center" spacing={2}>
+                            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
                                 <Typography variant="body1">{t('settings.enableAnimations')}</Typography>
                                 <FormControlLabel
                                     control={
@@ -836,6 +838,45 @@ const SettingsView = () => {
                                             }}
                                         >
                                             {animationsEnabled ? 'Enabled' : 'Disabled'}
+                                        </Typography>
+                                    }
+                                    labelPlacement="end"
+                                />
+                            </Stack>
+                            <Stack direction="row" alignItems="center" spacing={2}>
+                                <Typography variant="body1">
+                                    {t('settings.enableLoader') || 'Enable Startup Loader'}
+                                </Typography>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size="small"
+                                            checked={loaderEnabled}
+                                            onChange={async () => {
+                                                await toggleLoader()
+                                            }}
+                                            sx={{
+                                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                                    color: colors.neons.green.default,
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(25, 220, 140, 0.08)',
+                                                    },
+                                                },
+                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                    backgroundColor: colors.neons.green.dark,
+                                                },
+                                            }}
+                                        />
+                                    }
+                                    label={
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: readerMode ? colors.grays.gray000 : colors.grays.gray500,
+                                                fontWeight: 500,
+                                            }}
+                                        >
+                                            {loaderEnabled ? 'Enabled' : 'Disabled'}
                                         </Typography>
                                     }
                                     labelPlacement="end"

@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { LoadingStatus } from '../components/CyberpunkLoader'
 import { useData } from '../contexts/dataHooks'
 import { ModuleTypes } from '../utils/constants'
-import { DATA_IMPORT_EVENT, loadAllViewPreferences, loadReaderMode, saveReaderMode } from '../utils/storage'
+import {
+    DATA_IMPORT_EVENT,
+    loadAllViewPreferences,
+    loadLoaderEnabled,
+    loadReaderMode,
+    saveLoaderEnabled,
+    saveReaderMode,
+} from '../utils/storage'
 
 export interface AppInitializationResult {
     readerMode: boolean
@@ -11,7 +18,9 @@ export interface AppInitializationResult {
     isInitialized: boolean
     isLoadingPreferences: boolean
     loadingStatus: LoadingStatus
+    loaderEnabled: boolean
     toggleReaderMode: () => Promise<void>
+    toggleLoader: () => Promise<void>
     updateViewPreference: (moduleType: ModuleTypes, isTableView: boolean) => void
     handleLoaderComplete: () => void
     setStorageCleanupComplete: () => void
@@ -19,6 +28,7 @@ export interface AppInitializationResult {
 
 export const useAppInitialization = (): AppInitializationResult => {
     const [readerMode, setReaderMode] = useState(false)
+    const [loaderEnabled, setLoaderEnabled] = useState(true)
     const [isInitialized, setIsInitialized] = useState(false)
     const { isLoading } = useData()
     const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
@@ -41,10 +51,15 @@ export const useAppInitialization = (): AppInitializationResult => {
         const init = async () => {
             try {
                 setLoadingStatus((prev) => ({ ...prev, systemInit: true }))
-                const [dbReaderMode, allViewPrefs] = await Promise.all([loadReaderMode(), loadAllViewPreferences()])
+                const [dbReaderMode, allViewPrefs, dbLoaderEnabled] = await Promise.all([
+                    loadReaderMode(),
+                    loadAllViewPreferences(),
+                    loadLoaderEnabled(),
+                ])
 
                 setReaderMode(dbReaderMode)
                 setViewPreferences(allViewPrefs)
+                setLoaderEnabled(dbLoaderEnabled)
                 setViewPrefsLoaded(true)
 
                 setLoadingStatus((prev) => ({
@@ -95,6 +110,12 @@ export const useAppInitialization = (): AppInitializationResult => {
         await saveReaderMode(newReaderMode)
     }
 
+    const toggleLoader = async () => {
+        const newLoaderEnabled = !loaderEnabled
+        setLoaderEnabled(newLoaderEnabled)
+        await saveLoaderEnabled(newLoaderEnabled)
+    }
+
     // Apply reader-mode class to body
     useEffect(() => {
         if (readerMode) {
@@ -108,12 +129,14 @@ export const useAppInitialization = (): AppInitializationResult => {
     useEffect(() => {
         const handleDataImport = async () => {
             try {
-                const [importedReaderMode, importedViewPrefs] = await Promise.all([
+                const [importedReaderMode, importedViewPrefs, importedLoaderEnabled] = await Promise.all([
                     loadReaderMode(),
                     loadAllViewPreferences(),
+                    loadLoaderEnabled(),
                 ])
                 setReaderMode(importedReaderMode)
                 setViewPreferences(importedViewPrefs)
+                setLoaderEnabled(importedLoaderEnabled)
             } catch (error) {
                 console.error('Error reloading preferences after import:', error)
             }
@@ -153,7 +176,9 @@ export const useAppInitialization = (): AppInitializationResult => {
         isInitialized,
         isLoadingPreferences,
         loadingStatus,
+        loaderEnabled,
         toggleReaderMode,
+        toggleLoader,
         updateViewPreference,
         handleLoaderComplete,
         setStorageCleanupComplete,

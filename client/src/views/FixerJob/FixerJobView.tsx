@@ -1,5 +1,6 @@
 import { Box, CircularProgress, Container, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
+import { isEqual } from 'lodash'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ClearAllButton from '../../components/ClearAllButton'
@@ -106,8 +107,7 @@ const FixerJobView = () => {
         if (syncingFromContextRef.current) return
 
         // Check if the data has actually changed to avoid unnecessary saves
-        const hasChanged = JSON.stringify(fixerJobs) !== JSON.stringify(prevFixerJobsDataRef.current)
-        if (!hasChanged) return
+        if (isEqual(fixerJobs, prevFixerJobsDataRef.current)) return
 
         // Set updating context flag
         updatingContextRef.current = true
@@ -140,61 +140,32 @@ const FixerJobView = () => {
     const handleGenerateFixerJob = async () => {
         setIsGenerating(true)
         try {
-            const {
-                fixerJob: newFixerJob,
-                newGangs,
-                newBuildings,
-            } = await generateRandomFixerJob(
+            const { newFixerJob, newGang, newBuilding } = await generateRandomFixerJob(
                 t,
                 gangs,
                 buildings,
                 undefined,
-                undefined,
                 preferExistingBuilding,
                 preferExistingGang,
-                jobDifficulty
+                jobDifficulty,
+                undefined,
+                undefined
             )
-
-            // Process any new buildings if needed
-            const processedNewBuildings = newBuildings.map((building) => {
-                // Only process if the image doesn't already start with 'data:'
-                if (building.image && typeof building.image === 'string' && !building.image.startsWith('data:')) {
-                    // If it's not a data URL but a plain string, it might need proper formatting
-                    return {
-                        ...building,
-                        image: building.image.startsWith('data:')
-                            ? building.image
-                            : `data:image/jpeg;base64,${building.image}`,
-                    }
-                }
-                return building
-            })
-
-            // Batch all updates together
-            updatingContextRef.current = true
-
             // Update context states - our effect hooks will handle saving to storage
-            if (newGangs.length > 0) {
-                const updatedGangs = [...gangs, ...newGangs]
+            let updatedGangs: Gang[] = []
+            let updatedBuildings: Building[] = []
+            if (newGang) {
+                updatedGangs = [...gangs, newGang]
                 setDataGangs(updatedGangs)
             }
-
-            if (processedNewBuildings.length > 0) {
-                const updatedBuildings = [...buildings, ...processedNewBuildings]
+            if (newBuilding) {
+                updatedBuildings = [...buildings, newBuilding]
                 setDataBuildings(updatedBuildings)
             }
-
-            // Update fixer jobs
             setFixerJobs((prevFixerJobs) => [newFixerJob, ...prevFixerJobs])
-
-            // Allow time for state updates before resetting the flag
-            setTimeout(() => {
-                updatingContextRef.current = false
-                setIsSaving(true)
-            }, 100)
+            setIsSaving(true)
         } catch (error) {
             console.error('Failed to generate fixer job:', error)
-            updatingContextRef.current = false
         } finally {
             setIsGenerating(false)
         }
@@ -267,14 +238,6 @@ const FixerJobView = () => {
                         await deleteImageBlob(plot.plotBuilding.complication.item.image)
                     }
 
-                    if (
-                        plot.plotBuilding?.complication?.gang?.gang?.image &&
-                        typeof plot.plotBuilding.complication.gang.gang.image === 'string' &&
-                        !plot.plotBuilding.complication.gang.gang.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(plot.plotBuilding.complication.gang.gang.image)
-                    }
-
                     // Clean up subject images
                     if (plot.plotSubject) {
                         // Check if subject is a character
@@ -301,27 +264,19 @@ const FixerJobView = () => {
 
                     // Clean up plot complication images
                     if (
-                        plot.complication?.character?.image &&
-                        typeof plot.complication.character.image === 'string' &&
-                        !plot.complication.character.image.startsWith('data:')
+                        plot.plotComplication?.character?.image &&
+                        typeof plot.plotComplication.character.image === 'string' &&
+                        !plot.plotComplication.character.image.startsWith('data:')
                     ) {
-                        await deleteImageBlob(plot.complication.character.image)
+                        await deleteImageBlob(plot.plotComplication.character.image)
                     }
 
                     if (
-                        plot.complication?.item?.image &&
-                        typeof plot.complication.item.image === 'string' &&
-                        !plot.complication.item.image.startsWith('data:')
+                        plot.plotComplication?.item?.image &&
+                        typeof plot.plotComplication.item.image === 'string' &&
+                        !plot.plotComplication.item.image.startsWith('data:')
                     ) {
-                        await deleteImageBlob(plot.complication.item.image)
-                    }
-
-                    if (
-                        plot.complication?.gang?.gang?.image &&
-                        typeof plot.complication.gang.gang.image === 'string' &&
-                        !plot.complication.gang.gang.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(plot.complication.gang.gang.image)
+                        await deleteImageBlob(plot.plotComplication.item.image)
                     }
                 } catch (error) {
                     console.error('Error cleaning up fixer job images:', error)
