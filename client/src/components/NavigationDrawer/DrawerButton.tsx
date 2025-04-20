@@ -1,9 +1,7 @@
 import { Box, Button, FormControlLabel, Typography } from '@mui/material'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useAnimations } from '../../contexts/AnimationsContextTypes.ts'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import NavigationPaths from '../../navigation'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
@@ -18,8 +16,7 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
     const navigate = useNavigate()
     const { pathname } = useLocation()
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
-    const { animationsEnabled } = useAnimations()
+    const { readerMode, animationsEnabled } = useUserPreferences()
 
     const pickColor = (navigationPath: NavigationPaths) => {
         return pathname.startsWith(navigationPath)
@@ -43,7 +40,7 @@ const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
             size={'large'}
             onClick={active ? undefined : () => navigate(navigationPath)}
             sx={{
-                width: '85px',
+                width: '50px',
                 boxSizing: 'content-box',
                 color: pickColor(navigationPath),
                 position: 'relative',

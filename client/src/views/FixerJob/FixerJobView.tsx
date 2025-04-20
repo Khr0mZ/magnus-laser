@@ -1,7 +1,7 @@
 import { Box, CircularProgress, Container, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { isEqual } from 'lodash'
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ClearAllButton from '../../components/ClearAllButton'
 import EditDialog from '../../components/common/EditDialog/EditDialog'
@@ -15,13 +15,12 @@ import CyberpunkFormControlLabel from '../../components/CyberpunkFormControlLabe
 import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { ViewPreferencesContext } from '../../contexts/ViewPreferencesContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import { Building, FixerJob, Gang, JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { generateRandomFixerJob } from '../../utils/generators/generatorFixerJob'
-import { clearFixerJobs, deleteImageBlob, saveFixerJobs, saveViewPreference } from '../../utils/storage'
+import { clearFixerJobs, saveFixerJobs, saveViewPreference } from '../../utils/storage'
 
 // Add window.gangsDataLoaded declaration
 declare global {
@@ -33,8 +32,7 @@ declare global {
 const FixerJobView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('modules.FIXER_JOB')}`)
-    const { readerMode } = useContext(ReaderModeContext)
-    const { viewPreferences, viewPrefsLoaded, updateViewPreference } = useContext(ViewPreferencesContext)
+    const { readerMode, viewPreferences, viewPrefsLoaded, updateViewPreference } = useUserPreferences()
     const {
         fixerJobs: dataFixerJobs,
         setFixerJobs: setDataFixerJobs,
@@ -194,103 +192,11 @@ const FixerJobView = () => {
 
     const handleDeleteConfirm = () => {
         if (fixerJobToDelete !== null) {
-            // Get the fixer job to be deleted
-            const jobToDelete = fixerJobs[fixerJobToDelete]
-
-            // Clean up all images in the fixer job
-            const cleanupImages = async () => {
-                try {
-                    // Clean up main image if it's an image ID (not a data URL)
-                    if (
-                        jobToDelete.image &&
-                        typeof jobToDelete.image === 'string' &&
-                        !jobToDelete.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(jobToDelete.image)
-                    }
-
-                    // Clean up plot-related images
-                    const plot = jobToDelete.plot
-
-                    // Clean up plot place building image
-                    if (
-                        plot.plotBuilding?.building?.image &&
-                        typeof plot.plotBuilding.building.image === 'string' &&
-                        !plot.plotBuilding.building.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(plot.plotBuilding.building.image)
-                    }
-
-                    // Clean up place complication images
-                    if (
-                        plot.plotBuilding?.complication?.character?.image &&
-                        typeof plot.plotBuilding.complication.character.image === 'string' &&
-                        !plot.plotBuilding.complication.character.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(plot.plotBuilding.complication.character.image)
-                    }
-
-                    if (
-                        plot.plotBuilding?.complication?.item?.image &&
-                        typeof plot.plotBuilding.complication.item.image === 'string' &&
-                        !plot.plotBuilding.complication.item.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(plot.plotBuilding.complication.item.image)
-                    }
-
-                    // Clean up subject images
-                    if (plot.plotSubject) {
-                        // Check if subject is a character
-                        if ('type' in plot.plotSubject && 'name' in plot.plotSubject && 'image' in plot.plotSubject) {
-                            if (
-                                plot.plotSubject.image &&
-                                typeof plot.plotSubject.image === 'string' &&
-                                !plot.plotSubject.image.startsWith('data:')
-                            ) {
-                                await deleteImageBlob(plot.plotSubject.image)
-                            }
-                        }
-
-                        // Check if subject is a gang
-                        if ('gang' in plot.plotSubject && plot.plotSubject.gang?.image) {
-                            if (
-                                typeof plot.plotSubject.gang.image === 'string' &&
-                                !plot.plotSubject.gang.image.startsWith('data:')
-                            ) {
-                                await deleteImageBlob(plot.plotSubject.gang.image)
-                            }
-                        }
-                    }
-
-                    // Clean up plot complication images
-                    if (
-                        plot.plotComplication?.character?.image &&
-                        typeof plot.plotComplication.character.image === 'string' &&
-                        !plot.plotComplication.character.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(plot.plotComplication.character.image)
-                    }
-
-                    if (
-                        plot.plotComplication?.item?.image &&
-                        typeof plot.plotComplication.item.image === 'string' &&
-                        !plot.plotComplication.item.image.startsWith('data:')
-                    ) {
-                        await deleteImageBlob(plot.plotComplication.item.image)
-                    }
-                } catch (error) {
-                    console.error('Error cleaning up fixer job images:', error)
-                }
-            }
-
-            // Clean up images before removing the fixer job
-            cleanupImages().then(() => {
-                // Now update state to remove the job
-                setFixerJobs((prevFixerJobs) => prevFixerJobs.filter((_, i) => i !== fixerJobToDelete))
-                setIsSaving(true)
-                setDeleteDialogOpen(false)
-                setFixerJobToDelete(null)
-            })
+            // Directly remove the selected fixer job
+            setFixerJobs((prevFixerJobs) => prevFixerJobs.filter((_, i) => i !== fixerJobToDelete))
+            setIsSaving(true)
+            setDeleteDialogOpen(false)
+            setFixerJobToDelete(null)
         }
     }
 

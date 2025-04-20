@@ -6,7 +6,6 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import colors from '../utils/colors'
-import { cleanupOrphanedImages } from '../utils/storage'
 import {
     blink,
     flicker,
@@ -284,7 +283,6 @@ const CyberpunkLoader = ({
         const runCleanup = async () => {
             try {
                 // Just run the cleanup without updating any progress displays
-                await cleanupOrphanedImages()
 
                 // Update the loadingStatus when complete
                 if (!cleanupStatusUpdatedRef.current) {

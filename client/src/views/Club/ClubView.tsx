@@ -2,26 +2,26 @@ import { Container, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import colors from '../../utils/colors'
+import colors from '../../utils/colors.ts'
 
-const NPCView = () => {
+const ClubView = () => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    useDocumentTitle(`Magnus Laser - NPC`)
+    useDocumentTitle(`Magnus Laser - Club`)
 
     return (
         <Container maxWidth={false} sx={{ pt: 3 }}>
             <Typography
                 variant="h3"
                 className="glitch-text"
-                data-text={t('modules.NPC')}
+                data-text={t('modules.CLUB')}
                 sx={{
                     color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                     textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                     flexGrow: 1,
                 }}
             >
-                {t('modules.NPC')}
+                {t('modules.CLUB')}
             </Typography>
             <Typography
                 variant="h4"
@@ -31,10 +31,10 @@ const NPCView = () => {
                     mb: 1,
                 }}
             >
-                {t('modules.NPC_DESCRIPTION')}
+                {t('modules.CLUB_DESCRIPTION')}
             </Typography>
         </Container>
     )
 }
 
-export default NPCView
+export default ClubView

@@ -266,113 +266,12 @@ export const neonPulse = keyframes`
   }
 `
 
-// Text glow animations for various colors
-export const textGlowRed = keyframes`
-  0% {
-    text-shadow: 0 0 4px ${colors.neons.red.default}, 0 0 8px ${colors.neons.red.default}70;
-  }
-  50% {
-    text-shadow: 0 0 8px ${colors.neons.red.default}, 0 0 15px ${colors.neons.red.default}90, 0 0 20px ${colors.neons.red.default}50;
-  }
-  100% {
-    text-shadow: 0 0 4px ${colors.neons.red.default}, 0 0 8px ${colors.neons.red.default}70;
-  }
-`
-
-// Add these new animations for the CyberpunkLoader component
-
-export const progressNeonCycle = keyframes`
-  0% {
-    background: linear-gradient(to right, rgba(0, 255, 255, 0.7), rgba(0, 255, 255, 0.9));
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-  }
-  20% {
-    background: linear-gradient(to right, rgba(255, 0, 255, 0.7), rgba(255, 0, 255, 0.9));
-    box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
-  }
-  40% {
-    background: linear-gradient(to right, rgba(0, 255, 139, 0.7), rgba(0, 255, 139, 0.9));
-    box-shadow: 0 0 10px rgba(0, 255, 139, 0.5);
-  }
-  60% {
-    background: linear-gradient(to right, rgba(153, 0, 255, 0.7), rgba(153, 0, 255, 0.9));
-    box-shadow: 0 0 10px rgba(153, 0, 255, 0.5);
-  }
-  80% {
-    background: linear-gradient(to right, rgba(255, 255, 0, 0.7), rgba(255, 255, 0, 0.9));
-    box-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
-  }
-  100% {
-    background: linear-gradient(to right, rgba(0, 255, 255, 0.7), rgba(0, 255, 255, 0.9));
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-  }
-`
-
-export const progressComplete = keyframes`
-  0%, 100% {
-    opacity: 0.9;
-  }
-  50% {
-    opacity: 1;
-  }
-`
-
-export const scanlineAnimation = keyframes`
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 0 -512px;
-  }
-`
-
-export const horizontalScanline = keyframes`
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-`
-
-export const verticalScanline = keyframes`
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100%);
-  }
-`
-
 export const textNeonPulse = keyframes`
   0% {
     text-shadow: 0 0 5px ${colors.neons.cyan.default}, 0 0 10px ${colors.neons.cyan.default}40;
   }
   100% {
     text-shadow: 0 0 15px ${colors.neons.cyan.default}, 0 0 20px ${colors.neons.cyan.default}, 0 0 30px ${colors.neons.cyan.default}50;
-  }
-`
-
-export const logoBackgroundPulse = keyframes`
-  0% {
-    opacity: 0.03;
-    filter: blur(3px);
-  }
-  100% {
-    opacity: 0.07;
-    filter: blur(1px);
-  }
-`
-
-// Static cyan color for total progress bar
-export const staticCyanProgress = keyframes`
-  0%, 100% {
-    background: linear-gradient(to right, rgba(0, 215, 255, 0.7), rgba(0, 255, 255, 0.9));
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 0 0 20px rgba(0, 255, 255, 0.2);
-  }
-  50% {
-    background: linear-gradient(to right, rgba(0, 235, 255, 0.8), rgba(0, 255, 255, 1));
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.6), 0 0 25px rgba(0, 255, 255, 0.3);
   }
 `
 
@@ -406,22 +305,6 @@ export const blink = keyframes`
     50% { opacity: 0; }
     99% { opacity: 0; }
     100% { opacity: 1; }
-`
-
-// New Animation: Drop-shadow glow filter effect for transparent logo
-export const logoGlowFilter = keyframes`
-  0%, 100% {
-    filter: drop-shadow(0 0 8px ${colors.neons.cyan.default}B3);
-  }
-  25% {
-    filter: drop-shadow(0 0 12px ${colors.neons.pink.default}E6);
-  }
-  50% {
-    filter: drop-shadow(0 0 8px ${colors.neons.green.default}CC);
-  }
-  75% {
-    filter: drop-shadow(0 0 10px ${colors.neons.blue.default}DD);
-  }
 `
 
 // New Animation: Drop-shadow glow filter effect for icons (now cyan)

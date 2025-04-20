@@ -1,7 +1,6 @@
 import { ToggleButton, ToggleButtonGroup } from '@mui/material'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import CyberpunkFormControlLabel from '../CyberpunkFormControlLabel'
 import { pulseGlowBlue, pulseGlowCyan } from './Animations'
@@ -14,7 +13,7 @@ type ViewToggleProps = {
 const ViewToggle = (props: ViewToggleProps) => {
     const { compactView, onViewChange } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
 
     return (
         <CyberpunkFormControlLabel

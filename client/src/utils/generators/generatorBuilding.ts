@@ -607,7 +607,12 @@ function generateLocalBuildingName(
 
     // Get appropriate naming patterns for this building type
     const appropriatePatterns = buildingNameData[type].preferredPatterns || [1, 2, 3]
-    const namingPattern = getRandomElement(appropriatePatterns)
+    // Cyberpunk flair arrays
+    const cyberpunkPrefixes = ['Neon', 'Chrome', 'Quantum', 'Cyber', 'Holo', 'Pulse', 'Shadow', 'Data', 'Grid']
+    const cyberpunkSuffixes = ['Nexus', 'Spire', 'Hub', 'Matrix', 'Node', 'Vault', 'Core', 'Forge', 'Citadel']
+    // Extend naming patterns with two new cyberpunk styles
+    const allPatterns = [...appropriatePatterns, 13, 14]
+    const namingPattern = getRandomElement(allPatterns)
 
     // Check if this building has corporate affiliation based on type and ownership
     const hasCorpoAffiliation =
@@ -692,6 +697,12 @@ function generateLocalBuildingName(
                 name = `${styleWord} ${typeWord} ${buildingSuffix}`
             }
             break
+        case 13: // Cyberpunk combo: "Neon Nexus"
+            name = `${getRandomElement(cyberpunkPrefixes)} ${getRandomElement(cyberpunkSuffixes)}`
+            break
+        case 14: // Hybrid cyberpunk: "Quantum Tower Core"
+            name = `${getRandomElement(cyberpunkPrefixes)} ${typeWord} ${getRandomElement(cyberpunkSuffixes)}`
+            break
         default:
             name = `${styleWord} ${typeWord} ${buildingSuffix}`
     }
@@ -703,12 +714,15 @@ function generateLocalBuildingName(
     }
 
     // Add abandoned prefix if applicable
-    name = abandonedPrefix + name.trim()
-
+    let finalName = abandonedPrefix + name.trim()
+    // Occasionally prefix with corporate brand for corpo-affiliated buildings
+    if (corpoName && Math.random() > 0.6) {
+        finalName = `${corpoName} ${finalName}`
+    }
     // Clean up excess spaces
-    name = name.replace(/\s+/g, ' ').trim()
+    finalName = finalName.replace(/\s+/g, ' ').trim()
 
-    return name
+    return finalName
 }
 
 /**
@@ -736,9 +750,6 @@ const generateLocalBuildingDescription = (t: TFunction, building: Building): str
         event,
         secret,
     } = building
-
-    // Choose a description pattern randomly (1-6)
-    const descriptionPattern = getRandomInt(1, 6)
 
     // Element variables for description building
     let overviewDesc = ''
@@ -999,68 +1010,36 @@ const generateLocalBuildingDescription = (t: TFunction, building: Building): str
 
     atmosphereDesc = atmosphereByStyle[style] || t('buildings.atmosphere.generic')
 
-    // Combine elements based on the chosen pattern
-    let finalDescription = ''
-
-    switch (descriptionPattern) {
-        case 1: // Standard pattern: overview, physical features, security, current events
-            finalDescription = `${overviewDesc}${physicalDesc ? ' ' + physicalDesc : ''} ${securityDesc} ${
-                currentHappeningsDesc ? currentHappeningsDesc : ''
-            }${secretDesc ? ' ' + secretDesc : ''}`
-            break
-
-        case 2: // Start with atmosphere, then overview and details
-            finalDescription = `${atmosphereDesc} ${overviewDesc}${
-                physicalDesc ? ' ' + physicalDesc : ''
-            } ${securityDesc} ${currentHappeningsDesc ? currentHappeningsDesc : ''}${
-                secretDesc ? ' ' + secretDesc : ''
-            }`
-            break
-
-        case 3: // Start with current happenings, then building details
-            if (currentHappeningsDesc) {
-                finalDescription = `${currentHappeningsDesc} ${overviewDesc}${
-                    physicalDesc ? ' ' + physicalDesc : ''
-                } ${securityDesc}${secretDesc ? ' ' + secretDesc : ''}`
-            } else {
-                // Fall back to standard pattern if no current happenings
-                finalDescription = `${overviewDesc}${physicalDesc ? ' ' + physicalDesc : ''} ${securityDesc}${
-                    secretDesc ? ' ' + secretDesc : ''
-                }`
-            }
-            break
-
-        case 4: // Focus on security first
-            finalDescription = `${overviewDesc} ${securityDesc}${physicalDesc ? ' ' + physicalDesc : ''} ${
-                currentHappeningsDesc ? currentHappeningsDesc : ''
-            }${secretDesc ? ' ' + secretDesc : ''}`
-            break
-
-        case 5: // Focus on access and circulation
-            finalDescription = `${overviewDesc} ${accessDesc || (physicalDesc ? physicalDesc : '')} ${securityDesc} ${
-                currentHappeningsDesc ? currentHappeningsDesc : ''
-            }${secretDesc ? ' ' + secretDesc : ''}`
-            break
-
-        default: // Default pattern with atmospheric elements
-            finalDescription = `${overviewDesc} ${atmosphereDesc}${
-                physicalDesc ? ' ' + physicalDesc : ''
-            } ${securityDesc} ${currentHappeningsDesc ? currentHappeningsDesc : ''}${
-                secretDesc ? ' ' + secretDesc : ''
-            }`
+    // Dynamic paragraph builder reflecting all building fields
+    const openers = [
+        'Under neon haze,',
+        'Behind holographic signage,',
+        'Amid gritty streets,',
+        'On the chrome-lit sidewalk,',
+    ]
+    // Always use uppercase connectors for transitions
+    const connectors = ['However', 'Still', 'Meanwhile', 'Yet']
+    // Gather fragments without trailing punctuation
+    const fragments = [overviewDesc.trim()]
+    if (physicalDesc) fragments.push(physicalDesc.trim())
+    if (accessDesc) fragments.push(accessDesc.trim())
+    fragments.push(securityDesc.trim())
+    if (currentHappeningsDesc) fragments.push(currentHappeningsDesc.trim())
+    if (secretDesc) fragments.push(secretDesc.trim())
+    fragments.push(atmosphereDesc.trim())
+    // Optionally prepend an opener to the first fragment
+    if (Math.random() > 0.6) {
+        const first = fragments[0]
+        fragments[0] = `${getRandomElement(openers)} ${first.charAt(0).toLowerCase()}${first.slice(1)}`
     }
-
-    // Clean up extra spaces and add periods between sentences if needed
-    finalDescription = finalDescription
-        .replace(/\s+/g, ' ')
-        .replace(/\.\s+\./g, '.')
-        .replace(/\s+\./g, '.')
-        .replace(/\.\s*$/g, '.') // Ensure description ends with a period
-        .trim()
-
-    if (!finalDescription.endsWith('.')) {
-        finalDescription += '.'
+    // Build final paragraph: first fragment ends with period; each next starts with connector
+    let paragraph = fragments[0].replace(/[.,]+$/, '') + '.'
+    for (let i = 1; i < fragments.length; i++) {
+        const frag = fragments[i].replace(/[.,]+$/, '').trim()
+        const conn = getRandomElement(connectors)
+        // Lowercase first letter of fragment
+        const sentence = frag.charAt(0).toLowerCase() + frag.slice(1)
+        paragraph += ` ${conn}, ${sentence}.`
     }
-
-    return finalDescription
+    return paragraph
 }

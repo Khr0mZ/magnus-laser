@@ -1,10 +1,9 @@
 import { Box, Card, CardContent, Container, Grid, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { flicker, glitch, neonColorCycle, neonPulse, severeGlitch } from '../../components/common/Animations.tsx'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext.tsx'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import NavigationPaths from '../../navigation.ts'
 import colors from '../../utils/colors.ts'
 import { ModuleTypes } from '../../utils/constants'
@@ -13,7 +12,7 @@ import { getModuleIcon } from '../../utils/functions.tsx'
 const Dashboard = () => {
     const navigate = useNavigate()
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     useDocumentTitle(`Magnus Laser - ${t('modules.DASHBOARD')}`)
 
     return (

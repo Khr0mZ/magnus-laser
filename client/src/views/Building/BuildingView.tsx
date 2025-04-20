@@ -1,7 +1,7 @@
 import { CircularProgress, Container, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { isEqual } from 'lodash'
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ClearAllButton from '../../components/ClearAllButton'
 import EditDialog from '../../components/common/EditDialog/EditDialog'
@@ -13,8 +13,7 @@ import { WarningDialog } from '../../components/common/WarningDialog'
 import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { ViewPreferencesContext } from '../../contexts/ViewPreferencesContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import { Building, FixerJob, Gang, JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
@@ -32,8 +31,7 @@ declare global {
 const BuildingView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('modules.BUILDING')}`)
-    const { readerMode } = useContext(ReaderModeContext)
-    const { viewPreferences, viewPrefsLoaded, updateViewPreference } = useContext(ViewPreferencesContext)
+    const { readerMode, viewPreferences, viewPrefsLoaded, updateViewPreference } = useUserPreferences()
     const { buildings: dataBuildings, setBuildings: setDataBuildings, isLoading } = useData()
     const [buildings, setBuildings] = useState<Building[]>([])
 

@@ -1,11 +1,10 @@
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Typography } from '@mui/material'
-import { Dispatch, SetStateAction, useContext, useEffect, useRef, useState } from 'react'
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReaderModeContext } from '../../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
 import { Building, FixerJob, Gang } from '../../../graphql/types'
 import colors from '../../../utils/colors'
 import { ModuleTypes } from '../../../utils/constants'
-import { deleteImageBlob } from '../../../utils/storage'
 import CustomScrollbar from '../../CustomScrollbar'
 import { pulseGlowBlue, pulseGlowCyan } from '../Animations'
 import { WarningDialog } from '../WarningDialog'
@@ -64,7 +63,7 @@ export const EditDialog = (props: EditDialogProps) => {
         setFixerJobToEdit,
     } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     const [editedItem, setEditedItem] = useState<Gang | Building | FixerJob | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [deleteImageDialogOpen, setDeleteImageDialogOpen] = useState(false)
@@ -195,36 +194,7 @@ export const EditDialog = (props: EditDialogProps) => {
 
     const handleSave = async () => {
         if (editedItem && item) {
-            // Check for deleted images that need to be removed from storage
-            const checkAndDeleteImage = async (fieldPath: string) => {
-                const originalImage = getNestedValue(item, fieldPath) as string | null | undefined
-                const newImage = getNestedValue(editedItem, fieldPath) as string | null | undefined
-
-                // If image was removed (exists in original but not in edited or is null/empty in edited)
-                if (
-                    originalImage &&
-                    typeof originalImage === 'string' &&
-                    !originalImage.startsWith('data:') &&
-                    (!newImage || newImage === '')
-                ) {
-                    try {
-                        await deleteImageBlob(originalImage)
-                    } catch (error) {
-                        console.error(`Error deleting image blob: ${error}`)
-                    }
-                }
-            }
-
-            // Check main image field
-            await checkAndDeleteImage('image')
-
-            // Add more image fields here if needed based on your data structure
-            // e.g., for nested image fields
-            // await checkAndDeleteImage('someObject.image')
-
             onSave(editedItem)
-
-            // Now set the saving flag to true to trigger the notification
             setIsSaving(true)
         }
         onClose()

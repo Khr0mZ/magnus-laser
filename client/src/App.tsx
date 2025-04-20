@@ -1,22 +1,23 @@
 import { ThemeProvider } from '@emotion/react'
-import { CssBaseline, createTheme as muiCreateTheme } from '@mui/material'
+import { CssBaseline } from '@mui/material'
+import { createTheme } from '@mui/material/styles'
 import { SnackbarProvider } from 'notistack'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import CustomScrollbar from './components/CustomScrollbar'
 import CyberpunkLoader from './components/CyberpunkLoader'
 import NavigationDrawer from './components/NavigationDrawer/NavigationDrawer'
-import { AnimationsProvider } from './contexts/AnimationsContext'
 import { DataProvider } from './contexts/DataContext'
-import { ReaderModeContext } from './contexts/ReaderModeContext'
-import UserProvider from './contexts/UserContext'
-import { ViewPreferencesContext } from './contexts/ViewPreferencesContext'
-import { useAppInitialization } from './hooks/useAppInitialization'
+import { useData } from './contexts/dataHooks'
+import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
+import { useUserPreferences } from './contexts/userPreferencesHooks.ts'
 import './i18n'
 import './index.css'
 import NavigationPaths from './navigation'
 import { getDesignTokens } from './utils/theme'
+import BountyView from './views/Bounty/BountyView.tsx'
 import BuildingView from './views/Building/BuildingView'
+import ClubView from './views/Club/ClubView.tsx'
 import Corporation from './views/Corporation/CorporationView'
 import Dashboard from './views/Dashboard/Dashboard'
 import FixerJob from './views/FixerJob/FixerJobView'
@@ -25,19 +26,60 @@ import NPC from './views/NPC/NPCView'
 import SettingsView from './views/Settings/SettingsView'
 
 const AppContent = (): JSX.Element => {
-    const {
-        readerMode,
-        viewPreferences,
-        viewPrefsLoaded,
-        isInitialized,
-        isLoadingPreferences,
-        loadingStatus,
-        loaderEnabled,
-        toggleReaderMode,
-        updateViewPreference,
-        handleLoaderComplete,
-        setStorageCleanupComplete,
-    } = useAppInitialization()
+    const { readerMode, loaderEnabled, isLoadingPreferences } = useUserPreferences()
+
+    // Additional state for loader
+    const [isInitialized, setIsInitialized] = useState(false)
+    const [loadingStatus, setLoadingStatus] = useState({
+        readerMode: false,
+        viewPreferences: false,
+        buildingsData: false,
+        gangsData: false,
+        fixerJobsData: false,
+        systemInit: false,
+        storageCleanup: false,
+    })
+    const { isLoading } = useData()
+
+    // Update loading status based on data context
+    useEffect(() => {
+        if (!isLoading) {
+            setLoadingStatus((prev) => ({
+                ...prev,
+                buildingsData: true,
+                gangsData: true,
+                fixerJobsData: true,
+            }))
+        } else {
+            setLoadingStatus((prev) => ({
+                ...prev,
+                buildingsData: false,
+                gangsData: false,
+                fixerJobsData: false,
+            }))
+        }
+    }, [isLoading])
+
+    // Set system init and preferences loaded in loading status
+    useEffect(() => {
+        setLoadingStatus((prev) => ({
+            ...prev,
+            systemInit: true,
+            readerMode: true,
+            viewPreferences: true,
+        }))
+    }, [])
+
+    const handleLoaderComplete = () => {
+        setIsInitialized(true)
+    }
+
+    const setStorageCleanupComplete = () => {
+        setLoadingStatus((prev) => ({
+            ...prev,
+            storageCleanup: true,
+        }))
+    }
 
     // If preferences are still loading, render nothing (or a minimal placeholder)
     if (isLoadingPreferences) {
@@ -65,43 +107,39 @@ const AppContent = (): JSX.Element => {
     }
 
     return (
-        <ViewPreferencesContext.Provider value={{ viewPreferences, viewPrefsLoaded, updateViewPreference }}>
-            <ReaderModeContext.Provider value={{ readerMode, toggleReaderMode }}>
-                <ThemeProvider theme={muiCreateTheme(getDesignTokens(readerMode ? 'light' : 'dark'))}>
-                    <CssBaseline />
-                    <SnackbarProvider maxSnack={5}>
-                        <BrowserRouter>
-                            <NavigationDrawer />
-                            <CustomScrollbar scrollDirection="vertical">
-                                <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
-                                    <Routes>
-                                        <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
-                                        <Route path={NavigationPaths.GANG} element={<GangView />} />
-                                        <Route path={NavigationPaths.CORPORATION} element={<Corporation />} />
-                                        <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
-                                        <Route path={NavigationPaths.NPC} element={<NPC />} />
-                                        <Route path={NavigationPaths.BUILDING} element={<BuildingView />} />
-                                        <Route path={NavigationPaths.SETTINGS} element={<SettingsView />} />
-                                    </Routes>
-                                </Suspense>
-                            </CustomScrollbar>
-                        </BrowserRouter>
-                    </SnackbarProvider>
-                </ThemeProvider>
-            </ReaderModeContext.Provider>
-        </ViewPreferencesContext.Provider>
+        <ThemeProvider theme={createTheme(getDesignTokens(readerMode ? 'light' : 'dark'))}>
+            <CssBaseline />
+            <SnackbarProvider maxSnack={5}>
+                <BrowserRouter>
+                    <NavigationDrawer />
+                    <CustomScrollbar scrollDirection="vertical">
+                        <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
+                            <Routes>
+                                <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
+                                <Route path={NavigationPaths.GANG} element={<GangView />} />
+                                <Route path={NavigationPaths.CORPORATION} element={<Corporation />} />
+                                <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
+                                <Route path={NavigationPaths.CLUB} element={<ClubView />} />
+                                <Route path={NavigationPaths.BOUNTY} element={<BountyView />} />
+                                <Route path={NavigationPaths.NPC} element={<NPC />} />
+                                <Route path={NavigationPaths.BUILDING} element={<BuildingView />} />
+                                <Route path={NavigationPaths.SETTINGS} element={<SettingsView />} />
+                            </Routes>
+                        </Suspense>
+                    </CustomScrollbar>
+                </BrowserRouter>
+            </SnackbarProvider>
+        </ThemeProvider>
     )
 }
 
 const App = (): JSX.Element => {
     return (
-        <UserProvider>
-            <DataProvider>
-                <AnimationsProvider>
-                    <AppContent />
-                </AnimationsProvider>
-            </DataProvider>
-        </UserProvider>
+        <DataProvider>
+            <UserPreferencesProvider>
+                <AppContent />
+            </UserPreferencesProvider>
+        </DataProvider>
     )
 }
 

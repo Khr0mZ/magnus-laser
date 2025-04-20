@@ -1,14 +1,12 @@
 import { Box, Drawer, Stack } from '@mui/material'
-import { useContext } from 'react'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import DrawerButton from './DrawerButton'
 import LogoButton from './LogoButton'
-import ReaderModeButton from './ReaderModeButton'
 
 const NavigationDrawer = (): JSX.Element => {
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
 
     return (
         <Box sx={{ mb: 11 }}>
@@ -78,7 +76,17 @@ const NavigationDrawer = (): JSX.Element => {
                     }}
                 />
 
-                <Stack direction={'row'} sx={{ bgcolor: 'transparent', position: 'relative', zIndex: 15 }}>
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    sx={{
+                        bgcolor: 'transparent',
+                        position: 'relative',
+                        zIndex: 15,
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        mt: { xs: 2, md: 0 },
+                    }}
+                >
                     <LogoButton />
                     <Stack
                         direction={'row'}
@@ -86,17 +94,14 @@ const NavigationDrawer = (): JSX.Element => {
                             bgcolor: 'transparent',
                             flex: 1,
                             justifyContent: 'center',
-                            ml: -6,
                             position: 'relative',
+                            flexWrap: 'wrap',
                         }}
                     >
                         {Object.values(ModuleTypes).map((module) => (
                             <DrawerButton key={module} module={module} />
                         ))}
                     </Stack>
-
-                    {/* Reader Mode Toggle Button */}
-                    <ReaderModeButton />
                 </Stack>
             </Drawer>
         </Box>

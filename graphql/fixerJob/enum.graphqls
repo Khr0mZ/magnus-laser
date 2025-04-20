@@ -4,7 +4,6 @@ enum PlotCharacterVerb {
   ESCORT
   ROB
   RESCUE
-  SPY_ON
   INTIMIDATE
   INTERROGATE
   INVESTIGATE
@@ -25,7 +24,7 @@ enum PlotGangVerb {
   NEGOTIATE_WITH
   CHALLENGE
   SABOTAGE
-  SPY_ON
+  INVESTIGATE
 }
 enum PlotBuildingVerb {
   INVESTIGATE

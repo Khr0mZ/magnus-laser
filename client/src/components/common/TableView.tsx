@@ -1,10 +1,9 @@
 import { Close } from '@mui/icons-material'
 import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import CustomScrollbar from '../../components/CustomScrollbar'
 import { useData } from '../../contexts/dataHooks'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import { Building, FixerJob, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { buildingColumns, fixerJobColumns, gangColumns, ModuleTypes } from '../../utils/constants'
@@ -17,7 +16,6 @@ import {
     processGangValueForDisplay,
 } from '../../utils/functions'
 import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
-import { translateLabel } from '../../utils/i18nUtils'
 import { buttonGlitch } from './Animations'
 
 type TableColumn = {
@@ -35,7 +33,7 @@ type TableViewProps = {
 const TableView = (props: TableViewProps) => {
     const { items, onDelete, moduleType, onEdit } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     const { buildings, gangs } = useData()
 
     const resolveGangReference = (gangId: string) => {
@@ -152,11 +150,9 @@ const TableView = (props: TableViewProps) => {
                                         textShadow: `0 0 5px ${colors.neons.cyan.dark}`,
                                     }}
                                 >
-                                    {moduleType === ModuleTypes.GANG && translateLabel(t, column.label, 'gangs')}
-                                    {moduleType === ModuleTypes.BUILDING &&
-                                        translateLabel(t, column.label, 'buildings')}
-                                    {moduleType === ModuleTypes.FIXER_JOB &&
-                                        translateLabel(t, column.label, 'fixerJobs')}
+                                    {moduleType === ModuleTypes.GANG && t(`gangs.labels.${column.label}`)}
+                                    {moduleType === ModuleTypes.BUILDING && t(`buildings.labels.${column.label}`)}
+                                    {moduleType === ModuleTypes.FIXER_JOB && t(`fixerJobs.labels.${column.label}`)}
                                 </TableCell>
                             ))}
 

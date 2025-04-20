@@ -1,7 +1,6 @@
 import { Button } from '@mui/material'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReaderModeContext } from '../contexts/ReaderModeContext'
+import { useUserPreferences } from '../contexts/userPreferencesHooks.ts'
 import colors from '../utils/colors'
 import { buttonGlitch, pulseGlowGreen, scanlineFlow } from './common/Animations'
 
@@ -12,7 +11,7 @@ type GenerateButtonProps = {
 
 const GenerateButton = (props: GenerateButtonProps) => {
     const { isGenerating, handleGenerate } = props
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
 
     return (

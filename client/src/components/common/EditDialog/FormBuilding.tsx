@@ -1,7 +1,7 @@
 import { FormControl, Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
-import { Dispatch, SetStateAction, useContext } from 'react'
+import { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReaderModeContext } from '../../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
 import {
     Building,
     BuildingEvent,
@@ -54,7 +54,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
         hiddenFileInput,
     } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     return (
         <>
             {hiddenFileInput}

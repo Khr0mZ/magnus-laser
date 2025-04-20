@@ -1,12 +1,12 @@
 import { Elderly } from '@mui/icons-material'
 import { Avatar, Button, Typography } from '@mui/material'
-import { useContext, useState } from 'react'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useState } from 'react'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { glitch } from '../common/Animations.tsx'
 
-const ReaderModeButton = (): JSX.Element => {
-    const { readerMode, toggleReaderMode } = useContext(ReaderModeContext)
+const ReaderModeButton = () => {
+    const { readerMode, toggleReaderMode } = useUserPreferences()
     const [isHovered, setIsHovered] = useState(false)
 
     return (

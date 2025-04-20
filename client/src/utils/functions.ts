@@ -2,7 +2,6 @@ import { TFunction } from 'i18next'
 import { Building, BuildingType, FixerJob, Gang, GangColor, JobDifficulty } from '../graphql/types.ts'
 import colors from './colors.ts'
 import { fixerJobColumns } from './constants.ts'
-import { translateLabel } from './i18nUtils.ts'
 
 /**
  * Re-export getModuleIcon from functions.tsx
@@ -52,7 +51,7 @@ export const getRandomElement = <T>(array: T[]): T => {
  * @param hex The hex color string (accepts 3-digit, 6-digit, with or without # prefix)
  * @returns A tuple containing the [r, g, b] values as numbers
  */
-export const hexToRgb = (hex: string): [number, number, number] => {
+const hexToRgb = (hex: string): [number, number, number] => {
     // Trim input once
     const trimmedHex = hex.trim()
 
@@ -127,26 +126,26 @@ export const getGangColorValue = (gangColor: GangColor): string => {
  */
 export const getOrderedGangData = (gang: Gang, t: TFunction): { key: string; label: string; value: unknown }[] => {
     return [
-        { key: 'name', label: translateLabel(t, 'name', 'gangs'), value: gang.name },
-        { key: 'type', label: translateLabel(t, 'type', 'gangs'), value: gang.type },
+        { key: 'name', label: t('gangs.labels.name'), value: gang.name },
+        { key: 'type', label: t('gangs.labels.type'), value: gang.type },
         {
             key: 'cyberwareQuality',
-            label: translateLabel(t, 'cyberwareQuality', 'gangs'),
+            label: t('gangs.labels.cyberwareQuality'),
             value: gang.cyberwareQuality,
         },
-        { key: 'skill', label: translateLabel(t, 'skill', 'gangs'), value: gang.skill },
-        { key: 'weapons', label: translateLabel(t, 'weapons', 'gangs'), value: gang.weapons },
-        { key: 'armor', label: translateLabel(t, 'armor', 'gangs'), value: gang.armor },
-        { key: 'secretive', label: translateLabel(t, 'secretive', 'gangs'), value: gang.secretive },
-        { key: 'status', label: translateLabel(t, 'status', 'gangs'), value: gang.status },
-        { key: 'color', label: translateLabel(t, 'color', 'gangs'), value: gang.color },
-        { key: 'sin', label: translateLabel(t, 'sin', 'gangs'), value: gang.sin },
-        { key: 'knownFor', label: translateLabel(t, 'knownFor', 'gangs'), value: gang.knownFor },
-        { key: 'flaw', label: translateLabel(t, 'flaw', 'gangs'), value: gang.flaw },
-        { key: 'currentAttitude', label: translateLabel(t, 'currentAttitude', 'gangs'), value: gang.currentAttitude },
+        { key: 'skill', label: t('gangs.labels.skill'), value: gang.skill },
+        { key: 'weapons', label: t('gangs.labels.weapons'), value: gang.weapons },
+        { key: 'armor', label: t('gangs.labels.armor'), value: gang.armor },
+        { key: 'secretive', label: t('gangs.labels.secretive'), value: gang.secretive },
+        { key: 'status', label: t('gangs.labels.status'), value: gang.status },
+        { key: 'color', label: t('gangs.labels.color'), value: gang.color },
+        { key: 'sin', label: t('gangs.labels.sin'), value: gang.sin },
+        { key: 'knownFor', label: t('gangs.labels.knownFor'), value: gang.knownFor },
+        { key: 'flaw', label: t('gangs.labels.flaw'), value: gang.flaw },
+        { key: 'currentAttitude', label: t('gangs.labels.currentAttitude'), value: gang.currentAttitude },
         {
             key: 'newsTheLeaderIsReceiving',
-            label: translateLabel(t, 'newsTheLeaderIsReceiving', 'gangs'),
+            label: t('gangs.labels.newsTheLeaderIsReceiving'),
             value: gang.newsTheLeaderIsReceiving,
         },
     ]
@@ -248,41 +247,41 @@ export const getOrderedBuildingData = (
     return [
         {
             key: 'type',
-            label: translateLabel(t, 'type', 'buildings'),
+            label: t('buildings.labels.type'),
             value: building.type,
         },
-        { key: 'elevators', label: translateLabel(t, 'elevators', 'buildings'), value: building.elevators },
-        { key: 'parking', label: translateLabel(t, 'parking', 'buildings'), value: building.parking },
+        { key: 'elevators', label: t('buildings.labels.elevators'), value: building.elevators },
+        { key: 'parking', label: t('buildings.labels.parking'), value: building.parking },
         {
             key: 'gatehouseFrontDesk',
-            label: translateLabel(t, 'gatehouseFrontDesk', 'buildings'),
+            label: t('buildings.labels.gatehouseFrontDesk'),
             value: building.gatehouseFrontDesk,
         },
         {
             key: 'emergencyExit',
-            label: translateLabel(t, 'emergencyExit', 'buildings'),
+            label: t('buildings.labels.emergencyExit'),
             value: building.emergencyExit,
         },
         {
             key: 'backupLights',
-            label: translateLabel(t, 'backupLights', 'buildings'),
+            label: t('buildings.labels.backupLights'),
             value: building.backupLights,
         },
-        { key: 'landingPad', label: translateLabel(t, 'landingPad', 'buildings'), value: building.landingPad },
+        { key: 'landingPad', label: t('buildings.labels.landingPad'), value: building.landingPad },
         {
             key: 'secretOrAltEntrance',
-            label: translateLabel(t, 'secretOrAltEntrance', 'buildings'),
+            label: t('buildings.labels.secretOrAltEntrance'),
             value: building.secretOrAltEntrance,
         },
-        { key: 'ownership', label: translateLabel(t, 'ownership', 'buildings'), value: building.ownership },
+        { key: 'ownership', label: t('buildings.labels.ownership'), value: building.ownership },
         {
             key: 'securityPersonnel',
-            label: translateLabel(t, 'securityPersonnel', 'buildings'),
+            label: t('buildings.labels.securityPersonnel'),
             value: building.securityPersonnel,
         },
-        { key: 'style', label: translateLabel(t, 'style', 'buildings'), value: building.style },
-        { key: 'event', label: translateLabel(t, 'event', 'buildings'), value: building.event },
-        { key: 'secret', label: translateLabel(t, 'secret', 'buildings'), value: building.secret },
+        { key: 'style', label: t('buildings.labels.style'), value: building.style },
+        { key: 'event', label: t('buildings.labels.event'), value: building.event },
+        { key: 'secret', label: t('buildings.labels.secret'), value: building.secret },
     ]
 }
 
@@ -373,7 +372,7 @@ export const getOrderedFixerJobData = (
 
         return {
             key: col.key,
-            label: translateLabel(t, col.label, 'fixerJobs'),
+            label: t(`fixerJobs.labels.${col.label}`),
             value: value,
         }
     })
@@ -399,6 +398,9 @@ export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TF
         return t(`common.jobDifficultySelector.${String(item).toLowerCase()}`)
     }
     if (key.includes('plotComplication') && item) {
+        if (t(`fixerJobs.complication.${item}`).includes('fixerJobs.complication.')) {
+            return item as string
+        }
         return t(`fixerJobs.complication.${item}`)
     }
     if (key.includes('buildingComplication') && item) {

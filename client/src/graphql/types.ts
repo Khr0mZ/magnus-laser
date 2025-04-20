@@ -404,8 +404,7 @@ export enum PlotCharacterVerb {
   KILL = 'KILL',
   RECRUIT = 'RECRUIT',
   RESCUE = 'RESCUE',
-  ROB = 'ROB',
-  SPY_ON = 'SPY_ON'
+  ROB = 'ROB'
 }
 
 export type PlotCharacterVerbWrapper = Verb & {
@@ -455,9 +454,9 @@ export enum PlotGangVerb {
   ALLY_WITH = 'ALLY_WITH',
   CHALLENGE = 'CHALLENGE',
   INFILTRATE = 'INFILTRATE',
+  INVESTIGATE = 'INVESTIGATE',
   NEGOTIATE_WITH = 'NEGOTIATE_WITH',
-  SABOTAGE = 'SABOTAGE',
-  SPY_ON = 'SPY_ON'
+  SABOTAGE = 'SABOTAGE'
 }
 
 export type PlotGangVerbWrapper = Verb & {

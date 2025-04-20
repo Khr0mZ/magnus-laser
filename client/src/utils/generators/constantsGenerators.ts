@@ -1,5 +1,6 @@
 import { BuildingOwnership, BuildingStyle, BuildingType, GangNameType, GangType } from '../../graphql/types'
 import { getRandomElement } from '../functions'
+import { BUILDINGS_STORAGE_KEY, FIXER_JOBS_STORAGE_KEY, GANGS_STORAGE_KEY, PREFERENCES_STORAGE_KEY } from '../storage'
 import { NameComponents } from '../types'
 
 // Hugging Face constants
@@ -1223,9 +1224,14 @@ export const buildingNameData: Record<BuildingType | BuildingStyle | BuildingOwn
     },
 }
 
-// Storage keys used in the application for module data
-// Note: User settings like view preferences and reader mode are deliberately excluded
-export const APP_STORAGE_KEYS = ['magnus-laser-gangs', 'magnus-laser-buildings', 'magnus-laser-fixer-jobs']
+// Storage keys used in the application for module data and user preferences
+// These keys are included in import/export operations
+export const APP_STORAGE_KEYS = [
+    GANGS_STORAGE_KEY,
+    BUILDINGS_STORAGE_KEY,
+    FIXER_JOBS_STORAGE_KEY,
+    PREFERENCES_STORAGE_KEY,
+]
 
 export const personNames = [
     'Adela',

@@ -1,4 +1,4 @@
-import { FolderOpen, Save, SaveAlt, UploadFile } from '@mui/icons-material'
+import { FolderOpen, Save, UploadFile } from '@mui/icons-material'
 import {
     Alert,
     Box,
@@ -17,7 +17,7 @@ import {
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import localforage from 'localforage'
 import { useSnackbar } from 'notistack'
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     buttonGlitch,
@@ -33,9 +33,7 @@ import {
 } from '../../components/common/Animations'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
-import { useAnimations } from '../../contexts/AnimationsContextTypes'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
-import { useAppInitialization } from '../../hooks/useAppInitialization'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
 import {
@@ -43,6 +41,8 @@ import {
     loadHuggingFaceApiKey,
     loadOpenAIApiKey,
     notifyDataImported,
+    notifyPreferencesChanged,
+    PREFERENCES_STORAGE_KEY,
     saveGeminiApiKey,
     saveHuggingFaceApiKey,
     saveOpenAIApiKey,
@@ -51,9 +51,8 @@ import {
 const SettingsView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('common.settings')}`)
-    const { readerMode } = useContext(ReaderModeContext)
-    const { animationsEnabled, toggleAnimations } = useAnimations()
-    const { loaderEnabled, toggleLoader } = useAppInitialization()
+    const { readerMode, animationsEnabled, toggleAnimations, loaderEnabled, toggleLoader, toggleReaderMode } =
+        useUserPreferences()
     const { enqueueSnackbar, closeSnackbar } = useSnackbar()
     const [importDialogOpen, setImportDialogOpen] = useState(false)
 
@@ -132,13 +131,10 @@ const SettingsView = () => {
     const handleExport = async () => {
         try {
             const data: Record<string, unknown> = {}
-
-            // Only export keys related to our application modules
+            // Export all application collections (no separate image store)
             for (const key of APP_STORAGE_KEYS) {
                 const value = await localforage.getItem(key)
-                if (value) {
-                    data[key] = value
-                }
+                if (value) data[key] = value
             }
 
             // Create a JSON file to download
@@ -182,8 +178,9 @@ const SettingsView = () => {
                         onClose={() => closeSnackbar(key)}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <SaveAlt sx={{ mr: 1 }} />
-                            <Typography variant="body2">Data exported successfully</Typography>
+                            <Typography variant="body2">
+                                {`Exported ${Object.keys(data).length} collections successfully`}
+                            </Typography>
                         </Box>
                     </Alert>
                 ),
@@ -241,18 +238,25 @@ const SettingsView = () => {
                     try {
                         const data = JSON.parse(event.target?.result as string)
 
-                        // Only import keys related to our application modules
-                        let importedItems = 0
+                        // Import all application data and count collections and registries
+                        let importedCollections = 0
+                        let importedRegistries = 0
                         for (const key of Object.keys(data)) {
                             if (APP_STORAGE_KEYS.includes(key)) {
-                                await localforage.setItem(key, data[key])
-                                importedItems++
+                                const value = data[key]
+                                await localforage.setItem(key, value)
+                                // Count imported collections
+                                importedCollections += 1
+                                // Count registries within collections
+                                if (Array.isArray(value)) importedRegistries += value.length
+                                if (key === PREFERENCES_STORAGE_KEY) {
+                                    notifyPreferencesChanged()
+                                }
                             }
                         }
 
-                        // Show success notification and notify components instead of reloading
-                        if (importedItems > 0) {
-                            // Show success notification
+                        // Show success notification if any collections imported
+                        if (importedCollections > 0) {
                             enqueueSnackbar('', {
                                 variant: 'success',
                                 autoHideDuration: 3000,
@@ -271,7 +275,9 @@ const SettingsView = () => {
                                     >
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <UploadFile sx={{ mr: 1 }} />
-                                            <Typography variant="body2">{`Imported ${importedItems} items successfully`}</Typography>
+                                            <Typography variant="body2">
+                                                {`Imported ${importedRegistries} registries in ${importedCollections} collections successfully`}
+                                            </Typography>
                                         </Box>
                                     </Alert>
                                 ),
@@ -280,7 +286,7 @@ const SettingsView = () => {
                             // Notify components about data changes
                             notifyDataImported()
                         } else {
-                            // Show warning notification if no items were imported
+                            // Show warning notification if no collections were imported
                             enqueueSnackbar('', {
                                 variant: 'warning',
                                 autoHideDuration: 3000,
@@ -298,9 +304,7 @@ const SettingsView = () => {
                                         onClose={() => closeSnackbar(key)}
                                     >
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Typography variant="body2">
-                                                No application data found in import file
-                                            </Typography>
+                                            <Typography variant="body2">No collections found in import file</Typography>
                                         </Box>
                                     </Alert>
                                 ),
@@ -808,79 +812,130 @@ const SettingsView = () => {
                             </Typography>
 
                             <Divider sx={{ mb: 3 }} />
-                            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-                                <Typography variant="body1">{t('settings.enableAnimations')}</Typography>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            size="small"
-                                            checked={animationsEnabled}
-                                            onChange={toggleAnimations}
-                                            sx={{
-                                                '& .MuiSwitch-switchBase.Mui-checked': {
-                                                    color: colors.neons.green.default,
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(25, 220, 140, 0.08)',
+                            <Stack direction="column" spacing={2}>
+                                <Stack
+                                    direction="row"
+                                    sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                                    spacing={2}
+                                >
+                                    <Typography variant="body1">{t('settings.readerMode')}</Typography>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                size="small"
+                                                checked={!readerMode}
+                                                onChange={async () => {
+                                                    await toggleReaderMode()
+                                                }}
+                                                sx={{
+                                                    '& .MuiSwitch-switchBase.Mui-checked': {
+                                                        color: colors.neons.green.default,
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(25, 220, 140, 0.08)',
+                                                        },
                                                     },
-                                                },
-                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                                    backgroundColor: colors.neons.green.dark,
-                                                },
-                                            }}
-                                        />
-                                    }
-                                    label={
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                color: readerMode ? colors.grays.gray000 : colors.grays.gray500,
-                                                fontWeight: 500,
-                                            }}
-                                        >
-                                            {animationsEnabled ? 'Enabled' : 'Disabled'}
-                                        </Typography>
-                                    }
-                                    labelPlacement="end"
-                                />
-                            </Stack>
-                            <Stack direction="row" alignItems="center" spacing={2}>
-                                <Typography variant="body1">
-                                    {t('settings.enableLoader') || 'Enable Startup Loader'}
-                                </Typography>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            size="small"
-                                            checked={loaderEnabled}
-                                            onChange={async () => {
-                                                await toggleLoader()
-                                            }}
-                                            sx={{
-                                                '& .MuiSwitch-switchBase.Mui-checked': {
-                                                    color: colors.neons.green.default,
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(25, 220, 140, 0.08)',
+                                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                        backgroundColor: colors.neons.green.dark,
                                                     },
-                                                },
-                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                                    backgroundColor: colors.neons.green.dark,
-                                                },
-                                            }}
-                                        />
-                                    }
-                                    label={
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                color: readerMode ? colors.grays.gray000 : colors.grays.gray500,
-                                                fontWeight: 500,
-                                            }}
-                                        >
-                                            {loaderEnabled ? 'Enabled' : 'Disabled'}
-                                        </Typography>
-                                    }
-                                    labelPlacement="end"
-                                />
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray000 : colors.grays.gray500,
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                {!readerMode ? 'Enabled' : 'Disabled'}
+                                            </Typography>
+                                        }
+                                        labelPlacement="end"
+                                    />
+                                </Stack>
+                                <Stack
+                                    direction="row"
+                                    sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                                    spacing={2}
+                                >
+                                    <Typography variant="body1">{t('settings.enableAnimations')}</Typography>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                size="small"
+                                                checked={animationsEnabled}
+                                                onChange={toggleAnimations}
+                                                sx={{
+                                                    '& .MuiSwitch-switchBase.Mui-checked': {
+                                                        color: colors.neons.green.default,
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(25, 220, 140, 0.08)',
+                                                        },
+                                                    },
+                                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                        backgroundColor: colors.neons.green.dark,
+                                                    },
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray000 : colors.grays.gray500,
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                {animationsEnabled ? 'Enabled' : 'Disabled'}
+                                            </Typography>
+                                        }
+                                        labelPlacement="end"
+                                    />
+                                </Stack>
+                                <Stack
+                                    direction="row"
+                                    sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                                    spacing={2}
+                                >
+                                    <Typography variant="body1">
+                                        {t('settings.enableLoader') || 'Enable Startup Loader'}
+                                    </Typography>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                size="small"
+                                                checked={loaderEnabled}
+                                                onChange={async () => {
+                                                    await toggleLoader()
+                                                }}
+                                                sx={{
+                                                    '& .MuiSwitch-switchBase.Mui-checked': {
+                                                        color: colors.neons.green.default,
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(25, 220, 140, 0.08)',
+                                                        },
+                                                    },
+                                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                        backgroundColor: colors.neons.green.dark,
+                                                    },
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray000 : colors.grays.gray500,
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                {loaderEnabled ? 'Enabled' : 'Disabled'}
+                                            </Typography>
+                                        }
+                                        labelPlacement="end"
+                                    />
+                                </Stack>
                             </Stack>
                         </CardContent>
                     </Card>

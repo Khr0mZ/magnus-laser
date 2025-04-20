@@ -2,9 +2,8 @@ import { Close, Save } from '@mui/icons-material'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import { Avatar, Box, CircularProgress, IconButton, Typography } from '@mui/material'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReaderModeContext } from '../../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
 import colors from '../../../utils/colors'
 import { flicker, glitch } from '../Animations'
 
@@ -34,7 +33,7 @@ const ImageField = (props: ImageFieldProps) => {
         disabled,
     } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
 
     // Ensure these event handlers stop propagation to prevent unwanted parent clicks
     const handleUploadClick = (e: React.MouseEvent) => {

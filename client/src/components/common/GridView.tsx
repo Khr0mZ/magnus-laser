@@ -11,10 +11,9 @@ import {
     TableRow,
     Typography,
 } from '@mui/material'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../contexts/dataHooks'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import { Building, FixerJob, Gang } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
@@ -46,7 +45,7 @@ type GridViewProps = {
 const GridView = (props: GridViewProps) => {
     const { items, onDelete, moduleType, onEdit } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     const { buildings, gangs } = useData()
 
     // Helper function to resolve gang references

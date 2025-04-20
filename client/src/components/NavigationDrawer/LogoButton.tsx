@@ -1,14 +1,13 @@
 import { Avatar, Box, Button } from '@mui/material'
-import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import NavigationPaths from '../../navigation'
 import colors from '../../utils/colors'
 import { severeGlitch } from '../common/Animations.tsx'
 
 const LogoButton = (): JSX.Element => {
     const navigate = useNavigate()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
 
     return (
         <Button

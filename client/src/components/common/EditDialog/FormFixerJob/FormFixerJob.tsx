@@ -10,10 +10,10 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { Dispatch, SetStateAction, useCallback, useContext } from 'react'
+import { Dispatch, SetStateAction, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
-import { ReaderModeContext } from '../../../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks.ts'
 import {
     FixerJob,
     JobDifficulty,
@@ -81,7 +81,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
         hiddenFileInput,
     } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     const { fixerJobs, gangs, buildings } = useData()
 
     const getSubjectType = (): string => {

@@ -1,13 +1,12 @@
 import { Container, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 
 const CorporationView = () => {
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     useDocumentTitle(`Magnus Laser - Corporation`)
 
     return (

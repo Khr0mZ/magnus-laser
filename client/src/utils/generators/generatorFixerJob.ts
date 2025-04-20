@@ -6,7 +6,6 @@ import {
     FixerJob,
     Gang,
     GangComplication,
-    GangNameType,
     JobDifficulty,
     Maybe,
     Plot,
@@ -35,12 +34,33 @@ import { getJobDifficultyModifier, getRandomElement, getRandomInt } from '../fun
 import { generateRandomBuilding } from '../generators/generatorBuilding'
 import { generateRandomGang } from '../generators/generatorGang'
 import {
-    corpoPrefixes,
-    gangNameCategories, // Import corpoPrefixes
+    corpoPrefixes, // Import corpoPrefixes
     personNames, // Import personNames
     surnames, // Import surnames
     TextGenerationType,
 } from './constantsGenerators'
+
+// Shared lists for weapon name generation and themed suffixes
+const WEAPON_ADJECTIVES = ['Neon', 'Chrome', 'Cyber', 'Plasma', 'Quantum', 'Hyper', 'Vapor']
+const WEAPON_NOUNS = [
+    'Medium Pistol',
+    'Heavy Pistol',
+    'Very Heavy Pistol',
+    'Submachine Gun',
+    'Heavy Submachine Gun',
+    'Shotgun',
+    'Assault Rifle',
+    'Sniper Rifle',
+    'Bow and Crossbow',
+    'Grenade Launcher',
+    'Rocket Launcher',
+    'Light Melee Weapon',
+    'Medium Melee Weapon',
+    'Heavy Melee Weapon',
+    'Very Heavy Melee Weapon',
+    'Thrown Weapon',
+]
+const ITEM_NAME_THEMED_SUFFIXES = ['Mk.I', 'Mk.II', 'Series X', 'Prototype', 'Alpha', 'Omega', 'V1', 'V2']
 
 /**
  * Improved FixerJob generator with increased narrative detail.
@@ -238,38 +258,36 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
     const buildingStyle = building?.style ? t(`buildings.style.${building.style}`) : ''
     const buildingType = building?.type ? t(`buildings.type.${building.type}`) : ''
 
-    // --- Translate Subject Details ---
+    // --- Translate Subject Details using verb type ---
     let subjectDetails = ''
-    if (plotSubject) {
-        let type = ''
-        let detail = ''
-        if (plotSubject.__typename === 'PlotCharacter') {
-            type = t(`fixerJobs.character.${plotSubject.type}`)
-            detail = t(`fixerJobs.characterAttitude.${plotSubject.attitude}`)
-            subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectCharDetail']), {
-                name: subjectName,
-                type,
-                attitude: detail,
-            })
-        } else if (plotSubject.__typename === 'PlotItem') {
-            type = t(`fixerJobs.item.${plotSubject.type}`)
-            detail = t(`fixerJobs.itemCondition.${plotSubject.condition}`)
-            subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectItemDetail']), {
-                name: subjectName,
-                type,
-                condition: detail,
-            })
-        } else if (plotSubject.__typename === 'PlotGang' && plotSubject.gang) {
-            type = t(`gangs.type.${plotSubject.gang.type}`)
-            detail = plotSubject.complication?.type
-                ? t(`fixerJobs.gangComplication.${plotSubject.complication.type}`)
-                : ''
-            subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectGangDetail']), {
-                name: subjectName,
-                type,
-                complication: detail,
-            })
-        }
+    if (verb.__typename === 'PlotCharacterVerbWrapper' && plotSubject) {
+        const character = plotSubject as PlotCharacter
+        const typeLabel = t(`fixerJobs.character.${character.type}`)
+        const attitudeLabel = t(`fixerJobs.characterAttitude.${character.attitude}`)
+        subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectCharDetail']), {
+            name: subjectName,
+            type: typeLabel,
+            attitude: attitudeLabel,
+        })
+    } else if (verb.__typename === 'PlotItemVerbWrapper' && plotSubject) {
+        const item = plotSubject as PlotItem
+        const typeLabel = t(`fixerJobs.item.${item.type}`)
+        const conditionLabel = t(`fixerJobs.itemCondition.${item.condition}`)
+        subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectItemDetail']), {
+            name: subjectName,
+            type: typeLabel,
+            condition: conditionLabel,
+        })
+    } else if (verb.__typename === 'PlotGangVerbWrapper' && plotSubject) {
+        const gangPlot = plotSubject as PlotGang
+        const typeLabel = t(`gangs.type.${gangPlot.gang.type}`)
+        const newsKey = gangPlot.gang.newsTheLeaderIsReceiving
+        const newsLabel = newsKey ? t(`gangs.news.${newsKey}`) : ''
+        subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectGangDetail']), {
+            name: subjectName,
+            type: typeLabel,
+            news: newsLabel,
+        })
     }
 
     // --- Translate Complication Details ---
@@ -286,13 +304,10 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
             specifics = t(getRandomElement(['fixerJobs.generator.complicationDetailItem']), {
                 name: plotComplication.item.name,
             })
-        mainCompDetails = t(
-            getRandomElement([
-                'fixerJobs.generator.mainComplicationSentenceA',
-                'fixerJobs.generator.mainComplicationSentenceB',
-            ]),
-            { complication: translatedMainComp, specifics }
-        )
+        mainCompDetails = t('fixerJobs.generator.mainComplicationSentenceA', {
+            complication: translatedMainComp,
+            specifics,
+        })
     }
 
     // --- Translate Place Complication Details ---
@@ -309,18 +324,15 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
             specifics = t(getRandomElement(['fixerJobs.generator.complicationDetailItem']), {
                 name: plotBuilding.complication.item.name,
             })
-        placeCompDetails = t(
-            getRandomElement([
-                'fixerJobs.generator.placeComplicationSentenceA',
-                'fixerJobs.generator.placeComplicationSentenceB',
-            ]),
-            { complication: translatedPlaceComp, specifics }
-        )
+        placeCompDetails = t('fixerJobs.generator.placeComplicationSentenceA', {
+            complication: translatedPlaceComp,
+            specifics,
+        })
     }
 
     // --- Build Sentence Components ---
     const objectives = [
-        t(getRandomElement(['fixerJobs.generator.objectiveSentence1a', 'fixerJobs.generator.objectiveSentence1b']), {
+        t('fixerJobs.generator.objectiveSentence1a', {
             verb: translatedVerb,
             subject: subjectName,
         }),
@@ -336,86 +348,113 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
     ].filter((s) => s)
 
     const buildings = [
-        t(getRandomElement(['fixerJobs.generator.buildingSentence1a', 'fixerJobs.generator.buildingSentence1b']), {
+        t('fixerJobs.generator.buildingSentence1a', {
             building: buildingName,
+            style: buildingStyle,
+            type: buildingType,
         }),
         buildingType
-            ? t(
-                  getRandomElement([
-                      'fixerJobs.generator.buildingSentence2a',
-                      'fixerJobs.generator.buildingSentence2b',
-                  ]),
-                  { building: buildingName, type: buildingType }
-              )
+            ? t('fixerJobs.generator.buildingSentence1a', {
+                  building: buildingName,
+                  type: buildingType,
+                  style: buildingStyle,
+              })
             : '',
         buildingStyle
-            ? t(
-                  getRandomElement([
-                      'fixerJobs.generator.buildingSentence3a',
-                      'fixerJobs.generator.buildingSentence3b',
-                  ]),
-                  { building: buildingName, style: buildingStyle }
-              )
+            ? t('fixerJobs.generator.buildingSentence1a', {
+                  building: buildingName,
+                  type: buildingType,
+                  style: buildingStyle,
+              })
             : '',
     ].filter((s) => s)
 
-    const complications = [mainCompDetails, placeCompDetails].filter((s) => s)
-
-    const moods = [
-        t(getRandomElement(['fixerJobs.generator.moodSentence1a', 'fixerJobs.generator.moodSentence1b'])),
-        t(getRandomElement(['fixerJobs.generator.moodSentence2a', 'fixerJobs.generator.moodSentence2b'])),
-        t(getRandomElement(['fixerJobs.generator.moodSentence3a', 'fixerJobs.generator.moodSentence3b'])),
-    ]
-
-    const connectors = [
-        t('fixerJobs.generator.connPhrase1'),
-        t('fixerJobs.generator.connPhrase2'),
-        t('fixerJobs.generator.connPhrase3'),
-        t('fixerJobs.generator.connPhrase4'),
-        t('fixerJobs.generator.connPhrase5'),
-        '', // Option for no connector
-    ]
-
-    // --- Assemble Description ---
-    const descriptionParts: string[] = []
-    const structure = getRandomElement(['OLCM', 'LOCM', 'OCLM', 'LOMC']) // Added LOMC variation
-
-    const sentenceMap: { [key: string]: string[] } = {
-        O: objectives,
-        L: buildings,
-        C: complications,
-        M: moods,
+    // Markdown formatted description reflecting all defined fields
+    const mdLines: string[] = []
+    // Helper to clean up extra punctuation and whitespace
+    const cleanText = (s: string) =>
+        s
+            .trim()
+            .replace(/\s+/g, ' ')
+            .replace(/\.{2,}/g, '.')
+            .replace(/[.?!]+$/, '')
+    // Objective (take the first sentence)
+    if (objectives.length) {
+        const obj = cleanText(objectives[0])
+        mdLines.push(`**Objective:** *${obj.trimEnd()}*`)
     }
-
-    let firstPart = true
-    for (const partKey of structure) {
-        const sentences = sentenceMap[partKey]
-        if (sentences && sentences.length > 0) {
-            let sentence = getRandomElement(sentences)
-            // Add connector sometimes before non-first parts
-            if (!firstPart && Math.random() > 0.4) {
-                const connector = getRandomElement(connectors)
-                if (connector) {
-                    sentence = `${connector} ${sentence.charAt(0).toLowerCase() + sentence.slice(1)}`
-                }
+    // Subject Details based on objective type
+    if (verb.__typename === 'PlotCharacterVerbWrapper' && plotSubject) {
+        const character = plotSubject as PlotCharacter
+        const detail = cleanText(
+            t(getRandomElement(['fixerJobs.generator.subjectCharDetail']), {
+                name: subjectName,
+                type: t(`fixerJobs.character.${character.type}`),
+                attitude: t(`fixerJobs.characterAttitude.${character.attitude}`),
+            })
+        )
+        mdLines.push(`- **Objective Details:** *${detail}*`)
+    } else if (verb.__typename === 'PlotItemVerbWrapper' && plotSubject) {
+        const item = plotSubject as PlotItem
+        const detail = cleanText(
+            t(getRandomElement(['fixerJobs.generator.subjectItemDetail']), {
+                name: subjectName,
+                type: t(`fixerJobs.item.${item.type}`),
+                condition: t(`fixerJobs.itemCondition.${item.condition}`),
+            })
+        )
+        mdLines.push(`- **Objective Details:** *${detail}*`)
+    } else if (verb.__typename === 'PlotGangVerbWrapper' && plotSubject) {
+        const gangPlot = plotSubject as PlotGang
+        const newsKey = gangPlot.gang.newsTheLeaderIsReceiving
+        const newsLabel = newsKey ? t(`gangs.news.${newsKey}`) : ''
+        const detail = cleanText(
+            t(getRandomElement(['fixerJobs.generator.subjectGangDetail']), {
+                name: subjectName,
+                type: t(`gangs.type.${gangPlot.gang.type}`),
+                news: newsLabel,
+            })
+        )
+        mdLines.push(`- **Objective Details:** *${detail}*`)
+    }
+    // Gang Complication (if the action targets a gang)
+    if (verb.__typename === 'PlotGangVerbWrapper' && plotSubject) {
+        const gangPlot = plotSubject as PlotGang
+        if (gangPlot.complication) {
+            const compTypeKey = gangPlot.complication.type
+            const translatedGC = t(`fixerJobs.gangComplication.${compTypeKey}`)
+            // specifics: either character or item
+            let gcSpecifics = ''
+            if (gangPlot.complication.character) {
+                gcSpecifics = t(getRandomElement(['fixerJobs.generator.complicationDetailChar']), {
+                    name: gangPlot.complication.character.name,
+                })
+            } else if (gangPlot.complication.item) {
+                gcSpecifics = t(getRandomElement(['fixerJobs.generator.complicationDetailItem']), {
+                    name: gangPlot.complication.item.name,
+                })
             }
-            descriptionParts.push(sentence)
-            firstPart = false
+            const fullGC = cleanText(`${translatedGC}. ${gcSpecifics}`)
+            mdLines.push(`- **Objective Complication:** *${fullGC.trimEnd()}*`)
         }
     }
-
-    // Simple fallback if assembly fails
-    if (descriptionParts.length < 2) {
-        return (
-            `${getRandomElement(objectives)} ${getRandomElement(buildings)} ${
-                mainCompDetails || placeCompDetails || 'No complications reported.'
-            } ${getRandomElement(moods)}`
-                .replace(/\s+/g, ' ')
-                .trim() + '.'
-        )
+    // Location (pick one sentence)
+    if (buildings.length) {
+        const loc = cleanText(getRandomElement(buildings))
+        mdLines.push(`**Location:** *${loc.trimEnd()}*`)
     }
-
-    return descriptionParts.join(' ').replace(/\s+/g, ' ').replace(/ \./g, '.').trim() // Join selected parts, clean whitespace and punctuation
+    // Site Complication
+    if (placeCompDetails) {
+        const pc = cleanText(placeCompDetails)
+        mdLines.push(`- **Location Complication:** *${pc.trimEnd()}*`)
+    }
+    // Main Complication
+    if (mainCompDetails) {
+        const comp = cleanText(mainCompDetails)
+        mdLines.push(`**Main Complication:** *${comp.trimEnd()}*`)
+    }
+    // Return joined markdown lines
+    return mdLines.join('\n\n')
 }
 
 /**
@@ -423,202 +462,48 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
  * Incorporates more job details for variety.
  */
 const generateLocalFixerJobName = (t: TFunction, fixerJob: FixerJob): string => {
-    const verb = fixerJob.plot.verb
-    const verbValue = verb.value
-    const subject = fixerJob.plot.plotSubject
-    const building = fixerJob.plot.plotBuilding.building
-    const complicationType = fixerJob.plot.plotComplication?.type
-
-    // Translate relevant parts
-    const translatedVerb = t(`fixerJobs.verb.${verbValue}`)
-    let translatedSubjectType = ''
-    if (subject) {
-        if (verb.__typename === 'PlotCharacterVerbWrapper') {
-            translatedSubjectType = t(`fixerJobs.character.${(subject as PlotCharacter).type}`)
-        } else if (verb.__typename === 'PlotItemVerbWrapper') {
-            translatedSubjectType = t(`fixerJobs.item.${(subject as PlotItem).type}`)
-        } else if (verb.__typename === 'PlotGangVerbWrapper' && (subject as PlotGang).gang) {
-            translatedSubjectType = t(`gangs.type.${(subject as PlotGang).gang.type}`)
-        } else if (verb.__typename === 'PlotBuildingVerbWrapper') {
-            translatedSubjectType = t(`buildings.type.${building.type}`)
+    const { plot } = fixerJob
+    const action = t(`fixerJobs.verb.${plot.verb.value}`)
+    // Building-specific patterns
+    if (plot.verb.__typename === 'PlotBuildingVerbWrapper') {
+        const name = plot.plotBuilding.building.name
+        const buildingPatterns = [
+            `${action} ${name}`,
+            `Operation: ${action} ${name}`,
+            `Siege of ${name}`,
+            `Break-In at ${name}`,
+            `Secure ${name}`,
+            `Lockdown at ${name}`,
+            `Extraction of ${name}`,
+        ]
+        return getRandomElement(buildingPatterns)
+    }
+    // Character, Item, or Gang patterns
+    if (plot.plotSubject) {
+        // @ts-expect-error: target subject or gang has name
+        const name = plot.plotSubject.name || plot.plotSubject.gang?.name || ''
+        // Map certain verbs to noun phrases
+        const nounMap: Record<string, string> = {
+            INVESTIGATE: 'Investigation',
+            INFILTRATE: 'Infiltration',
+            ALLY_WITH: 'Alliance',
+            NEGOTIATE_WITH: 'Negotiation',
         }
+        const verbKey = plot.verb.value
+        const patterns: string[] = [`${action} ${name}`, `Operation: ${action} ${name}`]
+        if (nounMap[verbKey]) {
+            const nounPhrase = nounMap[verbKey]
+            // Use 'with' for verbs ending in '_WITH', otherwise 'of'
+            if (verbKey.endsWith('_WITH')) {
+                patterns.push(`The ${nounPhrase} with ${name}`)
+            } else {
+                patterns.push(`The ${nounPhrase} of ${name}`)
+            }
+        }
+        return getRandomElement(patterns)
     }
-    const translatedBuildingStyle = building?.style ? t(`buildings.style.${building.style}`) : ''
-    const translatedComplicationType = complicationType ? t(`fixerJobs.complication.${complicationType}`) : ''
-
-    // --- New elements for added complexity ---
-    const randomCorpo = getRandomElement(corpoPrefixes)
-    const randomSurname = getRandomElement(surnames)
-    const randomFirstName = getRandomElement(personNames)
-    const relevantGangCategories = [
-        GangNameType.WEAPON,
-        GangNameType.ANIMAL,
-        GangNameType.WEATHER_PHENOMENA,
-        GangNameType.ADJECTIVE,
-        GangNameType.COLOR,
-        GangNameType.BODY_PART,
-    ]
-    const randomGangCategory = getRandomElement(relevantGangCategories)
-    const randomGangWord = getRandomElement(gangNameCategories[randomGangCategory])
-    // --- End new elements ---
-
-    // Cyberpunk terms
-    const cyberpunkAdjectives = [
-        'Neon',
-        'Chrome',
-        'Quantum',
-        'Ghost',
-        'Shadow',
-        'Data',
-        'Zero-Day',
-        'Cryo',
-        'Bio',
-        'Synth',
-        'Vapor',
-        'Holo',
-        'Glitch',
-        'Wired',
-        'Street',
-        'Midnight',
-        'Terminal',
-        'Digital',
-        'Viral',
-        'Augmented',
-    ]
-    const cyberpunkNouns = [
-        'Protocol',
-        'Gambit',
-        'Run',
-        'Interface',
-        'Network',
-        'Heist',
-        'Requiem',
-        'Algorithm',
-        'Matrix',
-        'Vector',
-        'Echo',
-        'Whisper',
-        'Signal',
-        'Manifest',
-        'Directive',
-        'Replicant',
-        'Construct',
-        'Payload',
-        'Cipher',
-        'Shard',
-        'Trace',
-    ]
-
-    const randomAdjective = getRandomElement(cyberpunkAdjectives)
-    const randomNoun = getRandomElement(cyberpunkNouns)
-
-    const patterns: string[] = []
-
-    // Basic patterns
-    patterns.push(t('fixerJobs.generator.namePatternBasic1', { verb: translatedVerb })) // Operation: Verb
-    patterns.push(t('fixerJobs.generator.namePatternBasic2', { adjective: randomAdjective, verb: translatedVerb })) // Adj Verb
-    patterns.push(t('fixerJobs.generator.namePatternBasic3', { noun: randomNoun, verb: translatedVerb })) // The Noun Verb
-    patterns.push(t('fixerJobs.generator.namePatternBasic4', { verb: translatedVerb })) // The Verb Protocol
-
-    // Patterns using subject
-    if (translatedSubjectType) {
-        patterns.push(
-            t('fixerJobs.generator.namePatternSubject1', { verb: translatedVerb, subjectType: translatedSubjectType })
-        ) // The SubjectType Verb
-        patterns.push(
-            t('fixerJobs.generator.namePatternSubject2', { subjectType: translatedSubjectType, noun: randomNoun })
-        ) // SubjectType Noun
-    }
-
-    // Patterns using building
-    if (building?.name) {
-        patterns.push(
-            t('fixerJobs.generator.namePatternBuilding1', { verb: translatedVerb, buildingName: building.name })
-        ) // The Building Verb
-    }
-    if (translatedBuildingStyle) {
-        patterns.push(
-            t('fixerJobs.generator.namePatternBuilding2', {
-                buildingStyle: translatedBuildingStyle,
-                verb: translatedVerb,
-            })
-        ) // BuildingStyle Verb
-        patterns.push(
-            t('fixerJobs.generator.namePatternBuilding3', { buildingStyle: translatedBuildingStyle, noun: randomNoun })
-        ) // BuildingStyle Noun
-    }
-
-    // Patterns using complication
-    if (translatedComplicationType) {
-        patterns.push(
-            t('fixerJobs.generator.namePatternComplication1', {
-                complicationType: translatedComplicationType,
-                noun: randomNoun,
-            })
-        ) // The ComplicationType Noun
-    }
-
-    // --- New Complex Patterns ---
-    patterns.push(t('fixerJobs.generator.namePatternCorpo1', { corpo: randomCorpo, verb: translatedVerb })) // Corpo Verb
-    patterns.push(t('fixerJobs.generator.namePatternCorpo2', { corpo: randomCorpo, noun: randomNoun })) // Corpo Noun
-    patterns.push(t('fixerJobs.generator.namePatternSurname1', { surname: randomSurname, noun: randomNoun })) // Surname's Noun
-    patterns.push(t('fixerJobs.generator.namePatternSurname2', { surname: randomSurname, verb: translatedVerb })) // Surname's Verb
-    patterns.push(
-        t('fixerJobs.generator.namePatternFullName1', {
-            firstName: randomFirstName,
-            surname: randomSurname,
-            noun: randomNoun,
-        })
-    ) // FirstName Surname Noun
-    patterns.push(t('fixerJobs.generator.namePatternGangWord1', { gangWord: randomGangWord, verb: translatedVerb })) // GangWord Verb
-    patterns.push(t('fixerJobs.generator.namePatternGangWord2', { gangWord: randomGangWord, noun: randomNoun })) // The GangWord Noun
-    patterns.push(t('fixerJobs.generator.namePatternAdjNoun', { adjective: randomAdjective, noun: randomNoun })) // Adj Noun
-    // --- End New Complex Patterns ---
-
-    // --- New Three-Part Patterns ---
-    patterns.push(
-        t('fixerJobs.generator.namePatternAdjNounVerb', {
-            adjective: randomAdjective,
-            noun: randomNoun,
-            verb: translatedVerb,
-        })
-    )
-    patterns.push(
-        t('fixerJobs.generator.namePatternAdjGangNoun', {
-            adjective: randomAdjective,
-            gangWord: randomGangWord,
-            noun: randomNoun,
-        })
-    )
-    patterns.push(
-        t('fixerJobs.generator.namePatternCorpoAdjNoun', {
-            corpo: randomCorpo,
-            adjective: randomAdjective,
-            noun: randomNoun,
-        })
-    )
-    if (translatedBuildingStyle) {
-        // Only add if building style is available
-        patterns.push(
-            t('fixerJobs.generator.namePatternBuildingNounVerb', {
-                buildingStyle: translatedBuildingStyle,
-                noun: randomNoun,
-                verb: translatedVerb,
-            })
-        )
-    }
-    // --- End New Three-Part Patterns ---
-
-    // Filter out any potentially empty strings if translations failed unexpectedly
-    const validPatterns = patterns.filter((p) => p && !p.startsWith('fixerJobs.generator.'))
-
-    // Fallback if somehow all patterns fail
-    if (validPatterns.length === 0) {
-        // Simple fallback with some flavor
-        return `${randomAdjective} ${translatedVerb}`.trim()
-    }
-
-    return getRandomElement(validPatterns)
+    // Fallback
+    return action
 }
 
 /**
@@ -702,31 +587,21 @@ const generateLocalRandomItemName = (itemType: PlotItemType): string => {
         case PlotItemType.MONEY:
             return `CredStack ${getRandomInt(100, 1000)}`
         case PlotItemType.WEAPONS: {
-            const adjectives = ['Neon', 'Chrome', 'Cyber', 'Plasma', 'Quantum', 'Hyper', 'Vapor']
-            const nouns = [
-                'Medium Pistol',
-                'Heavy Pistol',
-                'Very Heavy Pistol',
-                'Submachine Gun',
-                'Heavy Submachine Gun',
-                'Shotgun',
-                'Assault Rifle',
-                'Sniper Rifle',
-                'Bow and Crossbow',
-                'Grenade Launcher',
-                'Rocket Launcher',
-                'Light Melee Weapon',
-                'Medium Melee Weapon',
-                'Heavy Melee Weapon',
-                'Very Heavy Melee Weapon',
-                'Thrown Weapon',
-            ]
-            let name = `${getRandomElement(adjectives)} ${getRandomElement(nouns)} ${getRandomInt(100, 999)}`
+            // Use shared constants
+            let name = `${getRandomElement(WEAPON_ADJECTIVES)} ${getRandomElement(WEAPON_NOUNS)} ${getRandomInt(
+                100,
+                999
+            )}`
             const chance = Math.random()
-            if (chance < 0.3) {
+            // 40% corporate prefix, next 20% 'by' suffix
+            if (chance < 0.4) {
                 name = `${getRandomElement(corpoPrefixes)} ${name}`
-            } else if (chance < 0.5) {
+            } else if (chance < 0.6) {
                 name = `${name} by ${getRandomElement(surnames)}`
+            }
+            // 20% themed suffix
+            if (Math.random() < 0.2) {
+                name = `${name} ${getRandomElement(ITEM_NAME_THEMED_SUFFIXES)}`
             }
             return name
         }
@@ -804,7 +679,9 @@ const generateLocalRandomItemName = (itemType: PlotItemType): string => {
             return `${getRandomElement(adjectives)} ${getRandomElement(nouns)}`
         }
         default:
-            return `Artifact ${getRandomInt(100, 999)}`
+            return `Artifact ${getRandomInt(100, 999)}${
+                Math.random() < 0.3 ? ` ${getRandomElement(ITEM_NAME_THEMED_SUFFIXES)}` : ''
+            }`
     }
 }
 

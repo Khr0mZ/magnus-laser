@@ -2,8 +2,8 @@ import { Box, FormControl, InputLabel, SxProps, Theme, useTheme } from '@mui/mat
 import { EditorContent, useEditor } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { marked } from 'marked'
-import { useContext, useEffect, useId } from 'react'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useEffect, useId } from 'react'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { pulseGlowBlue, pulseGlowCyan } from './Animations'
 
@@ -15,7 +15,7 @@ type TiptapEditorProps = {
 }
 
 const TiptapEditor = ({ label, value, onChange, sx }: TiptapEditorProps) => {
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     const theme = useTheme() // Use theme for consistency if needed
     const editorId = useId() // Generate unique ID for accessibility
     const labelId = `tiptap-label-${editorId}`

@@ -1,7 +1,6 @@
 import { ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReaderModeContext } from '../../contexts/ReaderModeContext'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import { JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { getJobDifficultyModifier } from '../../utils/functions'
@@ -16,7 +15,7 @@ type JobDifficultySelectorProps = {
 const JobDifficultySelector = (props: JobDifficultySelectorProps) => {
     const { jobDifficulty, onJobDifficultyChange } = props
     const { t } = useTranslation()
-    const { readerMode } = useContext(ReaderModeContext)
+    const { readerMode } = useUserPreferences()
     return (
         <CyberpunkFormControlLabel
             readerMode={readerMode}

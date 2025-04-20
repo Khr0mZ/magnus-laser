@@ -380,7 +380,34 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
 function generateLocalGangName(t: TFunction, type: GangType, gangColor: GangColor): string {
     // Get appropriate naming patterns for this gang type
     const appropriatePatterns = gangTypeNameData[type].preferredPatterns || [1, 2, 3, 4, 5]
-    const namingPattern = getRandomElement(appropriatePatterns)
+    // Define cyberpunk arrays for extra flair
+    const cyberpunkAdjectives = [
+        'Neon',
+        'Chrome',
+        'Quantum',
+        'Shadow',
+        'Digital',
+        'Holo',
+        'Pulse',
+        'Cipher',
+        'Echo',
+        'Requiem',
+    ]
+    const cyberpunkNouns = [
+        'Legion',
+        'Vortex',
+        'Protocol',
+        'Matrix',
+        'Spectrum',
+        'Specter',
+        'Wave',
+        'Grid',
+        'Fragment',
+        'Glitch',
+    ]
+    // Extend patterns with two new cyberpunk styles
+    const allPatterns = [...appropriatePatterns, 16, 17]
+    const namingPattern = getRandomElement(allPatterns)
 
     // Define all the elements we might need
     const adjective = getRandomElement(gangNameCategories[GangNameType.ADJECTIVE])
@@ -450,6 +477,12 @@ function generateLocalGangName(t: TFunction, type: GangType, gangColor: GangColo
         case 15: // Quirky poser: "Los Chrome Boys"
             name = `${prefix} ${color} ${profession}`
             break
+        case 16: // Cyberpunk style: "Neon Legion"
+            name = `${getRandomElement(cyberpunkAdjectives)} ${getRandomElement(cyberpunkNouns)}`
+            break
+        case 17: // Themed cyberpunk: "The Digital Spectrum"
+            name = `${t('common.the')} ${getRandomElement(cyberpunkAdjectives)} ${getRandomElement(cyberpunkNouns)}`
+            break
         default:
             name = `${t('common.the')} ${adjective} ${animal}`
     }
@@ -501,18 +534,13 @@ const generateLocalGangDescription = (t: TFunction, gang: Gang): string => {
         newsTheLeaderIsReceiving,
     } = gang
 
-    // Choose a description pattern randomly based on gang type
-    const descriptionPattern = getRandomInt(1, 6)
-
     // Element variables for description building
     let identityDesc = ''
     let appearanceDesc = ''
     let reputationDesc = ''
     let activityDesc = ''
-    let strengthDesc = ''
     let weaknessDesc = ''
     let newsDesc = ''
-    let atmosphereDesc = ''
     let secretiveDesc = ''
 
     // Generate identity description based on gang type
@@ -742,97 +770,35 @@ const generateLocalGangDescription = (t: TFunction, gang: Gang): string => {
         t('gangs.description.newsRumor', { news: newsText }),
     ])
 
-    // Generate random atmospheric details based on gang type and status
-    const atmosphereOptions = [
-        t('gangs.atmosphere.feared'),
-        t('gangs.atmosphere.respected'),
-        t('gangs.atmosphere.infamous'),
-        t('gangs.atmosphere.mysterious'),
-        t('gangs.atmosphere.volatile'),
-    ]
-    atmosphereDesc = getRandomElement(atmosphereOptions)
-
-    // Combine elements based on the chosen pattern
-    let finalDescription = ''
-
-    switch (descriptionPattern) {
-        case 1: // Traditional pattern: identity, appearance, reputation, current state
-            finalDescription = `${identityDesc} ${appearanceDesc} ${
-                secretiveDesc ? secretiveDesc + ' ' : ''
-            }${reputationDesc}${weaknessDesc ? ' ' + weaknessDesc : ''}. ${activityDesc ? activityDesc : ''}${
-                newsDesc ? ' ' + newsDesc : ''
-            }`
-            break
-
-        case 2: // Start with reputation, then identity and appearance
-            finalDescription = `${reputationDesc} ${identityDesc} ${appearanceDesc} ${
-                secretiveDesc ? secretiveDesc + ' ' : ''
-            }${weaknessDesc ? ' ' + weaknessDesc : ''}. ${activityDesc ? activityDesc : ''}${
-                newsDesc ? ' ' + newsDesc : ''
-            }`
-            break
-
-        case 3: // Start with current activity, then identity and details
-            if (activityDesc || newsDesc) {
-                finalDescription = `${activityDesc ? activityDesc : ''}${
-                    newsDesc ? ' ' + newsDesc : ''
-                } ${identityDesc} ${appearanceDesc} ${secretiveDesc ? secretiveDesc + ' ' : ''}${reputationDesc}${
-                    weaknessDesc ? ' ' + weaknessDesc : ''
-                }.`
-            } else {
-                // Fall back to traditional pattern if no activity/news
-                finalDescription = `${identityDesc} ${appearanceDesc} ${
-                    secretiveDesc ? secretiveDesc + ' ' : ''
-                }${reputationDesc}${weaknessDesc ? ' ' + weaknessDesc : ''}.`
-            }
-            break
-
-        case 4: // Atmospheric opening
-            finalDescription = `${atmosphereDesc} ${identityDesc} ${
-                secretiveDesc ? secretiveDesc + ' ' : ''
-            }${appearanceDesc} ${reputationDesc}${weaknessDesc ? ' ' + weaknessDesc : ''}. ${
-                activityDesc ? activityDesc : ''
-            }${newsDesc ? ' ' + newsDesc : ''}`
-            break
-
-        case 5: // Focus on strengths and weaknesses, including secretiveness
-            strengthDesc = `They are known for their ${skillDesc
-                .replace(/They are |They have /g, '')
-                .trim()} and ${cyberwareDesc.replace(/They sport |They use |They have /g, '').trim()}.`
-            finalDescription = `${identityDesc} ${strengthDesc} ${secretiveDesc ? secretiveDesc + ' ' : ''}${
-                weaknessDesc ? weaknessDesc + ' ' : ''
-            }${reputationDesc} ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
-            break
-
-        case 6: // Lead with secretiveness if it's a highly secretive gang
-            if (secretive && secretive >= 15) {
-                finalDescription = `${secretiveDesc} ${identityDesc} ${appearanceDesc} ${reputationDesc}${
-                    weaknessDesc ? ' ' + weaknessDesc : ''
-                }. ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
-            } else {
-                finalDescription = `${identityDesc} ${appearanceDesc} ${
-                    secretiveDesc ? secretiveDesc + ' ' : ''
-                }${reputationDesc}. ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
-            }
-            break
-
-        default: // Default to simplest pattern
-            finalDescription = `${identityDesc} ${appearanceDesc} ${
-                secretiveDesc ? secretiveDesc + ' ' : ''
-            }${reputationDesc}. ${activityDesc ? activityDesc : ''}${newsDesc ? ' ' + newsDesc : ''}`
+    // Dynamic paragraph generator using context-aware connectors and varied sentence starters
+    const connectors: string[] =
+        secretive >= 15
+            ? ['despite it', 'yet unfazed', 'however resolute']
+            : ['still exposed', 'even so wary', 'yet cautious']
+    const starters: string[] = ["You'll find", 'This crew moves', 'They operate', 'Rumor has it']
+    const sentences: string[] = []
+    // Sentence 1: identity + appearance
+    sentences.push(`${identityDesc}. ${appearanceDesc}.`)
+    // Sentence 2: secretiveness + reputation [+ flaw]
+    let s2 = `${secretiveDesc}${getRandomElement(connectors)} ${reputationDesc}`
+    if (weaknessDesc) s2 += ` and ${weaknessDesc}`
+    sentences.push(`${getRandomElement(starters)} ${s2}.`)
+    // Sentence 3: current attitude + news or rumor hook
+    if (newsText !== 'none') {
+        sentences.push(`${activityDesc}. ${newsDesc}.`)
+    } else {
+        sentences.push(`${activityDesc}. Rumor hints something's brewing.`)
     }
-
-    // Clean up extra spaces and fix sentence structure
-    finalDescription = finalDescription
-        .replace(/\s+/g, ' ')
-        .replace(/\.\s+\./g, '.')
-        .replace(/\s+\./g, '.')
-        .replace(/\.\s*$/g, '.') // Ensure description ends with a period
+    // Combine and finalize
+    // Build raw text and clean up punctuation and spacing
+    const raw = sentences
+        .map((s) => s.trim().replace(/\.+$/, '.'))
+        .join(' ')
         .trim()
-
-    if (!finalDescription.endsWith('.')) {
-        finalDescription += '.'
-    }
-
-    return finalDescription
+    const cleaned = raw
+        .replace(/\.{2,}/g, '.') // collapse multiple dots
+        .replace(/([.?!])([A-Za-z])/g, '$1 $2') // ensure space after sentence end
+        .replace(/\s+/g, ' ') // normalize whitespace
+        .trim()
+    return cleaned.endsWith('.') ? cleaned : cleaned + '.'
 }
