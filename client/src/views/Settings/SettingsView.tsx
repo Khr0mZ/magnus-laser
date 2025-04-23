@@ -37,15 +37,26 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
 import {
+    BUILDINGS_STORAGE_KEY,
+    CHARACTERS_STORAGE_KEY,
+    FIXER_JOBS_STORAGE_KEY,
+    GANGS_STORAGE_KEY,
+    ITEMS_STORAGE_KEY,
+    PREFERENCES_STORAGE_KEY,
     loadGeminiApiKey,
     loadHuggingFaceApiKey,
     loadOpenAIApiKey,
     notifyDataImported,
     notifyPreferencesChanged,
-    PREFERENCES_STORAGE_KEY,
+    saveBuildings,
+    saveCharacters,
+    saveFixerJobs,
+    saveGangs,
     saveGeminiApiKey,
     saveHuggingFaceApiKey,
+    saveItems,
     saveOpenAIApiKey,
+    savePreferences,
 } from '../../utils/storage'
 
 localforage.config({
@@ -248,22 +259,55 @@ const SettingsView = () => {
                         // Import all application data and count collections and registries
                         let importedCollections = 0
                         let importedRegistries = 0
+
+                        // Process each key in the imported data
                         for (const key of Object.keys(data)) {
                             if (APP_STORAGE_KEYS.includes(key)) {
                                 const value = data[key]
-                                await localforage.setItem(key, value)
-                                // Count imported collections
-                                importedCollections += 1
-                                // Count registries within collections
-                                if (Array.isArray(value)) importedRegistries += value.length
-                                if (key === PREFERENCES_STORAGE_KEY) {
-                                    notifyPreferencesChanged()
+
+                                // Use the appropriate save function for each type of data
+                                // This ensures both localStorage and the in-memory cache are updated
+                                switch (key) {
+                                    case GANGS_STORAGE_KEY:
+                                        await saveGangs(value)
+                                        break
+                                    case BUILDINGS_STORAGE_KEY:
+                                        await saveBuildings(value)
+                                        break
+                                    case FIXER_JOBS_STORAGE_KEY:
+                                        await saveFixerJobs(value)
+                                        break
+                                    case CHARACTERS_STORAGE_KEY:
+                                        await saveCharacters(value)
+                                        break
+                                    case ITEMS_STORAGE_KEY:
+                                        await saveItems(value)
+                                        break
+                                    case PREFERENCES_STORAGE_KEY:
+                                        await savePreferences(value)
+                                        break
+                                    default:
+                                        // Fallback for any future keys
+                                        await localforage.setItem(key, value)
+                                        break
                                 }
+
+                                // Notify that data has been imported for immediate UI updates
+                                notifyDataImported()
+
+                                // Count for the success message
+                                importedCollections += 1
+                                if (Array.isArray(value)) importedRegistries += value.length
                             }
                         }
 
                         // Show success notification if any collections imported
                         if (importedCollections > 0) {
+                            // Make sure to trigger a preferences update if any data might have changed
+                            if (data[PREFERENCES_STORAGE_KEY]) {
+                                notifyPreferencesChanged()
+                            }
+
                             enqueueSnackbar('', {
                                 variant: 'success',
                                 autoHideDuration: 3000,
@@ -289,9 +333,6 @@ const SettingsView = () => {
                                     </Alert>
                                 ),
                             })
-
-                            // Notify components about data changes
-                            notifyDataImported()
                         } else {
                             // Show warning notification if no collections were imported
                             enqueueSnackbar('', {

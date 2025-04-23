@@ -27,7 +27,7 @@ export type FormBuildingProps = {
     handleChange: (field: string, value: unknown) => void
     handleImageUploadClick: () => void
     openDeleteImageDialog: () => void
-    toggleFullscreenImage: () => void
+    toggleFullscreenImage: (image: string) => void
     formControlStyle: SxProps
     inputLabelStyle: SxProps
     selectStyle: SxProps

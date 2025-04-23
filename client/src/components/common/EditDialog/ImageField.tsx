@@ -13,7 +13,7 @@ interface ImageFieldProps {
     downloadName: string | undefined
     handleImageUploadClick?: () => void
     handleImageRemove?: () => void
-    toggleFullscreenImage: () => void
+    toggleFullscreenImage: (image: string) => void
     handleRegenerateClick?: () => void
     canRegenerate?: boolean
     isGeneratingImage?: boolean
@@ -59,7 +59,7 @@ const ImageField = (props: ImageFieldProps) => {
 
     const handleImageClick = () => {
         if (image) {
-            toggleFullscreenImage()
+            toggleFullscreenImage(image)
         }
     }
 

@@ -1,6 +1,13 @@
 import { BuildingOwnership, BuildingStyle, BuildingType, GangNameType, GangType } from '../../graphql/types'
 import { getRandomElement } from '../functions'
-import { BUILDINGS_STORAGE_KEY, FIXER_JOBS_STORAGE_KEY, GANGS_STORAGE_KEY, PREFERENCES_STORAGE_KEY } from '../storage'
+import {
+    BUILDINGS_STORAGE_KEY,
+    CHARACTERS_STORAGE_KEY,
+    FIXER_JOBS_STORAGE_KEY,
+    GANGS_STORAGE_KEY,
+    ITEMS_STORAGE_KEY,
+    PREFERENCES_STORAGE_KEY,
+} from '../storage'
 import { NameComponents } from '../types'
 
 // Hugging Face constants
@@ -1974,6 +1981,8 @@ export const APP_STORAGE_KEYS = [
     BUILDINGS_STORAGE_KEY,
     FIXER_JOBS_STORAGE_KEY,
     PREFERENCES_STORAGE_KEY,
+    ITEMS_STORAGE_KEY,
+    CHARACTERS_STORAGE_KEY,
 ]
 
 export const personNames = [

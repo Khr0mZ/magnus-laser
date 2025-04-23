@@ -47,6 +47,7 @@ export const gangColumns: TableColumn[] = [
 export const buildingColumns: TableColumn[] = [
     { key: 'name', label: 'name' },
     { key: 'type', label: 'type' },
+    { key: 'isAbandoned', label: 'isAbandoned' },
     { key: 'elevators', label: 'elevators' },
     { key: 'parking', label: 'parking' },
     { key: 'gatehouseFrontDesk', label: 'gatehouseFrontDesk' },

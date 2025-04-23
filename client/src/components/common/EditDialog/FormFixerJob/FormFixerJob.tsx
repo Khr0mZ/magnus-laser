@@ -16,13 +16,9 @@ import { useData } from '../../../../contexts/dataHooks'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks.ts'
 import {
     Character,
-    CharacterAttitude,
-    CharacterType,
     CharacterVerb,
     FixerJob,
     Item,
-    ItemCondition,
-    ItemType,
     ItemVerb,
     JobDifficulty,
     PlotBuilding,
@@ -82,7 +78,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
     } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const { fixerJobs, gangs, buildings } = useData()
+    const { fixerJobs, gangs, items, characters } = useData()
 
     // --- Image Handlers ---
     // Create a single reusable regenerate handler that takes the path as an argument
@@ -132,73 +128,45 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
         const fixerJob = fixerJobs.find((job) => job.ID === editedTarget.ID)
         // Reset subject data based on category
         if (!fixerJob) return
-        if (newCategory === 'CHARACTER') {
+        if (newCategory === 'CharacterVerbWrapper') {
             if (fixerJob.plot.verb.__typename === 'CharacterVerbWrapper') {
                 handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
                 handleChange('plot.verb', fixerJob.plot.verb)
             } else {
-                handleChange('plot.plotSubject', {
-                    name: '',
-                    type: Object.values(CharacterType)[0],
-                    attitude: Object.values(CharacterAttitude)[0],
-                    image: '',
-                })
+                handleChange('plot.plotSubject', characters[0])
                 handleChange('plot.verb', {
                     __typename: 'CharacterVerbWrapper',
                     value: Object.values(CharacterVerb)[0],
                 })
             }
-        } else if (newCategory === 'ITEM') {
+        } else if (newCategory === 'ItemVerbWrapper') {
             if (fixerJob.plot.verb.__typename === 'ItemVerbWrapper') {
                 handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
                 handleChange('plot.verb', fixerJob.plot.verb)
             } else {
-                handleChange('plot.plotSubject', {
-                    name: '',
-                    type: Object.values(ItemType)[0],
-                    condition: Object.values(ItemCondition)[0],
-                    image: '',
-                })
+                handleChange('plot.plotSubject', items[0])
                 handleChange('plot.verb', {
                     __typename: 'ItemVerbWrapper',
                     value: Object.values(ItemVerb)[0],
                 })
             }
-        } else if (newCategory === 'GANG') {
+        } else if (newCategory === 'PlotGangVerbWrapper') {
             if (fixerJob.plot.verb.__typename === 'PlotGangVerbWrapper') {
                 handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
                 handleChange('plot.verb', fixerJob.plot.verb)
             } else {
-                // Get the first gang or undefined if no gangs
-                const firstGang = gangs.length > 0 ? gangs[0] : undefined
-                const gangId = firstGang?.ID
-
-                // Store gang reference structure with ID for storage compatibility
                 handleChange('plot.plotSubject', {
-                    gang: gangId,
+                    gang: gangs[0],
                     complication: {
-                        type: Object.values(PlotGangComplicationType)[0],
+                        type: PlotGangComplicationType.POLICE_RAIDING,
                     },
                 })
-
-                // After the ID reference is set, update with the full object for display
-                if (firstGang) {
-                    setTimeout(() => {
-                        handleChange('plot.plotSubject', {
-                            gang: firstGang,
-                            complication: {
-                                type: Object.values(PlotGangComplicationType)[0],
-                            },
-                        })
-                    }, 0)
-                }
-
                 handleChange('plot.verb', {
                     __typename: 'PlotGangVerbWrapper',
                     value: Object.values(PlotGangVerb)[0],
                 })
             }
-        } else if (newCategory === 'BUILDING') {
+        } else if (newCategory === 'PlotBuildingVerbWrapper') {
             if (fixerJob.plot.verb.__typename === 'PlotBuildingVerbWrapper') {
                 handleChange('plot.plotSubject', null)
                 handleChange('plot.verb', fixerJob.plot.verb)
@@ -208,29 +176,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     __typename: 'PlotBuildingVerbWrapper',
                     value: Object.values(PlotBuildingVerb)[0],
                 })
-
-                // Get the first building or undefined if no buildings
-                const firstBuilding = buildings.length > 0 ? buildings[0] : undefined
-                const buildingId = firstBuilding?.ID
-
-                // Set default building as ID reference for storage compatibility
-                if (buildingId) {
-                    handleChange('plot.plotBuilding.building', buildingId)
-
-                    // After the ID reference is set, update with the full object for display
-                    if (firstBuilding) {
-                        setTimeout(() => {
-                            // Get the current plotBuilding value first
-                            const plotBuilding = fixerJob.plot.plotBuilding || {}
-
-                            // Update with the full building object
-                            handleChange('plot.plotBuilding', {
-                                ...plotBuilding,
-                                building: firstBuilding,
-                            })
-                        }, 0)
-                    }
-                }
             }
         }
     }
@@ -263,19 +208,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 />
             </Grid>
             <Grid item container xs={12} spacing={2}>
-                {/* Image (Main) */}
-                <Grid item xs={12} md={4}>
-                    <ImageField
-                        image={editedTarget.image}
-                        downloadName={editedTarget.name}
-                        handleImageUploadClick={() => handleImageUploadClick(ImageFields.main)}
-                        handleImageRemove={() => openDeleteImageDialog(ImageFields.main)}
-                        toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.main)}
-                        handleRegenerateClick={() => handleRegenerateClick(ImageFields.main)}
-                        canRegenerate={!!editedTarget.description}
-                        isGeneratingImage={isGeneratingImage}
-                    />
-                </Grid>
                 <Grid item container xs={12} md={8}>
                     <Stack spacing={2} sx={{ width: '100%' }}>
                         {/* --- PLOT SECTION --- */}
@@ -346,13 +278,26 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                         </FormControl>
                     </Stack>
                 </Grid>
+                {/* Image (Main) */}
+                <Grid item xs={12} md={4}>
+                    <ImageField
+                        image={editedTarget.image}
+                        downloadName={editedTarget.name}
+                        handleImageUploadClick={() => handleImageUploadClick(ImageFields.main)}
+                        handleImageRemove={() => openDeleteImageDialog(ImageFields.main)}
+                        toggleFullscreenImage={toggleFullscreenImage}
+                        handleRegenerateClick={() => handleRegenerateClick(ImageFields.main)}
+                        canRegenerate={!!editedTarget.description}
+                        isGeneratingImage={isGeneratingImage}
+                    />
+                </Grid>
             </Grid>
             {/* --- CHARACTER SECTION --- */}
             {editedTarget.plot.verb.__typename === 'CharacterVerbWrapper' && (
                 <CardCharacter
                     editedTarget={editedTarget}
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
-                    toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.characterOrItem)}
+                    toggleFullscreenImage={toggleFullscreenImage}
                     formControlStyle={formControlStyle}
                     inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}
@@ -371,7 +316,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 <CardItem
                     editedTarget={editedTarget}
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
-                    toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.characterOrItem)}
+                    toggleFullscreenImage={toggleFullscreenImage}
                     formControlStyle={formControlStyle}
                     inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}

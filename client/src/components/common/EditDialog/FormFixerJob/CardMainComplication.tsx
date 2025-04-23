@@ -94,7 +94,7 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
                 {complication.character.check && (
                     <CardCharacter
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
-                        toggleFullscreenImage={() => toggleFullscreenImage(complication.character.field + '.image')}
+                        toggleFullscreenImage={toggleFullscreenImage}
                         formControlStyle={formControlStyle}
                         inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}
@@ -111,7 +111,7 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
                 {complication.item.check && (
                     <CardItem
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
-                        toggleFullscreenImage={() => toggleFullscreenImage(complication.item.field + '.image')}
+                        toggleFullscreenImage={toggleFullscreenImage}
                         formControlStyle={formControlStyle}
                         inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}

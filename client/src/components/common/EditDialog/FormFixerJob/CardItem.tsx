@@ -24,7 +24,7 @@ export type CardItemProps = {
     editedTarget: FixerJob
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
-    toggleFullscreenImage: () => void
+    toggleFullscreenImage: (image: string) => void
     formControlStyle: SxProps
     inputLabelStyle: SxProps
     selectStyle: SxProps

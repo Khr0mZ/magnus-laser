@@ -35,22 +35,6 @@ type EditDialogProps = {
     setItemToEdit?: Dispatch<SetStateAction<Item | null>>
 }
 
-// Helper function to get nested value safely
-const getNestedValue = (obj: unknown, path: string): unknown => {
-    if (!obj) return undefined
-    // Make sure path is a string before splitting
-    if (typeof path !== 'string') return undefined
-    const parts = path.split('.')
-    let current = obj as Record<string, unknown>
-
-    for (const part of parts) {
-        if (!current || typeof current !== 'object') return undefined
-        current = current[part] as Record<string, unknown>
-    }
-
-    return current
-}
-
 export const EditDialog = (props: EditDialogProps) => {
     const {
         open,
@@ -235,7 +219,7 @@ export const EditDialog = (props: EditDialogProps) => {
     }
 
     // Add a handler to toggle fullscreen image
-    const toggleFullscreenImage = (targetField: string = 'image') => {
+    const toggleFullscreenImage = (targetField: string) => {
         setCurrentImageField(targetField) // Set which field to show in fullscreen
         setFullscreenImage(!fullscreenImage)
     }
@@ -561,7 +545,7 @@ export const EditDialog = (props: EditDialogProps) => {
                 >
                     <Box
                         component="img"
-                        src={editedTarget && (getNestedValue(editedTarget, currentImageField) as string | undefined)}
+                        src={currentImageField}
                         alt={editedTarget?.name}
                         id="fullscreen-image-title"
                         tabIndex={0}

@@ -27,7 +27,6 @@ import {
     PlotBuildingComplicationType,
 } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
-import { ImageFields } from '../../../../utils/constants'
 import ImageField from '../ImageField'
 import CardCharacter from './CardCharacter'
 import CardItem from './CardItem'
@@ -350,7 +349,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                                 downloadName={selectedBuilding?.name}
                                 handleImageUploadClick={() => {}}
                                 handleImageRemove={() => {}}
-                                toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.building)}
+                                toggleFullscreenImage={toggleFullscreenImage}
                                 handleRegenerateClick={() => {}}
                                 canRegenerate={false}
                                 isGeneratingImage={false}
@@ -403,7 +402,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                     <CardCharacter
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
                         handleChange={handleChange}
-                        toggleFullscreenImage={() => toggleFullscreenImage(building.character.field + '.image')}
+                        toggleFullscreenImage={toggleFullscreenImage}
                         formControlStyle={formControlStyle}
                         inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}
@@ -420,7 +419,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                     <CardItem
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
                         handleChange={handleChange}
-                        toggleFullscreenImage={() => toggleFullscreenImage(building.item.field + '.image')}
+                        toggleFullscreenImage={toggleFullscreenImage}
                         formControlStyle={formControlStyle}
                         inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}

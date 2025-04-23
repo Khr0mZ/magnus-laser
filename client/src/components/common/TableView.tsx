@@ -395,8 +395,8 @@ const TableView = (props: TableViewProps) => {
 
                                     {/* Render data cells for each column (excluding name since it's already rendered) */}
                                     {columns.slice(1).map((column) => {
-                                        // Get and process the value
-                                        let displayValue: string = '—'
+                                        // Default value for display
+                                        let displayValue: React.ReactNode = '—'
 
                                         if (moduleType === ModuleTypes.GANG) {
                                             displayValue = String(
@@ -407,14 +407,17 @@ const TableView = (props: TableViewProps) => {
                                                 )
                                             )
                                         } else if (moduleType === ModuleTypes.BUILDING) {
-                                            displayValue = String(
-                                                processBuildingValueForDisplay(
-                                                    column.key,
-                                                    (target as Building)[column.key as keyof Building],
-                                                    t,
-                                                    (target as Building).isAbandoned
-                                                )
+                                            const processedValue = processBuildingValueForDisplay(
+                                                column.key,
+                                                (target as Building)[column.key as keyof Building],
+                                                t,
+                                                (target as Building).isAbandoned
                                             )
+                                            // Only convert to string if it's not a React element (boolean values)
+                                            displayValue =
+                                                typeof processedValue === 'object'
+                                                    ? processedValue
+                                                    : String(processedValue)
                                         } else if (moduleType === ModuleTypes.FIXER_JOB) {
                                             if (column.key === 'name') {
                                                 displayValue = target.name

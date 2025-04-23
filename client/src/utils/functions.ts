@@ -319,6 +319,11 @@ export const getOrderedBuildingData = (
             label: t('buildings.labels.type'),
             value: building.type,
         },
+        {
+            key: 'isAbandoned',
+            label: t('buildings.labels.isAbandoned'),
+            value: building.isAbandoned,
+        },
         { key: 'elevators', label: t('buildings.labels.elevators'), value: building.elevators },
         { key: 'parking', label: t('buildings.labels.parking'), value: building.parking },
         {

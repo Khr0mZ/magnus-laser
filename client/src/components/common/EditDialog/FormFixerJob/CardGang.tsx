@@ -19,7 +19,6 @@ import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
 import { Character, FixerJob, Gang, Item, Maybe, PlotGang, PlotGangComplicationType } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
-import { ImageFields } from '../../../../utils/constants'
 import ImageField from '../ImageField'
 import CardCharacter from './CardCharacter'
 import CardItem from './CardItem'
@@ -372,7 +371,7 @@ const CardGang = (props: CardGangProps) => {
                                 downloadName={selectedGang?.name}
                                 handleImageUploadClick={() => {}}
                                 handleImageRemove={() => {}}
-                                toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.gang)}
+                                toggleFullscreenImage={toggleFullscreenImage}
                                 handleRegenerateClick={() => {}}
                                 canRegenerate={false}
                                 isGeneratingImage={false}
@@ -433,7 +432,7 @@ const CardGang = (props: CardGangProps) => {
                         {gang.character.check && (
                             <CardCharacter
                                 textFieldOutlinedStyle={textFieldOutlinedStyle}
-                                toggleFullscreenImage={() => toggleFullscreenImage(gang.character.field + '.image')}
+                                toggleFullscreenImage={toggleFullscreenImage}
                                 formControlStyle={formControlStyle}
                                 inputLabelStyle={inputLabelStyle}
                                 selectStyle={selectStyle}
@@ -449,7 +448,7 @@ const CardGang = (props: CardGangProps) => {
                         {gang.item.check && (
                             <CardItem
                                 textFieldOutlinedStyle={textFieldOutlinedStyle}
-                                toggleFullscreenImage={() => toggleFullscreenImage(gang.item.field + '.image')}
+                                toggleFullscreenImage={toggleFullscreenImage}
                                 formControlStyle={formControlStyle}
                                 inputLabelStyle={inputLabelStyle}
                                 selectStyle={selectStyle}
