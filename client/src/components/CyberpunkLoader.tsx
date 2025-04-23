@@ -290,7 +290,7 @@ const CyberpunkLoader = ({
                     cleanupStatusUpdatedRef.current = true
                 }
             } catch (error) {
-                console.error('Error during storage cleanup:', error)
+                console.warn('Error during storage cleanup:', error)
 
                 // Update the loadingStatus even on error
                 if (!cleanupStatusUpdatedRef.current) {

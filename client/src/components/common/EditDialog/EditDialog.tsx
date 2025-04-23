@@ -2,21 +2,23 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, T
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
-import { Building, FixerJob, Gang } from '../../../graphql/types'
+import { Building, Character, FixerJob, Gang, Item } from '../../../graphql/types'
 import colors from '../../../utils/colors'
 import { ModuleTypes } from '../../../utils/constants'
 import CustomScrollbar from '../../CustomScrollbar'
 import { pulseGlowBlue, pulseGlowCyan } from '../Animations'
 import { WarningDialog } from '../WarningDialog'
 import { FormBuilding } from './FormBuilding'
+import FormCharacter from './FormCharacter.tsx'
 import FormFixerJob from './FormFixerJob/FormFixerJob'
 import FormGang from './FormGang'
+import FormItem from './FormItem.tsx'
 
 type EditDialogProps = {
     open: boolean
     onClose: () => void
-    onSave: (item: Gang | Building | FixerJob) => void
-    item: Gang | Building | FixerJob | null
+    onSave: (target: Gang | Building | FixerJob | Character | Item) => void
+    target: Gang | Building | FixerJob | Character | Item | null
     moduleType: ModuleTypes
     setIsSaving: (isSaving: boolean) => void
     isGeneratingImage?: boolean
@@ -27,6 +29,10 @@ type EditDialogProps = {
     setGangToEdit?: Dispatch<SetStateAction<Gang | null>>
     setFixerJobs?: Dispatch<SetStateAction<FixerJob[]>>
     setFixerJobToEdit?: Dispatch<SetStateAction<FixerJob | null>>
+    setCharacters?: Dispatch<SetStateAction<Character[]>>
+    setCharacterToEdit?: Dispatch<SetStateAction<Character | null>>
+    setItems?: Dispatch<SetStateAction<Item[]>>
+    setItemToEdit?: Dispatch<SetStateAction<Item | null>>
 }
 
 // Helper function to get nested value safely
@@ -50,7 +56,7 @@ export const EditDialog = (props: EditDialogProps) => {
         open,
         onClose,
         onSave,
-        item,
+        target,
         moduleType,
         setIsGeneratingImage,
         setIsSaving,
@@ -61,10 +67,14 @@ export const EditDialog = (props: EditDialogProps) => {
         setGangToEdit,
         setFixerJobs,
         setFixerJobToEdit,
+        setCharacters,
+        setCharacterToEdit,
+        setItems,
+        setItemToEdit,
     } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const [editedItem, setEditedItem] = useState<Gang | Building | FixerJob | null>(null)
+    const [editedTarget, setEditedTarget] = useState<Gang | Building | FixerJob | Character | Item | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [deleteImageDialogOpen, setDeleteImageDialogOpen] = useState(false)
     const [fullscreenImage, setFullscreenImage] = useState(false)
@@ -161,13 +171,13 @@ export const EditDialog = (props: EditDialogProps) => {
     )
 
     useEffect(() => {
-        if (item) {
-            setEditedItem({ ...item })
+        if (target) {
+            setEditedTarget({ ...target })
         }
-    }, [item])
+    }, [target])
 
     const handleChange = (field: string, value: unknown) => {
-        setEditedItem((prev) => {
+        setEditedTarget((prev) => {
             if (!prev) return prev
 
             // --- Custom Deep Update Logic ---
@@ -193,8 +203,8 @@ export const EditDialog = (props: EditDialogProps) => {
     }
 
     const handleSave = async () => {
-        if (editedItem && item) {
-            onSave(editedItem)
+        if (editedTarget && target) {
+            onSave(editedTarget)
             setIsSaving(true)
         }
         onClose()
@@ -208,7 +218,7 @@ export const EditDialog = (props: EditDialogProps) => {
     }
 
     const handleImageRemove = async (targetField: string = 'image') => {
-        if (!editedItem) return
+        if (!editedTarget) return
 
         // Note: We're no longer deleting the blob immediately. This will happen when Save is clicked.
 
@@ -230,7 +240,7 @@ export const EditDialog = (props: EditDialogProps) => {
         setFullscreenImage(!fullscreenImage)
     }
 
-    if (!editedItem) return null
+    if (!editedTarget) return null
 
     return (
         <>
@@ -303,6 +313,10 @@ export const EditDialog = (props: EditDialogProps) => {
                                 ? t('gangs.editTitle')
                                 : moduleType === ModuleTypes.BUILDING
                                 ? t('buildings.editTitle')
+                                : moduleType === ModuleTypes.CHARACTER
+                                ? t('characters.editTitle')
+                                : moduleType === ModuleTypes.ITEM
+                                ? t('items.editTitle')
                                 : t('fixerJobs.editTitle')
                         }
                         sx={{
@@ -314,6 +328,10 @@ export const EditDialog = (props: EditDialogProps) => {
                             ? t('gangs.editTitle')
                             : moduleType === ModuleTypes.BUILDING
                             ? t('buildings.editTitle')
+                            : moduleType === ModuleTypes.CHARACTER
+                            ? t('characters.editTitle')
+                            : moduleType === ModuleTypes.ITEM
+                            ? t('items.editTitle')
                             : t('fixerJobs.editTitle')}
                     </Typography>
                 </DialogTitle>
@@ -330,7 +348,7 @@ export const EditDialog = (props: EditDialogProps) => {
                         <Grid container spacing={2} sx={{ pr: 3, mt: 0 }}>
                             {moduleType === ModuleTypes.GANG ? (
                                 <FormGang
-                                    editedItem={editedItem as Gang}
+                                    editedTarget={editedTarget as Gang}
                                     moduleType={moduleType}
                                     setIsSaving={setIsSaving}
                                     isGeneratingImage={isGeneratingImage}
@@ -349,7 +367,7 @@ export const EditDialog = (props: EditDialogProps) => {
                                 />
                             ) : moduleType === ModuleTypes.BUILDING ? (
                                 <FormBuilding
-                                    editedItem={editedItem as Building}
+                                    editedTarget={editedTarget as Building}
                                     moduleType={moduleType}
                                     setIsSaving={setIsSaving}
                                     isGeneratingImage={isGeneratingImage}
@@ -366,9 +384,9 @@ export const EditDialog = (props: EditDialogProps) => {
                                     toggleFullscreenImage={toggleFullscreenImage}
                                     textFieldOutlinedStyle={textFieldOutlinedStyle}
                                 />
-                            ) : (
+                            ) : moduleType === ModuleTypes.FIXER_JOB ? (
                                 <FormFixerJob
-                                    editedItem={editedItem as FixerJob}
+                                    editedTarget={editedTarget as FixerJob}
                                     moduleType={moduleType}
                                     setIsSaving={setIsSaving}
                                     isGeneratingImage={isGeneratingImage}
@@ -385,6 +403,46 @@ export const EditDialog = (props: EditDialogProps) => {
                                     toggleFullscreenImage={toggleFullscreenImage}
                                     textFieldOutlinedStyle={textFieldOutlinedStyle}
                                 />
+                            ) : moduleType === ModuleTypes.CHARACTER ? (
+                                <FormCharacter
+                                    editedTarget={editedTarget as Character}
+                                    moduleType={moduleType}
+                                    setIsSaving={setIsSaving}
+                                    isGeneratingImage={isGeneratingImage}
+                                    setIsGeneratingImage={setIsGeneratingImage}
+                                    setCharacters={setCharacters}
+                                    setCharacterToEdit={setCharacterToEdit}
+                                    formControlStyle={formControlStyle}
+                                    inputLabelStyle={inputLabelStyle}
+                                    selectStyle={selectStyle}
+                                    hiddenFileInput={hiddenFileInput}
+                                    textFieldOutlinedStyle={textFieldOutlinedStyle}
+                                    handleChange={handleChange}
+                                    handleImageUploadClick={handleImageUploadClick}
+                                    openDeleteImageDialog={openDeleteImageDialog}
+                                    toggleFullscreenImage={toggleFullscreenImage}
+                                />
+                            ) : moduleType === ModuleTypes.ITEM ? (
+                                <FormItem
+                                    editedTarget={editedTarget as Item}
+                                    moduleType={moduleType}
+                                    setIsSaving={setIsSaving}
+                                    isGeneratingImage={isGeneratingImage}
+                                    setIsGeneratingImage={setIsGeneratingImage}
+                                    setItems={setItems}
+                                    setItemToEdit={setItemToEdit}
+                                    formControlStyle={formControlStyle}
+                                    inputLabelStyle={inputLabelStyle}
+                                    selectStyle={selectStyle}
+                                    hiddenFileInput={hiddenFileInput}
+                                    textFieldOutlinedStyle={textFieldOutlinedStyle}
+                                    handleChange={handleChange}
+                                    handleImageUploadClick={handleImageUploadClick}
+                                    openDeleteImageDialog={openDeleteImageDialog}
+                                    toggleFullscreenImage={toggleFullscreenImage}
+                                />
+                            ) : (
+                                <></>
                             )}
                         </Grid>
                     </CustomScrollbar>
@@ -503,8 +561,8 @@ export const EditDialog = (props: EditDialogProps) => {
                 >
                     <Box
                         component="img"
-                        src={editedItem && (getNestedValue(editedItem, currentImageField) as string | undefined)}
-                        alt={editedItem?.name}
+                        src={editedTarget && (getNestedValue(editedTarget, currentImageField) as string | undefined)}
+                        alt={editedTarget?.name}
                         id="fullscreen-image-title"
                         tabIndex={0}
                         sx={{

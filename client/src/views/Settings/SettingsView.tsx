@@ -48,6 +48,13 @@ import {
     saveOpenAIApiKey,
 } from '../../utils/storage'
 
+localforage.config({
+    name: 'magnus-laser',
+    version: 1.0,
+    storeName: 'magnus-laser', // Should be alphanumeric, with underscores.
+    description: 'Magnus Laser data',
+})
+
 const SettingsView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('common.settings')}`)
@@ -74,7 +81,7 @@ const SettingsView = () => {
                 const savedGeminiApiKey = await loadGeminiApiKey()
                 setGeminiApiKey(savedGeminiApiKey)
             } catch (error) {
-                console.error('Error loading API keys:', error)
+                console.warn('Error loading API keys:', error)
             }
         }
 
@@ -186,7 +193,7 @@ const SettingsView = () => {
                 ),
             })
         } catch (error) {
-            console.error('Failed to export data:', error)
+            console.warn('Failed to export data:', error)
 
             // Show error notification
             enqueueSnackbar('', {
@@ -311,7 +318,7 @@ const SettingsView = () => {
                             })
                         }
                     } catch (error) {
-                        console.error('Failed to parse import file:', error)
+                        console.warn('Failed to parse import file:', error)
 
                         // Show error notification
                         enqueueSnackbar('', {
@@ -344,7 +351,7 @@ const SettingsView = () => {
             // Trigger file selection
             input.click()
         } catch (error) {
-            console.error('Failed to import data:', error)
+            console.warn('Failed to import data:', error)
 
             // Show error notification
             enqueueSnackbar('', {

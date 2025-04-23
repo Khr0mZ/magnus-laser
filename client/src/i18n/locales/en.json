@@ -58,14 +58,16 @@
         "CORPORATION_DESCRIPTION": "Corpos are the suits your edgerunners might cross paths with.",
         "FIXER_JOB": "Gig",
         "FIXER_JOB_DESCRIPTION": "Gigs are jobs your edgerunners can pull off for eddies.",
-        "NPC": "Contact",
-        "NPC_DESCRIPTION": "Contacts are individuals your edgerunners can connect with.",
+        "CHARACTER": "Contact",
+        "CHARACTER_DESCRIPTION": "Contacts are individuals your edgerunners can connect with.",
         "SETTINGS": "System",
         "SETTINGS_DESCRIPTION": "System prefs for your rig.",
         "BOUNTY": "Bounty",
         "BOUNTY_DESCRIPTION": "Bounties are jobs your edgerunners can pull off for eddies.",
         "CLUB": "Club",
-        "CLUB_DESCRIPTION": "Clubs are buildings your edgerunners can visit for fun."
+        "CLUB_DESCRIPTION": "Clubs are buildings your edgerunners can visit for fun.",
+        "ITEM": "Item",
+        "ITEM_DESCRIPTION": "Items are objects your edgerunners can use."
     },
     "dashboard": {
         "exportData": "Dump Data",
@@ -74,6 +76,82 @@
         "importDescription": "Load assets from a local shard.",
         "importDescriptionWarning": "Warning: This will overwrite all current assets.",
         "confirmImport": "Confirm Data Load"
+    },
+    "characters": {
+        "title": "Dynamic Asset Database Connection",
+        "editTitle": "Character Prefs",
+        "characterSelector": "Character",
+        "type": {
+            "POLICE_LAWMAN": "Police/Lawman",
+            "TECH": "Tech",
+            "NETRUNNER_HACKER": "Netrunner/Hacker",
+            "CORPORATE_EXEC": "Corporate Exec",
+            "AVERAGE_CITIZEN_STREETRAT": "Average Citizen/Streetrat",
+            "CELEBRITY": "Celebrity",
+            "GOVERNMENT_OFFICIAL": "Government Official",
+            "KNOWN_TERRORIST": "Known Terrorist",
+            "MERCENARY_FREELANCER_ASSASSIN": "Mercenary/Freelancer/Assassin",
+            "NOMAD": "Nomad",
+            "POP_STAR": "Pop Star",
+            "RELIGIOUS_FIGURE": "Religious Figure",
+            "POLITICIAN": "Politician",
+            "RIPPERDOC": "Ripperdoc"
+        },
+        "attitude": {
+            "WANTS_A_CREW_MEMBER_DEAD": "Wants a crew member dead",
+            "GENERALLY_DISLIKES_THE_CREW": "Generally dislikes the crew",
+            "DOESN_T_TRUST_THE_CREW": "Doesn't trust the crew",
+            "COLD_AND_PROFESSIONAL": "Cold and professional",
+            "NEUTRAL_ATTITUDE_TOWARDS_THE_CREW": "Neutral attitude towards the crew",
+            "THINKS_THE_CREW_COULD_BE_POTENTIAL_ALLIES": "Thinks the crew could be potential allies",
+            "TRUSTS_IN_THE_CREW_S_DECISIONS": "Trusts in the crew's decisions",
+            "CONSIDERS_A_CREW_MEMBER_A_PARTNER": "Considers a crew member a partner",
+            "CONSIDERS_A_CREW_MEMBER_A_GOOD_FRIEND": "Considers a crew member a good friend",
+            "WORSHIPS_A_CREW_MEMBER": "Worships a crew member"
+        },
+        "labels": {
+            "title": "Character Details",
+            "name": "Name",
+            "type": "Type",
+            "attitude": "Attitude",
+            "image": "Character Optics"
+        }
+    },
+    "items": {
+        "title": "Static Asset Database Connection",
+        "editTitle": "Item Prefs",
+        "itemSelector": "Item",
+        "type": {
+            "MONEY": "Money",
+            "WEAPONS": "Weapons",
+            "BIOLOGICAL_SAMPLES": "Biological samples",
+            "DRUGS_ILLEGAL_CONTRABAND": "Drugs/Illegal contraband",
+            "CYBERWARE": "Cyberware",
+            "DIGITAL_FILES": "Digital files",
+            "FOOD_FUELS_SUPPLIES": "Food/Fuels/Supplies",
+            "VEHICLE": "Vehicle",
+            "EXOTIC_ANIMAL": "Exotic animal",
+            "AI_ROBOT_DRONE": "AI/Robot/Drone"
+        },
+        "condition": {
+            "BROKEN_AND_IN_PIECES": "Broken and in pieces",
+            "LOW_GRADE_CHEAP_MATERIALS": "Low grade/cheap materials",
+            "FUNCTIONAL_AND_UTILITARIAN": "Functional and utilitarian",
+            "BELOW_AVERAGE_QUALITY": "Below average quality",
+            "AVERAGE_QUALITY": "Average quality",
+            "GOOD_CONDITION_BUT_USED": "Good condition but used",
+            "BRAND_NEW_AND_IN_GREAT_CONDITION": "Brand new and in great condition",
+            "ENHANCED_IN_SOME_WAY_AND_SOUGHT_AFTER": "Enhanced in some way and sought after",
+            "COLLECTORS_ITEM_FEW_IN_EXISTENCE": "Collector's item, few in existence",
+            "ONE_OF_A_KIND_ITEM_TOP_QUALITY": "One of a kind item, top quality"
+        },
+        "labels": {
+            "title": "Item Details",
+            "name": "Name",
+            "type": "Type",
+            "condition": "Condition",
+            "image": "Item Optics"
+        }
     },
     "gangs": {
         "title": "Street Gang Intel Feed",
@@ -522,9 +600,12 @@
     },
     "fixerJobs": {
         "title": "Fixer Contracts Building Framework",
-        "editTitle": "Edit Job",
-        "useExistingBuildings": "Use Existing Buildings",
-        "useExistingGangs": "Use Existing Gangs",
+        "editTitle": "Job Prefs",
+        "useExisting": "Use Existing:",
+        "useExistingBuildings": "Buildings?",
+        "useExistingGangs": "Gangs?",
+        "useExistingCharacters": "Characters?",
+        "useExistingItems": "Items?",
         "type": {
             "CORPORATE": "Corporate",
             "CRIME": "Crime",
@@ -667,13 +748,13 @@
             "verbType": {
                 "PlotGangVerbWrapper": "Gang",
                 "PlotBuildingVerbWrapper": "Building",
-                "PlotCharacterVerbWrapper": "Character",
-                "PlotItemVerbWrapper": "Item"
+                "CharacterVerbWrapper": "Character",
+                "ItemVerbWrapper": "Item"
             },
             "plotCategory": {
                 "character": "Character",
                 "item": "Item",
-                "characterOrItem": "Character or Item",
+                "target": "Target",
                 "gang": "Gang",
                 "building": "Building"
             },

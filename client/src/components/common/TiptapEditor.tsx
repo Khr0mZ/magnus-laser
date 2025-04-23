@@ -61,7 +61,7 @@ const TiptapEditor = ({ label, value, onChange, sx }: TiptapEditorProps) => {
             // Assume 'value' is Markdown and parse it
             newHtml = marked.parse(value || '') as string
         } catch (error) {
-            console.error('Error parsing initial Markdown:', error)
+            console.warn('Error parsing initial Markdown:', error)
             newHtml = '<p>Error loading content</p>'
         }
 

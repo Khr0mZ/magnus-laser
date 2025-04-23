@@ -44,7 +44,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
                 setLoaderEnabled(dbLoaderEnabled)
                 setViewPrefsLoaded(true)
             } catch (error) {
-                console.error('Error loading preferences:', error)
+                console.warn('Error loading preferences:', error)
             } finally {
                 setIsLoadingPreferences(false)
             }
@@ -87,7 +87,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
                 setAnimationsEnabled(updatedAnimationsEnabled)
                 setLoaderEnabled(updatedLoaderEnabled)
             } catch (error) {
-                console.error('Error reloading preferences after change:', error)
+                console.warn('Error reloading preferences after change:', error)
             }
         }
 

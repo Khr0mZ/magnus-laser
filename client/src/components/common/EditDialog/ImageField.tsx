@@ -11,8 +11,8 @@ import { flicker, glitch } from '../Animations'
 interface ImageFieldProps {
     image: string | undefined
     downloadName: string | undefined
-    handleImageUploadClick: () => void
-    handleImageRemove: () => void
+    handleImageUploadClick?: () => void
+    handleImageRemove?: () => void
     toggleFullscreenImage: () => void
     handleRegenerateClick?: () => void
     canRegenerate?: boolean
@@ -38,12 +38,16 @@ const ImageField = (props: ImageFieldProps) => {
     // Ensure these event handlers stop propagation to prevent unwanted parent clicks
     const handleUploadClick = (e: React.MouseEvent) => {
         e.stopPropagation()
-        handleImageUploadClick()
+        if (handleImageUploadClick) {
+            handleImageUploadClick()
+        }
     }
 
     const handleRemoveClick = (e: React.MouseEvent) => {
         e.stopPropagation()
-        handleImageRemove()
+        if (handleImageRemove) {
+            handleImageRemove()
+        }
     }
 
     const handleRegenerateButtonClick = (e: React.MouseEvent) => {

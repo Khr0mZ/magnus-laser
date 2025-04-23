@@ -7,10 +7,24 @@ export enum ModuleTypes {
     FIXER_JOB = 'FIXER_JOB',
     BOUNTY = 'BOUNTY',
     CLUB = 'CLUB',
-    CORPORATION = 'CORPORATION',
-    NPC = 'NPC',
+    ITEM = 'ITEM',
+    CHARACTER = 'CHARACTER',
     SETTINGS = 'SETTINGS',
 }
+
+// Item columns used in the item table view
+export const itemColumns: TableColumn[] = [
+    { key: 'name', label: 'name' },
+    { key: 'type', label: 'type' },
+    { key: 'condition', label: 'condition' },
+]
+
+// Character columns used in the character table view
+export const characterColumns: TableColumn[] = [
+    { key: 'name', label: 'name' },
+    { key: 'type', label: 'type' },
+    { key: 'attitude', label: 'attitude' },
+]
 
 // Gang columns used in the gang table view
 export const gangColumns: TableColumn[] = [
@@ -53,23 +67,21 @@ export const fixerJobColumns: TableColumn[] = [
     { key: 'difficulty', label: 'difficulty' },
     { key: 'plot.verb.value', label: 'verb' },
     { key: 'plot.verb.__typename', label: 'subjectCategory' },
-    { key: 'plot.plotSubject.name', label: 'plotCategory.characterOrItem' },
-    { key: 'plot.plotSubject.gang.name', label: 'plotCategory.gang' },
-    { key: 'plot.plotSubject.complication.type', label: 'gangComplication' },
-    {
-        key: 'plot.plotSubject.complication.character.name',
-        label: 'plotCategory.character',
-    },
-    {
-        key: 'plot.plotSubject.complication.item.name',
-        label: 'plotCategory.item',
-    },
 
+    // Only these fields are needed for subject display
+    { key: 'plot.plotSubject', label: 'plotCategory.target' },
+    // { key: 'plot.plotSubject.gang.name', label: 'plotCategory.gang' },
+    { key: 'plot.plotSubject.complication.type', label: 'gangComplication' },
+    { key: 'plot.plotSubject.complication.character.name', label: 'plotCategory.character' },
+    { key: 'plot.plotSubject.complication.item.name', label: 'plotCategory.item' },
+
+    // Building - only show name and complication
     { key: 'plot.plotBuilding.building.name', label: 'plotCategory.building' },
     { key: 'plot.plotBuilding.complication.type', label: 'buildingComplication' },
     { key: 'plot.plotBuilding.complication.character.name', label: 'plotCategory.character' },
     { key: 'plot.plotBuilding.complication.item.name', label: 'plotCategory.item' },
 
+    // Main complication
     { key: 'plot.plotComplication.type', label: 'mainComplication' },
     { key: 'plot.plotComplication.character.name', label: 'plotCategory.character' },
     { key: 'plot.plotComplication.item.name', label: 'plotCategory.item' },

@@ -1,0 +1,7 @@
+type Character {
+  ID: ID!
+  name: String!
+  type: CharacterType!
+  attitude: CharacterAttitude!
+  image: String!
+}

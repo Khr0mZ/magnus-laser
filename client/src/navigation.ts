@@ -6,7 +6,8 @@ enum NavigationPaths {
     CLUB = '/club',
     CORPORATION = '/corpo',
     BUILDING = '/building',
-    NPC = '/npc',
+    CHARACTER = '/character',
+    ITEM = '/item',
     SETTINGS = '/settings',
 }
 

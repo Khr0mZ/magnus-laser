@@ -16,7 +16,7 @@ import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, FixerJob, Gang, JobDifficulty } from '../../graphql/types'
+import { Building, Character, FixerJob, Gang, Item, JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { generateRandomFixerJob } from '../../utils/generators/generatorFixerJob'
@@ -41,6 +41,10 @@ const FixerJobView = () => {
         buildings,
         setGangs: setDataGangs,
         setBuildings: setDataBuildings,
+        characters,
+        items,
+        setCharacters: setDataCharacters,
+        setItems: setDataItems,
     } = useData()
     const [fixerJobs, setFixerJobs] = useState<FixerJob[]>([])
 
@@ -52,6 +56,8 @@ const FixerJobView = () => {
     // Add state for generator preferences
     const [preferExistingBuilding, setPreferExistingBuilding] = useState(false)
     const [preferExistingGang, setPreferExistingGang] = useState(false)
+    const [preferExistingCharacter, setPreferExistingCharacter] = useState(false)
+    const [preferExistingItem, setPreferExistingItem] = useState(false)
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [fixerJobToDelete, setFixerJobToDelete] = useState<number | null>(null)
@@ -138,14 +144,20 @@ const FixerJobView = () => {
     const handleGenerateFixerJob = async () => {
         setIsGenerating(true)
         try {
-            const { newFixerJob, newGang, newBuilding } = await generateRandomFixerJob(
+            const { newFixerJob, newGang, newBuilding, newCharacters, newItems } = await generateRandomFixerJob(
                 t,
                 gangs,
                 buildings,
+                characters,
+                items,
                 undefined,
                 preferExistingBuilding,
                 preferExistingGang,
+                preferExistingCharacter,
+                preferExistingItem,
                 jobDifficulty,
+                undefined,
+                undefined,
                 undefined,
                 undefined
             )
@@ -160,10 +172,16 @@ const FixerJobView = () => {
                 updatedBuildings = [...buildings, newBuilding]
                 setDataBuildings(updatedBuildings)
             }
+            if (newCharacters.length > 0) {
+                setDataCharacters([...characters, ...newCharacters])
+            }
+            if (newItems.length > 0) {
+                setDataItems([...items, ...newItems])
+            }
             setFixerJobs((prevFixerJobs) => [newFixerJob, ...prevFixerJobs])
             setIsSaving(true)
         } catch (error) {
-            console.error('Failed to generate fixer job:', error)
+            console.warn('Failed to generate fixer job:', error)
         } finally {
             setIsGenerating(false)
         }
@@ -210,9 +228,9 @@ const FixerJobView = () => {
         setEditDialogOpen(true)
     }
 
-    const handleEditSave = (editedItem: FixerJob) => {
+    const handleEditSave = (editedTarget: FixerJob) => {
         setFixerJobs((prevFixerJobs) =>
-            prevFixerJobs.map((fixerJob) => (fixerJob.ID === editedItem.ID ? editedItem : fixerJob))
+            prevFixerJobs.map((fixerJob) => (fixerJob.ID === editedTarget.ID ? editedTarget : fixerJob))
         )
         setIsSaving(true)
         setEditDialogOpen(false)
@@ -304,7 +322,16 @@ const FixerJobView = () => {
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     <GenerateButton isGenerating={isGenerating} handleGenerate={handleGenerateFixerJob} />
 
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: 'center' }}>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
+                                textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                            }}
+                        >
+                            {t('fixerJobs.useExisting')}
+                        </Typography>
                         <CyberpunkFormControlLabel
                             readerMode={readerMode}
                             disabled={buildings.length === 0}
@@ -331,6 +358,32 @@ const FixerJobView = () => {
                             }
                             label={t('fixerJobs.useExistingGangs')}
                         />
+                        <CyberpunkFormControlLabel
+                            readerMode={readerMode}
+                            disabled={gangs.length === 0}
+                            control={
+                                <CyberpunkCheckbox
+                                    readerMode={readerMode}
+                                    checked={preferExistingCharacter}
+                                    onChange={(e) => setPreferExistingCharacter(e.target.checked)}
+                                    disabled={characters.length === 0}
+                                />
+                            }
+                            label={t('fixerJobs.useExistingCharacters')}
+                        />
+                        <CyberpunkFormControlLabel
+                            readerMode={readerMode}
+                            disabled={items.length === 0}
+                            control={
+                                <CyberpunkCheckbox
+                                    readerMode={readerMode}
+                                    checked={preferExistingItem}
+                                    onChange={(e) => setPreferExistingItem(e.target.checked)}
+                                    disabled={items.length === 0}
+                                />
+                            }
+                            label={t('fixerJobs.useExistingItems')}
+                        />
                     </Stack>
                 </Box>
                 <ClearAllButton handleClearAllClick={handleClearAllClick} disabled={fixerJobs.length === 0} />
@@ -356,14 +409,14 @@ const FixerJobView = () => {
                 </Typography>
             ) : compactView ? (
                 <TableView
-                    items={fixerJobs}
+                    targetArray={fixerJobs}
                     onDelete={handleDeleteClick}
                     moduleType={ModuleTypes.FIXER_JOB}
                     onEdit={handleEditClick}
                 />
             ) : (
                 <GridView
-                    items={fixerJobs}
+                    targetArray={fixerJobs}
                     onDelete={handleDeleteClick}
                     moduleType={ModuleTypes.FIXER_JOB}
                     onEdit={handleEditClick}
@@ -400,8 +453,8 @@ const FixerJobView = () => {
             <EditDialog
                 open={editDialogOpen}
                 onClose={handleEditCancel}
-                onSave={handleEditSave as (item: Gang | Building | FixerJob) => void}
-                item={fixerJobToEdit}
+                onSave={handleEditSave as (target: Gang | Building | FixerJob | Character | Item) => void}
+                target={fixerJobToEdit}
                 moduleType={ModuleTypes.FIXER_JOB}
                 isGeneratingImage={isGeneratingImage}
                 setIsGeneratingImage={setIsGeneratingImage}

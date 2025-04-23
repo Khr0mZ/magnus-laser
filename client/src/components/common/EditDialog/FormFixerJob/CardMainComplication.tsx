@@ -12,143 +12,119 @@ import {
     Typography,
 } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { FixerJob, PlotComplicationType } from '../../../../graphql/types'
+import { Character, FixerJob, Item, Maybe, PlotComplicationType } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
-import { ImageFields } from '../../../../utils/constants'
-import CardCharacter, { FieldProps, ImageFieldProps } from './CardCharacter'
+import CardCharacter from './CardCharacter'
 import CardItem from './CardItem'
 
 export type CardMainComplicationProps = {
-    editedItem: FixerJob
-    isGeneratingImage?: boolean
+    editedTarget: FixerJob
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
-    handleImageUploadClick: (targetField: string) => void
-    openDeleteImageDialog: (targetField: string) => void
     toggleFullscreenImage: (targetField: string) => void
-    handleRegenerateClick: (imageFieldPath: string) => void
     formControlStyle: SxProps
     inputLabelStyle: SxProps
     selectStyle: SxProps
-    hiddenFileInput: JSX.Element
     complication: {
-        character: {
+        character: Character & {
             check: boolean
-            imageField: ImageFields
-            name: FieldProps
-            type: FieldProps
-            attitude: FieldProps
-            image: ImageFieldProps
+            field: string
+            chain: Maybe<Character>
         }
-        item: {
+        item: Item & {
             check: boolean
-            imageField: ImageFields
-            name: FieldProps
-            type: FieldProps
-            condition: FieldProps
-            image: ImageFieldProps
+            field: string
+            chain: Maybe<Item>
         }
     }
 }
 
 export const CardMainComplication = (props: CardMainComplicationProps) => {
     const {
-        editedItem,
-        isGeneratingImage,
+        editedTarget,
         textFieldOutlinedStyle,
         handleChange,
         formControlStyle,
         inputLabelStyle,
         selectStyle,
-        handleRegenerateClick,
-        handleImageUploadClick,
-        openDeleteImageDialog,
         toggleFullscreenImage,
-        hiddenFileInput,
         complication,
     } = props
     const { t } = useTranslation()
 
     return (
-        <>
-            {hiddenFileInput}
-            <Accordion
-                sx={{
-                    mt: 2,
-                    ml: '16px !important',
-                    bgcolor: colors.neons.red.default + '50 !important',
-                    border: `1px solid ${colors.neons.cyan.dark}`,
-                    borderRadius: 0.5,
-                    width: '100%',
-                }}
-                disableGutters
-            >
-                <AccordionSummary expandIcon={<ExpandMore fontSize="large" />}>
-                    <Typography variant="h6">{t('fixerJobs.labels.mainComplication')}</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                    {/* Main Complication Type */}
-                    <Grid item xs={12}>
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel id="complication-label" sx={inputLabelStyle}>
-                                {t('fixerJobs.labels.complicationType')}
-                            </InputLabel>
-                            <Select
-                                labelId="complication-label"
-                                value={editedItem.plot?.plotComplication?.type || ''}
-                                onChange={(e) => handleChange('plot.plotComplication.type', e.target.value)}
-                                label={t('fixerJobs.labels.complicationType')}
-                                sx={selectStyle}
-                            >
-                                {Object.values(PlotComplicationType).map((type) => (
-                                    <MenuItem key={type} value={type}>
-                                        {t(`fixerJobs.complication.${type}`)}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
+        <Accordion
+            sx={{
+                mt: 2,
+                ml: '16px !important',
+                bgcolor: colors.neons.red.default + '50 !important',
+                border: `1px solid ${colors.neons.cyan.dark}`,
+                borderRadius: 0.5,
+                width: '100%',
+            }}
+            disableGutters
+        >
+            <AccordionSummary expandIcon={<ExpandMore fontSize="large" />}>
+                <Typography variant="h6">{t('fixerJobs.labels.mainComplication')}</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+                {/* Main Complication Type */}
+                <Grid item xs={12}>
+                    <FormControl fullWidth variant="outlined" sx={formControlStyle}>
+                        <InputLabel id="complication-label" sx={inputLabelStyle}>
+                            {t('fixerJobs.labels.complicationType')}
+                        </InputLabel>
+                        <Select
+                            labelId="complication-label"
+                            value={editedTarget.plot?.plotComplication?.type || ''}
+                            onChange={(e) => handleChange('plot.plotComplication.type', e.target.value)}
+                            label={t('fixerJobs.labels.complicationType')}
+                            sx={selectStyle}
+                        >
+                            {Object.values(PlotComplicationType).map((type) => (
+                                <MenuItem key={type} value={type}>
+                                    {t(`fixerJobs.complication.${type}`)}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Grid>
 
-                    {/* Character Complication */}
-                    {complication.character.check && (
-                        <CardCharacter
-                            isGeneratingImage={isGeneratingImage}
-                            textFieldOutlinedStyle={textFieldOutlinedStyle}
-                            handleImageUploadClick={() => handleImageUploadClick(complication.character.imageField)}
-                            openDeleteImageDialog={() => openDeleteImageDialog(complication.character.imageField)}
-                            toggleFullscreenImage={() => toggleFullscreenImage(complication.character.imageField)}
-                            handleRegenerateClick={() => handleRegenerateClick(complication.character.imageField)}
-                            formControlStyle={formControlStyle}
-                            inputLabelStyle={inputLabelStyle}
-                            selectStyle={selectStyle}
-                            hiddenFileInput={hiddenFileInput}
-                            character={{
-                                ...complication.character,
-                            }}
-                        />
-                    )}
+                {/* Character Complication */}
+                {complication.character.check && (
+                    <CardCharacter
+                        textFieldOutlinedStyle={textFieldOutlinedStyle}
+                        toggleFullscreenImage={() => toggleFullscreenImage(complication.character.field + '.image')}
+                        formControlStyle={formControlStyle}
+                        inputLabelStyle={inputLabelStyle}
+                        selectStyle={selectStyle}
+                        character={{
+                            ...complication.character,
+                            main: false,
+                        }}
+                        handleChange={handleChange}
+                        editedTarget={editedTarget}
+                    />
+                )}
 
-                    {/* Item Complication */}
-                    {complication.item.check && (
-                        <CardItem
-                            isGeneratingImage={isGeneratingImage}
-                            textFieldOutlinedStyle={textFieldOutlinedStyle}
-                            handleImageUploadClick={() => handleImageUploadClick(complication.item.imageField)}
-                            openDeleteImageDialog={() => openDeleteImageDialog(complication.item.imageField)}
-                            toggleFullscreenImage={() => toggleFullscreenImage(complication.item.imageField)}
-                            handleRegenerateClick={() => handleRegenerateClick(complication.item.imageField)}
-                            formControlStyle={formControlStyle}
-                            inputLabelStyle={inputLabelStyle}
-                            selectStyle={selectStyle}
-                            hiddenFileInput={hiddenFileInput}
-                            item={{
-                                ...complication.item,
-                            }}
-                        />
-                    )}
-                </AccordionDetails>
-            </Accordion>
-        </>
+                {/* Item Complication */}
+                {complication.item.check && (
+                    <CardItem
+                        textFieldOutlinedStyle={textFieldOutlinedStyle}
+                        toggleFullscreenImage={() => toggleFullscreenImage(complication.item.field + '.image')}
+                        formControlStyle={formControlStyle}
+                        inputLabelStyle={inputLabelStyle}
+                        selectStyle={selectStyle}
+                        item={{
+                            ...complication.item,
+                            main: false,
+                        }}
+                        handleChange={handleChange}
+                        editedTarget={editedTarget}
+                    />
+                )}
+            </AccordionDetails>
+        </Accordion>
     )
 }
 

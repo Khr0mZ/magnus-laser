@@ -327,7 +327,7 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
             newGang.name = generateLocalGangName(t, type, color) // Use fallback function
         }
     } catch (error) {
-        console.error(`Error generating API name for gang ${newGang.name}:`, error)
+        console.warn(`Error generating API name for gang ${newGang.name}:`, error)
         newGang.name = generateLocalGangName(t, type, color) // Use fallback function
     }
 
@@ -345,7 +345,7 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
             newGang.description = generateLocalGangDescription(t, newGang) // Fallback
         }
     } catch (error) {
-        console.error(`Error generating API description for gang ${newGang.name}:`, error)
+        console.warn(`Error generating API description for gang ${newGang.name}:`, error)
         newGang.description = generateLocalGangDescription(t, newGang) // Fallback
     }
 
@@ -359,7 +359,7 @@ export const generateRandomGang = async (t: TFunction, gang?: Partial<Gang>): Pr
                 newGang.image = '' // Ensure it's an empty string on failure
             }
         } catch (error) {
-            console.error(`Error generating or converting image for gang ${newGang.name}:`, error)
+            console.warn(`Error generating or converting image for gang ${newGang.name}:`, error)
             newGang.image = '' // Ensure it's an empty string on error
         }
     } else {

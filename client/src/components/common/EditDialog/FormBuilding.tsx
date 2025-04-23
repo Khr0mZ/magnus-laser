@@ -16,7 +16,7 @@ import { ModuleTypes } from '../../../utils/constants'
 import ImageField from './ImageField'
 
 export type FormBuildingProps = {
-    editedItem: Building
+    editedTarget: Building
     moduleType: ModuleTypes
     setIsSaving: (isSaving: boolean) => void
     isGeneratingImage?: boolean
@@ -36,7 +36,7 @@ export type FormBuildingProps = {
 
 export const FormBuilding = (props: FormBuildingProps) => {
     const {
-        editedItem,
+        editedTarget,
         moduleType,
         setIsSaving,
         isGeneratingImage,
@@ -63,7 +63,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                 <TextField
                     fullWidth
                     label={t('buildings.labels.name')}
-                    value={editedItem.name}
+                    value={editedTarget.name}
                     onChange={(e) => handleChange('name', e.target.value)}
                     variant="outlined"
                     sx={textFieldOutlinedStyle}
@@ -74,7 +74,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                 <TextField
                     fullWidth
                     label={t('common.description')}
-                    value={editedItem.description || ''}
+                    value={editedTarget.description || ''}
                     onChange={(e) => handleChange('description', e.target.value)}
                     variant="outlined"
                     sx={textFieldOutlinedStyle}
@@ -91,7 +91,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                             </InputLabel>
                             <Select
                                 labelId="type-label"
-                                value={editedItem.type || ''}
+                                value={editedTarget.type || ''}
                                 onChange={(e) => handleChange('type', e.target.value)}
                                 label={t('buildings.labels.type')}
                                 sx={selectStyle}
@@ -107,7 +107,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.style')}</InputLabel>
                             <Select
-                                value={editedItem.style || ''}
+                                value={editedTarget.style || ''}
                                 onChange={(e) => handleChange('style', e.target.value)}
                                 label={t('buildings.labels.style')}
                                 sx={selectStyle}
@@ -125,7 +125,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.isAbandoned')}</InputLabel>
                             <Select
-                                value={editedItem.isAbandoned ? 'yes' : 'no'}
+                                value={editedTarget.isAbandoned ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('isAbandoned', e.target.value === 'yes')}
                                 label={t('buildings.labels.isAbandoned')}
                                 sx={selectStyle}
@@ -138,7 +138,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.elevators')}</InputLabel>
                             <Select
-                                value={editedItem.elevators ? 'yes' : 'no'}
+                                value={editedTarget.elevators ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('elevators', e.target.value === 'yes')}
                                 label={t('buildings.labels.elevators')}
                                 sx={selectStyle}
@@ -151,7 +151,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.parking')}</InputLabel>
                             <Select
-                                value={editedItem.parking ? 'yes' : 'no'}
+                                value={editedTarget.parking ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('parking', e.target.value === 'yes')}
                                 label={t('buildings.labels.parking')}
                                 sx={selectStyle}
@@ -164,7 +164,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.gatehouseFrontDesk')}</InputLabel>
                             <Select
-                                value={editedItem.gatehouseFrontDesk ? 'yes' : 'no'}
+                                value={editedTarget.gatehouseFrontDesk ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('gatehouseFrontDesk', e.target.value === 'yes')}
                                 label={t('buildings.labels.gatehouseFrontDesk')}
                                 sx={selectStyle}
@@ -179,7 +179,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.emergencyExit')}</InputLabel>
                             <Select
-                                value={editedItem.emergencyExit ? 'yes' : 'no'}
+                                value={editedTarget.emergencyExit ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('emergencyExit', e.target.value === 'yes')}
                                 label={t('buildings.labels.emergencyExit')}
                                 sx={selectStyle}
@@ -192,7 +192,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.backupLights')}</InputLabel>
                             <Select
-                                value={editedItem.backupLights ? 'yes' : 'no'}
+                                value={editedTarget.backupLights ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('backupLights', e.target.value === 'yes')}
                                 label={t('buildings.labels.backupLights')}
                                 sx={selectStyle}
@@ -205,7 +205,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.landingPad')}</InputLabel>
                             <Select
-                                value={editedItem.landingPad ? 'yes' : 'no'}
+                                value={editedTarget.landingPad ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('landingPad', e.target.value === 'yes')}
                                 label={t('buildings.labels.landingPad')}
                                 sx={selectStyle}
@@ -218,7 +218,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.secretOrAltEntrance')}</InputLabel>
                             <Select
-                                value={editedItem.secretOrAltEntrance ? 'yes' : 'no'}
+                                value={editedTarget.secretOrAltEntrance ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('secretOrAltEntrance', e.target.value === 'yes')}
                                 label={t('buildings.labels.secretOrAltEntrance')}
                                 sx={selectStyle}
@@ -233,7 +233,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.securityPersonnel')}</InputLabel>
                             <Select
-                                value={editedItem.securityPersonnel || ''}
+                                value={editedTarget.securityPersonnel || ''}
                                 onChange={(e) => handleChange('securityPersonnel', e.target.value)}
                                 label={t('buildings.labels.securityPersonnel')}
                                 sx={selectStyle}
@@ -249,7 +249,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.ownership')}</InputLabel>
                             <Select
-                                value={editedItem.ownership || ''}
+                                value={editedTarget.ownership || ''}
                                 onChange={(e) => handleChange('ownership', e.target.value)}
                                 label={t('buildings.labels.ownership')}
                                 sx={selectStyle}
@@ -267,7 +267,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.event')}</InputLabel>
                             <Select
-                                value={editedItem.event || ''}
+                                value={editedTarget.event || ''}
                                 onChange={(e) => handleChange('event', e.target.value)}
                                 label={t('buildings.labels.event')}
                                 sx={selectStyle}
@@ -283,7 +283,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('buildings.labels.secret')}</InputLabel>
                             <Select
-                                value={editedItem.secret || ''}
+                                value={editedTarget.secret || ''}
                                 onChange={(e) => handleChange('secret', e.target.value)}
                                 label={t('buildings.labels.secret')}
                                 sx={selectStyle}
@@ -301,15 +301,15 @@ export const FormBuilding = (props: FormBuildingProps) => {
             {/* Image */}
             <Grid item xs={12} md={4}>
                 <ImageField
-                    image={editedItem.image}
-                    downloadName={editedItem.name}
+                    image={editedTarget.image}
+                    downloadName={editedTarget.name}
                     handleImageUploadClick={handleImageUploadClick}
                     handleImageRemove={openDeleteImageDialog}
                     toggleFullscreenImage={toggleFullscreenImage}
                     handleRegenerateClick={() => {
                         if (setIsGeneratingImage && setBuildings) {
                             handleRegenerateImage(
-                                editedItem,
+                                editedTarget,
                                 readerMode,
                                 setIsGeneratingImage,
                                 setIsSaving,
@@ -319,7 +319,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                             )
                         }
                     }}
-                    canRegenerate={!!editedItem.description}
+                    canRegenerate={!!editedTarget.description}
                     isGeneratingImage={isGeneratingImage}
                 />
             </Grid>

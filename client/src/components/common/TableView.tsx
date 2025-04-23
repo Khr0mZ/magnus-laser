@@ -4,16 +4,25 @@ import { useTranslation } from 'react-i18next'
 import CustomScrollbar from '../../components/CustomScrollbar'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, FixerJob, Gang } from '../../graphql/types'
+import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
 import colors from '../../utils/colors'
-import { buildingColumns, fixerJobColumns, gangColumns, ModuleTypes } from '../../utils/constants'
+import {
+    buildingColumns,
+    characterColumns,
+    fixerJobColumns,
+    gangColumns,
+    itemColumns,
+    ModuleTypes,
+} from '../../utils/constants'
 import {
     getBuildingColor,
     getComplementaryColor,
     getFixerJobDifficultyColor,
     getGangColorValue,
+    processCharacterValueForDisplay,
     processFixerJobValueForDisplay,
     processGangValueForDisplay,
+    processItemValueForDisplay,
 } from '../../utils/functions'
 import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
 import { buttonGlitch } from './Animations'
@@ -24,18 +33,19 @@ type TableColumn = {
 }
 
 type TableViewProps = {
-    items: Gang[] | Building[] | FixerJob[]
+    targetArray: (Gang | Building | FixerJob | Character | Item)[]
     onDelete: (index: number) => void
     moduleType: ModuleTypes
     onEdit: (index: number) => void
 }
 
 const TableView = (props: TableViewProps) => {
-    const { items, onDelete, moduleType, onEdit } = props
+    const { targetArray, onDelete, moduleType, onEdit } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const { buildings, gangs } = useData()
+    const { buildings, gangs, characters, items } = useData()
 
+    // Helper functions to resolve references
     const resolveGangReference = (gangId: string) => {
         if (!gangId) return null
         return gangs.find((g) => g.ID === gangId)
@@ -46,7 +56,74 @@ const TableView = (props: TableViewProps) => {
         return buildings.find((b) => b.ID === buildingId)
     }
 
+    const resolveCharacterReference = (characterId: string) => {
+        if (!characterId) return null
+        return characters.find((c) => c.ID === characterId)
+    }
+
+    const resolveItemReference = (itemId: string) => {
+        if (!itemId) return null
+        return items.find((i) => i.ID === itemId)
+    }
+
     const getValueByPath = (item: Record<string, unknown>, path: string): unknown => {
+        // Special case handlers for common problematic paths
+        if (path === 'plot.plotSubject.gang.name') {
+            const plot = (item.plot as Record<string, unknown>) || {}
+            const plotSubject = (plot.plotSubject as Record<string, unknown>) || {}
+            const gang = plotSubject.gang
+
+            if (typeof gang === 'string') {
+                const gangRef = resolveGangReference(gang)
+                return gangRef?.name || gang
+            } else if (gang && typeof gang === 'object' && 'name' in (gang as Record<string, unknown>)) {
+                return (gang as Record<string, unknown>).name
+            }
+            return undefined
+        }
+
+        if (path === 'plot.plotBuilding.building.name') {
+            const plot = (item.plot as Record<string, unknown>) || {}
+            const plotBuilding = (plot.plotBuilding as Record<string, unknown>) || {}
+            const building = plotBuilding.building
+
+            if (typeof building === 'string') {
+                const buildingRef = resolveBuildingReference(building)
+                return buildingRef?.name || building
+            } else if (building && typeof building === 'object' && 'name' in (building as Record<string, unknown>)) {
+                return (building as Record<string, unknown>).name
+            }
+            return undefined
+        }
+
+        // Handle character or item names in complications
+        if (path.endsWith('.character.name')) {
+            const basePath = path.substring(0, path.length - 5)
+            const baseValue = getValueByPath(item, basePath)
+
+            if (typeof baseValue === 'string') {
+                const charRef = resolveCharacterReference(baseValue)
+                return charRef?.name || baseValue
+            } else if (baseValue && typeof baseValue === 'object' && 'name' in (baseValue as Record<string, unknown>)) {
+                return (baseValue as Record<string, unknown>).name
+            }
+            return undefined
+        }
+
+        if (path.endsWith('.item.name')) {
+            const basePath = path.substring(0, path.length - 5)
+            const baseValue = getValueByPath(item, basePath)
+
+            if (typeof baseValue === 'string') {
+                const itemRef = resolveItemReference(baseValue)
+                return itemRef?.name || baseValue
+            } else if (baseValue && typeof baseValue === 'object' && 'name' in (baseValue as Record<string, unknown>)) {
+                return (baseValue as Record<string, unknown>).name
+            }
+            return undefined
+        }
+
+        // Standard path traversal for other paths
         const parts = path.split('.')
         let current = item as Record<string, unknown>
 
@@ -80,26 +157,69 @@ const TableView = (props: TableViewProps) => {
                 }
             }
 
+            if (part === 'character' && current[part]) {
+                if (typeof current[part] === 'string') {
+                    const characterRef = resolveCharacterReference(current[part] as string)
+                    if (characterRef) {
+                        current = characterRef as unknown as Record<string, unknown>
+                        continue
+                    }
+                    return current[part]
+                }
+            }
+
+            if (part === 'item' && current[part]) {
+                if (typeof current[part] === 'string') {
+                    const itemRef = resolveItemReference(current[part] as string)
+                    if (itemRef) {
+                        current = itemRef as unknown as Record<string, unknown>
+                        continue
+                    }
+                    return current[part]
+                }
+            }
+
+            // Handle complication objects
+            if (part === 'complication' && current[part]) {
+                current = current[part] as Record<string, unknown>
+                continue
+            }
+
             current = current[part] as Record<string, unknown>
         }
 
         return current
     }
 
-    if (items.length === 0) return null
+    // Return all columns without filtering for TableView
+    const getFilteredColumns = (): TableColumn[] => {
+        let baseColumns: TableColumn[] = []
+        switch (moduleType) {
+            case ModuleTypes.GANG:
+                baseColumns = gangColumns
+                break
+            case ModuleTypes.BUILDING:
+                baseColumns = buildingColumns
+                break
+            case ModuleTypes.FIXER_JOB:
+                baseColumns = fixerJobColumns
+                break
+            case ModuleTypes.ITEM:
+                baseColumns = itemColumns
+                break
+            case ModuleTypes.CHARACTER:
+                baseColumns = characterColumns
+                break
+        }
 
-    let columns: TableColumn[] = []
-    switch (moduleType) {
-        case ModuleTypes.GANG:
-            columns = gangColumns
-            break
-        case ModuleTypes.BUILDING:
-            columns = buildingColumns
-            break
-        case ModuleTypes.FIXER_JOB:
-            columns = fixerJobColumns
-            break
+        // For table view, show all columns without filtering
+        return baseColumns
     }
+
+    if (targetArray.length === 0) return null
+
+    // Get the filtered columns for display
+    const columns = getFilteredColumns()
 
     return (
         <TableContainer
@@ -153,6 +273,8 @@ const TableView = (props: TableViewProps) => {
                                     {moduleType === ModuleTypes.GANG && t(`gangs.labels.${column.label}`)}
                                     {moduleType === ModuleTypes.BUILDING && t(`buildings.labels.${column.label}`)}
                                     {moduleType === ModuleTypes.FIXER_JOB && t(`fixerJobs.labels.${column.label}`)}
+                                    {moduleType === ModuleTypes.ITEM && t(`items.labels.${column.label}`)}
+                                    {moduleType === ModuleTypes.CHARACTER && t(`characters.labels.${column.label}`)}
                                 </TableCell>
                             ))}
 
@@ -173,22 +295,30 @@ const TableView = (props: TableViewProps) => {
                     </TableHead>
 
                     <TableBody>
-                        {items.map((item, index) => {
+                        {targetArray.map((target, index) => {
                             // Generate localized name and color based on module type
                             let name = ''
                             let color = ''
                             switch (moduleType) {
                                 case ModuleTypes.GANG:
-                                    name = item.name
-                                    color = getGangColorValue((item as Gang).color)
+                                    name = target.name
+                                    color = getGangColorValue((target as Gang).color)
                                     break
                                 case ModuleTypes.BUILDING:
-                                    name = item.name
-                                    color = getBuildingColor((item as Building).type)
+                                    name = target.name
+                                    color = getBuildingColor((target as Building).type)
                                     break
                                 case ModuleTypes.FIXER_JOB:
-                                    name = item.name
-                                    color = getFixerJobDifficultyColor((item as FixerJob).difficulty)
+                                    name = target.name
+                                    color = getFixerJobDifficultyColor((target as FixerJob).difficulty)
+                                    break
+                                case ModuleTypes.ITEM:
+                                    name = target.name
+                                    color = colors.neons.cyan.default
+                                    break
+                                case ModuleTypes.CHARACTER:
+                                    name = target.name
+                                    color = colors.neons.cyan.default
                                     break
                             }
 
@@ -218,14 +348,26 @@ const TableView = (props: TableViewProps) => {
                                     <TableCell
                                         className="cell-content"
                                         align="center"
-                                        sx={{ borderBottom: `1px solid ${colors.neons.cyan.dark}` }}
+                                        sx={{
+                                            borderBottom: `1px solid ${colors.neons.cyan.dark}`,
+                                            position: 'sticky',
+                                            left: 0,
+                                            bgcolor: readerMode
+                                                ? index % 2 === 0
+                                                    ? 'rgba(0, 255, 255, 0.2)'
+                                                    : 'rgba(0, 255, 255, 0.1)'
+                                                : index % 2 === 0
+                                                ? 'rgba(0, 20, 40, 0.2)'
+                                                : 'rgba(0, 15, 30, 0.4)',
+                                            zIndex: 1,
+                                        }}
                                     >
                                         <Typography
                                             className={readerMode ? 'gang-name-typography' : 'glitch-text'}
                                             data-text={name}
                                             sx={{
                                                 fontWeight: 500,
-                                                color: name,
+                                                color: color,
                                                 textShadow: readerMode
                                                     ? `0 0 5px ${getComplementaryColor(
                                                           color
@@ -252,43 +394,136 @@ const TableView = (props: TableViewProps) => {
                                     </TableCell>
 
                                     {/* Render data cells for each column (excluding name since it's already rendered) */}
-                                    {columns.slice(1).map((column) => (
-                                        <TableCell
-                                            key={column.key}
-                                            align="center"
-                                            sx={{
-                                                color: readerMode ? colors.grays.gray400 : colors.neons.cyan.default,
-                                                fontWeight: 500,
-                                                borderBottom: `1px solid ${colors.neons.cyan.dark}`,
-                                            }}
-                                            className="cell-content"
-                                        >
-                                            {moduleType === ModuleTypes.GANG &&
+                                    {columns.slice(1).map((column) => {
+                                        // Get and process the value
+                                        let displayValue: string = '—'
+
+                                        if (moduleType === ModuleTypes.GANG) {
+                                            displayValue = String(
                                                 processGangValueForDisplay(
                                                     column.key,
-                                                    (item as Gang)[column.key as keyof Gang],
+                                                    (target as Gang)[column.key as keyof Gang],
                                                     t
-                                                )}
-                                            {moduleType === ModuleTypes.BUILDING &&
+                                                )
+                                            )
+                                        } else if (moduleType === ModuleTypes.BUILDING) {
+                                            displayValue = String(
                                                 processBuildingValueForDisplay(
                                                     column.key,
-                                                    (item as Building)[column.key as keyof Building],
+                                                    (target as Building)[column.key as keyof Building],
                                                     t,
-                                                    (item as Building).isAbandoned
-                                                )}
-                                            {moduleType === ModuleTypes.FIXER_JOB && (
-                                                <>
-                                                    {column.key === 'name' && item.name}
-                                                    {column.key !== 'name' &&
-                                                        processFixerJobValueForDisplay(
-                                                            column.key,
-                                                            getValueByPath(item as Record<string, unknown>, column.key),
-                                                            t
-                                                        )}
-                                                </>
-                                            )}
-                                        </TableCell>
-                                    ))}
+                                                    (target as Building).isAbandoned
+                                                )
+                                            )
+                                        } else if (moduleType === ModuleTypes.FIXER_JOB) {
+                                            if (column.key === 'name') {
+                                                displayValue = target.name
+                                            } else if (
+                                                column.key === 'plot.plotSubject' ||
+                                                column.label === 'plotCategory.target'
+                                            ) {
+                                                // Special handling for the Target column
+                                                const fixerJob = target as FixerJob
+                                                const plotSubject = fixerJob.plot?.plotSubject
+
+                                                // Handle direct character/item references
+                                                if (
+                                                    plotSubject &&
+                                                    typeof plotSubject === 'object' &&
+                                                    'name' in plotSubject
+                                                ) {
+                                                    displayValue = plotSubject.name
+                                                }
+                                                // Handle gang references
+                                                else if (
+                                                    plotSubject &&
+                                                    typeof plotSubject === 'object' &&
+                                                    'gang' in plotSubject
+                                                ) {
+                                                    const gang = plotSubject.gang
+                                                    if (typeof gang === 'object' && gang !== null && 'name' in gang) {
+                                                        displayValue = (gang as { name: string }).name
+                                                    } else if (typeof gang === 'string') {
+                                                        // Try to resolve the gang reference
+                                                        const gangRef = resolveGangReference(gang)
+                                                        displayValue = gangRef?.name || '—'
+                                                    }
+                                                } else if (typeof plotSubject === 'string') {
+                                                    // Try to resolve the string ID
+                                                    const charRef = resolveCharacterReference(plotSubject)
+                                                    if (charRef) {
+                                                        displayValue = charRef.name
+                                                    } else {
+                                                        const itemRef = resolveItemReference(plotSubject)
+                                                        if (itemRef) {
+                                                            displayValue = itemRef.name
+                                                        } else {
+                                                            displayValue = '—'
+                                                        }
+                                                    }
+                                                } else {
+                                                    displayValue = '—'
+                                                }
+                                            } else {
+                                                const value = getValueByPath(
+                                                    target as Record<string, unknown>,
+                                                    column.key
+                                                )
+
+                                                // Handle undefined values explicitly
+                                                if (value === undefined) {
+                                                    displayValue = '—'
+                                                } else {
+                                                    const processed = processFixerJobValueForDisplay(
+                                                        column.key,
+                                                        value,
+                                                        t
+                                                    )
+                                                    // Replace 'undefined' string with the dash character
+                                                    displayValue = processed === 'undefined' ? '—' : processed
+                                                }
+                                            }
+                                        } else if (moduleType === ModuleTypes.ITEM) {
+                                            displayValue = String(
+                                                processItemValueForDisplay(
+                                                    column.key,
+                                                    getValueByPath(target as Record<string, unknown>, column.key),
+                                                    t
+                                                )
+                                            )
+                                        } else if (moduleType === ModuleTypes.CHARACTER) {
+                                            displayValue = String(
+                                                processCharacterValueForDisplay(
+                                                    column.key,
+                                                    getValueByPath(target as Record<string, unknown>, column.key),
+                                                    t
+                                                )
+                                            )
+                                        }
+
+                                        // Special handling for strings that contain 'undefined'
+                                        if (displayValue === 'undefined') {
+                                            displayValue = '—'
+                                        }
+
+                                        // Display all cells, even with "—" value
+                                        return (
+                                            <TableCell
+                                                key={column.key}
+                                                align="center"
+                                                sx={{
+                                                    color: readerMode
+                                                        ? colors.grays.gray400
+                                                        : colors.neons.cyan.default,
+                                                    fontWeight: 500,
+                                                    borderBottom: `1px solid ${colors.neons.cyan.dark}`,
+                                                }}
+                                                className="cell-content"
+                                            >
+                                                {displayValue}
+                                            </TableCell>
+                                        )
+                                    })}
 
                                     {/* Actions cell */}
                                     <TableCell

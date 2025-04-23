@@ -2,65 +2,36 @@ import { TFunction } from 'i18next'
 import { v4 as uuidv4 } from 'uuid'
 import {
     Building,
-    BuildingComplication,
+    BuildingComplication, // The complete plot object (includes verb, place, subject, complication)
+    Character,
+    CharacterVerb,
     FixerJob,
     Gang,
     GangComplication,
+    Item,
+    ItemVerb,
     JobDifficulty,
     Maybe,
     Plot,
     PlotBuilding,
     PlotBuildingComplicationType,
-    PlotBuildingVerb, // The complete plot object (includes verb, place, subject, complication)
-    PlotCharacter,
-    PlotCharacterAttitude,
-    PlotCharacterType,
-    PlotCharacterVerb,
+    PlotBuildingVerb,
     PlotComplication,
     PlotComplicationType,
     PlotGang,
     PlotGangComplicationType,
     PlotGangVerb,
-    PlotItem,
-    PlotItemCondition,
-    PlotItemType,
-    PlotItemVerb,
     PlotSubject,
     PlotVerb,
 } from '../../graphql/types'
-import { blobToBase64, generateAIItemName, generateImageWithFallback, generateTextWithFallback } from '../apiUtils'
+import { blobToBase64, generateImageWithFallback, generateTextWithFallback } from '../apiUtils'
 import { ModuleTypes } from '../constants'
 import { getJobDifficultyModifier, getRandomElement, getRandomInt } from '../functions'
 import { generateRandomBuilding } from '../generators/generatorBuilding'
 import { generateRandomGang } from '../generators/generatorGang'
-import {
-    corpoPrefixes, // Import corpoPrefixes
-    personNames, // Import personNames
-    surnames, // Import surnames
-    TextGenerationType,
-} from './constantsGenerators'
-
-// Shared lists for weapon name generation and themed suffixes
-const WEAPON_ADJECTIVES = ['Neon', 'Chrome', 'Cyber', 'Plasma', 'Quantum', 'Hyper', 'Vapor']
-const WEAPON_NOUNS = [
-    'Medium Pistol',
-    'Heavy Pistol',
-    'Very Heavy Pistol',
-    'Submachine Gun',
-    'Heavy Submachine Gun',
-    'Shotgun',
-    'Assault Rifle',
-    'Sniper Rifle',
-    'Bow and Crossbow',
-    'Grenade Launcher',
-    'Rocket Launcher',
-    'Light Melee Weapon',
-    'Medium Melee Weapon',
-    'Heavy Melee Weapon',
-    'Very Heavy Melee Weapon',
-    'Thrown Weapon',
-]
-const ITEM_NAME_THEMED_SUFFIXES = ['Mk.I', 'Mk.II', 'Series X', 'Prototype', 'Alpha', 'Omega', 'V1', 'V2']
+import { TextGenerationType } from './constantsGenerators'
+import { generateRandomCharacter } from './generatorCharacter'
+import { generateRandomItem } from './generatorItem'
 
 /**
  * Improved FixerJob generator with increased narrative detail.
@@ -74,22 +45,36 @@ const ITEM_NAME_THEMED_SUFFIXES = ['Mk.I', 'Mk.II', 'Series X', 'Prototype', 'Al
  * @param preferExistingGang - Optional flag to prefer existing gangs.
  * @param jobDifficulty - Optional job difficulty.
  * @param presetGang - Optional preset gang for plotSubject.
- * @returns A complete FixerJob object along with any newly created gangs and buildings.
+ * @returns A complete FixerJob object along with any newly created gangs, buildings, characters or items.
  */
 export const generateRandomFixerJob = async (
     t: TFunction,
     gangs: Gang[],
     buildings: Building[],
+    characters: Character[],
+    items: Item[],
     fixerJob?: Partial<FixerJob>,
     preferExistingBuilding?: boolean,
     preferExistingGang?: boolean,
+    preferExistingCharacter?: boolean,
+    preferExistingItem?: boolean,
     jobDifficulty?: JobDifficulty,
     presetBuilding?: Building,
-    presetGang?: Gang
-): Promise<{ newFixerJob: FixerJob; newGang: Maybe<Gang>; newBuilding: Maybe<Building> }> => {
+    presetGang?: Gang,
+    presetCharacter?: Character,
+    presetItem?: Item
+): Promise<{
+    newFixerJob: FixerJob
+    newGang: Maybe<Gang>
+    newBuilding: Maybe<Building>
+    newCharacters: Character[]
+    newItems: Item[]
+}> => {
     // Arrays to collect newly created entities
     let newGang: Maybe<Gang> = undefined
     let newBuilding: Maybe<Building> = undefined
+    const newCharacters: Character[] = []
+    const newItems: Item[] = []
     // Things to generate
     // - PlotBuilding
     // - Verb
@@ -101,7 +86,21 @@ export const generateRandomFixerJob = async (
 
     // Generate PlotBuilding
     const difficulty = jobDifficulty ?? JobDifficulty.TYPICAL
-    const plotBuilding = await generatePlotBuilding(t, buildings, preferExistingBuilding, difficulty, presetBuilding)
+    const plotBuilding = await generatePlotBuilding(
+        t,
+        buildings,
+        characters,
+        items,
+        newCharacters,
+        newItems,
+        preferExistingBuilding,
+        preferExistingCharacter,
+        preferExistingItem,
+        difficulty,
+        presetBuilding,
+        presetCharacter,
+        presetItem
+    )
     // If there are no buildings, or the building is not a preset or existing building, add it to the array of new buildings
     if (buildings.length === 0 || (!presetBuilding && !preferExistingBuilding && buildings.length > 0)) {
         newBuilding = plotBuilding.building
@@ -113,14 +112,14 @@ export const generateRandomFixerJob = async (
     switch (verbRoll) {
         case 0:
             verb = {
-                __typename: 'PlotCharacterVerbWrapper',
-                value: getRandomElement(Object.values(PlotCharacterVerb)),
+                __typename: 'CharacterVerbWrapper',
+                value: getRandomElement(Object.values(CharacterVerb)),
             }
             break
         case 1:
             verb = {
-                __typename: 'PlotItemVerbWrapper',
-                value: getRandomElement(Object.values(PlotItemVerb)),
+                __typename: 'ItemVerbWrapper',
+                value: getRandomElement(Object.values(ItemVerb)),
             }
             break
         case 2:
@@ -141,14 +140,41 @@ export const generateRandomFixerJob = async (
     // Generate plot subject
     let plotSubject: Maybe<PlotSubject> = undefined
     switch (verb.__typename) {
-        case 'PlotCharacterVerbWrapper':
-            plotSubject = await generateRandomCharacter()
+        case 'CharacterVerbWrapper':
+            plotSubject =
+                presetCharacter ||
+                (preferExistingCharacter && characters.length > 0
+                    ? getRandomElement(characters)
+                    : await generateRandomCharacter())
+            // If there are no characters, or the character is not a preset or existing character, add it to the array of new characters
+            if (characters.length === 0 || (!presetCharacter && !preferExistingCharacter && characters.length > 0)) {
+                newCharacters.push(plotSubject)
+            }
             break
-        case 'PlotItemVerbWrapper':
-            plotSubject = await generateRandomItem(t)
+        case 'ItemVerbWrapper':
+            plotSubject =
+                presetItem ||
+                (preferExistingItem && items.length > 0 ? getRandomElement(items) : await generateRandomItem(t))
+            // If there are no items, or the item is not a preset or existing item, add it to the array of new items
+            if (items.length === 0 || (!presetItem && !preferExistingItem && items.length > 0)) {
+                newItems.push(plotSubject)
+            }
             break
         case 'PlotGangVerbWrapper':
-            plotSubject = await generatePlotGang(t, gangs, preferExistingGang, presetGang)
+            plotSubject = await generatePlotGang(
+                t,
+                gangs,
+                characters,
+                items,
+                preferExistingGang,
+                preferExistingCharacter,
+                preferExistingItem,
+                newCharacters,
+                newItems,
+                presetGang,
+                presetCharacter,
+                presetItem
+            )
             // If there are no gangs, or the gang not an existing gang, add it to the array of new gangs
             if (gangs.length === 0 || (!presetGang && !preferExistingGang && gangs.length > 0)) {
                 newGang = plotSubject.gang
@@ -165,9 +191,23 @@ export const generateRandomFixerJob = async (
         type: getRandomElement(Object.values(PlotComplicationType)),
     }
     if (plotComplication.type.toString().includes('CHARACTER')) {
-        plotComplication.character = await generateRandomCharacter()
+        plotComplication.character =
+            presetCharacter ||
+            (preferExistingCharacter && characters.length > 0
+                ? getRandomElement(characters)
+                : await generateRandomCharacter())
+        // If there are no characters, or the character is not a preset or existing character, add it to the array of new characters
+        if (characters.length === 0 || (!presetCharacter && !preferExistingCharacter && characters.length > 0)) {
+            newCharacters.push(plotComplication.character)
+        }
     } else if (plotComplication.type.toString().includes('ITEM')) {
-        plotComplication.item = await generateRandomItem(t)
+        plotComplication.item =
+            presetItem ||
+            (preferExistingItem && items.length > 0 ? getRandomElement(items) : await generateRandomItem(t))
+        // If there are no items, or the item is not a preset or existing item, add it to the array of new items
+        if (items.length === 0 || (!presetItem && !preferExistingItem && items.length > 0)) {
+            newItems.push(plotComplication.item)
+        }
     }
 
     const plot: Plot = {
@@ -197,7 +237,7 @@ export const generateRandomFixerJob = async (
         )
         newFixerJob.name = generatedName || generateLocalFixerJobName(t, newFixerJob)
     } catch (error) {
-        console.error('Error generating fixer job name:', error)
+        console.warn('Error generating fixer job name:', error)
         newFixerJob.name = generateLocalFixerJobName(t, newFixerJob)
     }
 
@@ -211,7 +251,7 @@ export const generateRandomFixerJob = async (
         )
         newFixerJob.description = generatedDesc || generateLocalFixerJobDescription(t, newFixerJob)
     } catch (error) {
-        console.error('Error generating fixer job description:', error)
+        console.warn('Error generating fixer job description:', error)
         newFixerJob.description = generateLocalFixerJobDescription(t, newFixerJob)
     }
 
@@ -224,7 +264,7 @@ export const generateRandomFixerJob = async (
         )
         newFixerJob.image = imageBlob ? await blobToBase64(imageBlob) : ''
     } catch (error) {
-        console.error('Error generating fixer job image:', error)
+        console.warn('Error generating fixer job image:', error)
         newFixerJob.image = ''
     }
 
@@ -232,6 +272,8 @@ export const generateRandomFixerJob = async (
         newFixerJob,
         newGang,
         newBuilding,
+        newCharacters,
+        newItems,
     }
 }
 
@@ -245,10 +287,10 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
     // --- Translate Core Elements ---
     const translatedVerb = t(`fixerJobs.verb.${verb.value}`)
     let subjectName = ''
-    if (verb.__typename === 'PlotCharacterVerbWrapper') {
-        subjectName = (plotSubject as PlotCharacter)?.name
-    } else if (verb.__typename === 'PlotItemVerbWrapper') {
-        subjectName = (plotSubject as PlotItem)?.name
+    if (verb.__typename === 'CharacterVerbWrapper') {
+        subjectName = (plotSubject as Character)?.name
+    } else if (verb.__typename === 'ItemVerbWrapper') {
+        subjectName = (plotSubject as Item)?.name
     } else if (verb.__typename === 'PlotGangVerbWrapper') {
         subjectName = (plotSubject as PlotGang)?.gang?.name
     } else if (verb.__typename === 'PlotBuildingVerbWrapper') {
@@ -260,8 +302,8 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
 
     // --- Translate Subject Details using verb type ---
     let subjectDetails = ''
-    if (verb.__typename === 'PlotCharacterVerbWrapper' && plotSubject) {
-        const character = plotSubject as PlotCharacter
+    if (verb.__typename === 'CharacterVerbWrapper' && plotSubject) {
+        const character = plotSubject as Character
         const typeLabel = t(`fixerJobs.character.${character.type}`)
         const attitudeLabel = t(`fixerJobs.characterAttitude.${character.attitude}`)
         subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectCharDetail']), {
@@ -269,8 +311,8 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
             type: typeLabel,
             attitude: attitudeLabel,
         })
-    } else if (verb.__typename === 'PlotItemVerbWrapper' && plotSubject) {
-        const item = plotSubject as PlotItem
+    } else if (verb.__typename === 'ItemVerbWrapper' && plotSubject) {
+        const item = plotSubject as Item
         const typeLabel = t(`fixerJobs.item.${item.type}`)
         const conditionLabel = t(`fixerJobs.itemCondition.${item.condition}`)
         subjectDetails = t(getRandomElement(['fixerJobs.generator.subjectItemDetail']), {
@@ -384,8 +426,8 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
         mdLines.push(`**Objective:** *${obj.trimEnd()}*`)
     }
     // Subject Details based on objective type
-    if (verb.__typename === 'PlotCharacterVerbWrapper' && plotSubject) {
-        const character = plotSubject as PlotCharacter
+    if (verb.__typename === 'CharacterVerbWrapper' && plotSubject) {
+        const character = plotSubject as Character
         const detail = cleanText(
             t(getRandomElement(['fixerJobs.generator.subjectCharDetail']), {
                 name: subjectName,
@@ -394,8 +436,8 @@ const generateLocalFixerJobDescription = (t: TFunction, fixerJob: FixerJob): str
             })
         )
         mdLines.push(`- **Objective Details:** *${detail}*`)
-    } else if (verb.__typename === 'PlotItemVerbWrapper' && plotSubject) {
-        const item = plotSubject as PlotItem
+    } else if (verb.__typename === 'ItemVerbWrapper' && plotSubject) {
+        const item = plotSubject as Item
         const detail = cleanText(
             t(getRandomElement(['fixerJobs.generator.subjectItemDetail']), {
                 name: subjectName,
@@ -507,185 +549,6 @@ const generateLocalFixerJobName = (t: TFunction, fixerJob: FixerJob): string => 
 }
 
 /**
- * Generates a random PlotCharacter.
- */
-const generateRandomCharacter = async (): Promise<PlotCharacter> => {
-    const characterType = getRandomElement(Object.values(PlotCharacterType))
-    const characterName = `${getRandomElement(personNames)} ${getRandomElement(surnames)}`
-    const characterAttitude = getRandomElement(Object.values(PlotCharacterAttitude))
-    try {
-        const characterBlob = await generateImageWithFallback(characterName, characterType, undefined, 'Character')
-        const characterImage = characterBlob ? await blobToBase64(characterBlob) : ''
-        return {
-            name: characterName,
-            type: characterType,
-            attitude: characterAttitude,
-            image: characterImage,
-        }
-    } catch (error) {
-        console.error('Error generating character image:', error)
-        return {
-            name: characterName,
-            type: characterType,
-            attitude: characterAttitude,
-            image: '',
-        }
-    }
-}
-
-/**
- * Generates a random PlotItem.
- */
-const generateRandomItem = async (t: TFunction): Promise<PlotItem> => {
-    const itemType = getRandomElement(Object.values(PlotItemType))
-    const itemCondition = getRandomElement(Object.values(PlotItemCondition))
-    const itemName = await generateRandomItemNameWithFallback(t, itemType, itemCondition)
-    try {
-        const itemBlob = await generateImageWithFallback(itemName, itemType, undefined, 'Item')
-        const itemImage = itemBlob ? await blobToBase64(itemBlob) : ''
-        return {
-            name: itemName,
-            type: itemType,
-            condition: itemCondition,
-            image: itemImage,
-        }
-    } catch (error) {
-        console.error('Error generating item image:', error)
-        return {
-            name: itemName,
-            type: itemType,
-            condition: itemCondition,
-            image: '',
-        }
-    }
-}
-/**
- * Generates a item name with fallback
- */
-const generateRandomItemNameWithFallback = async (
-    t: TFunction,
-    itemType: PlotItemType,
-    itemCondition: PlotItemCondition
-): Promise<string> => {
-    try {
-        const aiName = await generateAIItemName(itemType, itemCondition, t)
-        if (aiName) {
-            return aiName
-        }
-    } catch (error) {
-        console.error('AI item name generation failed, using local fallback:', error)
-    }
-    // Fallback to local generation if AI fails or returns null
-    return generateLocalRandomItemName(itemType)
-}
-/**
- * Generates a flashy cyberpunk-styled item name based on the item type.
- * Uses corpoPrefixes and surnames to add extra variety.
- */
-const generateLocalRandomItemName = (itemType: PlotItemType): string => {
-    switch (itemType) {
-        case PlotItemType.MONEY:
-            return `CredStack ${getRandomInt(100, 1000)}`
-        case PlotItemType.WEAPONS: {
-            // Use shared constants
-            let name = `${getRandomElement(WEAPON_ADJECTIVES)} ${getRandomElement(WEAPON_NOUNS)} ${getRandomInt(
-                100,
-                999
-            )}`
-            const chance = Math.random()
-            // 40% corporate prefix, next 20% 'by' suffix
-            if (chance < 0.4) {
-                name = `${getRandomElement(corpoPrefixes)} ${name}`
-            } else if (chance < 0.6) {
-                name = `${name} by ${getRandomElement(surnames)}`
-            }
-            // 20% themed suffix
-            if (Math.random() < 0.2) {
-                name = `${name} ${getRandomElement(ITEM_NAME_THEMED_SUFFIXES)}`
-            }
-            return name
-        }
-        case PlotItemType.BIOLOGICAL_SAMPLES: {
-            const adjectives = ['Mutant', 'Viral', 'Genomic', 'BioHack', 'Neuro', 'Synth']
-            const nouns = ['Serum', 'Extract', 'Specimen', 'Culture', 'Splice']
-            return `${getRandomElement(adjectives)} ${getRandomElement(nouns)} ${getRandomInt(1, 1000)}`
-        }
-        case PlotItemType.DRUGS_ILLEGAL_CONTRABAND: {
-            const adjectives = ['Synth', 'Neuro', 'Digital', 'Cyber', 'Vapor', 'Electric']
-            const nouns = ['Stims', 'Narcotics', 'Bliss', 'Boost', 'Splice']
-            return `${getRandomElement(adjectives)} ${getRandomElement(nouns)} ${getRandomInt(1, 500)}`
-        }
-        case PlotItemType.CYBERWARE: {
-            const adjectives = ['Neon', 'Chrome', 'Quantum', 'Cyber', 'Augmented', 'Hyper']
-            const nouns = ['Uplink', 'Cortex', 'Optic Enhancement', 'Neural Interface', 'Arm Upgrade']
-            let name = `${getRandomElement(adjectives)} ${getRandomElement(nouns)} ${getRandomInt(1, 50)}`
-            if (Math.random() < 0.4) {
-                name = `${getRandomElement(corpoPrefixes)} ${name}`
-            }
-            return name
-        }
-        case PlotItemType.DIGITAL_FILES: {
-            const adjectives = ['Encrypted', 'Classified', 'Quantum', 'Cyber', 'Nano', 'Holo']
-            const nouns = ['Data Packet', 'Fragment', 'Download', 'Schematic', 'Hack']
-            let name = `${getRandomElement(adjectives)} ${getRandomElement(nouns)}`
-            if (Math.random() < 0.3) {
-                name = `${getRandomElement(corpoPrefixes)} ${name}`
-            }
-            return name
-        }
-        case PlotItemType.FOOD_FUELS_SUPPLIES: {
-            const adjectives = ['Synth', 'Nano', 'Cyber', 'Quantum', 'Pulse']
-            const nouns = ['Rations', 'Fuel Cells', 'Med Kits', 'Ammunition', 'Supplies']
-            return `${getRandomElement(adjectives)} ${getRandomElement(nouns)}`
-        }
-        case PlotItemType.VEHICLE: {
-            const adjectives = ['Neo', 'Cyber', 'Chrome', 'Hyper', 'Quantum']
-            const nouns = ['Runner', 'Skimmer', 'Hoverbike', 'Interceptor', 'Shadow']
-            let name = `${getRandomElement(adjectives)} ${getRandomElement(nouns)}`
-            if (Math.random() < 0.3) {
-                name = `${getRandomElement(corpoPrefixes)} ${name}`
-            }
-            return name
-        }
-        case PlotItemType.EXOTIC_ANIMAL: {
-            const adjectives = ['Augmented', 'Mutant', 'Cybernetic', 'Neon']
-            const nouns = [
-                'Guacamayo',
-                'Caracal',
-                'Arapaima',
-                'Capibara',
-                'Suricata',
-                'Quetzal',
-                'Barracuda',
-                'Tapir',
-                'Marabú',
-                'Coatí',
-                'Iguana',
-                'Jacana',
-                'Colibrí',
-                'Manatí',
-                'Agutí',
-                'Axolotl',
-                'Pecarí',
-                'Morrocoy',
-                'Oropéndola',
-                'Ñandú',
-            ]
-            return `${getRandomElement(adjectives)} ${getRandomElement(nouns)}`
-        }
-        case PlotItemType.AI_ROBOT_DRONE: {
-            const adjectives = ['Sentient', 'Cyber', 'Quantum', 'Holo', 'Neon']
-            const nouns = ['Drone', 'Scout', 'Spider', 'Reaper']
-            return `${getRandomElement(adjectives)} ${getRandomElement(nouns)}`
-        }
-        default:
-            return `Artifact ${getRandomInt(100, 999)}${
-                Math.random() < 0.3 ? ` ${getRandomElement(ITEM_NAME_THEMED_SUFFIXES)}` : ''
-            }`
-    }
-}
-
-/**
  * Generates a PlotGang (of type PlotGang) using existing gangs if desired.
  * Uses the imported generateRandomGang function to create a new gang if needed.
  * Returns both the PlotGang and a flag indicating if a new gang was created.
@@ -693,8 +556,16 @@ const generateLocalRandomItemName = (itemType: PlotItemType): string => {
 const generatePlotGang = async (
     t: TFunction,
     gangs: Gang[],
+    characters: Character[],
+    items: Item[],
     preferExisting: boolean = true,
-    presetGang?: Gang
+    preferExistingCharacter: boolean = true,
+    preferExistingItem: boolean = true,
+    newCharacters: Character[],
+    newItems: Item[],
+    presetGang?: Gang,
+    presetCharacter?: Character,
+    presetItem?: Item
 ): Promise<PlotGang> => {
     const gang =
         presetGang || (preferExisting && gangs.length > 0 ? getRandomElement(gangs) : await generateRandomGang(t))
@@ -703,14 +574,33 @@ const generatePlotGang = async (
         type: complicationType,
     }
     if (complicationType.toString().includes('CHARACTER')) {
+        const character =
+            presetCharacter ||
+            (preferExistingCharacter && characters.length > 0
+                ? getRandomElement(characters)
+                : await generateRandomCharacter())
         complication = {
             ...complication,
-            character: await generateRandomCharacter(),
+            character,
+        }
+        // If there are no characters, or the character is not a preset or existing character, add it to the array of new characters
+        if (
+            characters.length === 0 ||
+            (!presetCharacter && !preferExistingCharacter && characters.length > 0 && character)
+        ) {
+            newCharacters.push(character)
         }
     } else if (complicationType.toString().includes('ITEM')) {
+        const item =
+            presetItem ||
+            (preferExistingItem && items.length > 0 ? getRandomElement(items) : await generateRandomItem(t))
         complication = {
             ...complication,
-            item: await generateRandomItem(t),
+            item,
+        }
+        // If there are no items, or the item is not a preset or existing item, add it to the array of new items
+        if (items.length === 0 || (!presetItem && !preferExistingItem && items.length > 0 && item)) {
+            newItems.push(item)
         }
     }
 
@@ -730,9 +620,17 @@ const generatePlotGang = async (
 const generatePlotBuilding = async (
     t: TFunction,
     buildings: Building[],
+    characters: Character[],
+    items: Item[],
+    newCharacters: Character[],
+    newItems: Item[],
     preferExisting: boolean = true,
+    preferExistingCharacter: boolean = true,
+    preferExistingItem: boolean = true,
     difficulty: JobDifficulty,
-    presetBuilding?: Building
+    presetBuilding?: Building,
+    presetCharacter?: Character,
+    presetItem?: Item
 ): Promise<PlotBuilding> => {
     const building =
         presetBuilding ||
@@ -746,12 +644,26 @@ const generatePlotBuilding = async (
     if (complicationType.toString().includes('CHARACTER')) {
         complication = {
             ...complication,
-            character: await generateRandomCharacter(),
+            character:
+                presetCharacter ||
+                (preferExistingCharacter && characters.length > 0
+                    ? getRandomElement(characters)
+                    : await generateRandomCharacter()),
+        }
+        // If there are no characters, or the character is not a preset or existing character, add it to the array of new characters
+        if (characters.length === 0 || (!presetCharacter && !preferExistingCharacter && characters.length > 0)) {
+            newCharacters.push(complication.character!)
         }
     } else if (complicationType.toString().includes('ITEM')) {
         complication = {
             ...complication,
-            item: await generateRandomItem(t),
+            item:
+                presetItem ||
+                (preferExistingItem && items.length > 0 ? getRandomElement(items) : await generateRandomItem(t)),
+        }
+        // If there are no items, or the item is not a preset or existing item, add it to the array of new items
+        if (items.length === 0 || (!presetItem && !preferExistingItem && items.length > 0)) {
+            newItems.push(complication.item!)
         }
     }
 

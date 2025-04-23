@@ -1,0 +1,7 @@
+type Item {
+  ID: ID!
+  name: String!
+  type: ItemType!
+  condition: ItemCondition!
+  image: String!
+}

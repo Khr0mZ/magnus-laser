@@ -3,7 +3,7 @@ import { Alert, Box, Typography } from '@mui/material'
 import { t, TFunction } from 'i18next'
 import { enqueueSnackbar } from 'notistack'
 import { SetStateAction } from 'react'
-import { Building, FixerJob, Gang, PlotItemCondition, PlotItemType } from '../graphql/types'
+import { Building, Character, FixerJob, Gang, Item, ItemCondition, ItemType } from '../graphql/types'
 import { ModuleTypes } from './constants'
 import { IMAGE_MODEL_URL, TEXT_MODEL_URL, TextGenerationType } from './generators/constantsGenerators'
 import { loadGeminiApiKey, loadHuggingFaceApiKey, loadOpenAIApiKey } from './storage'
@@ -48,8 +48,8 @@ const getGeminiToken = async (): Promise<string> => {
  * Helper function to build the detailed prompt string based on the item type.
  */
 const buildPromptDetails = (
-    item: Building | Gang | FixerJob | { type: PlotItemType; condition: PlotItemCondition; name?: string },
-    moduleType: ModuleTypes | 'PlotItem',
+    item: Building | Gang | FixerJob | { type: ItemType; condition: ItemCondition; name?: string },
+    moduleType: ModuleTypes | 'Item',
     t: TFunction,
     addName: boolean
 ): string => {
@@ -59,8 +59,8 @@ const buildPromptDetails = (
     const gang = isGang ? (item as Gang) : null
     const isFixerJob = moduleType === ModuleTypes.FIXER_JOB
     const fixerJob = isFixerJob ? (item as FixerJob) : null
-    const isPlotItem = moduleType === 'PlotItem'
-    const plotItem = isPlotItem ? (item as { type: PlotItemType; condition: PlotItemCondition; name?: string }) : null
+    const isItem = moduleType === 'Item'
+    const plotItem = isItem ? (item as { type: ItemType; condition: ItemCondition; name?: string }) : null
 
     if (isBuilding && building) {
         return `
@@ -116,12 +116,12 @@ const buildPromptDetails = (
             ${addName ? `Name: ${fixerJob.name}` : ''}
             Plot Verb: ${fixerJob.plot.verb ? t(`fixerJobs.plotVerbs.${fixerJob.plot.verb.value || ''}`) : ''},
             ${
-                fixerJob.plot.plotSubject && fixerJob.plot.plotSubject.__typename === 'PlotCharacter'
+                fixerJob.plot.plotSubject && fixerJob.plot.plotSubject.__typename === 'Character'
                     ? `Character Type: ${t(`fixerJobs.characterTypes.${fixerJob.plot.plotSubject.type}`)},`
                     : ''
             }
             ${
-                fixerJob.plot.plotSubject && fixerJob.plot.plotSubject.__typename === 'PlotCharacter'
+                fixerJob.plot.plotSubject && fixerJob.plot.plotSubject.__typename === 'Character'
                     ? `Character Attitude: ${t(`fixerJobs.characterAttitudes.${fixerJob.plot.plotSubject.attitude}`)},`
                     : ''
             }
@@ -145,7 +145,7 @@ const buildPromptDetails = (
                     : ''
             }
         `
-    } else if (isPlotItem && plotItem) {
+    } else if (isItem && plotItem) {
         return `
             ${addName && plotItem.name ? `Name: ${plotItem.name}` : ''}
             Item Type: ${t(`fixerJobs.item.${plotItem.type}`)},
@@ -164,8 +164,8 @@ const buildPromptDetails = (
  * @returns The generated description string or null on error.
  */
 export const generateHuggingFaceText = async (
-    item: Building | Gang | FixerJob | { type: PlotItemType; condition: PlotItemCondition; name?: string },
-    moduleType: ModuleTypes | 'PlotItem',
+    item: Building | Gang | FixerJob | { type: ItemType; condition: ItemCondition; name?: string },
+    moduleType: ModuleTypes | 'Item',
     t: TFunction,
     type: TextGenerationType
 ): Promise<string | null> => {
@@ -175,8 +175,8 @@ export const generateHuggingFaceText = async (
     const gang = isGang ? (item as Gang) : null
     const isFixerJob = moduleType === ModuleTypes.FIXER_JOB
     const fixerJob = isFixerJob ? (item as FixerJob) : null
-    const isPlotItem = moduleType === 'PlotItem'
-    const plotItem = isPlotItem ? (item as { type: PlotItemType; condition: PlotItemCondition; name?: string }) : null
+    const isItem = moduleType === 'Item'
+    const plotItem = isItem ? (item as { type: ItemType; condition: ItemCondition; name?: string }) : null
     const HUGGINGFACE_API_TOKEN = await getHuggingFaceToken()
     const addName = type === TextGenerationType.DESCRIPTION
 
@@ -184,7 +184,7 @@ export const generateHuggingFaceText = async (
         return null
     }
 
-    if ((isBuilding && !building) || (isGang && !gang) || (isFixerJob && !fixerJob) || (isPlotItem && !plotItem)) {
+    if ((isBuilding && !building) || (isGang && !gang) || (isFixerJob && !fixerJob) || (isItem && !plotItem)) {
         return null
     }
 
@@ -211,7 +211,7 @@ export const generateHuggingFaceText = async (
             : ''
     }
     ${
-        isPlotItem && type === TextGenerationType.NAME
+        isItem && type === TextGenerationType.NAME
             ? `When generating the name for the plot item, make it sound unique, potentially dangerous, valuable, or mysterious, reflecting its type and condition. Examples: 'Shard of Broken Hope' (Digital Files, Damaged), 'KX-9 Neuro-Disruptor' (Cyberware, Good), 'Crimson Viper Serum Vial' (Biological Samples, Pristine). IMPORTANT: Return ONLY the item name itself, without any introductory text like "Option 1:", quotes, or markdown formatting.`
             : ''
     }
@@ -263,8 +263,8 @@ export const generateHuggingFaceText = async (
  * @returns The generated description string or null on error.
  */
 export const generateOpenAIText = async (
-    item: Building | Gang | FixerJob | { type: PlotItemType; condition: PlotItemCondition; name?: string },
-    moduleType: ModuleTypes | 'PlotItem',
+    item: Building | Gang | FixerJob | { type: ItemType; condition: ItemCondition; name?: string },
+    moduleType: ModuleTypes | 'Item',
     t: TFunction,
     type: TextGenerationType
 ): Promise<string | null> => {
@@ -274,8 +274,8 @@ export const generateOpenAIText = async (
     const gang = isGang ? (item as Gang) : null
     const isFixerJob = moduleType === ModuleTypes.FIXER_JOB
     const fixerJob = isFixerJob ? (item as FixerJob) : null
-    const isPlotItem = moduleType === 'PlotItem'
-    const plotItem = isPlotItem ? (item as { type: PlotItemType; condition: PlotItemCondition; name?: string }) : null
+    const isItem = moduleType === 'Item'
+    const plotItem = isItem ? (item as { type: ItemType; condition: ItemCondition; name?: string }) : null
     const OPENAI_API_KEY = await getOpenAIToken()
     const addName = type === TextGenerationType.DESCRIPTION
 
@@ -283,7 +283,7 @@ export const generateOpenAIText = async (
         return null
     }
 
-    if ((isBuilding && !building) || (isGang && !gang) || (isFixerJob && !fixerJob) || (isPlotItem && !plotItem)) {
+    if ((isBuilding && !building) || (isGang && !gang) || (isFixerJob && !fixerJob) || (isItem && !plotItem)) {
         return null
     }
 
@@ -311,7 +311,7 @@ export const generateOpenAIText = async (
             : ''
     }
     ${
-        isPlotItem && type === TextGenerationType.NAME
+        isItem && type === TextGenerationType.NAME
             ? `When generating the name for the plot item, make it sound unique, potentially dangerous, valuable, or mysterious, reflecting its type and condition. Examples: 'Shard of Broken Hope' (Digital Files, Damaged), 'KX-9 Neuro-Disruptor' (Cyberware, Good), 'Crimson Viper Serum Vial' (Biological Samples, Pristine).`
             : ''
     }
@@ -373,8 +373,8 @@ export const generateOpenAIText = async (
  * @returns The generated description string or null on error.
  */
 export const generateGeminiText = async (
-    item: Building | Gang | FixerJob | { type: PlotItemType; condition: PlotItemCondition; name?: string },
-    moduleType: ModuleTypes | 'PlotItem',
+    item: Building | Gang | FixerJob | { type: ItemType; condition: ItemCondition; name?: string },
+    moduleType: ModuleTypes | 'Item',
     t: TFunction,
     type: TextGenerationType
 ): Promise<string | null> => {
@@ -384,8 +384,8 @@ export const generateGeminiText = async (
     const gang = isGang ? (item as Gang) : null
     const isFixerJob = moduleType === ModuleTypes.FIXER_JOB
     const fixerJob = isFixerJob ? (item as FixerJob) : null
-    const isPlotItem = moduleType === 'PlotItem'
-    const plotItem = isPlotItem ? (item as { type: PlotItemType; condition: PlotItemCondition; name?: string }) : null
+    const isItem = moduleType === 'Item'
+    const plotItem = isItem ? (item as { type: ItemType; condition: ItemCondition; name?: string }) : null
     const GEMINI_API_KEY = await getGeminiToken()
     const addName = type === TextGenerationType.DESCRIPTION
 
@@ -393,7 +393,7 @@ export const generateGeminiText = async (
         return null
     }
 
-    if ((isBuilding && !building) || (isGang && !gang) || (isFixerJob && !fixerJob) || (isPlotItem && !plotItem)) {
+    if ((isBuilding && !building) || (isGang && !gang) || (isFixerJob && !fixerJob) || (isItem && !plotItem)) {
         return null
     }
 
@@ -417,7 +417,7 @@ export const generateGeminiText = async (
                 'When generating the name for the gang, incorporate at least two of the following categories: adjective, animal, body part, color, neighborhood, number, place, profession, weapon, or weather phenomenon.'
         } else if (isFixerJob) {
             specificInstructions = 'When generating the name for the gig, use a neon-noir style.'
-        } else if (isPlotItem) {
+        } else if (isItem) {
             specificInstructions = `When generating the name for the plot item, make it sound unique, potentially dangerous, valuable, or mysterious, reflecting its type and condition. Examples: 'Shard of Broken Hope' (Digital Files, Damaged), 'KX-9 Neuro-Disruptor' (Cyberware, Good), 'Crimson Viper Serum Vial' (Biological Samples, Pristine).`
         }
     }
@@ -457,8 +457,8 @@ export const generateGeminiText = async (
  * @returns The generated description string or null on error.
  */
 export const generateTextWithFallback = async (
-    item: Building | Gang | FixerJob | { type: PlotItemType; condition: PlotItemCondition; name?: string },
-    moduleType: ModuleTypes | 'PlotItem',
+    item: Building | Gang | FixerJob | { type: ItemType; condition: ItemCondition; name?: string },
+    moduleType: ModuleTypes | 'Item',
     t: TFunction,
     type: TextGenerationType
 ): Promise<string | null> => {
@@ -558,8 +558,8 @@ export const generateTextWithFallback = async (
         return openAIResult
     }
 
-    // If all API methods fail, return null (no local generation for PlotItem)
-    if (moduleType === 'PlotItem') {
+    // If all API methods fail, return null (no local generation for Item)
+    if (moduleType === 'Item') {
         return null
     }
 
@@ -917,10 +917,14 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
  * @param setGangToEdit - The function to set the gang to edit state.
  * @param setFixerJobs - The function to set the fixer jobs state.
  * @param setFixerJobToEdit - The function to set the fixer job to edit state.
+ * @param setCharacters - The function to set the characters state.
+ * @param setCharacterToEdit - The function to set the character to edit state.
+ * @param setItems - The function to set the items state.
+ * @param setItemToEdit - The function to set the item to edit state.
  * @param imageFieldPath - Optional path to the specific image field to update (for nested objects).
  */
 export const handleRegenerateImage = async (
-    itemToRegenerate: Building | Gang | FixerJob,
+    itemToRegenerate: Building | Gang | FixerJob | Character | Item,
     readerMode: boolean,
     setIsGeneratingImage: (isGenerating: boolean) => void,
     setIsSaving: (isSaving: boolean) => void,
@@ -931,6 +935,10 @@ export const handleRegenerateImage = async (
     setGangToEdit?: (value: SetStateAction<Gang | null>) => void,
     setFixerJobs?: (value: SetStateAction<FixerJob[]>) => void,
     setFixerJobToEdit?: (value: SetStateAction<FixerJob | null>) => void,
+    setCharacters?: (value: SetStateAction<Character[]>) => void,
+    setCharacterToEdit?: (value: SetStateAction<Character | null>) => void,
+    setItems?: (value: SetStateAction<Item[]>) => void,
+    setItemToEdit?: (value: SetStateAction<Item | null>) => void,
     imageFieldPath?: string
 ) => {
     // Set generating state
@@ -938,7 +946,15 @@ export const handleRegenerateImage = async (
 
     try {
         // Use description and name for image generation
-        const description = itemToRegenerate.description || ''
+        let description = ''
+        if (moduleType === ModuleTypes.CHARACTER) {
+            description =
+                (itemToRegenerate as Character).attitude || '' + ' ' + (itemToRegenerate as Character).type || ''
+        } else if (moduleType === ModuleTypes.ITEM) {
+            description = (itemToRegenerate as Item).type || '' + ' ' + (itemToRegenerate as Item).condition || ''
+        } else if ('description' in itemToRegenerate) {
+            description = itemToRegenerate.description || ''
+        }
         const name = itemToRegenerate.name || ''
 
         if (!description || !name) {
@@ -1048,6 +1064,30 @@ export const handleRegenerateImage = async (
                     // In edit mode, update the editingFixerJob
                     setFixerJobToEdit(fixerJob)
                 }
+            } else if (moduleType === ModuleTypes.CHARACTER && setCharacters && setCharacterToEdit) {
+                const character = updatedWithImage as Character
+
+                // If in reader mode, update the characters array
+                if (readerMode) {
+                    setCharacters((prevCharacters) => {
+                        return prevCharacters.map((c) => (c.ID === character.ID ? character : c))
+                    })
+                } else {
+                    // In edit mode, update the editingCharacter
+                    setCharacterToEdit(character)
+                }
+            } else if (moduleType === ModuleTypes.ITEM && setItems && setItemToEdit) {
+                const item = updatedWithImage as Item
+
+                // If in reader mode, update the items array
+                if (readerMode) {
+                    setItems((prevItems) => {
+                        return prevItems.map((i) => (i.ID === item.ID ? item : i))
+                    })
+                } else {
+                    // In edit mode, update the editingItem
+                    setItemToEdit(item)
+                }
             }
         } else {
             // Default behavior: set image directly on the item
@@ -1132,17 +1172,17 @@ export const handleRegenerateImage = async (
  * @returns The generated item name string or null on error.
  */
 export const generateAIItemName = async (
-    itemType: PlotItemType,
-    itemCondition: PlotItemCondition,
+    itemType: ItemType,
+    itemCondition: ItemCondition,
     t: TFunction
 ): Promise<string | null> => {
     const itemDetails = { type: itemType, condition: itemCondition }
 
     // Use the generateTextWithFallback mechanism for item names
-    // We pass 'PlotItem' as a temporary moduleType identifier for prompt building
+    // We pass 'Item' as a temporary moduleType identifier for prompt building
     const generatedName = await generateTextWithFallback(
         itemDetails, // Pass the details object
-        'PlotItem',
+        'Item',
         t,
         TextGenerationType.NAME
     )

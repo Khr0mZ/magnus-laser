@@ -18,11 +18,12 @@ import { getDesignTokens } from './utils/theme'
 import BountyView from './views/Bounty/BountyView.tsx'
 import BuildingView from './views/Building/BuildingView'
 import ClubView from './views/Club/ClubView.tsx'
-import Corporation from './views/Corporation/CorporationView'
 import Dashboard from './views/Dashboard/Dashboard'
 import FixerJob from './views/FixerJob/FixerJobView'
 import GangView from './views/Gang/GangView'
-import NPC from './views/NPC/NPCView'
+
+import CharacterView from './views/Character/CharacterView.tsx'
+import ItemView from './views/Item/ItemView.tsx'
 import SettingsView from './views/Settings/SettingsView'
 
 const AppContent = (): JSX.Element => {
@@ -117,11 +118,11 @@ const AppContent = (): JSX.Element => {
                             <Routes>
                                 <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
                                 <Route path={NavigationPaths.GANG} element={<GangView />} />
-                                <Route path={NavigationPaths.CORPORATION} element={<Corporation />} />
                                 <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
                                 <Route path={NavigationPaths.CLUB} element={<ClubView />} />
                                 <Route path={NavigationPaths.BOUNTY} element={<BountyView />} />
-                                <Route path={NavigationPaths.NPC} element={<NPC />} />
+                                <Route path={NavigationPaths.CHARACTER} element={<CharacterView />} />
+                                <Route path={NavigationPaths.ITEM} element={<ItemView />} />
                                 <Route path={NavigationPaths.BUILDING} element={<BuildingView />} />
                                 <Route path={NavigationPaths.SETTINGS} element={<SettingsView />} />
                             </Routes>

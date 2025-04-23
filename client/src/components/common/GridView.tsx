@@ -14,7 +14,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, FixerJob, Gang } from '../../graphql/types'
+import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import {
@@ -23,10 +23,14 @@ import {
     getFixerJobDifficultyColor,
     getGangColorValue,
     getOrderedBuildingData,
+    getOrderedCharacterData,
     getOrderedFixerJobData,
     getOrderedGangData,
+    getOrderedItemData,
+    processCharacterValueForDisplay,
     processFixerJobValueForDisplay,
     processGangValueForDisplay,
+    processItemValueForDisplay,
 } from '../../utils/functions'
 import { processBuildingValueForDisplay } from '../../utils/functions.tsx'
 
@@ -36,106 +40,204 @@ import { buttonGlitch } from './Animations'
 import TiptapEditor from './TiptapEditor.tsx'
 
 type GridViewProps = {
-    items: (Gang | Building | FixerJob)[]
+    targetArray: (Gang | Building | FixerJob | Character | Item)[]
     onDelete: (index: number) => void
     moduleType: ModuleTypes
     onEdit: (index: number) => void
 }
 
 const GridView = (props: GridViewProps) => {
-    const { items, onDelete, moduleType, onEdit } = props
+    const { targetArray, onDelete, moduleType, onEdit } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const { buildings, gangs } = useData()
+    const { buildings, gangs, characters, items } = useData()
 
     // Helper function to resolve gang references
-    const resolveGangReference = (gangId: string) => {
+    const resolveGangReference = (gangId: string): Gang | null => {
         if (!gangId) return null
-        return gangs.find((g) => g.ID === gangId)
+        return gangs.find((g) => g.ID === gangId) || null
     }
 
     // Helper function to resolve building references
-    const resolveBuildingReference = (buildingId: string) => {
+    const resolveBuildingReference = (buildingId: string): Building | null => {
         if (!buildingId) return null
-        return buildings.find((b) => b.ID === buildingId)
+        return buildings.find((b) => b.ID === buildingId) || null
+    }
+
+    // Helper function to resolve character references
+    const resolveCharacterReference = (characterId: string): Character | null => {
+        if (!characterId) return null
+        return characters.find((c) => c.ID === characterId) || null
+    }
+
+    // Helper function to resolve item references
+    const resolveItemReference = (itemId: string): Item | null => {
+        if (!itemId) return null
+        return items.find((i) => i.ID === itemId) || null
     }
 
     // Helper function to process ordered data with reference resolution
-    const getOrderedData = (item: Gang | Building | FixerJob) => {
-        let itemData: { key: string; label: string; value: unknown }[] = []
+    const getOrderedData = (target: Gang | Building | FixerJob | Character | Item) => {
+        let targetData: { key: string; label: string; value: unknown }[] = []
         let color: string = ''
         switch (moduleType) {
-            case ModuleTypes.GANG:
-                itemData = getOrderedGangData(item as Gang, t)
-                color = getGangColorValue((item as Gang).color)
+            case ModuleTypes.GANG: {
+                targetData = getOrderedGangData(target as Gang, t)
+                color = getGangColorValue((target as Gang).color)
                 break
-            case ModuleTypes.BUILDING:
-                itemData = getOrderedBuildingData(item as Building, t)
-                color = getBuildingColor((item as Building).type)
+            }
+            case ModuleTypes.BUILDING: {
+                targetData = getOrderedBuildingData(target as Building, t)
+                color = getBuildingColor((target as Building).type)
                 break
-            case ModuleTypes.FIXER_JOB:
-                itemData = getOrderedFixerJobData(item as FixerJob, t)
-                color = getFixerJobDifficultyColor((item as FixerJob).difficulty)
-                // Special processing for FixerJob values to resolve references
-                itemData = itemData.map((entry) => {
-                    if (entry.value === undefined || entry.value === null) {
-                        return entry
-                    }
+            }
+            case ModuleTypes.CHARACTER: {
+                targetData = getOrderedCharacterData(target as Character, t)
+                color = colors.neons.cyan.default
+                break
+            }
+            case ModuleTypes.ITEM: {
+                targetData = getOrderedItemData(target as Item, t)
+                color = colors.neons.cyan.default
+                break
+            }
+            case ModuleTypes.FIXER_JOB: {
+                const fixerJob = target as FixerJob
 
-                    // For gang references
-                    if (
-                        typeof entry.value === 'string' &&
-                        (entry.key.includes('gang') || entry.key.includes('gang.gang'))
-                    ) {
-                        const gangRef = resolveGangReference(entry.value)
-                        if (gangRef) {
-                            if (entry.key.includes('name')) {
-                                return { ...entry, value: gangRef.name }
-                            } else if (entry.key.includes('type')) {
-                                return { ...entry, value: gangRef.type }
+                // Create a processed version for the resolver
+                const processedFixerJob = { ...fixerJob }
+                let needsProcessing = false
+
+                // Pre-process specific references to help with character/item display
+                if (fixerJob.plot && typeof fixerJob.plot.plotSubject === 'string') {
+                    // Try to resolve the plotSubject if it's a character or item ID
+                    const characterRef = resolveCharacterReference(fixerJob.plot.plotSubject)
+                    const itemRef = resolveItemReference(fixerJob.plot.plotSubject)
+
+                    // If we found a resolved character or item, use it
+                    if (characterRef) {
+                        processedFixerJob.plot = {
+                            ...fixerJob.plot,
+                            plotSubject: characterRef,
+                        }
+                        needsProcessing = true
+                    } else if (itemRef) {
+                        processedFixerJob.plot = {
+                            ...fixerJob.plot,
+                            plotSubject: itemRef,
+                        }
+                        needsProcessing = true
+                    }
+                }
+
+                // Handle gang references
+                if (
+                    fixerJob.plot?.plotSubject &&
+                    typeof fixerJob.plot.plotSubject === 'object' &&
+                    'gang' in fixerJob.plot.plotSubject &&
+                    typeof fixerJob.plot.plotSubject.gang === 'string'
+                ) {
+                    const gangId = fixerJob.plot.plotSubject.gang
+                    const gangRef = resolveGangReference(gangId)
+
+                    if (gangRef) {
+                        // Create a deep copy of plotSubject if needed
+                        const plotSubject =
+                            processedFixerJob.plot.plotSubject === fixerJob.plot.plotSubject
+                                ? { ...fixerJob.plot.plotSubject }
+                                : processedFixerJob.plot.plotSubject
+
+                        // Update the gang reference
+                        if (typeof plotSubject === 'object' && plotSubject !== null && 'gang' in plotSubject) {
+                            plotSubject.gang = gangRef
+
+                            // Also handle character in gang complication if it exists
+                            if (
+                                'complication' in plotSubject &&
+                                plotSubject.complication &&
+                                typeof plotSubject.complication === 'object' &&
+                                'character' in plotSubject.complication &&
+                                typeof plotSubject.complication.character === 'string'
+                            ) {
+                                const characterId = plotSubject.complication.character
+                                const characterRef = resolveCharacterReference(characterId)
+
+                                if (characterRef) {
+                                    plotSubject.complication = {
+                                        ...plotSubject.complication,
+                                        character: characterRef,
+                                    }
+                                }
                             }
-                            // For other properties, use the most meaningful representation
-                            return { ...entry, value: gangRef }
+
+                            // Also handle item in gang complication if it exists
+                            if (
+                                'complication' in plotSubject &&
+                                plotSubject.complication &&
+                                typeof plotSubject.complication === 'object' &&
+                                'item' in plotSubject.complication &&
+                                typeof plotSubject.complication.item === 'string'
+                            ) {
+                                const itemId = plotSubject.complication.item
+                                const itemRef = resolveItemReference(itemId)
+
+                                if (itemRef) {
+                                    plotSubject.complication = {
+                                        ...plotSubject.complication,
+                                        item: itemRef,
+                                    }
+                                }
+                            }
+
+                            // Update the processed job
+                            processedFixerJob.plot = {
+                                ...processedFixerJob.plot,
+                                plotSubject: plotSubject,
+                            }
+                            needsProcessing = true
                         }
                     }
+                }
 
-                    // For building references
-                    if (
-                        typeof entry.value === 'string' &&
-                        (entry.key.includes('building') || entry.key.includes('building.building'))
-                    ) {
-                        const buildingRef = resolveBuildingReference(entry.value)
-                        if (buildingRef) {
-                            if (entry.key.includes('name')) {
-                                return { ...entry, value: buildingRef.name }
-                            } else if (entry.key.includes('type')) {
-                                return { ...entry, value: buildingRef.type }
-                            } else if (entry.key.includes('style')) {
-                                return { ...entry, value: buildingRef.style }
-                            } else if (entry.key.includes('ownership')) {
-                                return { ...entry, value: buildingRef.ownership }
-                            } else if (entry.key.includes('securityPersonnel')) {
-                                return { ...entry, value: buildingRef.securityPersonnel }
-                            }
-                            // For other properties, use the most meaningful representation
-                            return { ...entry, value: buildingRef }
+                // Handle building references
+                if (fixerJob.plot?.plotBuilding && typeof fixerJob.plot.plotBuilding.building === 'string') {
+                    const buildingId = fixerJob.plot.plotBuilding.building
+                    const buildingRef = resolveBuildingReference(buildingId)
+
+                    if (buildingRef) {
+                        processedFixerJob.plot = {
+                            ...processedFixerJob.plot,
+                            plotBuilding: {
+                                ...processedFixerJob.plot.plotBuilding,
+                                building: buildingRef,
+                            },
                         }
+                        needsProcessing = true
                     }
+                }
 
-                    return entry
+                // Use the processed version if needed, otherwise use original
+                targetData = getOrderedFixerJobData(needsProcessing ? processedFixerJob : fixerJob, t, {
+                    resolveCharacter: resolveCharacterReference,
+                    resolveItem: resolveItemReference,
+                    resolveBuilding: resolveBuildingReference,
+                    resolveGang: resolveGangReference,
                 })
+
+                color = getFixerJobDifficultyColor(fixerJob.difficulty)
                 break
+            }
         }
         return {
-            itemData,
+            targetData,
             color,
         }
     }
 
     return (
         <Masonry columns={{ xs: 1, md: 2, xl: 3 }} spacing={3} sx={{ flex: 1, width: 'calc(100vw - 32px)' }}>
-            {items.map((item, index) => {
-                const { itemData, color } = getOrderedData(item)
+            {targetArray.map((target, index) => {
+                const { targetData: itemData, color } = getOrderedData(target)
                 return (
                     <Card
                         key={index}
@@ -196,7 +298,7 @@ const GridView = (props: GridViewProps) => {
                                 <Box>
                                     <Typography
                                         className={readerMode ? 'gang-name-typography' : 'glitch-text'}
-                                        data-text={item.name}
+                                        data-text={target.name}
                                         sx={{
                                             fontSize: '1rem',
                                             fontWeight: 'bold',
@@ -207,7 +309,7 @@ const GridView = (props: GridViewProps) => {
                                                 : `0 0 5px ${getComplementaryColor(color)}`,
                                         }}
                                     >
-                                        {item.name}
+                                        {target.name}
                                     </Typography>
                                     <Typography
                                         sx={{
@@ -220,18 +322,18 @@ const GridView = (props: GridViewProps) => {
                                         }}
                                     >
                                         {moduleType === ModuleTypes.GANG &&
-                                            processGangValueForDisplay('type', (item as Gang).type, t)}
+                                            processGangValueForDisplay('type', (target as Gang).type, t)}
                                         {moduleType === ModuleTypes.BUILDING &&
                                             processBuildingValueForDisplay(
                                                 'type',
-                                                (item as Building).type,
+                                                (target as Building).type,
                                                 t,
-                                                'isAbandoned' in item ? item.isAbandoned : false
+                                                'isAbandoned' in target ? target.isAbandoned : false
                                             )}
                                         {moduleType === ModuleTypes.FIXER_JOB &&
                                             processFixerJobValueForDisplay(
                                                 'plot.verb.value',
-                                                (item as FixerJob).plot.verb?.value,
+                                                (target as FixerJob).plot.verb?.value,
                                                 t
                                             )}
                                     </Typography>
@@ -313,7 +415,7 @@ const GridView = (props: GridViewProps) => {
                             </Box>
 
                             {/* Image Display */}
-                            {item.image && (
+                            {target.image && (
                                 <Box
                                     sx={{
                                         position: 'relative',
@@ -324,11 +426,11 @@ const GridView = (props: GridViewProps) => {
                                         maxHeight: '300px',
                                         justifyContent: 'center',
                                         bgcolor: `${
-                                            'color' in item
-                                                ? getGangColorValue((item as Gang).color)
-                                                : 'difficulty' in item
-                                                ? getFixerJobDifficultyColor((item as FixerJob).difficulty)
-                                                : getBuildingColor((item as Building).type)
+                                            'color' in target
+                                                ? getGangColorValue((target as Gang).color)
+                                                : 'difficulty' in target
+                                                ? getFixerJobDifficultyColor((target as FixerJob).difficulty)
+                                                : getBuildingColor((target as Building).type)
                                         }70`,
                                         transition: 'all 0.3s ease',
                                         p: 0.5,
@@ -338,8 +440,8 @@ const GridView = (props: GridViewProps) => {
                                     }}
                                 >
                                     <Avatar
-                                        src={item.image}
-                                        alt={t('common.itemImageAlt', { name: item.name })}
+                                        src={target.image}
+                                        alt={t('common.itemImageAlt', { name: target.name })}
                                         variant="rounded"
                                         slotProps={{
                                             img: {
@@ -371,7 +473,7 @@ const GridView = (props: GridViewProps) => {
                                     fontWeight: 500,
                                 }}
                             >
-                                <TiptapEditor value={item.description} />
+                                {'description' in target && <TiptapEditor value={target.description} />}
                             </Box>
 
                             {/* Data Table */}
@@ -387,134 +489,209 @@ const GridView = (props: GridViewProps) => {
                             >
                                 <Table size="small">
                                     <TableBody>
-                                        {itemData.map((entry) => (
-                                            <TableRow
-                                                key={entry.key}
-                                                sx={{
-                                                    position: 'relative',
-                                                    ...(readerMode
-                                                        ? {
-                                                              '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' },
-                                                              '&:nth-of-type(even)': { bgcolor: '#fff' },
-                                                              '&:hover': {
-                                                                  bgcolor: '#f0f0f0',
-                                                              },
-                                                          }
-                                                        : {
-                                                              '&:nth-of-type(odd)': { bgcolor: 'rgba(0, 15, 30, 0.4)' },
-                                                              '&:nth-of-type(even)': {
-                                                                  bgcolor: 'rgba(0, 20, 40, 0.2)',
-                                                              },
-                                                              '&:hover': {
-                                                                  bgcolor: 'rgba(0, 255, 255, 0.1)',
-                                                                  '& .cell-content': {
-                                                                      color: colors.neons.cyan.default,
-                                                                      textShadow: `0 0 5px ${colors.neons.cyan.default}`,
-                                                                  },
-                                                              },
-                                                          }),
-                                                    transition: 'all 0.3s ease',
-                                                }}
-                                            >
-                                                <TableCell
+                                        {itemData
+                                            // Filter out items with empty labels or "—" values
+                                            .filter((entry) => {
+                                                // Check for valid label
+                                                if (!entry.label || entry.label.trim() === '') {
+                                                    return false
+                                                }
+
+                                                // Check for empty values
+                                                let displayValue = ''
+
+                                                // Get the right processor function for this module type
+                                                if (moduleType === ModuleTypes.GANG) {
+                                                    displayValue = String(
+                                                        processGangValueForDisplay(entry.key, entry.value, t)
+                                                    )
+                                                } else if (moduleType === ModuleTypes.BUILDING) {
+                                                    displayValue = String(
+                                                        processBuildingValueForDisplay(
+                                                            entry.key,
+                                                            entry.value,
+                                                            t,
+                                                            'isAbandoned' in target ? target.isAbandoned : false
+                                                        )
+                                                    )
+                                                } else if (moduleType === ModuleTypes.FIXER_JOB) {
+                                                    displayValue =
+                                                        entry.value !== undefined
+                                                            ? processFixerJobValueForDisplay(entry.key, entry.value, t)
+                                                            : '—'
+                                                } else if (moduleType === ModuleTypes.CHARACTER) {
+                                                    displayValue = String(
+                                                        processCharacterValueForDisplay(entry.key, entry.value, t)
+                                                    )
+                                                } else if (moduleType === ModuleTypes.ITEM) {
+                                                    displayValue = String(
+                                                        processItemValueForDisplay(entry.key, entry.value, t)
+                                                    )
+                                                }
+
+                                                // If the display value is "—", filter it out
+                                                return displayValue !== '—'
+                                            })
+                                            .map((entry) => (
+                                                <TableRow
+                                                    key={entry.key}
                                                     sx={{
-                                                        borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
-                                                        fontWeight: 'bold',
-                                                        maxWidth: '15vw',
-                                                        textShadow: `0 0 5px ${colors.neons.cyan.dark}`,
-                                                        ...(readerMode && {
-                                                            color: '#333',
-                                                            textShadow: 'none',
-                                                            borderBottom: '1px solid #ddd ',
-                                                        }),
-                                                    }}
-                                                    className="cell-content"
-                                                >
-                                                    <Typography
-                                                        title={entry.label}
-                                                        variant="body2"
-                                                        noWrap
-                                                        sx={{
-                                                            color:
-                                                                (readerMode
-                                                                    ? colors.grays.gray000
-                                                                    : colors.neons.cyan.default) + ' !important',
-                                                        }}
-                                                    >
-                                                        {entry.label}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell
-                                                    sx={{
-                                                        maxWidth: '15vw',
-                                                        borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
-                                                        textShadow: `0 0 5px ${colors.neons.green.dark}`,
+                                                        position: 'relative',
                                                         ...(readerMode
                                                             ? {
-                                                                  color: '#333 ',
-                                                                  textShadow: 'none ',
-                                                                  borderBottom: '1px solid #ddd ',
-                                                                  fontWeight: 500,
+                                                                  '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' },
+                                                                  '&:nth-of-type(even)': { bgcolor: '#fff' },
+                                                                  '&:hover': {
+                                                                      bgcolor: '#f0f0f0',
+                                                                  },
                                                               }
-                                                            : {}),
+                                                            : {
+                                                                  '&:nth-of-type(odd)': {
+                                                                      bgcolor: 'rgba(0, 15, 30, 0.4)',
+                                                                  },
+                                                                  '&:nth-of-type(even)': {
+                                                                      bgcolor: 'rgba(0, 20, 40, 0.2)',
+                                                                  },
+                                                                  '&:hover': {
+                                                                      bgcolor: 'rgba(0, 255, 255, 0.1)',
+                                                                      '& .cell-content': {
+                                                                          color: colors.neons.cyan.default,
+                                                                          textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                                                                      },
+                                                                  },
+                                                              }),
+                                                        transition: 'all 0.3s ease',
                                                     }}
-                                                    className="cell-content"
                                                 >
-                                                    <Typography
-                                                        title={`${
-                                                            moduleType === ModuleTypes.GANG
-                                                                ? processGangValueForDisplay(entry.key, entry.value, t)
-                                                                : ''
-                                                        }${
-                                                            moduleType === ModuleTypes.BUILDING
-                                                                ? processBuildingValueForDisplay(
-                                                                      entry.key,
-                                                                      entry.value,
-                                                                      t,
-                                                                      'isAbandoned' in item ? item.isAbandoned : false
-                                                                  )
-                                                                : ''
-                                                        }${
-                                                            moduleType === ModuleTypes.FIXER_JOB
-                                                                ? entry.value !== undefined
+                                                    <TableCell
+                                                        sx={{
+                                                            borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
+                                                            fontWeight: 'bold',
+                                                            maxWidth: '15vw',
+                                                            textShadow: `0 0 5px ${colors.neons.cyan.dark}`,
+                                                            ...(readerMode && {
+                                                                color: '#333',
+                                                                textShadow: 'none',
+                                                                borderBottom: '1px solid #ddd ',
+                                                            }),
+                                                        }}
+                                                        className="cell-content"
+                                                    >
+                                                        <Typography
+                                                            title={entry.label}
+                                                            variant="body2"
+                                                            noWrap
+                                                            sx={{
+                                                                color:
+                                                                    (readerMode
+                                                                        ? colors.grays.gray000
+                                                                        : colors.neons.cyan.default) + ' !important',
+                                                            }}
+                                                        >
+                                                            {entry.label}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell
+                                                        sx={{
+                                                            maxWidth: '15vw',
+                                                            borderBottom: '1px solid rgba(0, 255, 255, 0.1)',
+                                                            textShadow: `0 0 5px ${colors.neons.green.dark}`,
+                                                            ...(readerMode
+                                                                ? {
+                                                                      color: '#333 ',
+                                                                      textShadow: 'none ',
+                                                                      borderBottom: '1px solid #ddd ',
+                                                                      fontWeight: 500,
+                                                                  }
+                                                                : {}),
+                                                        }}
+                                                        className="cell-content"
+                                                    >
+                                                        <Typography
+                                                            title={`${
+                                                                moduleType === ModuleTypes.GANG
+                                                                    ? processGangValueForDisplay(
+                                                                          entry.key,
+                                                                          entry.value,
+                                                                          t
+                                                                      )
+                                                                    : ''
+                                                            }${
+                                                                moduleType === ModuleTypes.BUILDING
+                                                                    ? processBuildingValueForDisplay(
+                                                                          entry.key,
+                                                                          entry.value,
+                                                                          t,
+                                                                          'isAbandoned' in target
+                                                                              ? target.isAbandoned
+                                                                              : false
+                                                                      )
+                                                                    : ''
+                                                            }${
+                                                                moduleType === ModuleTypes.FIXER_JOB
+                                                                    ? entry.value !== undefined
+                                                                        ? processFixerJobValueForDisplay(
+                                                                              entry.key,
+                                                                              entry.value,
+                                                                              t
+                                                                          )
+                                                                        : '—'
+                                                                    : ''
+                                                            }${
+                                                                moduleType === ModuleTypes.CHARACTER
+                                                                    ? processCharacterValueForDisplay(
+                                                                          entry.key,
+                                                                          entry.value,
+                                                                          t
+                                                                      )
+                                                                    : ''
+                                                            }${
+                                                                moduleType === ModuleTypes.ITEM
+                                                                    ? processItemValueForDisplay(
+                                                                          entry.key,
+                                                                          entry.value,
+                                                                          t
+                                                                      )
+                                                                    : ''
+                                                            }`}
+                                                            variant="body2"
+                                                            noWrap
+                                                            sx={{
+                                                                color:
+                                                                    (readerMode
+                                                                        ? colors.grays.gray000
+                                                                        : colors.grays.gray900) + ' !important',
+                                                            }}
+                                                        >
+                                                            {moduleType === ModuleTypes.GANG &&
+                                                                processGangValueForDisplay(entry.key, entry.value, t)}
+                                                            {moduleType === ModuleTypes.BUILDING &&
+                                                                processBuildingValueForDisplay(
+                                                                    entry.key,
+                                                                    entry.value,
+                                                                    t,
+                                                                    'isAbandoned' in target ? target.isAbandoned : false
+                                                                )}
+                                                            {moduleType === ModuleTypes.FIXER_JOB &&
+                                                                (entry.value !== undefined
                                                                     ? processFixerJobValueForDisplay(
                                                                           entry.key,
                                                                           entry.value,
                                                                           t
                                                                       )
-                                                                    : '—'
-                                                                : ''
-                                                        }`}
-                                                        variant="body2"
-                                                        noWrap
-                                                        sx={{
-                                                            color:
-                                                                (readerMode
-                                                                    ? colors.grays.gray000
-                                                                    : colors.grays.gray900) + ' !important',
-                                                        }}
-                                                    >
-                                                        {moduleType === ModuleTypes.GANG &&
-                                                            processGangValueForDisplay(entry.key, entry.value, t)}
-                                                        {moduleType === ModuleTypes.BUILDING &&
-                                                            processBuildingValueForDisplay(
-                                                                entry.key,
-                                                                entry.value,
-                                                                t,
-                                                                'isAbandoned' in item ? item.isAbandoned : false
-                                                            )}
-                                                        {moduleType === ModuleTypes.FIXER_JOB &&
-                                                            (entry.value !== undefined
-                                                                ? processFixerJobValueForDisplay(
-                                                                      entry.key,
-                                                                      entry.value,
-                                                                      t
-                                                                  )
-                                                                : '—')}
-                                                    </Typography>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                                                    : '—')}
+                                                            {moduleType === ModuleTypes.CHARACTER &&
+                                                                processCharacterValueForDisplay(
+                                                                    entry.key,
+                                                                    entry.value,
+                                                                    t
+                                                                )}
+                                                            {moduleType === ModuleTypes.ITEM &&
+                                                                processItemValueForDisplay(entry.key, entry.value, t)}
+                                                        </Typography>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
                                     </TableBody>
                                 </Table>
                             </TableContainer>

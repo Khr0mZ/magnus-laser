@@ -2,13 +2,13 @@
 interface Verb {
   value: String!
 }
-# Wrapper for PlotCharacterVerb enum values.
-type PlotCharacterVerbWrapper implements Verb {
-  value: PlotCharacterVerb!
+# Wrapper for CharacterVerb enum values.
+type CharacterVerbWrapper implements Verb {
+  value: CharacterVerb!
 }
-# Wrapper for PlotItemVerb enum values.
-type PlotItemVerbWrapper implements Verb {
-  value: PlotItemVerb!
+# Wrapper for ItemVerb enum values.
+type ItemVerbWrapper implements Verb {
+  value: ItemVerb!
 }
 # Wrapper for PlotGangVerb enum values.
 type PlotGangVerbWrapper implements Verb {
@@ -20,8 +20,8 @@ type PlotBuildingVerbWrapper implements Verb {
 }
 # The PlotVerb union aggregates all verb wrapper types.
 union PlotVerb =
-    PlotCharacterVerbWrapper
-  | PlotItemVerbWrapper
+    CharacterVerbWrapper
+  | ItemVerbWrapper
   | PlotGangVerbWrapper
   | PlotBuildingVerbWrapper
 
@@ -48,23 +48,7 @@ type Plot {
 }
 
 # The PlotSubject union represents the possible subjects of the plot.
-union PlotSubject = PlotCharacter | PlotItem | PlotGang
-
-# The PlotCharacter type represents an individual character involved in the plot.
-type PlotCharacter {
-  name: String!
-  type: PlotCharacterType!
-  attitude: PlotCharacterAttitude!
-  image: String!
-}
-
-# The PlotItem type represents an item involved in the plot.
-type PlotItem {
-  name: String!
-  type: PlotItemType!
-  condition: PlotItemCondition!
-  image: String!
-}
+union PlotSubject = Character | Item | PlotGang
 
 # The PlotGang type represents a gang involved in the plot.
 type PlotGang {
@@ -82,22 +66,22 @@ type PlotBuilding {
 type PlotComplication {
   type: PlotComplicationType!
   # The following fields are conditionally set based on the complication type.
-  character: PlotCharacter
-  item: PlotItem
+  character: Character
+  item: Item
 }
 
 # GangComplication gives details about complications involving a gang.
 type GangComplication {
   type: PlotGangComplicationType!
   # The following fields are conditionally set based on the complication type.
-  character: PlotCharacter
-  item: PlotItem
+  character: Character
+  item: Item
 }
 
 # BuildingComplication gives details about complications involving the plot building.
 type BuildingComplication {
   type: PlotBuildingComplicationType!
   # The following fields are conditionally set based on the complication type.
-  character: PlotCharacter
-  item: PlotItem
+  character: Character
+  item: Item
 }

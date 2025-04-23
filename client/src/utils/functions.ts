@@ -1,5 +1,5 @@
 import { TFunction } from 'i18next'
-import { Building, BuildingType, FixerJob, Gang, GangColor, JobDifficulty } from '../graphql/types.ts'
+import { Building, BuildingType, Character, FixerJob, Gang, GangColor, Item, JobDifficulty } from '../graphql/types.ts'
 import colors from './colors.ts'
 import { fixerJobColumns } from './constants.ts'
 
@@ -90,9 +90,78 @@ export const getComplementaryColor = (color: string): string => {
             .padStart(6, '0')}`
         return complementaryHex
     } catch (error) {
-        console.error(`Error calculating complementary color for: ${color}`, error)
+        console.warn(`Error calculating complementary color for: ${color}`, error)
         return '#7f7f7f' // Return a neutral gray as fallback
     }
+}
+
+// CHARACTER FUNCTIONS
+
+/**
+ * Get ordered character data for display
+ * @param character The character data
+ * @param t Translation function
+ * @returns Array of data items ordered for display
+ */
+export const getOrderedCharacterData = (
+    character: Character,
+    t: TFunction
+): { key: string; label: string; value: unknown }[] => {
+    return [
+        { key: 'name', label: t('characters.labels.name'), value: character.name },
+        { key: 'type', label: t('characters.labels.type'), value: character.type },
+        { key: 'attitude', label: t('characters.labels.attitude'), value: character.attitude },
+    ]
+}
+
+/**
+ * Process a character value for display
+ * @param key The key of the value
+ * @param value The value to process
+ * @param t The translation function
+ * @returns The processed value
+ */
+export const processCharacterValueForDisplay = (key: string, value: unknown, t: TFunction): string => {
+    if (key === 'attitude') {
+        return t(`characters.attitude.${value}`, String(value))
+    }
+    if (key === 'type') {
+        return t(`characters.type.${value}`, String(value))
+    }
+    return String(value)
+}
+
+// ITEM FUNCTIONS
+
+/**
+ * Get ordered item data for display
+ * @param item The item data
+ * @param t Translation function
+ * @returns Array of data items ordered for display
+ */
+export const getOrderedItemData = (item: Item, t: TFunction): { key: string; label: string; value: unknown }[] => {
+    return [
+        { key: 'name', label: t('items.labels.name'), value: item.name },
+        { key: 'type', label: t('items.labels.type'), value: item.type },
+        { key: 'condition', label: t('items.labels.condition'), value: item.condition },
+    ]
+}
+
+/**
+ * Process an item value for display
+ * @param key The key of the value
+ * @param value The value to process
+ * @param t The translation function
+ * @returns The processed value
+ */
+export const processItemValueForDisplay = (key: string, value: unknown, t: TFunction): string => {
+    if (key === 'condition') {
+        return t(`items.condition.${value}`, String(value))
+    }
+    if (key === 'type') {
+        return t(`items.type.${value}`, String(value))
+    }
+    return String(value)
 }
 
 // GANG FUNCTIONS
@@ -305,54 +374,265 @@ export const getFixerJobDifficultyColor = (difficulty: JobDifficulty): string =>
  * Get ordered fixer job data for display
  * @param fixerJob The fixer job data
  * @param t Translation function
+ * @param resolvers Optional object containing reference resolvers for different entity types
  * @returns Array of data items ordered for display
  */
 export const getOrderedFixerJobData = (
     fixerJob: FixerJob,
-    t: TFunction
+    t: TFunction,
+    resolvers?: {
+        resolveCharacter?: (id: string) => Character | null
+        resolveItem?: (id: string) => Item | null
+        resolveBuilding?: (id: string) => Building | null
+        resolveGang?: (id: string) => Gang | null
+    }
 ): { key: string; label: string; value: unknown }[] => {
-    // Helper function to get value by dot-notation path
+    // Helper function to get value by dot-notation path, optimized for our GraphQL schema
     const getValueByPath = (obj: Record<string, unknown>, path: string): unknown => {
-        const parts = path.split('.')
-        let current = obj as Record<string, unknown>
+        // Edge case: empty object or path
+        if (!obj || !path) return undefined
 
-        for (const part of parts) {
+        const parts = path.split('.')
+        let current: unknown = obj
+
+        // Check for known exact path patterns that we've having trouble with
+        if (path === 'plot.plotSubject.gang.name') {
+            const plot = obj.plot as Record<string, unknown>
+            if (!plot || typeof plot !== 'object') return undefined
+
+            const plotSubject = plot.plotSubject
+            if (!plotSubject || typeof plotSubject !== 'object') return undefined
+
+            const gang = (plotSubject as Record<string, unknown>).gang
+            if (!gang) return undefined
+
+            if (typeof gang === 'string') {
+                // Try to resolve the gang ID to an object
+                if (resolvers?.resolveGang) {
+                    const resolvedGang = resolvers.resolveGang(gang)
+                    return resolvedGang?.name || gang
+                }
+                return gang
+            } else if (typeof gang === 'object' && 'name' in (gang as Record<string, unknown>)) {
+                return (gang as Record<string, unknown>).name
+            }
+
+            return undefined
+        }
+
+        if (path === 'plot.plotBuilding.building.name') {
+            const plot = obj.plot as Record<string, unknown>
+            if (!plot || typeof plot !== 'object') return undefined
+
+            const plotBuilding = plot.plotBuilding
+            if (!plotBuilding || typeof plotBuilding !== 'object') return undefined
+
+            const building = (plotBuilding as Record<string, unknown>).building
+            if (!building) return undefined
+
+            if (typeof building === 'string') {
+                // Try to resolve the building ID to an object
+                if (resolvers?.resolveBuilding) {
+                    const resolvedBuilding = resolvers.resolveBuilding(building)
+                    return resolvedBuilding?.name || building
+                }
+                return building
+            } else if (typeof building === 'object' && 'name' in (building as Record<string, unknown>)) {
+                return (building as Record<string, unknown>).name
+            }
+
+            return undefined
+        }
+
+        // Handle character name paths in a generic way
+        if (path.endsWith('.character.name')) {
+            // Split into parts without the .name at the end
+            const basePath = path.substring(0, path.length - 5)
+            const baseValue = getValueByPath(obj, basePath)
+
+            if (!baseValue) return undefined
+
+            if (typeof baseValue === 'string') {
+                // Try to resolve the character ID
+                if (resolvers?.resolveCharacter) {
+                    const resolvedChar = resolvers.resolveCharacter(baseValue)
+                    return resolvedChar?.name || baseValue
+                }
+                return baseValue
+            } else if (typeof baseValue === 'object' && 'name' in (baseValue as Record<string, unknown>)) {
+                return (baseValue as Record<string, unknown>).name
+            }
+
+            return undefined
+        }
+
+        // Handle item name paths in a generic way
+        if (path.endsWith('.item.name')) {
+            // Split into parts without the .name at the end
+            const basePath = path.substring(0, path.length - 5)
+            const baseValue = getValueByPath(obj, basePath)
+
+            if (!baseValue) return undefined
+
+            if (typeof baseValue === 'string') {
+                // Try to resolve the item ID
+                if (resolvers?.resolveItem) {
+                    const resolvedItem = resolvers.resolveItem(baseValue)
+                    return resolvedItem?.name || baseValue
+                }
+                return baseValue
+            } else if (typeof baseValue === 'object' && 'name' in (baseValue as Record<string, unknown>)) {
+                return (baseValue as Record<string, unknown>).name
+            }
+
+            return undefined
+        }
+
+        // Standard path traversal for other paths
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i]
+
+            // Handle null/undefined values
             if (current === null || current === undefined) {
                 return undefined
             }
 
+            // Cast to Record for type safety
+            const currentObj = current as Record<string, unknown>
+
             // Special case for verb which is a union type
-            if (part === 'verb' && current.verb && typeof current.verb === 'object' && current.verb !== null) {
-                current = current.verb as Record<string, unknown>
+            if (part === 'verb') {
+                if (currentObj.verb && typeof currentObj.verb === 'object') {
+                    // Move to the verb object
+                    current = currentObj.verb
+
+                    // If the next part is 'value' and we're at the end of the path,
+                    // return the value directly from the verb object
+                    if (i === parts.length - 2 && parts[i + 1] === 'value') {
+                        const verbObj = current as Record<string, unknown>
+                        return verbObj.value
+                    }
+                } else {
+                    current = currentObj.verb
+                }
                 continue
             }
 
-            // Special cases for gang and building references that could be IDs or objects
-            if ((part === 'gang' || part === 'building') && current[part]) {
-                // If it's just a string ID, we can't go deeper
-                if (typeof current[part] === 'string') {
-                    return current[part]
+            // Special case for plotSubject.complication
+            if (part === 'complication' && i > 0 && parts[i - 1] === 'plotSubject') {
+                const complication = currentObj[part]
+
+                // Handle direct access to complication.type (this is often missed)
+                if (
+                    i === parts.length - 2 &&
+                    parts[i + 1] === 'type' &&
+                    complication &&
+                    typeof complication === 'object'
+                ) {
+                    return (complication as Record<string, unknown>).type
                 }
-                // If it's an object, we can continue traversing
-                if (typeof current[part] === 'object') {
-                    current = current[part] as Record<string, unknown>
-                    continue
+
+                // Handle direct access to complication.character
+                if (
+                    i === parts.length - 2 &&
+                    parts[i + 1] === 'character' &&
+                    complication &&
+                    typeof complication === 'object'
+                ) {
+                    const charRef = (complication as Record<string, unknown>).character
+                    if (typeof charRef === 'string' && resolvers?.resolveCharacter) {
+                        return resolvers.resolveCharacter(charRef) || charRef
+                    }
+                    return charRef
                 }
+
+                // Handle direct access to complication.item
+                if (
+                    i === parts.length - 2 &&
+                    parts[i + 1] === 'item' &&
+                    complication &&
+                    typeof complication === 'object'
+                ) {
+                    const itemRef = (complication as Record<string, unknown>).item
+                    if (typeof itemRef === 'string' && resolvers?.resolveItem) {
+                        return resolvers.resolveItem(itemRef) || itemRef
+                    }
+                    return itemRef
+                }
+
+                current = complication
+                continue
             }
 
-            current = current[part] as Record<string, unknown>
-        }
+            // Handle reference fields that could be either IDs or objects
+            if (['gang', 'building', 'character', 'item'].includes(part)) {
+                const reference = currentObj[part]
 
-        // Handle the case where gang or building references could be objects
-        if (current && typeof current === 'object') {
-            // If we're looking for a name and the object has a name property, return it
-            if ('name' in current) {
-                return current.name
+                // Handle string ID references with resolvers if available
+                if (typeof reference === 'string' && resolvers) {
+                    // If this is the last part in the path, return the resolved object or ID
+                    if (i === parts.length - 1) {
+                        if (part === 'character' && resolvers.resolveCharacter) {
+                            const resolved = resolvers.resolveCharacter(reference)
+                            return resolved || reference
+                        }
+                        if (part === 'item' && resolvers.resolveItem) {
+                            const resolved = resolvers.resolveItem(reference)
+                            return resolved || reference
+                        }
+                        if (part === 'building' && resolvers.resolveBuilding) {
+                            const resolved = resolvers.resolveBuilding(reference)
+                            return resolved || reference
+                        }
+                        if (part === 'gang' && resolvers.resolveGang) {
+                            const resolved = resolvers.resolveGang(reference)
+                            return resolved || reference
+                        }
+                        return reference
+                    }
+
+                    // If not the last part, try to resolve and continue traversal
+                    if (part === 'character' && resolvers.resolveCharacter) {
+                        current = resolvers.resolveCharacter(reference) || reference
+                        continue
+                    }
+                    if (part === 'item' && resolvers.resolveItem) {
+                        current = resolvers.resolveItem(reference) || reference
+                        continue
+                    }
+                    if (part === 'building' && resolvers.resolveBuilding) {
+                        current = resolvers.resolveBuilding(reference) || reference
+                        continue
+                    }
+                    if (part === 'gang' && resolvers.resolveGang) {
+                        current = resolvers.resolveGang(reference) || reference
+                        continue
+                    }
+                }
+
+                // If it's an object reference or there are no resolvers
+                if (i === parts.length - 1) {
+                    // If it's an object with a name, return the name or full object
+                    if (reference && typeof reference === 'object' && 'name' in (reference as object)) {
+                        return (reference as Record<string, unknown>).name
+                    }
+                    // Otherwise return the reference itself (ID string or object)
+                    return reference
+                }
+
+                // Not the last part, continue traversal
+                current = reference
+                continue
             }
-            // If we're looking for a type and the object has a type property, return it
-            if ('type' in current) {
-                return current.type
+
+            // If this is the final part and it's 'name' or 'type', and current is still an object
+            if (i === parts.length - 1 && (part === 'name' || part === 'type')) {
+                // Just return the value if it exists
+                return currentObj[part]
             }
+
+            // Regular property access
+            current = currentObj[part]
         }
 
         return current
@@ -361,14 +641,7 @@ export const getOrderedFixerJobData = (
     // Extract values for all columns
     const result = fixerJobColumns.map((col) => {
         // Get the value using the path
-        let value = getValueByPath(fixerJob, col.key)
-
-        // Special case for verb which is a union type
-        if (col.key === 'plot.verb.value' && !value && fixerJob.plot?.verb) {
-            if ('value' in fixerJob.plot.verb) {
-                value = fixerJob.plot.verb.value
-            }
-        }
+        const value = getValueByPath(fixerJob, col.key)
 
         return {
             key: col.key,
@@ -384,131 +657,188 @@ export const getOrderedFixerJobData = (
 /**
  * Process a fixer job value for display
  * @param key The key of the value
- * @param item The fixer job item or a direct value
+ * @param target The fixer job object or a direct value
  * @param t The translation function
  * @returns The processed value as a string
  */
-export const processFixerJobValueForDisplay = (key: string, item: unknown, t: TFunction): string => {
+export const processFixerJobValueForDisplay = (key: string, target: unknown, t: TFunction): string => {
     // Skip the typename property that GraphQL adds
     if (key.includes('__typename')) {
-        return t(`fixerJobs.labels.verbType.${item}`)
+        if (target === 'CharacterVerbWrapper') return 'Character'
+        if (target === 'ItemVerbWrapper') return 'Item'
+        if (target === 'PlotGangVerbWrapper') return 'Gang'
+        if (target === 'PlotBuildingVerbWrapper') return 'Building'
+        return String(target)
     }
 
     if (key === 'difficulty') {
-        return t(`common.jobDifficultySelector.${String(item).toLowerCase()}`)
-    }
-    if (key.includes('plotComplication') && item) {
-        if (t(`fixerJobs.complication.${item}`).includes('fixerJobs.complication.')) {
-            return item as string
-        }
-        return t(`fixerJobs.complication.${item}`)
-    }
-    if (key.includes('buildingComplication') && item) {
-        return t(`fixerJobs.buildingComplication.${item}`)
+        return t(`common.jobDifficultySelector.${String(target).toLowerCase()}`)
     }
 
     // If a direct value was passed instead of the full fixer job
-    if (item === undefined || item === null) {
-        return ''
+    if (target === undefined || target === null) {
+        return '—'
     }
 
-    // Handle special cases for object references (gang and building)
-    if (typeof item === 'object' && item !== null) {
-        // Special case for plot.plotSubject.gang references
-        if (key === 'plot.plotSubject.gang' || key.includes('gang.gang')) {
-            if ('name' in (item as Record<string, unknown>)) {
-                return (item as Record<string, unknown>).name as string
-            } else if ('ID' in (item as Record<string, unknown>)) {
-                return `Gang ID: ${(item as Record<string, unknown>).ID}`
+    // Handle complication types - special check for undefined/empty values
+    if (
+        key === 'plot.plotComplication.type' ||
+        key === 'plot.plotBuilding.complication.type' ||
+        key === 'plot.plotSubject.complication.type'
+    ) {
+        if (target === undefined || target === null || target === '') {
+            return '—'
+        }
+
+        // Handle translation based on the complication type
+        if (key === 'plot.plotComplication.type') {
+            return t(`fixerJobs.complication.${target}`, String(target))
+        }
+        if (key === 'plot.plotBuilding.complication.type') {
+            return t(`fixerJobs.buildingComplication.${target}`, String(target))
+        }
+        if (key === 'plot.plotSubject.complication.type') {
+            return t(`fixerJobs.gangComplication.${target}`, String(target))
+        }
+    }
+
+    // Handle building name
+    if (key === 'plot.plotBuilding.building.name') {
+        if (target === undefined || target === null) return '—'
+        if (typeof target === 'string') return target
+        if (typeof target === 'object' && target !== null && 'name' in target) {
+            return (target as { name: string }).name
+        }
+        return '—'
+    }
+
+    // Handle gang name
+    if (key === 'plot.plotSubject.gang.name') {
+        if (target === undefined || target === null) return '—'
+        if (typeof target === 'string') return target
+        if (typeof target === 'object' && target !== null && 'name' in target) {
+            return (target as { name: string }).name
+        }
+        return '—'
+    }
+
+    // Handle character names in complications
+    if (key.includes('.character.name')) {
+        if (target === undefined || target === null) return '—'
+        if (typeof target === 'string') return target
+        if (typeof target === 'object' && target !== null && 'name' in target) {
+            return (target as { name: string }).name
+        }
+        return '—'
+    }
+
+    // Handle item names in complications
+    if (key.includes('.item.name')) {
+        if (target === undefined || target === null) return '—'
+        if (typeof target === 'string') return target
+        if (typeof target === 'object' && target !== null && 'name' in target) {
+            return (target as { name: string }).name
+        }
+        return '—'
+    }
+
+    // Handle direct character or item reference via plotSubject
+    if (key === 'plot.plotSubject') {
+        // Handle case where plotSubject is a string ID - return just Subject since
+        // actual character/item will be in a different row
+        if (typeof target === 'string') {
+            return 'Subject'
+        }
+        // Handle object case
+        if (typeof target === 'object' && target !== null) {
+            // If it's a direct character or item with a name
+            if ('name' in target) return target.name as string
+
+            // If it's a gang reference
+            if ('gang' in target) {
+                if (typeof target.gang === 'object' && target.gang !== null && 'name' in target.gang) {
+                    return (target.gang as { name: string }).name
+                }
+                return 'Subject (Gang)'
+            }
+            return 'Subject'
+        }
+        return '—'
+    }
+
+    // Special case for the Target column that should show the actual name
+    if (key === 'Target') {
+        const fixerJob = target as FixerJob
+        if (!fixerJob?.plot?.plotSubject) return '—'
+
+        const subject = fixerJob.plot.plotSubject
+
+        // Handle character/item cases
+        if (typeof subject === 'object' && 'name' in subject) {
+            return subject.name as string
+        }
+
+        // Handle gang case
+        if (typeof subject === 'object' && 'gang' in subject) {
+            const gang = subject.gang
+            if (typeof gang === 'object' && gang !== null && 'name' in gang) {
+                return (gang as { name: string }).name
             }
         }
 
-        // Special case for plot.plotBuilding.building references
-        if (key === 'plot.plotBuilding.building' || key.includes('building.building')) {
-            if ('name' in (item as Record<string, unknown>)) {
-                return (item as Record<string, unknown>).name as string
-            } else if ('ID' in (item as Record<string, unknown>)) {
-                return `Building ID: ${(item as Record<string, unknown>).ID}`
-            }
+        return '—'
+    }
+
+    // Handle special cases for object references (gang, building, character, item)
+    if (typeof target === 'object' && target !== null) {
+        // If this is just a direct reference to a Gang, Building, Character, or Item with a name
+        if ('name' in target && typeof target.name === 'string') {
+            return target.name
         }
 
-        // If the object has a type property that should be translated
-        if ('type' in (item as Record<string, unknown>)) {
-            const type = (item as Record<string, unknown>).type as string
-
+        // If it has a type field we can display
+        if ('type' in target && typeof target.type === 'string') {
+            const type = target.type as string
             // Determine the namespace based on the key
             if (key.includes('gang')) {
                 return t(`gangs.type.${type}`, String(type))
             } else if (key.includes('building')) {
                 return t(`buildings.type.${type}`, String(type))
             }
-
             return String(type)
         }
 
-        // For any other objects, try to convert them meaningfully
-        return JSON.stringify(item)
-    }
-
-    // Simple mapping for enums
-    if (typeof item === 'string') {
-        // Direct mapping to namespaces based on key patterns
-        const keyNamespaceMap: Record<string, string> = {
-            // Verb fields
-            'plot.verb.value': 'fixerJobs.verb',
-            // Types for various entities
-            'plot.plotSubject.type': 'fixerJobs.character', // Default to character, special case for item below
-            'plot.complication.type': 'fixerJobs.complication',
-            'plot.complication.character.type': 'fixerJobs.character',
-            'plot.complication.item.type': 'fixerJobs.item',
-            'plot.item.type': 'fixerJobs.item',
-            'plot.plotBuilding.building.type': 'fixerJobs.building',
-            'plot.plotBuilding.complication.type': 'fixerJobs.buildingComplication',
-            'plot.plotSubject.complication.type': 'fixerJobs.gangComplication',
-            // Attitude and condition fields
-            'plot.plotSubject.attitude': 'fixerJobs.characterAttitude',
-            'plot.plotSubject.condition': 'fixerJobs.itemCondition',
-            // Building related fields
-            'plot.plotBuilding.building.style': 'buildings.style',
-            'plot.plotBuilding.building.ownership': 'buildings.ownership',
-            'plot.plotBuilding.building.securityPersonnel': 'buildings.securityPersonnel',
-        }
-
-        // Special case for gang types
-        if (key.includes('gang.type') || key.includes('gang.gang.type')) {
-            return t(`gangs.type.${item}`, String(item))
-        }
-
-        // Special case for item types (including AI_ROBOT_DRONE)
-        if (
-            (key === 'plot.plotSubject.type' || key === 'plot.item.type') &&
-            (item === 'AI_ROBOT_DRONE' ||
-                item === 'BIOLOGICAL_SAMPLES' ||
-                item === 'CYBERWARE' ||
-                item === 'DIGITAL_FILES' ||
-                item === 'DRUGS_ILLEGAL_CONTRABAND' ||
-                item === 'EXOTIC_ANIMAL' ||
-                item === 'FOOD_FUELS_SUPPLIES' ||
-                item === 'MONEY' ||
-                item === 'VEHICLE' ||
-                item === 'WEAPONS')
-        ) {
-            return t(`fixerJobs.item.${item}`, String(item))
-        }
-
-        // Look up the namespace
-        const namespace = keyNamespaceMap[key]
-        if (namespace) {
-            // Special case for plot.verb.value - directly check that we have the translation
-            if (key === 'plot.verb.value') {
-                const translated = t(`${namespace}.${item}`, String(item))
-                return translated
+        // For verb objects, return the value
+        if ('value' in target && typeof target.value === 'string') {
+            const value = target.value as string
+            if (key === 'plot.verb') {
+                return t(`fixerJobs.verb.${value}`, value)
             }
-
-            return t(`${namespace}.${item}`, String(item))
+            return value
         }
+
+        // For any other objects with an ID, just return "—" so we don't clutter the display
+        if ('ID' in target) {
+            return '—'
+        }
+
+        // Empty or inappropriate objects
+        return '—'
     }
 
-    // If no translation found, just return the string value
-    return String(item)
+    // Handle verb values for translation
+    if (key === 'plot.verb.value' && typeof target === 'string') {
+        return t(`fixerJobs.verb.${target}`, String(target))
+    }
+
+    // For direct IDs, don't display them - they'll be resolved to names in other rows
+    if (
+        typeof target === 'string' &&
+        (key.includes('character') || key.includes('item') || key.includes('building') || key.includes('gang'))
+    ) {
+        return '—'
+    }
+
+    // If no special case applies, return the string value
+    return String(target)
 }

@@ -14,158 +14,202 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { ChangeEvent } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PlotCharacterAttitude, PlotCharacterType } from '../../../../graphql/types'
+import { useData } from '../../../../contexts/dataHooks'
+import { Character, FixerJob, Maybe } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
 import ImageField from '../ImageField'
 
-export type FieldProps = {
-    value: string
-    onChange: (e: SelectChangeEvent<string> | ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
-}
-
-export type ImageFieldProps = {
-    image: string
-    main: boolean
-    canRegenerate: boolean
-}
-
 export type CardCharacterProps = {
-    isGeneratingImage?: boolean
+    editedTarget: FixerJob
     textFieldOutlinedStyle: SxProps
-    handleImageUploadClick: () => void
-    openDeleteImageDialog: () => void
+    handleChange: (field: string, value: unknown) => void
     toggleFullscreenImage: () => void
-    handleRegenerateClick: () => void
     formControlStyle: SxProps
     inputLabelStyle: SxProps
     selectStyle: SxProps
-    hiddenFileInput: JSX.Element
-    character: {
-        name: FieldProps
-        type: FieldProps
-        attitude: FieldProps
-        image: ImageFieldProps
+    character: Character & {
+        chain: Maybe<Character>
+        field: string
+        main: boolean
     }
 }
 
 const CardCharacter = (props: CardCharacterProps) => {
     const {
-        isGeneratingImage,
+        editedTarget,
         textFieldOutlinedStyle,
-        handleImageUploadClick,
-        openDeleteImageDialog,
+        handleChange,
         toggleFullscreenImage,
         formControlStyle,
         inputLabelStyle,
         selectStyle,
-        hiddenFileInput,
-        handleRegenerateClick,
         character,
     } = props
     const { t } = useTranslation()
+    const { characters } = useData()
+    const [selectedCharacter, setSelectedCharacter] = useState<Character>(() => {
+        // Get the character from chainStarter based on ID or direct reference
+        const characterRef = character.chain
+        if (typeof characterRef === 'string') {
+            // If character is stored as ID, find the character object
+            return characters.find((c) => c.ID === characterRef) || characters[0] || null
+        }
+        // Otherwise it's already a character object
+        return characterRef || characters[0] || null
+    })
+
+    const handleChangeCharacter = (e: SelectChangeEvent<string>) => {
+        const characterId = e.target.value
+        const sc = characters.find((c) => c.ID === characterId)
+        if (sc) {
+            setSelectedCharacter(sc)
+
+            // Store both the ID for storage compatibility and the character object for immediate display
+            if (character.chain && 'ID' in character.chain) {
+                // First update the ID reference for storage
+                handleChange(character.field, characterId)
+
+                // Now update the actual display object
+                // This is a separate update to ensure the UI shows the full gang object
+                // We need to use a timeout to ensure the first change is processed
+                setTimeout(() => {
+                    // For plotSubject.gang, we need to update the gang property directly
+                    // Look at the original object path and update appropriately
+                    if (character.field === 'plot.plotSubject') {
+                        const plotSubject = editedTarget.plot?.plotSubject
+                        if (plotSubject && 'gang' in plotSubject) {
+                            // Replace the string ID with the full gang object for display
+                            handleChange('plot.plotSubject', {
+                                ...plotSubject,
+                                character: sc,
+                            })
+                        }
+                    } else if (character.field === 'plot.plotSubject.complication.character') {
+                        const plotSubject = editedTarget.plot?.plotSubject
+                        if (
+                            plotSubject &&
+                            'complication' in plotSubject &&
+                            plotSubject.complication.type.includes('CHARACTER')
+                        ) {
+                            handleChange('plot.plotSubject.complication.character', sc)
+                        }
+                    } else if (character.field === 'plot.plotBuilding.complication.character') {
+                        const plotSubject = editedTarget.plot?.plotBuilding
+                        if (
+                            plotSubject &&
+                            'complication' in plotSubject &&
+                            plotSubject.complication.type.includes('CHARACTER')
+                        ) {
+                            handleChange('plot.plotBuilding.complication.character', sc)
+                        }
+                    } else if (character.field === 'plot.plotComplication.character') {
+                        const plotSubject = editedTarget.plot
+                        if (
+                            plotSubject &&
+                            'complication' in plotSubject &&
+                            editedTarget.plot.plotComplication.type.includes('CHARACTER')
+                        ) {
+                            handleChange('plot.plotComplication.character', sc)
+                        }
+                    }
+                }, 0)
+            }
+        }
+    }
 
     return (
-        <>
-            {hiddenFileInput}
-            <Accordion
-                sx={{
-                    mt: 2,
-                    ml: character.image.main ? '16px !important' : '0px !important',
-                    bgcolor: colors.neons.pink.default + '50 !important',
-                    border: `1px solid ${colors.neons.cyan.dark}`,
-                    borderRadius: 0.5,
-                    width: '100%',
-                }}
-                disableGutters
-            >
-                <AccordionSummary expandIcon={<ExpandMore fontSize="large" />}>
-                    <Typography variant="h6">{t('fixerJobs.labels.character.title')}</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                    <Grid item container xs={12} spacing={2}>
-                        <Grid item container xs={8}>
-                            <Stack spacing={2} sx={{ width: '100%' }}>
-                                {/* Subject Name */}
-                                <TextField
-                                    fullWidth
-                                    label={t('fixerJobs.labels.character.name')}
-                                    value={character.name.value}
-                                    onChange={character.name.onChange}
-                                    variant="outlined"
-                                    sx={textFieldOutlinedStyle}
-                                />
-                                {/* Character Type - Specific to character category */}
-                                <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                                    <InputLabel id="character-type-label" sx={inputLabelStyle}>
-                                        {t('fixerJobs.labels.character.type')}
-                                    </InputLabel>
-                                    <Select
-                                        labelId="character-type-label"
-                                        value={character.type.value}
-                                        onChange={character.type.onChange}
-                                        label={t('fixerJobs.labels.character.type')}
-                                        sx={selectStyle}
-                                    >
-                                        {Object.values(PlotCharacterType).map((type) => (
-                                            <MenuItem key={type} value={type}>
-                                                {t(`fixerJobs.character.${type}`)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                                {/* Character Attitude */}
-                                <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                                    <InputLabel id="subject-attitude-label" sx={inputLabelStyle}>
-                                        {t('fixerJobs.labels.character.attitude')}
-                                    </InputLabel>
-                                    <Select
-                                        labelId="subject-attitude-label"
-                                        value={character.attitude.value}
-                                        onChange={character.attitude.onChange}
-                                        label={t('fixerJobs.labels.character.attitude')}
-                                        sx={selectStyle}
-                                    >
-                                        {Object.values(PlotCharacterAttitude).map((attitude) => (
-                                            <MenuItem key={attitude} value={attitude}>
-                                                {t(`fixerJobs.characterAttitude.${attitude}`)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Stack>
-                        </Grid>
-                        {/* Character Image */}
-                        <Grid item xs={12} md={4}>
-                            <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                                <InputLabel
-                                    id="character-image-label"
-                                    sx={{
-                                        ...inputLabelStyle,
-                                        top: -25,
-                                        lineHeight: '1 !important',
-                                        py: '0 !important',
-                                    }}
-                                >
-                                    <Typography variant="caption">{t('fixerJobs.labels.character.image')}</Typography>
-                                </InputLabel>
-                                <ImageField
-                                    image={character.image.image}
-                                    downloadName={character.name.value}
-                                    handleImageUploadClick={handleImageUploadClick}
-                                    handleImageRemove={openDeleteImageDialog}
-                                    toggleFullscreenImage={toggleFullscreenImage}
-                                    handleRegenerateClick={handleRegenerateClick}
-                                    canRegenerate={character.image.canRegenerate}
-                                    isGeneratingImage={isGeneratingImage}
-                                />
-                            </FormControl>
-                        </Grid>
+        <Accordion
+            sx={{
+                mt: 2,
+                ml: character.main ? '16px !important' : '0px !important',
+                bgcolor: colors.neons.pink.default + '50 !important',
+                border: `1px solid ${colors.neons.cyan.dark}`,
+                borderRadius: 0.5,
+                width: '100%',
+            }}
+            disableGutters
+        >
+            <AccordionSummary expandIcon={<ExpandMore fontSize="large" />}>
+                <Typography variant="h6">{t('fixerJobs.labels.character.title')}</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+                {/* Character selection */}
+                <FormControl fullWidth variant="outlined" sx={{ ...formControlStyle, mb: 2 }}>
+                    <InputLabel id="character-label" sx={inputLabelStyle}>
+                        {t('characters.characterSelector')}
+                    </InputLabel>
+                    <Select
+                        labelId="character-label"
+                        value={selectedCharacter?.ID}
+                        onChange={(e) => handleChangeCharacter(e)}
+                        sx={selectStyle}
+                    >
+                        {characters.map((character) => (
+                            <MenuItem key={character.ID} value={character.ID}>
+                                {character.name}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <Grid item container xs={12} spacing={2}>
+                    <Grid item container xs={8}>
+                        <Stack spacing={2} sx={{ width: '100%' }}>
+                            {/* Subject Name */}
+                            <TextField
+                                fullWidth
+                                label={t('fixerJobs.labels.character.name')}
+                                value={selectedCharacter?.name || ''}
+                                variant="outlined"
+                                sx={textFieldOutlinedStyle}
+                                disabled
+                            />
+                            {/* Character Type - Specific to character category */}
+                            <TextField
+                                fullWidth
+                                label={t('fixerJobs.labels.character.type')}
+                                value={t(`fixerJobs.character.${selectedCharacter?.type}`)}
+                                variant="outlined"
+                                sx={textFieldOutlinedStyle}
+                                disabled
+                            />
+                            {/* Character Attitude */}
+                            <TextField
+                                fullWidth
+                                label={t('fixerJobs.labels.character.attitude')}
+                                value={t(`fixerJobs.characterAttitude.${selectedCharacter?.attitude}`)}
+                                variant="outlined"
+                                sx={textFieldOutlinedStyle}
+                                disabled
+                            />
+                        </Stack>
                     </Grid>
-                </AccordionDetails>
-            </Accordion>
-        </>
+                    {/* Character Image */}
+                    <Grid item xs={12} md={4}>
+                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
+                            <InputLabel
+                                id="character-image-label"
+                                sx={{
+                                    ...inputLabelStyle,
+                                    top: -25,
+                                    lineHeight: '1 !important',
+                                    py: '0 !important',
+                                }}
+                            >
+                                <Typography variant="caption">{t('fixerJobs.labels.character.image')}</Typography>
+                            </InputLabel>
+                            <ImageField
+                                image={selectedCharacter.image}
+                                downloadName={selectedCharacter.name}
+                                toggleFullscreenImage={toggleFullscreenImage}
+                                disabled
+                            />
+                        </FormControl>
+                    </Grid>
+                </Grid>
+            </AccordionDetails>
+        </Accordion>
     )
 }
 

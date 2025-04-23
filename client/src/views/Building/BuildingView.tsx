@@ -14,7 +14,7 @@ import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, FixerJob, Gang, JobDifficulty } from '../../graphql/types'
+import { Building, Character, FixerJob, Gang, Item, JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
@@ -130,7 +130,7 @@ const BuildingView = () => {
             setBuildings((prevBuildings) => [newBuilding, ...prevBuildings])
             setIsSaving(true)
         } catch (error) {
-            console.error('Failed to generate building:', error)
+            console.warn('Failed to generate building:', error)
         } finally {
             setIsGenerating(false)
         }
@@ -176,9 +176,9 @@ const BuildingView = () => {
         setEditDialogOpen(true)
     }
 
-    const handleEditSave = (editedItem: Building) => {
+    const handleEditSave = (editedTarget: Building) => {
         setBuildings((prevBuildings) =>
-            prevBuildings.map((building) => (building.ID === editedItem.ID ? editedItem : building))
+            prevBuildings.map((building) => (building.ID === editedTarget.ID ? editedTarget : building))
         )
         setIsSaving(true)
         setEditDialogOpen(false)
@@ -292,14 +292,14 @@ const BuildingView = () => {
                 </Typography>
             ) : compactView ? (
                 <TableView
-                    items={buildings}
+                    targetArray={buildings}
                     onDelete={handleDeleteClick}
                     moduleType={ModuleTypes.BUILDING}
                     onEdit={handleEditClick}
                 />
             ) : (
                 <GridView
-                    items={buildings}
+                    targetArray={buildings}
                     onDelete={handleDeleteClick}
                     moduleType={ModuleTypes.BUILDING}
                     onEdit={handleEditClick}
@@ -335,8 +335,8 @@ const BuildingView = () => {
             <EditDialog
                 open={editDialogOpen}
                 onClose={handleEditCancel}
-                onSave={handleEditSave as (item: Building | Gang | FixerJob) => void}
-                item={buildingToEdit}
+                onSave={handleEditSave as (target: Building | Gang | FixerJob | Character | Item) => void}
+                target={buildingToEdit}
                 moduleType={ModuleTypes.BUILDING}
                 isGeneratingImage={isGeneratingImage}
                 setIsGeneratingImage={setIsGeneratingImage}

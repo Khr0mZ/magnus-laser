@@ -15,21 +15,21 @@ import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks.ts'
 import {
+    Character,
+    CharacterAttitude,
+    CharacterType,
+    CharacterVerb,
     FixerJob,
+    Item,
+    ItemCondition,
+    ItemType,
+    ItemVerb,
     JobDifficulty,
     PlotBuilding,
     PlotBuildingVerb,
-    PlotCharacter,
-    PlotCharacterAttitude,
-    PlotCharacterType,
-    PlotCharacterVerb,
     PlotGang,
     PlotGangComplicationType,
     PlotGangVerb,
-    PlotItem,
-    PlotItemCondition,
-    PlotItemType,
-    PlotItemVerb,
 } from '../../../../graphql/types'
 import { handleRegenerateImage } from '../../../../utils/apiUtils'
 import { ImageFields, ModuleTypes } from '../../../../utils/constants'
@@ -42,7 +42,7 @@ import CardItem from './CardItem'
 import CardMainComplication from './CardMainComplication'
 
 export type FormFixerJobProps = {
-    editedItem: FixerJob
+    editedTarget: FixerJob
     moduleType: ModuleTypes
     setIsSaving: (isSaving: boolean) => void
     isGeneratingImage?: boolean
@@ -63,7 +63,7 @@ export type FormFixerJobProps = {
 
 export const FormFixerJob = (props: FormFixerJobProps) => {
     const {
-        editedItem,
+        editedTarget,
         moduleType,
         setIsSaving,
         isGeneratingImage,
@@ -84,27 +84,13 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
     const { readerMode } = useUserPreferences()
     const { fixerJobs, gangs, buildings } = useData()
 
-    const getSubjectType = (): string => {
-        const subject = editedItem.plot?.plotSubject
-        if (!subject) return 'BUILDING'
-        // Using type checking to determine the kind of subject
-        if ('gang' in subject) {
-            return 'GANG'
-        } else if ('attitude' in subject) {
-            return 'CHARACTER' // It's a PlotCharacter
-        } else if ('condition' in subject) {
-            return 'ITEM' // It's a PlotItem
-        }
-        return ''
-    }
-
     // --- Image Handlers ---
     // Create a single reusable regenerate handler that takes the path as an argument
     const handleRegenerateClick = useCallback(
         (imageFieldPath: string) => {
-            if (setIsGeneratingImage && setFixerJobs && editedItem.description) {
+            if (setIsGeneratingImage && setFixerJobs && editedTarget.description) {
                 handleRegenerateImage(
-                    editedItem,
+                    editedTarget,
                     readerMode,
                     setIsGeneratingImage,
                     setIsSaving,
@@ -115,22 +101,26 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     undefined, // setGangToEdit
                     setFixerJobs,
                     setFixerJobToEdit,
+                    undefined, // setCharacters
+                    undefined, // setCharacterToEdit
+                    undefined, // setItems
+                    undefined, // setItemToEdit
                     imageFieldPath // Pass the imageFieldPath to target the specific field
                 )
             }
         },
-        [editedItem, readerMode, setIsGeneratingImage, setIsSaving, moduleType, setFixerJobs, setFixerJobToEdit]
+        [editedTarget, readerMode, setIsGeneratingImage, setIsSaving, moduleType, setFixerJobs, setFixerJobToEdit]
     )
 
     const getVerbOptions = () => {
-        switch (getSubjectType()) {
-            case 'CHARACTER':
-                return Object.values(PlotCharacterVerb)
-            case 'ITEM':
-                return Object.values(PlotItemVerb)
-            case 'GANG':
+        switch (editedTarget.plot.verb.__typename) {
+            case 'CharacterVerbWrapper':
+                return Object.values(CharacterVerb)
+            case 'ItemVerbWrapper':
+                return Object.values(ItemVerb)
+            case 'PlotGangVerbWrapper':
                 return Object.values(PlotGangVerb)
-            case 'BUILDING':
+            case 'PlotBuildingVerbWrapper':
             default:
                 return Object.values(PlotBuildingVerb)
         }
@@ -139,39 +129,39 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
     const handleChangeSubjectCategory = (e: SelectChangeEvent<string>) => {
         // Handle different category types
         const newCategory = e.target.value
-        const fixerJob = fixerJobs.find((job) => job.ID === editedItem.ID)
+        const fixerJob = fixerJobs.find((job) => job.ID === editedTarget.ID)
         // Reset subject data based on category
         if (!fixerJob) return
         if (newCategory === 'CHARACTER') {
-            if (fixerJob.plot.verb.__typename === 'PlotCharacterVerbWrapper') {
+            if (fixerJob.plot.verb.__typename === 'CharacterVerbWrapper') {
                 handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
                 handleChange('plot.verb', fixerJob.plot.verb)
             } else {
                 handleChange('plot.plotSubject', {
                     name: '',
-                    type: Object.values(PlotCharacterType)[0],
-                    attitude: Object.values(PlotCharacterAttitude)[0],
+                    type: Object.values(CharacterType)[0],
+                    attitude: Object.values(CharacterAttitude)[0],
                     image: '',
                 })
                 handleChange('plot.verb', {
-                    __typename: 'PlotCharacterVerbWrapper',
-                    value: Object.values(PlotCharacterVerb)[0],
+                    __typename: 'CharacterVerbWrapper',
+                    value: Object.values(CharacterVerb)[0],
                 })
             }
         } else if (newCategory === 'ITEM') {
-            if (fixerJob.plot.verb.__typename === 'PlotItemVerbWrapper') {
+            if (fixerJob.plot.verb.__typename === 'ItemVerbWrapper') {
                 handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
                 handleChange('plot.verb', fixerJob.plot.verb)
             } else {
                 handleChange('plot.plotSubject', {
                     name: '',
-                    type: Object.values(PlotItemType)[0],
-                    condition: Object.values(PlotItemCondition)[0],
+                    type: Object.values(ItemType)[0],
+                    condition: Object.values(ItemCondition)[0],
                     image: '',
                 })
                 handleChange('plot.verb', {
-                    __typename: 'PlotItemVerbWrapper',
-                    value: Object.values(PlotItemVerb)[0],
+                    __typename: 'ItemVerbWrapper',
+                    value: Object.values(ItemVerb)[0],
                 })
             }
         } else if (newCategory === 'GANG') {
@@ -254,7 +244,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 <TextField
                     fullWidth
                     label={t('common.name')}
-                    value={editedItem.name}
+                    value={editedTarget.name}
                     onChange={(e) => handleChange('name', e.target.value)}
                     variant="outlined"
                     sx={textFieldOutlinedStyle}
@@ -265,7 +255,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 <TextField
                     fullWidth
                     label={t('common.description')}
-                    value={editedItem.description}
+                    value={editedTarget.description}
                     onChange={(e) => handleChange('description', e.target.value)}
                     variant="outlined"
                     sx={textFieldOutlinedStyle}
@@ -276,13 +266,13 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 {/* Image (Main) */}
                 <Grid item xs={12} md={4}>
                     <ImageField
-                        image={editedItem.image}
-                        downloadName={editedItem.name}
+                        image={editedTarget.image}
+                        downloadName={editedTarget.name}
                         handleImageUploadClick={() => handleImageUploadClick(ImageFields.main)}
                         handleImageRemove={() => openDeleteImageDialog(ImageFields.main)}
                         toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.main)}
                         handleRegenerateClick={() => handleRegenerateClick(ImageFields.main)}
-                        canRegenerate={!!editedItem.description}
+                        canRegenerate={!!editedTarget.description}
                         isGeneratingImage={isGeneratingImage}
                     />
                 </Grid>
@@ -299,7 +289,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                             </InputLabel>
                             <Select
                                 labelId="difficulty-label"
-                                value={editedItem.difficulty || JobDifficulty.TYPICAL}
+                                value={editedTarget.difficulty || JobDifficulty.TYPICAL}
                                 onChange={(e) => handleChange('difficulty', e.target.value)}
                                 sx={selectStyle}
                             >
@@ -318,7 +308,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                             </InputLabel>
                             <Select
                                 labelId="plot-verb-label"
-                                value={editedItem.plot.verb.value}
+                                value={editedTarget.plot.verb.value}
                                 onChange={(e) => {
                                     handleChange('plot.verb.value', e.target.value)
                                 }}
@@ -338,321 +328,153 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                             </InputLabel>
                             <Select
                                 labelId="subject-category-label"
-                                value={getSubjectType()}
+                                value={editedTarget.plot.verb.__typename}
                                 onChange={handleChangeSubjectCategory}
                                 sx={selectStyle}
                             >
-                                <MenuItem value="CHARACTER">{t('fixerJobs.labels.plotCategory.character')}</MenuItem>
-                                <MenuItem value="ITEM">{t('fixerJobs.labels.plotCategory.item')}</MenuItem>
-                                <MenuItem value="GANG">{t('fixerJobs.labels.plotCategory.gang')}</MenuItem>
-                                <MenuItem value="BUILDING">{t('fixerJobs.labels.plotCategory.building')}</MenuItem>
+                                <MenuItem value="CharacterVerbWrapper">
+                                    {t('fixerJobs.labels.plotCategory.character')}
+                                </MenuItem>
+                                <MenuItem value="ItemVerbWrapper">{t('fixerJobs.labels.plotCategory.item')}</MenuItem>
+                                <MenuItem value="PlotGangVerbWrapper">
+                                    {t('fixerJobs.labels.plotCategory.gang')}
+                                </MenuItem>
+                                <MenuItem value="PlotBuildingVerbWrapper">
+                                    {t('fixerJobs.labels.plotCategory.building')}
+                                </MenuItem>
                             </Select>
                         </FormControl>
                     </Stack>
                 </Grid>
             </Grid>
             {/* --- CHARACTER SECTION --- */}
-            {getSubjectType() === 'CHARACTER' && (
+            {editedTarget.plot.verb.__typename === 'CharacterVerbWrapper' && (
                 <CardCharacter
-                    isGeneratingImage={isGeneratingImage}
+                    editedTarget={editedTarget}
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
-                    handleImageUploadClick={() => handleImageUploadClick(ImageFields.characterOrItem)}
-                    openDeleteImageDialog={() => openDeleteImageDialog(ImageFields.characterOrItem)}
                     toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.characterOrItem)}
-                    handleRegenerateClick={() => handleRegenerateClick(ImageFields.characterOrItem)}
                     formControlStyle={formControlStyle}
                     inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}
-                    hiddenFileInput={hiddenFileInput}
+                    handleChange={handleChange}
                     character={{
-                        name: {
-                            value: (editedItem.plot.plotSubject as PlotCharacter)?.name || '',
-                            onChange: (e) => handleChange('plot.plotSubject.name', e.target.value),
-                        },
-                        type: {
-                            value: (editedItem.plot.plotSubject as PlotCharacter)?.type || '',
-                            onChange: (e) => handleChange('plot.plotSubject.type', e.target.value),
-                        },
-                        attitude: {
-                            value: (editedItem.plot.plotSubject as PlotCharacter)?.attitude || '',
-                            onChange: (e) => handleChange('plot.plotSubject.attitude', e.target.value),
-                        },
-                        image: {
-                            image: (editedItem.plot?.plotSubject as PlotCharacter)?.image,
-                            main: true,
-                            canRegenerate:
-                                !!(editedItem.plot?.plotSubject as PlotCharacter)?.name &&
-                                !!(editedItem.plot?.plotSubject as PlotCharacter)?.attitude &&
-                                !!(editedItem.plot?.plotSubject as PlotCharacter)?.type,
-                        },
+                        ...(editedTarget.plot.plotSubject as Character),
+                        field: 'plot.plotSubject',
+                        chain: editedTarget.plot.plotSubject as Character,
+                        main: true,
                     }}
                 />
             )}
 
             {/* --- ITEM SECTION --- */}
-            {getSubjectType() === 'ITEM' && (
+            {editedTarget.plot.verb.__typename === 'ItemVerbWrapper' && (
                 <CardItem
-                    isGeneratingImage={isGeneratingImage}
+                    editedTarget={editedTarget}
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
-                    handleImageUploadClick={() => handleImageUploadClick(ImageFields.characterOrItem)}
-                    openDeleteImageDialog={() => openDeleteImageDialog(ImageFields.characterOrItem)}
                     toggleFullscreenImage={() => toggleFullscreenImage(ImageFields.characterOrItem)}
-                    handleRegenerateClick={() => handleRegenerateClick(ImageFields.characterOrItem)}
                     formControlStyle={formControlStyle}
                     inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}
-                    hiddenFileInput={hiddenFileInput}
+                    handleChange={handleChange}
                     item={{
-                        name: {
-                            value: (editedItem.plot.plotSubject as PlotItem)?.name || '',
-                            onChange: (e) => handleChange('plot.plotSubject.name', e.target.value),
-                        },
-                        type: {
-                            value: (editedItem.plot.plotSubject as PlotItem)?.type || '',
-                            onChange: (e) => handleChange('plot.plotSubject.type', e.target.value),
-                        },
-                        condition: {
-                            value: (editedItem.plot.plotSubject as PlotItem)?.condition || '',
-                            onChange: (e) => handleChange('plot.plotSubject.condition', e.target.value),
-                        },
-                        image: {
-                            image: (editedItem.plot?.plotSubject as PlotItem)?.image,
-                            main: true,
-                            canRegenerate:
-                                !!(editedItem.plot?.plotSubject as PlotItem)?.name &&
-                                !!(editedItem.plot?.plotSubject as PlotItem)?.condition &&
-                                !!(editedItem.plot?.plotSubject as PlotItem)?.type,
-                        },
+                        ...(editedTarget.plot.plotSubject as Item),
+                        field: 'plot.plotSubject',
+                        chain: editedTarget.plot.plotSubject as Item,
+                        main: true,
                     }}
                 />
             )}
 
             {/* --- GANG SECTION --- */}
-            {getSubjectType() === 'GANG' && (
+            {editedTarget.plot.verb.__typename === 'PlotGangVerbWrapper' && (
                 <CardGang
-                    editedItem={editedItem}
-                    isGeneratingImage={isGeneratingImage}
+                    editedTarget={editedTarget}
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
                     handleChange={handleChange}
-                    handleImageUploadClick={handleImageUploadClick}
-                    openDeleteImageDialog={openDeleteImageDialog}
                     toggleFullscreenImage={toggleFullscreenImage}
-                    handleRegenerateClick={handleRegenerateClick}
                     formControlStyle={formControlStyle}
                     inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}
-                    hiddenFileInput={hiddenFileInput}
                     gang={{
                         main: true,
                         handleGangChangeTarget: 'plot.plotSubject.gang',
-                        // (editedItem.plot.plotSubject as PlotGang).complication.character?.image
                         handleChangeGangComplicationCharacterTarget: 'plot.plotSubject.complication.character',
                         handleChangeGangComplicationItemTarget: 'plot.plotSubject.complication.item',
                         handleChangeGangComplicationTypeTarget: 'plot.plotSubject.complication.type',
-                        chainStarter: editedItem.plot.plotSubject as PlotGang,
-                        originalChainStarter: fixerJobs.find((job) => job.ID === editedItem.ID)?.plot
+                        chainStarter: editedTarget.plot.plotSubject as PlotGang,
+                        originalChainStarter: fixerJobs.find((job) => job.ID === editedTarget.ID)?.plot
                             .plotSubject as PlotGang,
                         character: {
+                            ...(editedTarget.plot.plotSubject as PlotGang).complication.character!,
                             check:
-                                (editedItem.plot.plotSubject as PlotGang)?.complication?.type?.includes('CHARACTER') ||
+                                (editedTarget.plot.plotSubject as PlotGang).complication.type.includes('CHARACTER') ||
                                 false,
-                            imageField: ImageFields.gangComplicationCharacter,
-                            name: {
-                                value: (editedItem.plot.plotSubject as PlotGang)?.complication?.character?.name || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotSubject.complication.character.name', e.target.value),
-                            },
-                            type: {
-                                value: (editedItem.plot.plotSubject as PlotGang)?.complication?.character?.type || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotSubject.complication.character.type', e.target.value),
-                            },
-                            attitude: {
-                                value:
-                                    (editedItem.plot.plotSubject as PlotGang)?.complication?.character?.attitude || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotSubject.complication.character.attitude', e.target.value),
-                            },
-                            image: {
-                                main: false,
-                                image: (editedItem.plot.plotSubject as PlotGang)?.complication?.character?.image || '',
-                                canRegenerate:
-                                    !!(editedItem.plot?.plotSubject as PlotGang)?.complication?.character?.name &&
-                                    !!(editedItem.plot?.plotSubject as PlotGang)?.complication?.character?.attitude &&
-                                    !!(editedItem.plot?.plotSubject as PlotGang)?.complication?.character?.type,
-                            },
+                            field: 'plot.plotSubject.complication.character',
+                            chain: (editedTarget.plot.plotSubject as PlotGang).complication.character,
                         },
                         item: {
+                            ...(editedTarget.plot.plotSubject as PlotGang).complication.item!,
                             check:
-                                (editedItem.plot.plotSubject as PlotGang)?.complication?.type?.includes('ITEM') ||
-                                false,
-                            imageField: ImageFields.gangComplicationItem,
-                            name: {
-                                value: (editedItem.plot.plotSubject as PlotGang)?.complication?.item?.name || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotSubject.complication.item.name', e.target.value),
-                            },
-                            type: {
-                                value: (editedItem.plot.plotSubject as PlotGang)?.complication?.item?.type || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotSubject.complication.item.type', e.target.value),
-                            },
-                            condition: {
-                                value: (editedItem.plot.plotSubject as PlotGang)?.complication?.item?.condition || '',
-                                onChange: (e) =>
-                                    handleChange('plot.plotSubject.complication.item.condition', e.target.value),
-                            },
-                            image: {
-                                main: false,
-                                image: (editedItem.plot.plotSubject as PlotGang)?.complication?.item?.image || '',
-                                canRegenerate:
-                                    !!(editedItem.plot?.plotSubject as PlotGang)?.complication?.item?.name &&
-                                    !!(editedItem.plot?.plotSubject as PlotGang)?.complication?.item?.condition &&
-                                    !!(editedItem.plot?.plotSubject as PlotGang)?.complication?.item?.type,
-                            },
+                                (editedTarget.plot.plotSubject as PlotGang).complication.type.includes('ITEM') || false,
+                            field: 'plot.plotSubject.complication.item',
+                            chain: (editedTarget.plot.plotSubject as PlotGang).complication.item,
                         },
                     }}
                 />
             )}
             {/* --- BUILDING SECTION --- */}
             <CardBuilding
-                editedItem={editedItem}
-                isGeneratingImage={isGeneratingImage}
+                editedTarget={editedTarget}
                 textFieldOutlinedStyle={textFieldOutlinedStyle}
                 handleChange={handleChange}
-                handleImageUploadClick={handleImageUploadClick}
-                openDeleteImageDialog={openDeleteImageDialog}
                 toggleFullscreenImage={toggleFullscreenImage}
                 formControlStyle={formControlStyle}
                 inputLabelStyle={inputLabelStyle}
                 selectStyle={selectStyle}
-                hiddenFileInput={hiddenFileInput}
-                handleRegenerateClick={handleRegenerateClick}
                 building={{
                     handleBuildingChangeTarget: 'plot.plotBuilding.building',
                     handleChangeBuildingComplicationCharacterTarget: 'plot.plotBuilding.complication.character',
                     handleChangeBuildingComplicationItemTarget: 'plot.plotBuilding.complication.item',
                     handleChangeBuildingComplicationTypeTarget: 'plot.plotBuilding.complication.type',
-                    chainStarter: editedItem.plot.plotBuilding,
-                    originalChainStarter: fixerJobs.find((job) => job.ID === editedItem.ID)?.plot
+                    chainStarter: editedTarget.plot.plotBuilding,
+                    originalChainStarter: fixerJobs.find((job) => job.ID === editedTarget.ID)?.plot
                         .plotBuilding as PlotBuilding,
                     character: {
-                        check: editedItem.plot.plotBuilding.complication.type.includes('CHARACTER') || false,
-                        imageField: ImageFields.buildingComplicationCharacter,
-                        name: {
-                            value: editedItem.plot.plotBuilding.complication.character?.name || '',
-                            onChange: (e) =>
-                                handleChange('plot.plotBuilding.complication.character.name', e.target.value),
-                        },
-                        type: {
-                            value: editedItem.plot.plotBuilding.complication.character?.type || '',
-                            onChange: (e) =>
-                                handleChange('plot.plotBuilding.complication.character.type', e.target.value),
-                        },
-                        attitude: {
-                            value: editedItem.plot.plotBuilding.complication.character?.attitude || '',
-                            onChange: (e) =>
-                                handleChange('plot.plotBuilding.complication.character.attitude', e.target.value),
-                        },
-                        image: {
-                            main: false,
-                            image: editedItem.plot.plotBuilding.complication.character?.image || '',
-                            canRegenerate:
-                                !!editedItem.plot.plotBuilding.complication.character?.name &&
-                                !!editedItem.plot.plotBuilding.complication.character?.attitude &&
-                                !!editedItem.plot.plotBuilding.complication.character?.type,
-                        },
+                        ...(editedTarget.plot.plotBuilding.complication.character as Character),
+                        check: editedTarget.plot.plotBuilding.complication.type.includes('CHARACTER') || false,
+                        field: 'plot.plotBuilding.complication.character',
+                        chain: editedTarget.plot.plotBuilding.complication.character,
                     },
                     item: {
-                        check: editedItem.plot.plotBuilding.complication.type.includes('ITEM') || false,
-                        imageField: ImageFields.buildingComplicationItem,
-                        name: {
-                            value: editedItem.plot.plotBuilding.complication.item?.name || '',
-                            onChange: (e) => handleChange('plot.plotBuilding.complication.item.name', e.target.value),
-                        },
-                        type: {
-                            value: editedItem.plot.plotBuilding.complication.item?.type || '',
-                            onChange: (e) => handleChange('plot.plotBuilding.complication.item.type', e.target.value),
-                        },
-                        condition: {
-                            value: editedItem.plot.plotBuilding.complication.item?.condition || '',
-                            onChange: (e) =>
-                                handleChange('plot.plotBuilding.complication.item.condition', e.target.value),
-                        },
-                        image: {
-                            main: false,
-                            image: editedItem.plot.plotBuilding.complication.item?.image || '',
-                            canRegenerate:
-                                !!editedItem.plot.plotBuilding.complication.item?.name &&
-                                !!editedItem.plot.plotBuilding.complication.item?.condition &&
-                                !!editedItem.plot.plotBuilding.complication.item?.type,
-                        },
+                        ...(editedTarget.plot.plotBuilding.complication.item as Item),
+                        check: editedTarget.plot.plotBuilding.complication.type.includes('ITEM') || false,
+                        field: 'plot.plotBuilding.complication.item',
+                        chain: editedTarget.plot.plotBuilding.complication.item,
                     },
                 }}
             />
 
             {/* --- MAIN COMPLICATION SECTION --- */}
             <CardMainComplication
-                editedItem={editedItem}
-                isGeneratingImage={isGeneratingImage}
+                editedTarget={editedTarget}
                 textFieldOutlinedStyle={textFieldOutlinedStyle}
                 handleChange={handleChange}
-                handleImageUploadClick={handleImageUploadClick}
-                openDeleteImageDialog={openDeleteImageDialog}
                 toggleFullscreenImage={toggleFullscreenImage}
                 formControlStyle={formControlStyle}
                 inputLabelStyle={inputLabelStyle}
                 selectStyle={selectStyle}
-                hiddenFileInput={hiddenFileInput}
-                handleRegenerateClick={handleRegenerateClick}
                 complication={{
                     character: {
-                        check: editedItem.plot.plotComplication.type.includes('CHARACTER') || false,
-                        imageField: ImageFields.mainComplicationCharacter,
-                        name: {
-                            value: editedItem.plot.plotComplication.character?.name || '',
-                            onChange: (e) => handleChange('plot.plotComplication.character.name', e.target.value),
-                        },
-                        type: {
-                            value: editedItem.plot.plotComplication.character?.type || '',
-                            onChange: (e) => handleChange('plot.plotComplication.character.type', e.target.value),
-                        },
-                        attitude: {
-                            value: editedItem.plot.plotComplication.character?.attitude || '',
-                            onChange: (e) => handleChange('plot.plotComplication.character.attitude', e.target.value),
-                        },
-                        image: {
-                            main: false,
-                            image: editedItem.plot.plotComplication.character?.image || '',
-                            canRegenerate:
-                                !!editedItem.plot.plotComplication.character?.name &&
-                                !!editedItem.plot.plotComplication.character?.attitude &&
-                                !!editedItem.plot.plotComplication.character?.type,
-                        },
+                        ...(editedTarget.plot.plotComplication.character as Character),
+                        check: editedTarget.plot.plotComplication.type.includes('CHARACTER') || false,
+                        field: 'plot.plotComplication.character',
+                        chain: editedTarget.plot.plotComplication.character,
                     },
                     item: {
-                        check: editedItem.plot.plotComplication.type.includes('ITEM') || false,
-                        imageField: ImageFields.mainComplicationItem,
-                        name: {
-                            value: editedItem.plot.plotComplication.item?.name || '',
-                            onChange: (e) => handleChange('plot.plotComplication.item.name', e.target.value),
-                        },
-                        type: {
-                            value: editedItem.plot.plotComplication.item?.type || '',
-                            onChange: (e) => handleChange('plot.plotComplication.item.type', e.target.value),
-                        },
-                        condition: {
-                            value: editedItem.plot.plotComplication.item?.condition || '',
-                            onChange: (e) => handleChange('plot.plotComplication.item.condition', e.target.value),
-                        },
-                        image: {
-                            main: false,
-                            image: editedItem.plot.plotComplication.item?.image || '',
-                            canRegenerate:
-                                !!editedItem.plot.plotComplication.item?.name &&
-                                !!editedItem.plot.plotComplication.item?.condition &&
-                                !!editedItem.plot.plotComplication.item?.type,
-                        },
+                        ...(editedTarget.plot.plotComplication.item as Item),
+                        check: editedTarget.plot.plotComplication.type.includes('ITEM') || false,
+                        field: 'plot.plotComplication.item',
+                        chain: editedTarget.plot.plotComplication.item,
                     },
                 }}
             />

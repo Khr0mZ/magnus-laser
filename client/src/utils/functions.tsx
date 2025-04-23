@@ -1,7 +1,6 @@
 import {
     Apartment,
     Badge,
-    BusinessCenter,
     Check,
     Close,
     GpsFixed,
@@ -9,6 +8,7 @@ import {
     Hub,
     Nightlife,
     Settings,
+    Warehouse,
 } from '@mui/icons-material'
 import { TFunction } from 'i18next'
 import { BuildingType } from '../graphql/types'
@@ -78,9 +78,9 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />
         )
-    if (module === ModuleTypes.CORPORATION)
+    if (module === ModuleTypes.ITEM)
         return (
-            <BusinessCenter
+            <Warehouse
                 sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />

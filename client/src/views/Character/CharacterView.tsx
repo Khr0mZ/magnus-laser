@@ -3,48 +3,48 @@ import { useDocumentTitle } from '@uidotdev/usehooks'
 import { isEqual } from 'lodash'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ClearAllButton from '../../components/ClearAllButton'
-import EditDialog from '../../components/common/EditDialog/EditDialog'
-import GridView from '../../components/common/GridView'
-import TableView from '../../components/common/TableView'
-import ViewToggle from '../../components/common/ViewToggle'
-import { WarningDialog } from '../../components/common/WarningDialog'
-import GenerateButton from '../../components/GenerateButton'
-import StorageBanner from '../../components/StorageBanner'
-import { useData } from '../../contexts/dataHooks'
+import ClearAllButton from '../../components/ClearAllButton.tsx'
+import EditDialog from '../../components/common/EditDialog/EditDialog.tsx'
+import GridView from '../../components/common/GridView.tsx'
+import TableView from '../../components/common/TableView.tsx'
+import ViewToggle from '../../components/common/ViewToggle.tsx'
+import { WarningDialog } from '../../components/common/WarningDialog.tsx'
+import GenerateButton from '../../components/GenerateButton.tsx'
+import StorageBanner from '../../components/StorageBanner.tsx'
+import { useData } from '../../contexts/dataHooks.ts'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
-import colors from '../../utils/colors'
-import { ModuleTypes } from '../../utils/constants'
-import { generateRandomGang } from '../../utils/generators/generatorGang'
-import { clearGangs, saveGangs, saveViewPreference } from '../../utils/storage'
+import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types.ts'
+import colors from '../../utils/colors.ts'
+import { ModuleTypes } from '../../utils/constants.ts'
+import { generateRandomCharacter } from '../../utils/generators/generatorCharacter.ts'
+import { clearCharacters, saveCharacters, saveViewPreference } from '../../utils/storage.ts'
 
-// Add window.gangsDataLoaded declaration
+// Add window.charactersDataLoaded declaration
 declare global {
     interface Window {
-        gangsDataLoaded?: boolean
+        charactersDataLoaded?: boolean
     }
 }
 
-const GangView = () => {
+const CharacterView = () => {
     const { t } = useTranslation()
-    useDocumentTitle(`Magnus Laser - ${t('modules.GANG')}`)
+    useDocumentTitle(`Magnus Laser - ${t('modules.CHARACTER')}`)
     const { readerMode, viewPreferences, viewPrefsLoaded, updateViewPreference } = useUserPreferences()
-    const { gangs: dataGangs, setGangs: setDataGangs, isLoading } = useData()
-    const [gangs, setGangs] = useState<Gang[]>([])
+    const { characters: dataCharacters, setCharacters: setDataCharacters, isLoading } = useData()
+    const [characters, setCharacters] = useState<Character[]>([])
 
     // Use view preference from context
     const [compactView, setCompactView] = useState(() => {
-        return viewPrefsLoaded ? viewPreferences[ModuleTypes.GANG] : false
+        return viewPrefsLoaded ? viewPreferences[ModuleTypes.CHARACTER] : false
     })
 
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-    const [gangToDelete, setGangToDelete] = useState<number | null>(null)
+    const [characterToDelete, setCharacterToDelete] = useState<number | null>(null)
     const [editDialogOpen, setEditDialogOpen] = useState(false)
-    const [gangToEdit, setGangToEdit] = useState<Gang | null>(null)
-    const prevGangsRef = useRef<number>(0)
-    const prevGangsDataRef = useRef<Gang[]>([])
+    const [characterToEdit, setCharacterToEdit] = useState<Character | null>(null)
+    const prevCharactersRef = useRef<number>(0)
+    const prevCharactersDataRef = useRef<Character[]>([])
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
     const [isGenerating, setIsGenerating] = useState(false)
@@ -55,7 +55,7 @@ const GangView = () => {
     // Update local state when view preferences change
     useEffect(() => {
         if (viewPrefsLoaded) {
-            setCompactView(viewPreferences[ModuleTypes.GANG])
+            setCompactView(viewPreferences[ModuleTypes.CHARACTER])
         }
     }, [viewPreferences, viewPrefsLoaded])
 
@@ -68,17 +68,17 @@ const GangView = () => {
         syncingFromContextRef.current = true
 
         // Always sync with context data, even if empty
-        setGangs(dataGangs)
-        prevGangsRef.current = dataGangs.length
-        prevGangsDataRef.current = structuredClone(dataGangs)
+        setCharacters(dataCharacters)
+        prevCharactersRef.current = dataCharacters.length
+        prevCharactersDataRef.current = structuredClone(dataCharacters)
 
         // Reset the syncing flag after state update
         setTimeout(() => {
             syncingFromContextRef.current = false
         }, 0)
-    }, [dataGangs])
+    }, [dataCharacters])
 
-    // Save gangs to storage when they change
+    // Save characters to storage when they change
     useEffect(() => {
         // Skip during component initialization
         if (firstMountRef.current) {
@@ -90,40 +90,40 @@ const GangView = () => {
         if (syncingFromContextRef.current) return
 
         // Check if the data has actually changed to avoid unnecessary saves
-        if (isEqual(gangs, prevGangsDataRef.current)) return
+        if (isEqual(characters, prevCharactersDataRef.current)) return
 
         // Set updating context flag
         updatingContextRef.current = true
 
         // Always save the data when it exists
-        if (gangs.length > 0) {
-            saveGangs(gangs)
-            setDataGangs(gangs) // Update context data
-        } else if (prevGangsRef.current > 0 && gangs.length === 0 && !isLoading) {
-            // Only clear if we previously had gangs and now we don't
+        if (characters.length > 0) {
+            saveCharacters(characters)
+            setDataCharacters(characters) // Update context data
+        } else if (prevCharactersRef.current > 0 && characters.length === 0 && !isLoading) {
+            // Only clear if we previously had characters and now we don't
             // AND we're not still loading data
-            clearGangs()
-            setDataGangs([])
+            clearCharacters()
+            setDataCharacters([])
         }
 
         // Update references
-        prevGangsRef.current = gangs.length
-        prevGangsDataRef.current = structuredClone(gangs)
+        prevCharactersRef.current = characters.length
+        prevCharactersDataRef.current = structuredClone(characters)
 
         // Reset the context updating flag after state update
         setTimeout(() => {
             updatingContextRef.current = false
         }, 0)
-    }, [gangs, setDataGangs, isLoading])
+    }, [characters, setDataCharacters, isLoading])
 
-    const handleGenerateGang = async () => {
+    const handleGenerateCharacter = async () => {
         setIsGenerating(true)
         try {
-            const newGang = await generateRandomGang(t)
-            setGangs((prevGangs) => [newGang, ...prevGangs])
+            const newCharacter = await generateRandomCharacter()
+            setCharacters((prevCharacters) => [newCharacter, ...prevCharacters])
             setIsSaving(true)
         } catch (error) {
-            console.warn('Failed to generate gang:', error)
+            console.warn('Failed to generate character:', error)
         } finally {
             setIsGenerating(false)
         }
@@ -134,9 +134,9 @@ const GangView = () => {
     }
 
     const handleClearConfirm = async () => {
-        setGangs([])
-        await clearGangs()
-        setDataGangs([]) // Update context data
+        setCharacters([])
+        await clearCharacters()
+        setDataCharacters([]) // Update context data
         setIsSaving(true)
         setClearAllDialogOpen(false)
     }
@@ -146,39 +146,41 @@ const GangView = () => {
     }
 
     const handleDeleteClick = (index: number) => {
-        setGangToDelete(index)
+        setCharacterToDelete(index)
         setDeleteDialogOpen(true)
     }
 
     const handleDeleteConfirm = () => {
-        if (gangToDelete !== null) {
-            setGangs((prevGangs) => prevGangs.filter((_, i) => i !== gangToDelete))
+        if (characterToDelete !== null) {
+            setCharacters((prevCharacters) => prevCharacters.filter((_, i) => i !== characterToDelete))
             setIsSaving(true)
             setDeleteDialogOpen(false)
-            setGangToDelete(null)
+            setCharacterToDelete(null)
         }
     }
 
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false)
-        setGangToDelete(null)
+        setCharacterToDelete(null)
     }
 
     const handleEditClick = (index: number) => {
-        setGangToEdit(gangs[index])
+        setCharacterToEdit(characters[index])
         setEditDialogOpen(true)
     }
 
-    const handleEditSave = (editedTarget: Gang) => {
-        setGangs((prevGangs) => prevGangs.map((gang) => (gang.ID === editedTarget.ID ? editedTarget : gang)))
+    const handleEditSave = (editedTarget: Character) => {
+        setCharacters((prevCharacters) =>
+            prevCharacters.map((character) => (character.ID === editedTarget.ID ? editedTarget : character))
+        )
         setIsSaving(true)
         setEditDialogOpen(false)
-        setGangToEdit(null)
+        setCharacterToEdit(null)
     }
 
     const handleEditCancel = () => {
         setEditDialogOpen(false)
-        setGangToEdit(null)
+        setCharacterToEdit(null)
     }
 
     const handleViewChange = async (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
@@ -188,8 +190,8 @@ const GangView = () => {
         setCompactView(isTableView)
 
         // Save view preference to storage and update context
-        await saveViewPreference(ModuleTypes.GANG, isTableView)
-        updateViewPreference(ModuleTypes.GANG, isTableView)
+        await saveViewPreference(ModuleTypes.CHARACTER, isTableView)
+        updateViewPreference(ModuleTypes.CHARACTER, isTableView)
     }
 
     // Show loading spinner while data is loading
@@ -222,14 +224,14 @@ const GangView = () => {
                 <Typography
                     variant="h3"
                     className="glitch-text"
-                    data-text={t('gangs.title')}
+                    data-text={t('characters.title')}
                     sx={{
                         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                         flexGrow: 1,
                     }}
                 >
-                    {t('gangs.title')}
+                    {t('characters.title')}
                 </Typography>
                 {viewPrefsLoaded && <ViewToggle compactView={compactView} onViewChange={handleViewChange} />}
             </Stack>
@@ -241,14 +243,14 @@ const GangView = () => {
                     mb: 1,
                 }}
             >
-                {t('modules.GANG_DESCRIPTION')}
+                {t('modules.CHARACTER_DESCRIPTION')}
             </Typography>
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
-                <GenerateButton isGenerating={isGenerating} handleGenerate={handleGenerateGang} />
-                <ClearAllButton handleClearAllClick={handleClearAllClick} disabled={gangs.length === 0} />
+                <GenerateButton isGenerating={isGenerating} handleGenerate={handleGenerateCharacter} />
+                <ClearAllButton handleClearAllClick={handleClearAllClick} disabled={characters.length === 0} />
             </Stack>
 
-            {gangs.length === 0 ? (
+            {characters.length === 0 ? (
                 <Typography
                     variant="body1"
                     sx={{
@@ -264,20 +266,20 @@ const GangView = () => {
                         position: 'relative',
                     }}
                 >
-                    {t('common.noItems', { type: t('modules.GANG').toLowerCase() })}
+                    {t('common.noItems', { type: t('modules.CHARACTER').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
                 <TableView
-                    targetArray={gangs}
+                    targetArray={characters}
                     onDelete={handleDeleteClick}
-                    moduleType={ModuleTypes.GANG}
+                    moduleType={ModuleTypes.CHARACTER}
                     onEdit={handleEditClick}
                 />
             ) : (
                 <GridView
-                    targetArray={gangs}
+                    targetArray={characters}
                     onDelete={handleDeleteClick}
-                    moduleType={ModuleTypes.GANG}
+                    moduleType={ModuleTypes.CHARACTER}
                     onEdit={handleEditClick}
                 />
             )}
@@ -288,8 +290,10 @@ const GangView = () => {
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 title={t('common.deleteConfirmTitle')}
-                message={t('common.deleteConfirmMessage', { type: t(`modules.${ModuleTypes.GANG}`).toLowerCase() })}
-                moduleType={ModuleTypes.GANG}
+                message={t('common.deleteConfirmMessage', {
+                    type: t(`modules.${ModuleTypes.CHARACTER}`).toLowerCase(),
+                })}
+                moduleType={ModuleTypes.CHARACTER}
                 isDelete={true}
                 isClearAll={false}
             />
@@ -298,8 +302,10 @@ const GangView = () => {
                 onClose={handleClearCancel}
                 onConfirm={handleClearConfirm}
                 title={t('common.clearAllConfirmTitle')}
-                message={t('common.clearAllConfirmMessage', { type: t(`modules.${ModuleTypes.GANG}`).toLowerCase() })}
-                moduleType={ModuleTypes.GANG}
+                message={t('common.clearAllConfirmMessage', {
+                    type: t(`modules.${ModuleTypes.CHARACTER}`).toLowerCase(),
+                })}
+                moduleType={ModuleTypes.CHARACTER}
                 isDelete={true}
                 isClearAll={true}
             />
@@ -309,16 +315,16 @@ const GangView = () => {
                 open={editDialogOpen}
                 onClose={handleEditCancel}
                 onSave={handleEditSave as (target: Gang | Building | FixerJob | Character | Item) => void}
-                target={gangToEdit}
-                moduleType={ModuleTypes.GANG}
+                target={characterToEdit}
+                moduleType={ModuleTypes.CHARACTER}
                 isGeneratingImage={isGeneratingImage}
                 setIsGeneratingImage={setIsGeneratingImage}
                 setIsSaving={setIsSaving}
-                setGangs={setGangs}
-                setGangToEdit={setGangToEdit}
+                setCharacters={setCharacters}
+                setCharacterToEdit={setCharacterToEdit}
             />
         </Container>
     )
 }
 
-export default GangView
+export default CharacterView

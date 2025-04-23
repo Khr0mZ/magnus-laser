@@ -21,7 +21,7 @@ import { getGangColorValue } from '../../../utils/functions'
 import ImageField from './ImageField'
 
 export type FormGangProps = {
-    editedItem: Gang
+    editedTarget: Gang
     moduleType: ModuleTypes
     setIsSaving: (isSaving: boolean) => void
     isGeneratingImage?: boolean
@@ -41,7 +41,7 @@ export type FormGangProps = {
 
 export const FormGang = (props: FormGangProps) => {
     const {
-        editedItem,
+        editedTarget,
         moduleType,
         setIsSaving,
         isGeneratingImage,
@@ -68,7 +68,7 @@ export const FormGang = (props: FormGangProps) => {
                 <TextField
                     fullWidth
                     label={t('gangs.labels.name')}
-                    value={editedItem.name}
+                    value={editedTarget.name}
                     onChange={(e) => handleChange('name', e.target.value)}
                     variant="outlined"
                     sx={textFieldOutlinedStyle}
@@ -79,7 +79,7 @@ export const FormGang = (props: FormGangProps) => {
                 <TextField
                     fullWidth
                     label={t('common.description')}
-                    value={editedItem.description}
+                    value={editedTarget.description}
                     onChange={(e) => handleChange('description', e.target.value)}
                     variant="outlined"
                     sx={textFieldOutlinedStyle}
@@ -97,7 +97,7 @@ export const FormGang = (props: FormGangProps) => {
                             </InputLabel>
                             <Select
                                 labelId="type-label"
-                                value={editedItem.type || ''}
+                                value={editedTarget.type || ''}
                                 onChange={(e) => handleChange('type', e.target.value)}
                                 label={t('gangs.labels.type')}
                                 sx={selectStyle}
@@ -113,7 +113,7 @@ export const FormGang = (props: FormGangProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('gangs.labels.cyberwareQuality')}</InputLabel>
                             <Select
-                                value={editedItem.cyberwareQuality || ''}
+                                value={editedTarget.cyberwareQuality || ''}
                                 onChange={(e) => handleChange('cyberwareQuality', e.target.value)}
                                 label={t('gangs.labels.cyberwareQuality')}
                                 sx={selectStyle}
@@ -129,7 +129,7 @@ export const FormGang = (props: FormGangProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('gangs.labels.sin')}</InputLabel>
                             <Select
-                                value={editedItem.sin || ''}
+                                value={editedTarget.sin || ''}
                                 onChange={(e) => handleChange('sin', e.target.value)}
                                 label={t('gangs.labels.sin')}
                                 sx={selectStyle}
@@ -148,7 +148,7 @@ export const FormGang = (props: FormGangProps) => {
                             fullWidth
                             label={t('gangs.labels.skill')}
                             type="tel"
-                            value={editedItem.skill || 0}
+                            value={editedTarget.skill || 0}
                             onChange={(e) => handleChange('skill', parseInt(e.target.value, 10) || 0)}
                             variant="outlined"
                             sx={textFieldOutlinedStyle}
@@ -158,10 +158,10 @@ export const FormGang = (props: FormGangProps) => {
                             fullWidth
                             label={t('gangs.labels.weapons.spb', 'Weapons D6')}
                             type="tel"
-                            value={editedItem.weapons?.d6 || 0}
+                            value={editedTarget.weapons?.d6 || 0}
                             onChange={(e) =>
                                 handleChange('weapons', {
-                                    ...editedItem.weapons,
+                                    ...editedTarget.weapons,
                                     d6: parseInt(e.target.value, 10) || 0,
                                 })
                             }
@@ -173,10 +173,10 @@ export const FormGang = (props: FormGangProps) => {
                             fullWidth
                             label={t('gangs.labels.armor.spb', 'Armor SPB')}
                             type="tel"
-                            value={editedItem.armor?.spb || 0}
+                            value={editedTarget.armor?.spb || 0}
                             onChange={(e) =>
                                 handleChange('armor', {
-                                    ...editedItem.armor,
+                                    ...editedTarget.armor,
                                     spb: parseInt(e.target.value, 10) || 0,
                                 })
                             }
@@ -188,10 +188,10 @@ export const FormGang = (props: FormGangProps) => {
                             fullWidth
                             label={t('gangs.labels.armor.h', 'Armor H')}
                             type="tel"
-                            value={editedItem.armor?.h || 0}
+                            value={editedTarget.armor?.h || 0}
                             onChange={(e) =>
                                 handleChange('armor', {
-                                    ...editedItem.armor,
+                                    ...editedTarget.armor,
                                     h: parseInt(e.target.value, 10) || 0,
                                 })
                             }
@@ -203,7 +203,7 @@ export const FormGang = (props: FormGangProps) => {
                             fullWidth
                             label={t('gangs.labels.secretive')}
                             type="tel"
-                            value={editedItem.secretive || 0}
+                            value={editedTarget.secretive || 0}
                             onChange={(e) => handleChange('secretive', parseInt(e.target.value, 10) || 0)}
                             variant="outlined"
                             sx={textFieldOutlinedStyle}
@@ -215,7 +215,7 @@ export const FormGang = (props: FormGangProps) => {
                             <InputLabel sx={inputLabelStyle}>{t('gangs.labels.color')}</InputLabel>
                             <Select
                                 labelId="color-label"
-                                value={editedItem.color || ''}
+                                value={editedTarget.color || ''}
                                 onChange={(e) => handleChange('color', e.target.value)}
                                 label={t('gangs.labels.color')}
                                 sx={selectStyle}
@@ -245,10 +245,10 @@ export const FormGang = (props: FormGangProps) => {
                                 {t('gangs.labels.knownForPart1', 'Known For Part 1')}
                             </InputLabel>
                             <Select
-                                value={editedItem.knownFor?.knownForPart1 || ''}
+                                value={editedTarget.knownFor?.knownForPart1 || ''}
                                 onChange={(e) =>
                                     handleChange('knownFor', {
-                                        ...editedItem.knownFor,
+                                        ...editedTarget.knownFor,
                                         knownForPart1: e.target.value,
                                     })
                                 }
@@ -268,10 +268,10 @@ export const FormGang = (props: FormGangProps) => {
                                 {t('gangs.labels.knownForPart2', 'Known For Part 2')}
                             </InputLabel>
                             <Select
-                                value={editedItem.knownFor?.knownForPart2 || ''}
+                                value={editedTarget.knownFor?.knownForPart2 || ''}
                                 onChange={(e) =>
                                     handleChange('knownFor', {
-                                        ...editedItem.knownFor,
+                                        ...editedTarget.knownFor,
                                         knownForPart2: e.target.value,
                                     })
                                 }
@@ -291,7 +291,7 @@ export const FormGang = (props: FormGangProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('gangs.labels.status')}</InputLabel>
                             <Select
-                                value={editedItem.status || ''}
+                                value={editedTarget.status || ''}
                                 onChange={(e) => handleChange('status', e.target.value)}
                                 label={t('gangs.labels.status')}
                                 sx={selectStyle}
@@ -308,7 +308,7 @@ export const FormGang = (props: FormGangProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('gangs.labels.flaw')}</InputLabel>
                             <Select
-                                value={editedItem.flaw || ''}
+                                value={editedTarget.flaw || ''}
                                 onChange={(e) => handleChange('flaw', e.target.value)}
                                 label={t('gangs.labels.flaw')}
                                 sx={selectStyle}
@@ -326,7 +326,7 @@ export const FormGang = (props: FormGangProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('gangs.labels.currentAttitude')}</InputLabel>
                             <Select
-                                value={editedItem.currentAttitude || ''}
+                                value={editedTarget.currentAttitude || ''}
                                 onChange={(e) => handleChange('currentAttitude', e.target.value)}
                                 label={t('gangs.labels.currentAttitude')}
                                 sx={selectStyle}
@@ -342,7 +342,7 @@ export const FormGang = (props: FormGangProps) => {
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('gangs.labels.newsTheLeaderIsReceiving')}</InputLabel>
                             <Select
-                                value={editedItem.newsTheLeaderIsReceiving || ''}
+                                value={editedTarget.newsTheLeaderIsReceiving || ''}
                                 onChange={(e) => handleChange('newsTheLeaderIsReceiving', e.target.value)}
                                 label={t('gangs.labels.newsTheLeaderIsReceiving')}
                                 sx={selectStyle}
@@ -360,15 +360,15 @@ export const FormGang = (props: FormGangProps) => {
             {/* Image */}
             <Grid item xs={12} md={4}>
                 <ImageField
-                    image={editedItem.image}
-                    downloadName={editedItem.name}
+                    image={editedTarget.image}
+                    downloadName={editedTarget.name}
                     handleImageUploadClick={handleImageUploadClick}
                     handleImageRemove={openDeleteImageDialog}
                     toggleFullscreenImage={toggleFullscreenImage}
                     handleRegenerateClick={() => {
                         if (setIsGeneratingImage && setGangs) {
                             handleRegenerateImage(
-                                editedItem,
+                                editedTarget,
                                 readerMode,
                                 setIsGeneratingImage,
                                 setIsSaving,
@@ -380,7 +380,7 @@ export const FormGang = (props: FormGangProps) => {
                             )
                         }
                     }}
-                    canRegenerate={!!editedItem.description}
+                    canRegenerate={!!editedTarget.description}
                     isGeneratingImage={isGeneratingImage}
                 />
             </Grid>

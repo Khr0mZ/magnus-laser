@@ -539,7 +539,7 @@ export const generateRandomBuilding = async (
             newBuilding.name = generateLocalBuildingName(type, style, ownership, isAbandoned) // Use fallback function
         }
     } catch (error) {
-        console.error(`Error generating API name for building ${newBuilding.name}:`, error)
+        console.warn(`Error generating API name for building ${newBuilding.name}:`, error)
         newBuilding.name = generateLocalBuildingName(type, style, ownership, isAbandoned) // Use fallback function
     }
 
@@ -557,7 +557,7 @@ export const generateRandomBuilding = async (
             newBuilding.description = generateLocalBuildingDescription(t, newBuilding) // Use fallback function
         }
     } catch (error) {
-        console.error(`Error generating API description for building ${newBuilding.name}:`, error)
+        console.warn(`Error generating API description for building ${newBuilding.name}:`, error)
         newBuilding.description = generateLocalBuildingDescription(t, newBuilding) // Use fallback function
     }
 
@@ -575,7 +575,7 @@ export const generateRandomBuilding = async (
                 newBuilding.image = '' // Ensure it's an empty string on failure
             }
         } catch (error) {
-            console.error(`Error generating or converting image for building ${newBuilding.name}:`, error)
+            console.warn(`Error generating or converting image for building ${newBuilding.name}:`, error)
             newBuilding.image = '' // Ensure it's an empty string on error
         }
     } else {

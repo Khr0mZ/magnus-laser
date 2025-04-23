@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Building, FixerJob, Gang } from '../graphql/types'
-import { DATA_IMPORT_EVENT, loadBuildings, loadFixerJobs, loadGangs } from '../utils/storage'
+import { Building, Character, FixerJob, Gang, Item } from '../graphql/types'
+import { DATA_IMPORT_EVENT, loadBuildings, loadCharacters, loadFixerJobs, loadGangs, loadItems } from '../utils/storage'
 import { DataContext } from './dataHooks'
 
 interface DataProviderProps {
@@ -11,6 +11,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     const [buildings, setBuildings] = useState<Building[]>([])
     const [gangs, setGangs] = useState<Gang[]>([])
     const [fixerJobs, setFixerJobs] = useState<FixerJob[]>([])
+    const [items, setItems] = useState<Item[]>([])
+    const [characters, setCharacters] = useState<Character[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     // Initial data loading
@@ -22,11 +24,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
                 const loadedBuildings = await loadBuildings()
                 const loadedGangs = await loadGangs()
                 const loadedFixerJobs = await loadFixerJobs()
+                const loadedItems = await loadItems()
+                const loadedCharacters = await loadCharacters()
                 setBuildings(loadedBuildings)
                 setGangs(loadedGangs)
                 setFixerJobs(loadedFixerJobs)
+                setItems(loadedItems)
+                setCharacters(loadedCharacters)
             } catch (error) {
-                console.error('Error loading data:', error)
+                console.warn('Error loading data:', error)
             } finally {
                 setIsLoading(false)
             }
@@ -43,11 +49,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
                 const loadedBuildings = await loadBuildings()
                 const loadedGangs = await loadGangs()
                 const loadedFixerJobs = await loadFixerJobs()
+                const loadedItems = await loadItems()
+                const loadedCharacters = await loadCharacters()
                 setBuildings(loadedBuildings)
                 setGangs(loadedGangs)
                 setFixerJobs(loadedFixerJobs)
+                setItems(loadedItems)
+                setCharacters(loadedCharacters)
             } catch (error) {
-                console.error('Error reloading data after import:', error)
+                console.warn('Error reloading data after import:', error)
             } finally {
                 setIsLoading(false)
             }
@@ -63,10 +73,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         buildings,
         gangs,
         fixerJobs,
+        items,
+        characters,
         isLoading,
         setBuildings,
         setGangs,
         setFixerJobs,
+        setItems,
+        setCharacters,
     }
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>

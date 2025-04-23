@@ -145,7 +145,7 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
             try {
                 scrollbarInstance.update()
             } catch (error) {
-                console.error('Error updating scrollbar:', error)
+                console.warn('Error updating scrollbar:', error)
             }
 
             updatePendingRef.current = false
@@ -206,7 +206,7 @@ const CustomScrollbar: React.FC<CustomScrollbarProps> = ({
             checkIfScrollingNeeded()
             updateContainerPadding()
         } catch (error) {
-            console.error('Error initializing smooth-scrollbar:', error)
+            console.warn('Error initializing smooth-scrollbar:', error)
         }
     }, [applyScrollbarStyles, checkIfScrollingNeeded, updateContainerPadding, scrollbarInstance])
 

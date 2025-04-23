@@ -3,48 +3,48 @@ import { useDocumentTitle } from '@uidotdev/usehooks'
 import { isEqual } from 'lodash'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ClearAllButton from '../../components/ClearAllButton'
-import EditDialog from '../../components/common/EditDialog/EditDialog'
-import GridView from '../../components/common/GridView'
-import TableView from '../../components/common/TableView'
-import ViewToggle from '../../components/common/ViewToggle'
-import { WarningDialog } from '../../components/common/WarningDialog'
-import GenerateButton from '../../components/GenerateButton'
-import StorageBanner from '../../components/StorageBanner'
-import { useData } from '../../contexts/dataHooks'
+import ClearAllButton from '../../components/ClearAllButton.tsx'
+import EditDialog from '../../components/common/EditDialog/EditDialog.tsx'
+import GridView from '../../components/common/GridView.tsx'
+import TableView from '../../components/common/TableView.tsx'
+import ViewToggle from '../../components/common/ViewToggle.tsx'
+import { WarningDialog } from '../../components/common/WarningDialog.tsx'
+import GenerateButton from '../../components/GenerateButton.tsx'
+import StorageBanner from '../../components/StorageBanner.tsx'
+import { useData } from '../../contexts/dataHooks.ts'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
-import colors from '../../utils/colors'
-import { ModuleTypes } from '../../utils/constants'
-import { generateRandomGang } from '../../utils/generators/generatorGang'
-import { clearGangs, saveGangs, saveViewPreference } from '../../utils/storage'
+import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types.ts'
+import colors from '../../utils/colors.ts'
+import { ModuleTypes } from '../../utils/constants.ts'
+import { generateRandomItem } from '../../utils/generators/generatorItem.ts'
+import { clearItems, saveItems, saveViewPreference } from '../../utils/storage.ts'
 
-// Add window.gangsDataLoaded declaration
+// Add window.itemsDataLoaded declaration
 declare global {
     interface Window {
-        gangsDataLoaded?: boolean
+        itemsDataLoaded?: boolean
     }
 }
 
-const GangView = () => {
+const ItemView = () => {
     const { t } = useTranslation()
-    useDocumentTitle(`Magnus Laser - ${t('modules.GANG')}`)
+    useDocumentTitle(`Magnus Laser - ${t('modules.ITEM')}`)
     const { readerMode, viewPreferences, viewPrefsLoaded, updateViewPreference } = useUserPreferences()
-    const { gangs: dataGangs, setGangs: setDataGangs, isLoading } = useData()
-    const [gangs, setGangs] = useState<Gang[]>([])
+    const { items: dataItems, setItems: setDataItems, isLoading } = useData()
+    const [items, setItems] = useState<Item[]>([])
 
     // Use view preference from context
     const [compactView, setCompactView] = useState(() => {
-        return viewPrefsLoaded ? viewPreferences[ModuleTypes.GANG] : false
+        return viewPrefsLoaded ? viewPreferences[ModuleTypes.ITEM] : false
     })
 
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-    const [gangToDelete, setGangToDelete] = useState<number | null>(null)
+    const [itemToDelete, setItemToDelete] = useState<number | null>(null)
     const [editDialogOpen, setEditDialogOpen] = useState(false)
-    const [gangToEdit, setGangToEdit] = useState<Gang | null>(null)
-    const prevGangsRef = useRef<number>(0)
-    const prevGangsDataRef = useRef<Gang[]>([])
+    const [itemToEdit, setItemToEdit] = useState<Item | null>(null)
+    const prevItemsRef = useRef<number>(0)
+    const prevItemsDataRef = useRef<Item[]>([])
     const [isSaving, setIsSaving] = useState(false)
     const firstMountRef = useRef(true)
     const [isGenerating, setIsGenerating] = useState(false)
@@ -55,7 +55,7 @@ const GangView = () => {
     // Update local state when view preferences change
     useEffect(() => {
         if (viewPrefsLoaded) {
-            setCompactView(viewPreferences[ModuleTypes.GANG])
+            setCompactView(viewPreferences[ModuleTypes.ITEM])
         }
     }, [viewPreferences, viewPrefsLoaded])
 
@@ -68,17 +68,17 @@ const GangView = () => {
         syncingFromContextRef.current = true
 
         // Always sync with context data, even if empty
-        setGangs(dataGangs)
-        prevGangsRef.current = dataGangs.length
-        prevGangsDataRef.current = structuredClone(dataGangs)
+        setItems(dataItems)
+        prevItemsRef.current = dataItems.length
+        prevItemsDataRef.current = structuredClone(dataItems)
 
         // Reset the syncing flag after state update
         setTimeout(() => {
             syncingFromContextRef.current = false
         }, 0)
-    }, [dataGangs])
+    }, [dataItems])
 
-    // Save gangs to storage when they change
+    // Save items to storage when they change
     useEffect(() => {
         // Skip during component initialization
         if (firstMountRef.current) {
@@ -90,40 +90,40 @@ const GangView = () => {
         if (syncingFromContextRef.current) return
 
         // Check if the data has actually changed to avoid unnecessary saves
-        if (isEqual(gangs, prevGangsDataRef.current)) return
+        if (isEqual(items, prevItemsDataRef.current)) return
 
         // Set updating context flag
         updatingContextRef.current = true
 
         // Always save the data when it exists
-        if (gangs.length > 0) {
-            saveGangs(gangs)
-            setDataGangs(gangs) // Update context data
-        } else if (prevGangsRef.current > 0 && gangs.length === 0 && !isLoading) {
-            // Only clear if we previously had gangs and now we don't
+        if (items.length > 0) {
+            saveItems(items)
+            setDataItems(items) // Update context data
+        } else if (prevItemsRef.current > 0 && items.length === 0 && !isLoading) {
+            // Only clear if we previously had items and now we don't
             // AND we're not still loading data
-            clearGangs()
-            setDataGangs([])
+            clearItems()
+            setDataItems([])
         }
 
         // Update references
-        prevGangsRef.current = gangs.length
-        prevGangsDataRef.current = structuredClone(gangs)
+        prevItemsRef.current = items.length
+        prevItemsDataRef.current = structuredClone(items)
 
         // Reset the context updating flag after state update
         setTimeout(() => {
             updatingContextRef.current = false
         }, 0)
-    }, [gangs, setDataGangs, isLoading])
+    }, [items, setDataItems, isLoading])
 
-    const handleGenerateGang = async () => {
+    const handleGenerateItem = async () => {
         setIsGenerating(true)
         try {
-            const newGang = await generateRandomGang(t)
-            setGangs((prevGangs) => [newGang, ...prevGangs])
+            const newItem = await generateRandomItem(t)
+            setItems((prevItems) => [newItem, ...prevItems])
             setIsSaving(true)
         } catch (error) {
-            console.warn('Failed to generate gang:', error)
+            console.warn('Failed to generate item:', error)
         } finally {
             setIsGenerating(false)
         }
@@ -134,9 +134,9 @@ const GangView = () => {
     }
 
     const handleClearConfirm = async () => {
-        setGangs([])
-        await clearGangs()
-        setDataGangs([]) // Update context data
+        setItems([])
+        await clearItems()
+        setDataItems([]) // Update context data
         setIsSaving(true)
         setClearAllDialogOpen(false)
     }
@@ -146,39 +146,39 @@ const GangView = () => {
     }
 
     const handleDeleteClick = (index: number) => {
-        setGangToDelete(index)
+        setItemToDelete(index)
         setDeleteDialogOpen(true)
     }
 
     const handleDeleteConfirm = () => {
-        if (gangToDelete !== null) {
-            setGangs((prevGangs) => prevGangs.filter((_, i) => i !== gangToDelete))
+        if (itemToDelete !== null) {
+            setItems((prevItems) => prevItems.filter((_, i) => i !== itemToDelete))
             setIsSaving(true)
             setDeleteDialogOpen(false)
-            setGangToDelete(null)
+            setItemToDelete(null)
         }
     }
 
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false)
-        setGangToDelete(null)
+        setItemToDelete(null)
     }
 
     const handleEditClick = (index: number) => {
-        setGangToEdit(gangs[index])
+        setItemToEdit(items[index])
         setEditDialogOpen(true)
     }
 
-    const handleEditSave = (editedTarget: Gang) => {
-        setGangs((prevGangs) => prevGangs.map((gang) => (gang.ID === editedTarget.ID ? editedTarget : gang)))
+    const handleEditSave = (editedTarget: Item) => {
+        setItems((prevItems) => prevItems.map((item) => (item.ID === editedTarget.ID ? editedTarget : item)))
         setIsSaving(true)
         setEditDialogOpen(false)
-        setGangToEdit(null)
+        setItemToEdit(null)
     }
 
     const handleEditCancel = () => {
         setEditDialogOpen(false)
-        setGangToEdit(null)
+        setItemToEdit(null)
     }
 
     const handleViewChange = async (_: React.MouseEvent<HTMLElement>, newView: string | null) => {
@@ -188,8 +188,8 @@ const GangView = () => {
         setCompactView(isTableView)
 
         // Save view preference to storage and update context
-        await saveViewPreference(ModuleTypes.GANG, isTableView)
-        updateViewPreference(ModuleTypes.GANG, isTableView)
+        await saveViewPreference(ModuleTypes.ITEM, isTableView)
+        updateViewPreference(ModuleTypes.ITEM, isTableView)
     }
 
     // Show loading spinner while data is loading
@@ -222,14 +222,14 @@ const GangView = () => {
                 <Typography
                     variant="h3"
                     className="glitch-text"
-                    data-text={t('gangs.title')}
+                    data-text={t('items.title')}
                     sx={{
                         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 10px ${colors.neons.cyan.default}`,
                         flexGrow: 1,
                     }}
                 >
-                    {t('gangs.title')}
+                    {t('items.title')}
                 </Typography>
                 {viewPrefsLoaded && <ViewToggle compactView={compactView} onViewChange={handleViewChange} />}
             </Stack>
@@ -241,14 +241,14 @@ const GangView = () => {
                     mb: 1,
                 }}
             >
-                {t('modules.GANG_DESCRIPTION')}
+                {t('modules.ITEM_DESCRIPTION')}
             </Typography>
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
-                <GenerateButton isGenerating={isGenerating} handleGenerate={handleGenerateGang} />
-                <ClearAllButton handleClearAllClick={handleClearAllClick} disabled={gangs.length === 0} />
+                <GenerateButton isGenerating={isGenerating} handleGenerate={handleGenerateItem} />
+                <ClearAllButton handleClearAllClick={handleClearAllClick} disabled={items.length === 0} />
             </Stack>
 
-            {gangs.length === 0 ? (
+            {items.length === 0 ? (
                 <Typography
                     variant="body1"
                     sx={{
@@ -264,20 +264,20 @@ const GangView = () => {
                         position: 'relative',
                     }}
                 >
-                    {t('common.noItems', { type: t('modules.GANG').toLowerCase() })}
+                    {t('common.noItems', { type: t('modules.ITEM').toLowerCase() })}
                 </Typography>
             ) : compactView ? (
                 <TableView
-                    targetArray={gangs}
+                    targetArray={items}
                     onDelete={handleDeleteClick}
-                    moduleType={ModuleTypes.GANG}
+                    moduleType={ModuleTypes.ITEM}
                     onEdit={handleEditClick}
                 />
             ) : (
                 <GridView
-                    targetArray={gangs}
+                    targetArray={items}
                     onDelete={handleDeleteClick}
-                    moduleType={ModuleTypes.GANG}
+                    moduleType={ModuleTypes.ITEM}
                     onEdit={handleEditClick}
                 />
             )}
@@ -288,8 +288,10 @@ const GangView = () => {
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 title={t('common.deleteConfirmTitle')}
-                message={t('common.deleteConfirmMessage', { type: t(`modules.${ModuleTypes.GANG}`).toLowerCase() })}
-                moduleType={ModuleTypes.GANG}
+                message={t('common.deleteConfirmMessage', {
+                    type: t(`modules.${ModuleTypes.ITEM}`).toLowerCase(),
+                })}
+                moduleType={ModuleTypes.ITEM}
                 isDelete={true}
                 isClearAll={false}
             />
@@ -298,8 +300,10 @@ const GangView = () => {
                 onClose={handleClearCancel}
                 onConfirm={handleClearConfirm}
                 title={t('common.clearAllConfirmTitle')}
-                message={t('common.clearAllConfirmMessage', { type: t(`modules.${ModuleTypes.GANG}`).toLowerCase() })}
-                moduleType={ModuleTypes.GANG}
+                message={t('common.clearAllConfirmMessage', {
+                    type: t(`modules.${ModuleTypes.ITEM}`).toLowerCase(),
+                })}
+                moduleType={ModuleTypes.ITEM}
                 isDelete={true}
                 isClearAll={true}
             />
@@ -309,16 +313,16 @@ const GangView = () => {
                 open={editDialogOpen}
                 onClose={handleEditCancel}
                 onSave={handleEditSave as (target: Gang | Building | FixerJob | Character | Item) => void}
-                target={gangToEdit}
-                moduleType={ModuleTypes.GANG}
+                target={itemToEdit}
+                moduleType={ModuleTypes.ITEM}
                 isGeneratingImage={isGeneratingImage}
                 setIsGeneratingImage={setIsGeneratingImage}
                 setIsSaving={setIsSaving}
-                setGangs={setGangs}
-                setGangToEdit={setGangToEdit}
+                setItems={setItems}
+                setItemToEdit={setItemToEdit}
             />
         </Container>
     )
 }
 
-export default GangView
+export default ItemView

@@ -56,8 +56,8 @@ export type Building = {
 
 export type BuildingComplication = {
   __typename?: 'BuildingComplication';
-  character?: Maybe<PlotCharacter>;
-  item?: Maybe<PlotItem>;
+  character?: Maybe<Character>;
+  item?: Maybe<Item>;
   type: PlotBuildingComplicationType;
 };
 
@@ -151,6 +151,61 @@ export enum BuildingType {
   VACANT_LOT_CONSTRUCTION_SITE = 'VACANT_LOT_CONSTRUCTION_SITE'
 }
 
+export type Character = {
+  __typename?: 'Character';
+  ID: Scalars['ID']['output'];
+  attitude: CharacterAttitude;
+  image: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  type: CharacterType;
+};
+
+export enum CharacterAttitude {
+  COLD_AND_PROFESSIONAL = 'COLD_AND_PROFESSIONAL',
+  CONSIDERS_A_CREW_MEMBER_A_GOOD_FRIEND = 'CONSIDERS_A_CREW_MEMBER_A_GOOD_FRIEND',
+  CONSIDERS_A_CREW_MEMBER_A_PARTNER = 'CONSIDERS_A_CREW_MEMBER_A_PARTNER',
+  DOESN_T_TRUST_THE_CREW = 'DOESN_T_TRUST_THE_CREW',
+  GENERALLY_DISLIKES_THE_CREW = 'GENERALLY_DISLIKES_THE_CREW',
+  NEUTRAL_ATTITUDE_TOWARDS_THE_CREW = 'NEUTRAL_ATTITUDE_TOWARDS_THE_CREW',
+  THINKS_THE_CREW_COULD_BE_POTENTIAL_ALLIES = 'THINKS_THE_CREW_COULD_BE_POTENTIAL_ALLIES',
+  TRUSTS_IN_THE_CREW_S_DECISIONS = 'TRUSTS_IN_THE_CREW_S_DECISIONS',
+  WANTS_A_CREW_MEMBER_DEAD = 'WANTS_A_CREW_MEMBER_DEAD',
+  WORSHIPS_A_CREW_MEMBER = 'WORSHIPS_A_CREW_MEMBER'
+}
+
+export enum CharacterType {
+  AVERAGE_CITIZEN_STREETRAT = 'AVERAGE_CITIZEN_STREETRAT',
+  CELEBRITY = 'CELEBRITY',
+  CORPORATE_EXEC = 'CORPORATE_EXEC',
+  GOVERNMENT_OFFICIAL = 'GOVERNMENT_OFFICIAL',
+  KNOWN_TERRORIST = 'KNOWN_TERRORIST',
+  MERCENARY_FREELANCER_ASSASSIN = 'MERCENARY_FREELANCER_ASSASSIN',
+  NETRUNNER_HACKER = 'NETRUNNER_HACKER',
+  NOMAD = 'NOMAD',
+  POLICE_LAWMAN = 'POLICE_LAWMAN',
+  POLITICIAN = 'POLITICIAN',
+  POP_STAR = 'POP_STAR',
+  RELIGIOUS_FIGURE = 'RELIGIOUS_FIGURE',
+  RIPPERDOC = 'RIPPERDOC',
+  TECH = 'TECH'
+}
+
+export enum CharacterVerb {
+  ESCORT = 'ESCORT',
+  INTERROGATE = 'INTERROGATE',
+  INTIMIDATE = 'INTIMIDATE',
+  INVESTIGATE = 'INVESTIGATE',
+  KILL = 'KILL',
+  RECRUIT = 'RECRUIT',
+  RESCUE = 'RESCUE',
+  ROB = 'ROB'
+}
+
+export type CharacterVerbWrapper = Verb & {
+  __typename?: 'CharacterVerbWrapper';
+  value: CharacterVerb;
+};
+
 export enum CyberwareQuality {
   EXCELLENT = 'EXCELLENT',
   POOR = 'POOR',
@@ -225,8 +280,8 @@ export enum GangColor {
 
 export type GangComplication = {
   __typename?: 'GangComplication';
-  character?: Maybe<PlotCharacter>;
-  item?: Maybe<PlotItem>;
+  character?: Maybe<Character>;
+  item?: Maybe<Item>;
   type: PlotGangComplicationType;
 };
 
@@ -279,6 +334,56 @@ export enum GangType {
   SYNDICATE = 'SYNDICATE',
   YO = 'YO'
 }
+
+export type Item = {
+  __typename?: 'Item';
+  ID: Scalars['ID']['output'];
+  condition: ItemCondition;
+  image: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  type: ItemType;
+};
+
+export enum ItemCondition {
+  AVERAGE_QUALITY = 'AVERAGE_QUALITY',
+  BELOW_AVERAGE_QUALITY = 'BELOW_AVERAGE_QUALITY',
+  BRAND_NEW_AND_IN_GREAT_CONDITION = 'BRAND_NEW_AND_IN_GREAT_CONDITION',
+  BROKEN_AND_IN_PIECES = 'BROKEN_AND_IN_PIECES',
+  COLLECTORS_ITEM_FEW_IN_EXISTENCE = 'COLLECTORS_ITEM_FEW_IN_EXISTENCE',
+  ENHANCED_IN_SOME_WAY_AND_SOUGHT_AFTER = 'ENHANCED_IN_SOME_WAY_AND_SOUGHT_AFTER',
+  FUNCTIONAL_AND_UTILITARIAN = 'FUNCTIONAL_AND_UTILITARIAN',
+  GOOD_CONDITION_BUT_USED = 'GOOD_CONDITION_BUT_USED',
+  LOW_GRADE_CHEAP_MATERIALS = 'LOW_GRADE_CHEAP_MATERIALS',
+  ONE_OF_A_KIND_ITEM_TOP_QUALITY = 'ONE_OF_A_KIND_ITEM_TOP_QUALITY'
+}
+
+export enum ItemType {
+  AI_ROBOT_DRONE = 'AI_ROBOT_DRONE',
+  BIOLOGICAL_SAMPLES = 'BIOLOGICAL_SAMPLES',
+  CYBERWARE = 'CYBERWARE',
+  DIGITAL_FILES = 'DIGITAL_FILES',
+  DRUGS_ILLEGAL_CONTRABAND = 'DRUGS_ILLEGAL_CONTRABAND',
+  EXOTIC_ANIMAL = 'EXOTIC_ANIMAL',
+  FOOD_FUELS_SUPPLIES = 'FOOD_FUELS_SUPPLIES',
+  MONEY = 'MONEY',
+  VEHICLE = 'VEHICLE',
+  WEAPONS = 'WEAPONS'
+}
+
+export enum ItemVerb {
+  DELIVER = 'DELIVER',
+  DESTROY = 'DESTROY',
+  HIDE = 'HIDE',
+  MODIFY = 'MODIFY',
+  STEAL = 'STEAL',
+  TRADE = 'TRADE',
+  USE = 'USE'
+}
+
+export type ItemVerbWrapper = Verb & {
+  __typename?: 'ItemVerbWrapper';
+  value: ItemVerb;
+};
 
 export enum JobDifficulty {
   DANGEROUS = 'DANGEROUS',
@@ -358,64 +463,10 @@ export type PlotBuildingVerbWrapper = Verb & {
   value: PlotBuildingVerb;
 };
 
-export type PlotCharacter = {
-  __typename?: 'PlotCharacter';
-  attitude: PlotCharacterAttitude;
-  image: Scalars['String']['output'];
-  name: Scalars['String']['output'];
-  type: PlotCharacterType;
-};
-
-export enum PlotCharacterAttitude {
-  COLD_AND_PROFESSIONAL = 'COLD_AND_PROFESSIONAL',
-  CONSIDERS_A_CREW_MEMBER_A_GOOD_FRIEND = 'CONSIDERS_A_CREW_MEMBER_A_GOOD_FRIEND',
-  CONSIDERS_A_CREW_MEMBER_A_PARTNER = 'CONSIDERS_A_CREW_MEMBER_A_PARTNER',
-  DOESN_T_TRUST_THE_CREW = 'DOESN_T_TRUST_THE_CREW',
-  GENERALLY_DISLIKES_THE_CREW = 'GENERALLY_DISLIKES_THE_CREW',
-  NEUTRAL_ATTITUDE_TOWARDS_THE_CREW = 'NEUTRAL_ATTITUDE_TOWARDS_THE_CREW',
-  THINKS_THE_CREW_COULD_BE_POTENTIAL_ALLIES = 'THINKS_THE_CREW_COULD_BE_POTENTIAL_ALLIES',
-  TRUSTS_IN_THE_CREW_S_DECISIONS = 'TRUSTS_IN_THE_CREW_S_DECISIONS',
-  WANTS_A_CREW_MEMBER_DEAD = 'WANTS_A_CREW_MEMBER_DEAD',
-  WORSHIPS_A_CREW_MEMBER = 'WORSHIPS_A_CREW_MEMBER'
-}
-
-export enum PlotCharacterType {
-  AVERAGE_CITIZEN_STREETRAT = 'AVERAGE_CITIZEN_STREETRAT',
-  CELEBRITY = 'CELEBRITY',
-  CORPORATE_EXEC = 'CORPORATE_EXEC',
-  GOVERNMENT_OFFICIAL = 'GOVERNMENT_OFFICIAL',
-  KNOWN_TERRORIST = 'KNOWN_TERRORIST',
-  MERCENARY_FREELANCER_ASSASSIN = 'MERCENARY_FREELANCER_ASSASSIN',
-  NETRUNNER_HACKER = 'NETRUNNER_HACKER',
-  NOMAD = 'NOMAD',
-  POLICE_LAWMAN = 'POLICE_LAWMAN',
-  POLITICIAN = 'POLITICIAN',
-  POP_STAR = 'POP_STAR',
-  RELIGIOUS_FIGURE = 'RELIGIOUS_FIGURE',
-  RIPPERDOC = 'RIPPERDOC',
-  TECH = 'TECH'
-}
-
-export enum PlotCharacterVerb {
-  ESCORT = 'ESCORT',
-  INTERROGATE = 'INTERROGATE',
-  INTIMIDATE = 'INTIMIDATE',
-  INVESTIGATE = 'INVESTIGATE',
-  KILL = 'KILL',
-  RECRUIT = 'RECRUIT',
-  RESCUE = 'RESCUE',
-  ROB = 'ROB'
-}
-
-export type PlotCharacterVerbWrapper = Verb & {
-  __typename?: 'PlotCharacterVerbWrapper';
-  value: PlotCharacterVerb;
-};
-
 export type PlotComplication = {
   __typename?: 'PlotComplication';
-  character?: Maybe<PlotCharacter>;
-  item?: Maybe<PlotItem>;
+  character?: Maybe<Character>;
+  item?: Maybe<Item>;
   type: PlotComplicationType;
 };
 
@@ -464,58 +515,9 @@ export type PlotGangVerbWrapper = Verb & {
   value: PlotGangVerb;
 };
 
-export type PlotItem = {
-  __typename?: 'PlotItem';
-  condition: PlotItemCondition;
-  image: Scalars['String']['output'];
-  name: Scalars['String']['output'];
-  type: PlotItemType;
-};
+export type PlotSubject = Character | Item | PlotGang;
 
-export enum PlotItemCondition {
-  AVERAGE_QUALITY = 'AVERAGE_QUALITY',
-  BELOW_AVERAGE_QUALITY = 'BELOW_AVERAGE_QUALITY',
-  BRAND_NEW_AND_IN_GREAT_CONDITION = 'BRAND_NEW_AND_IN_GREAT_CONDITION',
-  BROKEN_AND_IN_PIECES = 'BROKEN_AND_IN_PIECES',
-  COLLECTORS_ITEM_FEW_IN_EXISTENCE = 'COLLECTORS_ITEM_FEW_IN_EXISTENCE',
-  ENHANCED_IN_SOME_WAY_AND_SOUGHT_AFTER = 'ENHANCED_IN_SOME_WAY_AND_SOUGHT_AFTER',
-  FUNCTIONAL_AND_UTILITARIAN = 'FUNCTIONAL_AND_UTILITARIAN',
-  GOOD_CONDITION_BUT_USED = 'GOOD_CONDITION_BUT_USED',
-  LOW_GRADE_CHEAP_MATERIALS = 'LOW_GRADE_CHEAP_MATERIALS',
-  ONE_OF_A_KIND_ITEM_TOP_QUALITY = 'ONE_OF_A_KIND_ITEM_TOP_QUALITY'
-}
-
-export enum PlotItemType {
-  AI_ROBOT_DRONE = 'AI_ROBOT_DRONE',
-  BIOLOGICAL_SAMPLES = 'BIOLOGICAL_SAMPLES',
-  CYBERWARE = 'CYBERWARE',
-  DIGITAL_FILES = 'DIGITAL_FILES',
-  DRUGS_ILLEGAL_CONTRABAND = 'DRUGS_ILLEGAL_CONTRABAND',
-  EXOTIC_ANIMAL = 'EXOTIC_ANIMAL',
-  FOOD_FUELS_SUPPLIES = 'FOOD_FUELS_SUPPLIES',
-  MONEY = 'MONEY',
-  VEHICLE = 'VEHICLE',
-  WEAPONS = 'WEAPONS'
-}
-
-export enum PlotItemVerb {
-  DELIVER = 'DELIVER',
-  DESTROY = 'DESTROY',
-  HIDE = 'HIDE',
-  MODIFY = 'MODIFY',
-  STEAL = 'STEAL',
-  TRADE = 'TRADE',
-  USE = 'USE'
-}
-
-export type PlotItemVerbWrapper = Verb & {
-  __typename?: 'PlotItemVerbWrapper';
-  value: PlotItemVerb;
-};
-
-export type PlotSubject = PlotCharacter | PlotGang | PlotItem;
-
-export type PlotVerb = PlotBuildingVerbWrapper | PlotCharacterVerbWrapper | PlotGangVerbWrapper | PlotItemVerbWrapper;
+export type PlotVerb = CharacterVerbWrapper | ItemVerbWrapper | PlotBuildingVerbWrapper | PlotGangVerbWrapper;
 
 export enum Sin {
   ENVY = 'ENVY',
