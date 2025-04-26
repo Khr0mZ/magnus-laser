@@ -1,0 +1,55 @@
+enum BountyRep {
+  BRAGGER
+  LOWPRO
+}
+
+enum CrimeType {
+  THEFT
+  MURDER
+  CONTRABAND
+  DRUG
+  BRIBE
+}
+
+enum TheftTarget {
+  POOR_SOUL
+  VENDIT
+  OASIS
+  PUBLIC_ELEMENT
+  MINI_CORP
+  MEGA_CORP
+}
+
+enum MurderTarget {
+  GANGER
+  NOBODY
+  CITIZEN
+  CORPO
+  COP
+  EXEC
+}
+
+enum ContrabandTarget {
+  COSTLY
+  PREMIUM
+  EXPENSIVE
+  VERY_EXPENSIVE
+  LUXURY
+  SUPER_LUXURY
+}
+
+enum DrugTarget {
+  SMASH
+  BLUE_GLASS
+  SYNTHCOKE
+  BOOST
+  BLACK_LACE
+}
+
+enum BribeTarget {
+  CITIZEN
+  CORPO
+  COP
+  EXEC
+  POLITICIAN
+}

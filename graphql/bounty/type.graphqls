@@ -1,0 +1,51 @@
+# --- Shared interface for all crimes ---
+interface Crime {
+  crimeType: CrimeType!
+  reward: Int!
+  multiplier: Int!
+}
+
+# --- One object type per crime category ---
+type TheftCrime implements Crime {
+  crimeType: CrimeType! # will always be THEFT
+  reward: Int!
+  multiplier: Int! # will always be 1
+  target: TheftTarget!
+}
+
+type MurderCrime implements Crime {
+  crimeType: CrimeType! # will always be MURDER
+  reward: Int!
+  multiplier: Int! # 1d10-8
+  target: MurderTarget!
+}
+
+type ContrabandCrime implements Crime {
+  crimeType: CrimeType! # will always be CONTRABAND
+  reward: Int!
+  multiplier: Int! # will always be 1
+  target: ContrabandTarget!
+}
+
+type DrugCrime implements Crime {
+  crimeType: CrimeType! # will always be DRUG
+  reward: Int!
+  multiplier: Int! # 1d100
+  target: DrugTarget!
+}
+
+type BribeCrime implements Crime {
+  crimeType: CrimeType! # will always be BRIBE
+  reward: Int!
+  multiplier: Int! # will always be 1
+  target: BribeTarget!
+}
+
+# --- Bounty refers to the interface ---
+type Bounty {
+  ID: ID!
+  rep: BountyRep!
+  character: Character!
+  crimes: [Crime!]!
+  speciality: CrimeType!
+}

@@ -2,12 +2,13 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, T
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
-import { Building, Character, FixerJob, Gang, Item } from '../../../graphql/types'
+import { Bounty, Building, Character, FixerJob, Gang, Item } from '../../../graphql/types'
 import colors from '../../../utils/colors'
 import { ModuleTypes } from '../../../utils/constants'
 import CustomScrollbar from '../../CustomScrollbar'
 import { pulseGlowBlue, pulseGlowCyan } from '../Animations'
 import { WarningDialog } from '../WarningDialog'
+import FormBounty from './FormBounty.tsx'
 import { FormBuilding } from './FormBuilding'
 import FormCharacter from './FormCharacter.tsx'
 import FormFixerJob from './FormFixerJob/FormFixerJob'
@@ -17,8 +18,8 @@ import FormItem from './FormItem.tsx'
 type EditDialogProps = {
     open: boolean
     onClose: () => void
-    onSave: (target: Gang | Building | FixerJob | Character | Item) => void
-    target: Gang | Building | FixerJob | Character | Item | null
+    onSave: (target: Gang | Building | FixerJob | Character | Item | Bounty) => void
+    target: Gang | Building | FixerJob | Character | Item | Bounty | null
     moduleType: ModuleTypes
     setIsSaving: (isSaving: boolean) => void
     isGeneratingImage?: boolean
@@ -58,7 +59,9 @@ export const EditDialog = (props: EditDialogProps) => {
     } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const [editedTarget, setEditedTarget] = useState<Gang | Building | FixerJob | Character | Item | null>(null)
+    const [editedTarget, setEditedTarget] = useState<Gang | Building | FixerJob | Character | Item | Bounty | null>(
+        null
+    )
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [deleteImageDialogOpen, setDeleteImageDialogOpen] = useState(false)
     const [fullscreenImage, setFullscreenImage] = useState(false)
@@ -301,6 +304,8 @@ export const EditDialog = (props: EditDialogProps) => {
                                 ? t('characters.editTitle')
                                 : moduleType === ModuleTypes.ITEM
                                 ? t('items.editTitle')
+                                : moduleType === ModuleTypes.BOUNTY
+                                ? t('bounties.editTitle')
                                 : t('fixerJobs.editTitle')
                         }
                         sx={{
@@ -316,6 +321,8 @@ export const EditDialog = (props: EditDialogProps) => {
                             ? t('characters.editTitle')
                             : moduleType === ModuleTypes.ITEM
                             ? t('items.editTitle')
+                            : moduleType === ModuleTypes.BOUNTY
+                            ? t('bounties.editTitle')
                             : t('fixerJobs.editTitle')}
                     </Typography>
                 </DialogTitle>
@@ -423,6 +430,16 @@ export const EditDialog = (props: EditDialogProps) => {
                                     handleChange={handleChange}
                                     handleImageUploadClick={handleImageUploadClick}
                                     openDeleteImageDialog={openDeleteImageDialog}
+                                    toggleFullscreenImage={toggleFullscreenImage}
+                                />
+                            ) : moduleType === ModuleTypes.BOUNTY ? (
+                                <FormBounty
+                                    editedTarget={editedTarget as Bounty}
+                                    formControlStyle={formControlStyle}
+                                    inputLabelStyle={inputLabelStyle}
+                                    selectStyle={selectStyle}
+                                    textFieldOutlinedStyle={textFieldOutlinedStyle}
+                                    handleChange={handleChange}
                                     toggleFullscreenImage={toggleFullscreenImage}
                                 />
                             ) : (
@@ -546,7 +563,14 @@ export const EditDialog = (props: EditDialogProps) => {
                     <Box
                         component="img"
                         src={currentImageField}
-                        alt={editedTarget?.name}
+                        alt={
+                            editedTarget &&
+                            ('name' in editedTarget
+                                ? editedTarget.name
+                                : 'character' in editedTarget
+                                ? editedTarget.character.name
+                                : '')
+                        }
                         id="fullscreen-image-title"
                         tabIndex={0}
                         sx={{

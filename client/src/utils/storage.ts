@@ -1,5 +1,5 @@
 import localforage from 'localforage'
-import { Building, Character, FixerJob, Gang, Item } from '../graphql/types'
+import { Bounty, Building, Character, FixerJob, Gang, Item } from '../graphql/types'
 import { ModuleTypes } from './constants'
 
 localforage.config({
@@ -43,6 +43,7 @@ export const ITEMS_STORAGE_KEY = 'items'
 export const CHARACTERS_STORAGE_KEY = 'characters'
 export const FIXER_JOBS_STORAGE_KEY = 'fixer-jobs'
 export const PREFERENCES_STORAGE_KEY = 'preferences'
+export const BOUNTIES_STORAGE_KEY = 'bounties'
 
 // Events
 export const DATA_IMPORT_EVENT = 'data-imported'
@@ -114,6 +115,43 @@ export const loadItems = (): Promise<Item[]> => loadEntities<Item>(ITEMS_STORAGE
 export const saveItems = (items: Item[]): Promise<void> => saveEntities<Item>(ITEMS_STORAGE_KEY, items)
 
 /**
+ * Bounty
+ */
+
+export const loadBounties = (): Promise<Bounty[]> => loadEntities<Bounty>(BOUNTIES_STORAGE_KEY)
+
+export const saveBounties = async (bounties: Bounty[]): Promise<void> => {
+    const characters = await loadCharacters()
+    const newCharacters: Character[] = []
+
+    const toStore = bounties.map((bounty) => {
+        if (typeof bounty.character === 'object') {
+            const character = characters.find((c) => c.ID === bounty.character.ID)
+            if (!character) {
+                newCharacters.push(bounty.character)
+            }
+            return { ...bounty, character: bounty.character.ID }
+        } else if (typeof bounty.character === 'string') {
+            const characterID = bounty.character as string
+            const character = characters.find((c) => c.ID === characterID)
+            if (!character) {
+                newCharacters.push(bounty.character)
+            }
+            return {
+                ...bounty,
+                character: characterID,
+            }
+        }
+    })
+    if (newCharacters.length) {
+        const merged = mergeEntities(characters, newCharacters)
+        await saveCharacters(merged)
+    }
+    await localforage.setItem(BOUNTIES_STORAGE_KEY, toStore)
+    cache.set(BOUNTIES_STORAGE_KEY, toStore)
+}
+
+/**
  * Characters
  */
 export const loadCharacters = (): Promise<Character[]> => loadEntities<Character>(CHARACTERS_STORAGE_KEY)
@@ -128,7 +166,7 @@ export const saveCharacters = (characters: Character[]): Promise<void> =>
 // ──────────────────────────────────────────────────────
 // Helper: pull out nested Gang/Building objects and persist
 // ──────────────────────────────────────────────────────
-const extractAndSaveReferences = async (fixerJobs: FixerJob[]): Promise<void> => {
+const extractAndSaveReferencesFromFixerJob = async (fixerJobs: FixerJob[]): Promise<void> => {
     const buildings: Building[] = []
     const gangs: Gang[] = []
     const characters: Character[] = []
@@ -214,7 +252,7 @@ const extractAndSaveReferences = async (fixerJobs: FixerJob[]): Promise<void> =>
 export const loadFixerJobs = (): Promise<FixerJob[]> => loadEntities<FixerJob>(FIXER_JOBS_STORAGE_KEY)
 
 export const saveFixerJobs = async (fixerJobs: FixerJob[]): Promise<void> => {
-    await extractAndSaveReferences(fixerJobs)
+    await extractAndSaveReferencesFromFixerJob(fixerJobs)
     const toStore: FixerJob[] = []
     for (const job of fixerJobs) {
         toStore.push(await processEntityForStorage(job))
@@ -246,144 +284,6 @@ export const savePreferences = async (preferences: AppPreferences): Promise<void
 }
 
 /** ===== Reference resolution for entity relationships ===== **/
-
-/**
- * Process loaded entities: resolve nested references for gangs, buildings,
- * characters, and items. Maintains the base64 image data as-is.
- */
-export const processEntityForDisplay = async <T extends Record<string, unknown>>(
-    entity: T,
-    preloadedGangs?: Gang[] | null,
-    preloadedBuildings?: Building[] | null,
-    preloadedCharacters?: Character[] | null,
-    preloadedItems?: Item[] | null
-): Promise<T> => {
-    if (!entity) return entity
-    const processedEntity = { ...entity }
-    let gangs: Gang[] | null = preloadedGangs || null
-    let buildings: Building[] | null = preloadedBuildings || null
-    let characters: Character[] | null = preloadedCharacters || null
-    let items: Item[] | null = preloadedItems || null
-
-    // Helper to load gangs/buildings once
-    const ensureGangs = async () => {
-        if (!gangs) gangs = await loadGangs()
-    }
-    const ensureBuildings = async () => {
-        if (!buildings) buildings = await loadBuildings()
-    }
-    const ensureCharacters = async () => {
-        if (!characters) characters = await loadCharacters()
-    }
-    const ensureItems = async () => {
-        if (!items) items = await loadItems()
-    }
-    const findCharacterById = (id: string) => characters?.find((c) => c.ID === id) ?? null
-    const findItemById = (id: string) => items?.find((i) => i.ID === id) ?? null
-    const findGangById = (id: string) => gangs?.find((g) => g.ID === id) ?? null
-    const findBuildingById = (id: string) => buildings?.find((b) => b.ID === id) ?? null
-
-    // Recursive walker
-    const processObject = async (obj: Record<string, unknown>, path = ''): Promise<void> => {
-        for (const [key, value] of Object.entries(obj)) {
-            const currentPath = path ? `${path}.${key}` : key
-
-            // plotSubject.gang resolution
-            if (currentPath.endsWith('plotSubject.gang')) {
-                if (typeof value === 'string') {
-                    await ensureGangs()
-                    const gang = findGangById(value)
-                    if (gang) obj[key] = await processEntityForDisplay(gang, gangs, buildings, characters, items)
-                }
-            }
-            // plotBuilding.building resolution
-            else if (currentPath.endsWith('plotBuilding.building')) {
-                if (typeof value === 'string') {
-                    await ensureBuildings()
-                    const bld = findBuildingById(value)
-                    if (bld) obj[key] = await processEntityForDisplay(bld, gangs, buildings, characters, items)
-                }
-            }
-            // plotSubject resolution for Character/Item
-            else if (currentPath.endsWith('plotSubject') && typeof value === 'string') {
-                await ensureCharacters()
-                await ensureItems()
-                const char = findCharacterById(value)
-                if (char) {
-                    obj[key] = await processEntityForDisplay(char, gangs, buildings, characters, items)
-                    continue
-                }
-                const itemRef = findItemById(value)
-                if (itemRef) {
-                    obj[key] = await processEntityForDisplay(itemRef, gangs, buildings, characters, items)
-                    continue
-                }
-            }
-            // plotComplication character resolution
-            else if (currentPath.endsWith('plotComplication.character') && typeof value === 'string') {
-                await ensureCharacters()
-                const char = findCharacterById(value)
-                if (char) {
-                    obj[key] = await processEntityForDisplay(char, gangs, buildings, characters, items)
-                    continue
-                }
-            }
-            // plotComplication item resolution
-            else if (currentPath.endsWith('plotComplication.item') && typeof value === 'string') {
-                await ensureItems()
-                const itemRef = findItemById(value)
-                if (itemRef) {
-                    obj[key] = await processEntityForDisplay(itemRef, gangs, buildings, characters, items)
-                    continue
-                }
-            }
-            // plotSubject complication character resolution
-            else if (currentPath.endsWith('plotSubject.complication.character') && typeof value === 'string') {
-                await ensureCharacters()
-                const char = findCharacterById(value)
-                if (char) {
-                    obj[key] = await processEntityForDisplay(char, gangs, buildings, characters, items)
-                    continue
-                }
-            }
-            // plotSubject complication item resolution
-            else if (currentPath.endsWith('plotSubject.complication.item') && typeof value === 'string') {
-                await ensureItems()
-                const itemRef = findItemById(value)
-                if (itemRef) {
-                    obj[key] = await processEntityForDisplay(itemRef, gangs, buildings, characters, items)
-                    continue
-                }
-            }
-            // building complication character resolution
-            else if (currentPath.endsWith('plotBuilding.complication.character') && typeof value === 'string') {
-                await ensureCharacters()
-                const char = findCharacterById(value)
-                if (char) {
-                    obj[key] = await processEntityForDisplay(char, gangs, buildings, characters, items)
-                    continue
-                }
-            }
-            // building complication item resolution
-            else if (currentPath.endsWith('plotBuilding.complication.item') && typeof value === 'string') {
-                await ensureItems()
-                const itemRef = findItemById(value)
-                if (itemRef) {
-                    obj[key] = await processEntityForDisplay(itemRef, gangs, buildings, characters, items)
-                    continue
-                }
-            }
-            // deep dive for nested objects/arrays
-            else if (value && typeof value === 'object') {
-                await processObject(value as Record<string, unknown>, currentPath)
-            }
-        }
-    }
-
-    await processObject(processedEntity)
-    return processedEntity
-}
-
 /**
  * Process entities for storage: converts nested entity objects to ID references.
  * Base64 image data is kept as-is without any transformation.
@@ -475,7 +375,10 @@ export const processEntityForStorage = async <T extends Record<string, unknown>>
                 obj[key] = (value as { ID: string }).ID
                 continue
             }
-
+            if (currentPath === 'character' && value != null && typeof value === 'object' && 'ID' in value) {
+                obj[key] = (value as { ID: string }).ID
+                continue
+            }
             // nested objects/arrays
             if (value && typeof value === 'object') {
                 await processObject(value as Record<string, unknown>, currentPath)
@@ -519,6 +422,11 @@ export const clearItems = async (): Promise<void> => {
 export const clearCharacters = async (): Promise<void> => {
     cache.delete(CHARACTERS_STORAGE_KEY)
     await localforage.removeItem(CHARACTERS_STORAGE_KEY)
+}
+
+export const clearBounties = async (): Promise<void> => {
+    cache.delete(BOUNTIES_STORAGE_KEY)
+    await localforage.removeItem(BOUNTIES_STORAGE_KEY)
 }
 
 // 4) View‑preference helpers

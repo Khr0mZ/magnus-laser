@@ -77,6 +77,62 @@
         "importDescriptionWarning": "Warning: This will overwrite all current assets.",
         "confirmImport": "Confirm Data Load"
     },
+    "bounties": {
+        "title": "Dynamic Asset Threat Index",
+        "editTitle": "Bounty Prefs",
+        "speciality": {
+            "MURDER": "Murder",
+            "THEFT": "Theft",
+            "CONTRABAND": "Contraband",
+            "DRUG": "Drug dealing",
+            "BRIBE": "Bribe"
+        },
+        "rep": {
+            "BRAGGER": "Bragger",
+            "LOWPRO": "Low Profile"
+        },
+        "target": {
+            "POOR_SOUL": "Poor soul",
+            "VENDIT": "Vendit",
+            "OASIS": "Oasis",
+            "PUBLIC_ELEMENT": "Public element",
+            "MINI_CORP": "Mini corp",
+            "MEGA_CORP": "Mega corp",
+            "GANGER": "Ganger",
+            "NOBODY": "Nobody",
+            "CITIZEN": "Citizen",
+            "CORPO": "Corpo",
+            "COP": "Cop",
+            "EXEC": "Exec",
+            "COSTLY": "Costly",
+            "PREMIUM": "Premium",
+            "EXPENSIVE": "Expensive",
+            "VERY_EXPENSIVE": "Very expensive",
+            "LUXURY": "Luxury",
+            "SUPER_LUXURY": "Super luxury",
+            "SMASH": "Smash",
+            "BLUE_GLASS": "Blue glass",
+            "SYNTHCOKE": "Synthcok",
+            "BOOST": "Boost",
+            "BLACK_LACE": "Black lace",
+            "POLITICIAN": "Politician"
+        },
+        "labels": {
+            "name": "Name",
+            "speciality": "Spec",
+            "rep": "Street Rep",
+            "crimes": "Crimes",
+            "totalBounty": "Total Bounty",
+            "baseBounty": "Base Bounty",
+            "multiplier": "Quantity",
+            "crime": "Crime",
+            "reward": "Reward",
+            "total": "Total",
+            "target": "Quality",
+            "wanted": "WANTED",
+            "type": "Type"
+        }
+    },
     "characters": {
         "title": "Dynamic Asset Database Connection",
         "editTitle": "Character Prefs",
@@ -89,7 +145,7 @@
             "AVERAGE_CITIZEN_STREETRAT": "Average Citizen/Streetrat",
             "CELEBRITY": "Celebrity",
             "GOVERNMENT_OFFICIAL": "Government Official",
-            "KNOWN_TERRORIST": "Known Terrorist",
+            "TERRORIST": "Terrorist",
             "MERCENARY_FREELANCER_ASSASSIN": "Mercenary/Freelancer/Assassin",
             "NOMAD": "Nomad",
             "POP_STAR": "Pop Star",
@@ -599,7 +655,7 @@
         }
     },
     "fixerJobs": {
-        "title": "Fixer Contracts Building Framework",
+        "title": "Contract Arrangement Framework",
         "editTitle": "Job Prefs",
         "useExisting": "Use Existing:",
         "useExistingBuildings": "Buildings?",
@@ -662,7 +718,7 @@
             "AVERAGE_CITIZEN_STREETRAT": "Average Citizen/Streetrat",
             "CELEBRITY": "Celebrity",
             "GOVERNMENT_OFFICIAL": "Government Official",
-            "KNOWN_TERRORIST": "Known Terrorist",
+            "TERRORIST": "Terrorist",
             "MERCENARY_FREELANCER_ASSASSIN": "Mercenary/Freelancer/Assassin",
             "NOMAD": "Nomad",
             "POP_STAR": "Pop Star",

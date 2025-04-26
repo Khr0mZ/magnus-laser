@@ -37,6 +37,7 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
 import {
+    BOUNTIES_STORAGE_KEY,
     BUILDINGS_STORAGE_KEY,
     CHARACTERS_STORAGE_KEY,
     FIXER_JOBS_STORAGE_KEY,
@@ -48,6 +49,7 @@ import {
     loadOpenAIApiKey,
     notifyDataImported,
     notifyPreferencesChanged,
+    saveBounties,
     saveBuildings,
     saveCharacters,
     saveFixerJobs,
@@ -282,6 +284,9 @@ const SettingsView = () => {
                                         break
                                     case ITEMS_STORAGE_KEY:
                                         await saveItems(value)
+                                        break
+                                    case BOUNTIES_STORAGE_KEY:
+                                        await saveBounties(value)
                                         break
                                     case PREFERENCES_STORAGE_KEY:
                                         await savePreferences(value)

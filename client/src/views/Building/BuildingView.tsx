@@ -14,7 +14,7 @@ import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, Character, FixerJob, Gang, Item, JobDifficulty } from '../../graphql/types'
+import { Bounty, Building, Character, FixerJob, Gang, Item, JobDifficulty } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { getJobDifficultyModifier } from '../../utils/functions'
@@ -335,7 +335,7 @@ const BuildingView = () => {
             <EditDialog
                 open={editDialogOpen}
                 onClose={handleEditCancel}
-                onSave={handleEditSave as (target: Building | Gang | FixerJob | Character | Item) => void}
+                onSave={handleEditSave as (target: Building | Gang | FixerJob | Character | Item | Bounty) => void}
                 target={buildingToEdit}
                 moduleType={ModuleTypes.BUILDING}
                 isGeneratingImage={isGeneratingImage}

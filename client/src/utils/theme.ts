@@ -338,7 +338,7 @@ export const getDesignTokens = (mode: PaletteMode) => {
                                   // Cyberpunk paper
                                   backgroundImage:
                                       'linear-gradient(to bottom, rgba(20, 20, 30, 0.8), rgba(20, 20, 30, 0.8)), repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 255, 0.03) 2px, rgba(0, 255, 255, 0.03) 4px)',
-                                  boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)',
+                                  //boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)',
                                   borderRadius: '4px',
                                   border: `1px solid rgba(0, 255, 255, 0.2)`,
                                   position: 'relative',

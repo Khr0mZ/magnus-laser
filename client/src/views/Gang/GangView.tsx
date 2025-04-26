@@ -13,7 +13,7 @@ import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
+import { Bounty, Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { generateRandomGang } from '../../utils/generators/generatorGang'
@@ -308,7 +308,7 @@ const GangView = () => {
             <EditDialog
                 open={editDialogOpen}
                 onClose={handleEditCancel}
-                onSave={handleEditSave as (target: Gang | Building | FixerJob | Character | Item) => void}
+                onSave={handleEditSave as (target: Gang | Building | FixerJob | Character | Item | Bounty) => void}
                 target={gangToEdit}
                 moduleType={ModuleTypes.GANG}
                 isGeneratingImage={isGeneratingImage}

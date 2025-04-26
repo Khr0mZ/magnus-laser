@@ -13,7 +13,7 @@ import GenerateButton from '../../components/GenerateButton.tsx'
 import StorageBanner from '../../components/StorageBanner.tsx'
 import { useData } from '../../contexts/dataHooks.ts'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Building, Character, FixerJob, Gang, Item } from '../../graphql/types.ts'
+import { Bounty, Building, Character, FixerJob, Gang, Item } from '../../graphql/types.ts'
 import colors from '../../utils/colors.ts'
 import { ModuleTypes } from '../../utils/constants.ts'
 import { generateRandomCharacter } from '../../utils/generators/generatorCharacter.ts'
@@ -314,7 +314,7 @@ const CharacterView = () => {
             <EditDialog
                 open={editDialogOpen}
                 onClose={handleEditCancel}
-                onSave={handleEditSave as (target: Gang | Building | FixerJob | Character | Item) => void}
+                onSave={handleEditSave as (target: Gang | Building | FixerJob | Character | Item | Bounty) => void}
                 target={characterToEdit}
                 moduleType={ModuleTypes.CHARACTER}
                 isGeneratingImage={isGeneratingImage}

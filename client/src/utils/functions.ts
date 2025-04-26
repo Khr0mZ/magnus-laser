@@ -1,7 +1,24 @@
 import { TFunction } from 'i18next'
-import { Building, BuildingType, Character, FixerJob, Gang, GangColor, Item, JobDifficulty } from '../graphql/types.ts'
+import {
+    Bounty,
+    BribeTarget,
+    Building,
+    BuildingType,
+    Character,
+    ContrabandTarget,
+    CrimeType,
+    DrugTarget,
+    FixerJob,
+    Gang,
+    GangColor,
+    Item,
+    JobDifficulty,
+    MurderTarget,
+    TheftTarget,
+} from '../graphql/types.ts'
 import colors from './colors.ts'
 import { fixerJobColumns } from './constants.ts'
+import { baseBountyRewardPerSpeciality } from './generators/generatorBounty.ts'
 
 /**
  * Re-export getModuleIcon from functions.tsx
@@ -93,6 +110,64 @@ export const getComplementaryColor = (color: string): string => {
         console.warn(`Error calculating complementary color for: ${color}`, error)
         return '#7f7f7f' // Return a neutral gray as fallback
     }
+}
+
+// BOUNTY FUNCTIONS
+
+/**
+ * Get ordered bounty data for display
+ * @param bounty The bounty data
+ * @param t Translation function
+ * @returns Array of data items ordered for display
+ */
+export const getOrderedBountyData = (
+    bounty: Bounty,
+    t: TFunction,
+    resolvers: {
+        resolveCharacter: (id: string) => Character | null
+    }
+): { key: string; label: string; value: unknown }[] => {
+    const resolvedCharacter = resolvers.resolveCharacter(bounty.character.ID)
+
+    const totalBounty =
+        bounty.crimes.reduce((acc, crime) => acc + crime.reward * crime.multiplier, 0) +
+        baseBountyRewardPerSpeciality[bounty.speciality]
+
+    return [
+        { key: 'name', label: t('characters.labels.name'), value: resolvedCharacter?.name },
+        { key: 'character.type', label: t('characters.labels.type'), value: resolvedCharacter?.type },
+        {
+            key: 'speciality',
+            label: t('bounties.labels.speciality'),
+            value: t(`bounties.speciality.${bounty.speciality}`, String(bounty.speciality)),
+        },
+        { key: 'rep', label: t('bounties.labels.rep'), value: t(`bounties.rep.${bounty.rep}`, String(bounty.rep)) },
+        { key: 'crimes', label: t('bounties.labels.crimes'), value: bounty.crimes.length },
+        { key: 'totalBounty', label: t('bounties.labels.totalBounty'), value: totalBounty },
+    ]
+}
+
+/**
+ * Process a bounty value for display
+ * @param key The key of the value
+ * @param value The value to process
+ * @param t The translation function
+ * @returns The processed value
+ */
+export const processBountyValueForDisplay = (key: string, value: unknown, t: TFunction): string => {
+    if (key === 'character.type') {
+        return t(`characters.type.${value}`)
+    }
+    if (key === 'attitude') {
+        return t(`characters.attitude.${value}`)
+    }
+    if (key === 'type') {
+        return t(`characters.type.${value}`)
+    }
+    if (key === 'totalBounty') {
+        return Intl.NumberFormat('en-US').format(value as number) + ' €$'
+    }
+    return String(value)
 }
 
 // CHARACTER FUNCTIONS
@@ -846,4 +921,27 @@ export const processFixerJobValueForDisplay = (key: string, target: unknown, t: 
 
     // If no special case applies, return the string value
     return String(target)
+}
+
+// BOUNTY FUNCTIONS
+
+/**
+ * Get the Target Type for a Crime
+ * @param crimeType The type of crime
+ * @returns The target type
+ */
+export const getCrimeTargetType = (crimeType: CrimeType) => {
+    switch (crimeType) {
+        case CrimeType.THEFT:
+            return TheftTarget
+        case CrimeType.MURDER:
+            return MurderTarget
+        case CrimeType.CONTRABAND:
+            return ContrabandTarget
+        case CrimeType.DRUG:
+            return DrugTarget
+        case CrimeType.BRIBE:
+        default:
+            return BribeTarget
+    }
 }

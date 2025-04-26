@@ -32,6 +32,36 @@ export enum Attitude {
   ROBBING_ASSAULTING = 'ROBBING_ASSAULTING'
 }
 
+export type Bounty = {
+  __typename?: 'Bounty';
+  ID: Scalars['ID']['output'];
+  character: Character;
+  crimes: Array<Crime>;
+  rep: BountyRep;
+  speciality: CrimeType;
+};
+
+export enum BountyRep {
+  BRAGGER = 'BRAGGER',
+  LOWPRO = 'LOWPRO'
+}
+
+export type BribeCrime = Crime & {
+  __typename?: 'BribeCrime';
+  crimeType: CrimeType;
+  multiplier: Scalars['Int']['output'];
+  reward: Scalars['Int']['output'];
+  target: BribeTarget;
+};
+
+export enum BribeTarget {
+  CITIZEN = 'CITIZEN',
+  COP = 'COP',
+  CORPO = 'CORPO',
+  EXEC = 'EXEC',
+  POLITICIAN = 'POLITICIAN'
+}
+
 export type Building = {
   __typename?: 'Building';
   ID: Scalars['ID']['output'];
@@ -178,7 +208,6 @@ export enum CharacterType {
   CELEBRITY = 'CELEBRITY',
   CORPORATE_EXEC = 'CORPORATE_EXEC',
   GOVERNMENT_OFFICIAL = 'GOVERNMENT_OFFICIAL',
-  KNOWN_TERRORIST = 'KNOWN_TERRORIST',
   MERCENARY_FREELANCER_ASSASSIN = 'MERCENARY_FREELANCER_ASSASSIN',
   NETRUNNER_HACKER = 'NETRUNNER_HACKER',
   NOMAD = 'NOMAD',
@@ -187,7 +216,8 @@ export enum CharacterType {
   POP_STAR = 'POP_STAR',
   RELIGIOUS_FIGURE = 'RELIGIOUS_FIGURE',
   RIPPERDOC = 'RIPPERDOC',
-  TECH = 'TECH'
+  TECH = 'TECH',
+  TERRORIST = 'TERRORIST'
 }
 
 export enum CharacterVerb {
@@ -206,6 +236,37 @@ export type CharacterVerbWrapper = Verb & {
   value: CharacterVerb;
 };
 
+export type ContrabandCrime = Crime & {
+  __typename?: 'ContrabandCrime';
+  crimeType: CrimeType;
+  multiplier: Scalars['Int']['output'];
+  reward: Scalars['Int']['output'];
+  target: ContrabandTarget;
+};
+
+export enum ContrabandTarget {
+  COSTLY = 'COSTLY',
+  EXPENSIVE = 'EXPENSIVE',
+  LUXURY = 'LUXURY',
+  PREMIUM = 'PREMIUM',
+  SUPER_LUXURY = 'SUPER_LUXURY',
+  VERY_EXPENSIVE = 'VERY_EXPENSIVE'
+}
+
+export type Crime = {
+  crimeType: CrimeType;
+  multiplier: Scalars['Int']['output'];
+  reward: Scalars['Int']['output'];
+};
+
+export enum CrimeType {
+  BRIBE = 'BRIBE',
+  CONTRABAND = 'CONTRABAND',
+  DRUG = 'DRUG',
+  MURDER = 'MURDER',
+  THEFT = 'THEFT'
+}
+
 export enum CyberwareQuality {
   EXCELLENT = 'EXCELLENT',
   POOR = 'POOR',
@@ -222,6 +283,22 @@ export type Dices = {
   d20?: Maybe<Scalars['Int']['output']>;
   d100?: Maybe<Scalars['Int']['output']>;
 };
+
+export type DrugCrime = Crime & {
+  __typename?: 'DrugCrime';
+  crimeType: CrimeType;
+  multiplier: Scalars['Int']['output'];
+  reward: Scalars['Int']['output'];
+  target: DrugTarget;
+};
+
+export enum DrugTarget {
+  BLACK_LACE = 'BLACK_LACE',
+  BLUE_GLASS = 'BLUE_GLASS',
+  BOOST = 'BOOST',
+  SMASH = 'SMASH',
+  SYNTHCOKE = 'SYNTHCOKE'
+}
 
 export type FixerJob = {
   __typename?: 'FixerJob';
@@ -423,6 +500,23 @@ export enum KnownForPart2 {
   WEAPONS = 'WEAPONS'
 }
 
+export type MurderCrime = Crime & {
+  __typename?: 'MurderCrime';
+  crimeType: CrimeType;
+  multiplier: Scalars['Int']['output'];
+  reward: Scalars['Int']['output'];
+  target: MurderTarget;
+};
+
+export enum MurderTarget {
+  CITIZEN = 'CITIZEN',
+  COP = 'COP',
+  CORPO = 'CORPO',
+  EXEC = 'EXEC',
+  GANGER = 'GANGER',
+  NOBODY = 'NOBODY'
+}
+
 export type Plot = {
   __typename?: 'Plot';
   plotBuilding: PlotBuilding;
@@ -527,6 +621,23 @@ export enum Sin {
   PRIDE = 'PRIDE',
   SLOTH = 'SLOTH',
   WRATH = 'WRATH'
+}
+
+export type TheftCrime = Crime & {
+  __typename?: 'TheftCrime';
+  crimeType: CrimeType;
+  multiplier: Scalars['Int']['output'];
+  reward: Scalars['Int']['output'];
+  target: TheftTarget;
+};
+
+export enum TheftTarget {
+  MEGA_CORP = 'MEGA_CORP',
+  MINI_CORP = 'MINI_CORP',
+  OASIS = 'OASIS',
+  POOR_SOUL = 'POOR_SOUL',
+  PUBLIC_ELEMENT = 'PUBLIC_ELEMENT',
+  VENDIT = 'VENDIT'
 }
 
 export type Verb = {
