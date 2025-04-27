@@ -53,3 +53,9 @@ enum BribeTarget {
   EXEC
   POLITICIAN
 }
+
+enum BountyStatus {
+  ACTIVE
+  CAPTURED
+  DEAD
+}

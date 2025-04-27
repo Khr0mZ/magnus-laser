@@ -18,7 +18,7 @@ import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
 import { Bounty, BountyRep, Character, CrimeType } from '../../../graphql/types.ts'
 import colors from '../../../utils/colors.ts'
 import { getCrimeTargetType, getRandomElement } from '../../../utils/functions.ts'
-import { baseBountyRewardPerSpeciality } from '../../../utils/generators/generatorBounty.ts'
+import { baseBountyRewardPerSpeciality, getTarget } from '../../../utils/generators/generatorBounty.ts'
 import { flicker } from '../Animations.tsx'
 import ImageField from './ImageField.tsx'
 
@@ -188,15 +188,21 @@ const FormBounty = (props: FormBountyProps) => {
                         <IconButton
                             size="small"
                             onClick={() => {
-                                handleChange('crimes', [
-                                    ...updatedTarget.crimes,
-                                    {
-                                        crimeType: updatedTarget.speciality,
-                                        target: 'Character',
-                                        multiplier: 1,
-                                        reward: 1000,
-                                    },
-                                ])
+                                const crimeType = getRandomElement(Object.values(CrimeType))
+                                const multiplier =
+                                    crimeType === updatedTarget.speciality
+                                        ? updatedTarget.rep === BountyRep.BRAGGER
+                                            ? 2
+                                            : 0.5
+                                        : 1
+                                const target = getTarget(crimeType, multiplier)
+                                const crime = {
+                                    crimeType,
+                                    target: target.target,
+                                    multiplier,
+                                    reward: target.reward * multiplier,
+                                }
+                                handleChange('crimes', [...updatedTarget.crimes, crime])
                             }}
                             sx={{
                                 minWidth: '30px',
@@ -307,7 +313,9 @@ const FormBounty = (props: FormBountyProps) => {
                                 <InputLabel sx={inputLabelStyle}>{t('bounties.labels.target')}</InputLabel>
                                 <Select
                                     value={'target' in crime ? crime.target : ''}
-                                    onChange={(e) => handleChange(`crimes.${i}.target`, e.target.value)}
+                                    onChange={(e) => {
+                                        handleChange(`crimes.${i}.target`, e.target.value)
+                                    }}
                                     label={t('bounties.labels.target')}
                                     sx={selectStyle}
                                 >
@@ -324,6 +332,7 @@ const FormBounty = (props: FormBountyProps) => {
                                 value={crime.multiplier}
                                 variant="outlined"
                                 sx={textFieldOutlinedStyle}
+                                onChange={(e) => handleChange(`crimes.${i}.multiplier`, e.target.value)}
                             />
                             <Typography variant="h4">X</Typography>
                             <TextField
@@ -332,6 +341,7 @@ const FormBounty = (props: FormBountyProps) => {
                                 value={crime.reward}
                                 variant="outlined"
                                 sx={textFieldOutlinedStyle}
+                                onChange={(e) => handleChange(`crimes.${i}.reward`, e.target.value)}
                             />
                             <Typography variant="h4">=</Typography>
                             <TextField

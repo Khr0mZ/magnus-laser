@@ -129,8 +129,16 @@
             "reward": "Reward",
             "total": "Total",
             "target": "Quality",
-            "wanted": "WANTED",
-            "type": "Type"
+            "type": "Type",
+            "rank": "Rank",
+            "advance": "+ 1 week",
+            "filter": "Filter",
+            "status": {
+                "title": "Status",
+                "ACTIVE": "Wanted",
+                "DEAD": "Dead",
+                "CAPTURED": "Captured"
+            }
         }
     },
     "characters": {

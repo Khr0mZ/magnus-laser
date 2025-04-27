@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import {
     Bounty,
     BountyRep,
+    BountyStatus,
     BribeCrime,
     BribeTarget,
     Character,
@@ -72,6 +73,7 @@ export const generateRandomBounty = async (
         rep,
         crimes: [initialCrime],
         speciality,
+        status: BountyStatus.ACTIVE,
         ...presetBounty,
     }
 
@@ -84,7 +86,7 @@ export const generateRandomBounty = async (
  * @param rewardMultiplier - The reward multiplier
  * @returns An object with the target, multiplier and reward
  */
-const getTarget = (crimeType: CrimeType, rewardMultiplier: number) => {
+export const getTarget = (crimeType: CrimeType, rewardMultiplier: number) => {
     const targetRoll = getRandomInt(1, 10)
 
     if (crimeType === CrimeType.THEFT) {

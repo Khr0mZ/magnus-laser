@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Container, Stack, Typography } from '@mui/material'
+import { Box, CircularProgress, Container, Divider, Stack, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { isEqual } from 'lodash'
 import { useEffect, useRef, useState } from 'react'
@@ -15,10 +15,11 @@ import ViewToggle from '../../components/common/ViewToggle.tsx'
 import { WarningDialog } from '../../components/common/WarningDialog.tsx'
 import { useData } from '../../contexts/dataHooks.ts'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Bounty, Building, Character, FixerJob, Gang, Item } from '../../graphql/types.ts'
+import { Bounty, BountyStatus, Building, Character, FixerJob, Gang, Item } from '../../graphql/types.ts'
 import colors from '../../utils/colors.ts'
 import { ModuleTypes } from '../../utils/constants.ts'
-import { generateRandomBounty } from '../../utils/generators/generatorBounty.ts'
+import { getRandomInt } from '../../utils/functions.ts'
+import { generateRandomBounty, generateRandomCrime } from '../../utils/generators/generatorBounty.ts'
 import { clearBounties, saveBounties, saveViewPreference } from '../../utils/storage.ts'
 
 // Add window.bountiesDataLoaded declaration
@@ -46,8 +47,6 @@ const BountyView = () => {
         return viewPrefsLoaded ? viewPreferences[ModuleTypes.BOUNTY] : false
     })
 
-    console.log({ dataBounties, characters })
-
     // Add state for generator preferences
     const [preferExistingCharacter, setPreferExistingCharacter] = useState(false)
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
@@ -62,6 +61,8 @@ const BountyView = () => {
     const [isGenerating, setIsGenerating] = useState(false)
     const syncingFromContextRef = useRef(false)
     const updatingContextRef = useRef(false)
+    const [filterDead, setFilterDead] = useState(false)
+    const [filterCaptured, setFilterCaptured] = useState(false)
 
     // Update local state when view preferences change
     useEffect(() => {
@@ -106,8 +107,6 @@ const BountyView = () => {
         // Set updating context flag
         updatingContextRef.current = true
 
-        console.log('saving bounties', bounties)
-
         // Always save the data when it exists
         if (bounties.length > 0) {
             saveBounties(bounties)
@@ -139,7 +138,6 @@ const BountyView = () => {
                 undefined,
                 preferExistingCharacter
             )
-            console.log('newCharacter', newCharacter)
             // Update context states - our effect hooks will handle saving to storage
             if (newCharacter) {
                 setDataCharacters([...characters, newCharacter])
@@ -151,6 +149,52 @@ const BountyView = () => {
         } finally {
             setIsGenerating(false)
         }
+    }
+
+    const handleAdvanceBounty = () => {
+        setIsGenerating(true)
+        // add 1 crime to each bounty
+        setBounties((prevBounties) =>
+            prevBounties.map((bounty) => {
+                const previousCrimes = Math.min(bounty.crimes.length, 10)
+                const statusRoll = getRandomInt(0, 100) + previousCrimes
+                let skip = false
+                let status = bounty.status
+                if (status === BountyStatus.CAPTURED) {
+                    skip = getRandomInt(0, 100) <= 50 + previousCrimes
+                }
+                if (status === BountyStatus.DEAD) {
+                    skip = true
+                }
+                if (!skip) {
+                    if (statusRoll <= 11) {
+                        if (statusRoll % 2 === 0) {
+                            status = BountyStatus.DEAD
+                        } else {
+                            status = BountyStatus.CAPTURED
+                        }
+                    } else if (statusRoll >= 100) {
+                        skip = true
+                    } else {
+                        status = BountyStatus.ACTIVE
+                    }
+                }
+
+                return {
+                    ...bounty,
+                    crimes: skip
+                        ? bounty.crimes
+                        : [...bounty.crimes, generateRandomCrime(bounty.speciality, bounty.rep)],
+                    status: status,
+                }
+            })
+        )
+        setIsGenerating(false)
+    }
+
+    const handleFilterChange = (filter: string) => {
+        if (filter === 'dead') setFilterDead(!filterDead)
+        if (filter === 'captured') setFilterCaptured(!filterCaptured)
     }
 
     const handleClearAllClick = () => {
@@ -267,6 +311,11 @@ const BountyView = () => {
                         justifyContent: 'flex-end',
                     }}
                 >
+                    <GenerateButton
+                        isGenerating={isGenerating}
+                        handleGenerate={handleAdvanceBounty}
+                        label={t('bounties.labels.advance')}
+                    />
                     {viewPrefsLoaded && <ViewToggle compactView={compactView} onViewChange={handleViewChange} />}
                 </Stack>
             </Stack>
@@ -308,6 +357,44 @@ const BountyView = () => {
                             label={t('fixerJobs.useExistingCharacters')}
                         />
                     </Stack>
+                    <Divider orientation="vertical" flexItem sx={{ bgcolor: colors.neons.pink.default }} />
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: 'center' }}>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
+                                textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                            }}
+                        >
+                            {t('bounties.labels.filter')}
+                        </Typography>
+                        <CyberpunkFormControlLabel
+                            readerMode={readerMode}
+                            disabled={characters.length === 0}
+                            control={
+                                <CyberpunkCheckbox
+                                    readerMode={readerMode}
+                                    checked={filterDead}
+                                    onChange={() => handleFilterChange('dead')}
+                                    disabled={characters.length === 0}
+                                />
+                            }
+                            label={t('bounties.labels.status.DEAD') + '?'}
+                        />
+                        <CyberpunkFormControlLabel
+                            readerMode={readerMode}
+                            disabled={characters.length === 0}
+                            control={
+                                <CyberpunkCheckbox
+                                    readerMode={readerMode}
+                                    checked={filterCaptured}
+                                    onChange={() => handleFilterChange('captured')}
+                                    disabled={characters.length === 0}
+                                />
+                            }
+                            label={t('bounties.labels.status.CAPTURED') + '?'}
+                        />
+                    </Stack>
                 </Box>
                 <ClearAllButton handleClearAllClick={handleClearAllClick} disabled={bounties.length === 0} />
             </Stack>
@@ -336,6 +423,8 @@ const BountyView = () => {
                     onDelete={handleDeleteClick}
                     moduleType={ModuleTypes.BOUNTY}
                     onEdit={handleEditClick}
+                    filterDead={filterDead}
+                    filterCaptured={filterCaptured}
                 />
             ) : (
                 <GridView
@@ -343,6 +432,8 @@ const BountyView = () => {
                     onDelete={handleDeleteClick}
                     moduleType={ModuleTypes.BOUNTY}
                     onEdit={handleEditClick}
+                    filterDead={filterDead}
+                    filterCaptured={filterCaptured}
                 />
             )}
 

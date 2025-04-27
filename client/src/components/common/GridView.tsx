@@ -14,7 +14,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Bounty, Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
+import { Bounty, BountyStatus, Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import {
@@ -47,10 +47,12 @@ type GridViewProps = {
     onDelete: (index: number) => void
     moduleType: ModuleTypes
     onEdit: (index: number) => void
+    filterDead?: boolean
+    filterCaptured?: boolean
 }
 
 const GridView = (props: GridViewProps) => {
-    const { targetArray, onDelete, moduleType, onEdit } = props
+    const { targetArray, onDelete, moduleType, onEdit, filterDead, filterCaptured } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
     const { buildings, gangs, characters, items } = useData()
@@ -265,22 +267,22 @@ const GridView = (props: GridViewProps) => {
     return (
         <Masonry columns={{ xs: 1, md: 2, xl: 3 }} spacing={3} sx={{ flex: 1, width: 'calc(100vw - 32px)' }}>
             {targetArray
+                .filter((target) => {
+                    if (moduleType === ModuleTypes.BOUNTY) {
+                        if (filterDead && (target as Bounty).status === BountyStatus.DEAD) return false
+                        if (filterCaptured && (target as Bounty).status === BountyStatus.CAPTURED) return false
+                        return true
+                    }
+                    return true
+                })
                 .sort((a, b) => {
                     if (moduleType === ModuleTypes.BOUNTY) {
-                        const totalBountyA = (a as Bounty).crimes.reduce(
-                            (acc, crime) =>
-                                acc +
-                                crime.reward * crime.multiplier +
-                                baseBountyRewardPerSpeciality[(a as Bounty).speciality],
-                            0
-                        )
-                        const totalBountyB = (b as Bounty).crimes.reduce(
-                            (acc, crime) =>
-                                acc +
-                                crime.reward * crime.multiplier +
-                                baseBountyRewardPerSpeciality[(b as Bounty).speciality],
-                            0
-                        )
+                        const totalBountyA =
+                            (a as Bounty).crimes.reduce((acc, crime) => acc + crime.reward * crime.multiplier, 0) +
+                            baseBountyRewardPerSpeciality[(a as Bounty).speciality]
+                        const totalBountyB =
+                            (b as Bounty).crimes.reduce((acc, crime) => acc + crime.reward * crime.multiplier, 0) +
+                            baseBountyRewardPerSpeciality[(b as Bounty).speciality]
                         return totalBountyB - totalBountyA
                     }
                     return 0
@@ -348,11 +350,13 @@ const GridView = (props: GridViewProps) => {
                                         <Typography
                                             className={readerMode ? 'gang-name-typography' : 'glitch-text'}
                                             data-text={
-                                                moduleType === ModuleTypes.BOUNTY
-                                                    ? resolveCharacterReference(
+                                                'name' in target
+                                                    ? target.name
+                                                    : typeof target.character === 'object' && 'name' in target.character
+                                                    ? (target.character.name as string)
+                                                    : resolveCharacterReference(
                                                           (target as Bounty).character as unknown as string
                                                       )?.name
-                                                    : 'name' in target && target.name
                                             }
                                             sx={{
                                                 fontSize: '1rem',
@@ -364,11 +368,13 @@ const GridView = (props: GridViewProps) => {
                                                     : `0 0 5px ${getComplementaryColor(color)}`,
                                             }}
                                         >
-                                            {moduleType === ModuleTypes.BOUNTY
-                                                ? resolveCharacterReference(
+                                            {'name' in target
+                                                ? target.name
+                                                : typeof target.character === 'object' && 'name' in target.character
+                                                ? (target.character.name as string)
+                                                : resolveCharacterReference(
                                                       (target as Bounty).character as unknown as string
-                                                  )?.name
-                                                : 'name' in target && target.name}
+                                                  )?.name}
                                         </Typography>
                                         <Typography
                                             sx={{
@@ -579,15 +585,20 @@ const GridView = (props: GridViewProps) => {
                                             <Typography
                                                 variant="h2"
                                                 className="glitch-text"
-                                                data-text={t('bounties.labels.wanted')}
+                                                data-text={t('bounties.labels.status.' + (target as Bounty).status)}
                                                 sx={{
                                                     fontWeight: 900,
-                                                    color: colors.neons.red.default,
+                                                    color:
+                                                        (target as Bounty).status === BountyStatus.DEAD
+                                                            ? colors.grays.gray000
+                                                            : (target as Bounty).status === BountyStatus.CAPTURED
+                                                            ? colors.grays.gray900
+                                                            : colors.neons.red.default,
                                                     lineHeight: 1,
                                                     letterSpacing: '0.1em',
                                                 }}
                                             >
-                                                {t('bounties.labels.wanted')}
+                                                {t('bounties.labels.status.' + (target as Bounty).status)}
                                             </Typography>
                                             <Typography
                                                 variant="h4"
@@ -600,7 +611,12 @@ const GridView = (props: GridViewProps) => {
                                                 )} €$`}
                                                 sx={{
                                                     fontWeight: 900,
-                                                    color: colors.neons.yellow.default,
+                                                    color:
+                                                        (target as Bounty).status === BountyStatus.DEAD
+                                                            ? colors.grays.gray000
+                                                            : (target as Bounty).status === BountyStatus.CAPTURED
+                                                            ? colors.grays.gray000
+                                                            : colors.neons.yellow.default,
                                                     lineHeight: 1,
                                                 }}
                                             >

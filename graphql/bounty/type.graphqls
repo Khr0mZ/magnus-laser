@@ -48,4 +48,5 @@ type Bounty {
   character: Character!
   crimes: [Crime!]!
   speciality: CrimeType!
+  status: BountyStatus!
 }

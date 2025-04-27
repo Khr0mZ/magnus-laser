@@ -7,10 +7,11 @@ import { buttonGlitch, pulseGlowGreen, scanlineFlow } from './common/Animations'
 type GenerateButtonProps = {
     isGenerating: boolean
     handleGenerate: () => void
+    label?: string
 }
 
 const GenerateButton = (props: GenerateButtonProps) => {
-    const { isGenerating, handleGenerate } = props
+    const { isGenerating, handleGenerate, label } = props
     const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
 
@@ -87,7 +88,7 @@ const GenerateButton = (props: GenerateButtonProps) => {
                       }),
             }}
         >
-            {isGenerating ? t('common.generating') : t('common.generate')}
+            {isGenerating ? t('common.generating') : label || t('common.generate')}
         </Button>
     )
 }

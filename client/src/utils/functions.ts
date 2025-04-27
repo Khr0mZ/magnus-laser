@@ -158,6 +158,9 @@ export const processBountyValueForDisplay = (key: string, value: unknown, t: TFu
     if (key === 'character.type') {
         return t(`characters.type.${value}`)
     }
+    if (key === 'status') {
+        return t(`bounties.labels.status.${value}`)
+    }
     if (key === 'attitude') {
         return t(`characters.attitude.${value}`)
     }

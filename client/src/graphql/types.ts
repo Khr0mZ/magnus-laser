@@ -39,11 +39,18 @@ export type Bounty = {
   crimes: Array<Crime>;
   rep: BountyRep;
   speciality: CrimeType;
+  status: BountyStatus;
 };
 
 export enum BountyRep {
   BRAGGER = 'BRAGGER',
   LOWPRO = 'LOWPRO'
+}
+
+export enum BountyStatus {
+  ACTIVE = 'ACTIVE',
+  CAPTURED = 'CAPTURED',
+  DEAD = 'DEAD'
 }
 
 export type BribeCrime = Crime & {

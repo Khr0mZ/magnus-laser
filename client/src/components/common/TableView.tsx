@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import CustomScrollbar from '../../components/CustomScrollbar'
 import { useData } from '../../contexts/dataHooks'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
-import { Bounty, Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
+import { Bounty, BountyStatus, Building, Character, FixerJob, Gang, Item } from '../../graphql/types'
 import colors from '../../utils/colors'
 import {
     bountyColumns,
@@ -40,10 +40,12 @@ type TableViewProps = {
     onDelete: (index: number) => void
     moduleType: ModuleTypes
     onEdit: (index: number) => void
+    filterDead?: boolean
+    filterCaptured?: boolean
 }
 
 const TableView = (props: TableViewProps) => {
-    const { targetArray, onDelete, moduleType, onEdit } = props
+    const { targetArray, onDelete, moduleType, onEdit, filterDead, filterCaptured } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
     const { buildings, gangs, characters, items } = useData()
@@ -303,22 +305,27 @@ const TableView = (props: TableViewProps) => {
 
                     <TableBody>
                         {targetArray
+                            .filter((target) => {
+                                if (moduleType === ModuleTypes.BOUNTY) {
+                                    if (filterDead && (target as Bounty).status === BountyStatus.DEAD) return false
+                                    if (filterCaptured && (target as Bounty).status === BountyStatus.CAPTURED)
+                                        return false
+                                    return true
+                                }
+                                return true
+                            })
                             .sort((a, b) => {
                                 if (moduleType === ModuleTypes.BOUNTY) {
-                                    const totalBountyA = (a as Bounty).crimes.reduce(
-                                        (acc, crime) =>
-                                            acc +
-                                            crime.reward * crime.multiplier +
-                                            baseBountyRewardPerSpeciality[(a as Bounty).speciality],
-                                        0
-                                    )
-                                    const totalBountyB = (b as Bounty).crimes.reduce(
-                                        (acc, crime) =>
-                                            acc +
-                                            crime.reward * crime.multiplier +
-                                            baseBountyRewardPerSpeciality[(b as Bounty).speciality],
-                                        0
-                                    )
+                                    const totalBountyA =
+                                        (a as Bounty).crimes.reduce(
+                                            (acc, crime) => acc + crime.reward * crime.multiplier,
+                                            0
+                                        ) + baseBountyRewardPerSpeciality[(a as Bounty).speciality]
+                                    const totalBountyB =
+                                        (b as Bounty).crimes.reduce(
+                                            (acc, crime) => acc + crime.reward * crime.multiplier,
+                                            0
+                                        ) + baseBountyRewardPerSpeciality[(b as Bounty).speciality]
                                     return totalBountyB - totalBountyA
                                 }
                                 return 0
@@ -378,6 +385,56 @@ const TableView = (props: TableViewProps) => {
                                             transition: 'all 0.2s',
                                         }}
                                     >
+                                        {/* Rank cell */}
+                                        {moduleType === ModuleTypes.BOUNTY && (
+                                            <TableCell
+                                                className="cell-content"
+                                                align="center"
+                                                sx={{
+                                                    borderBottom: `1px solid ${colors.neons.cyan.dark}`,
+                                                    position: 'sticky',
+                                                    left: 0,
+                                                    bgcolor: readerMode
+                                                        ? index % 2 === 0
+                                                            ? 'rgba(0, 255, 255, 0.2)'
+                                                            : 'rgba(0, 255, 255, 0.1)'
+                                                        : index % 2 === 0
+                                                        ? 'rgba(0, 20, 40, 0.2)'
+                                                        : 'rgba(0, 15, 30, 0.4)',
+                                                    zIndex: 1,
+                                                }}
+                                            >
+                                                <Typography
+                                                    className={readerMode ? 'gang-name-typography' : 'glitch-text'}
+                                                    data-text={index + 1}
+                                                    sx={{
+                                                        fontWeight: 500,
+                                                        color: color,
+                                                        textShadow: readerMode
+                                                            ? `0 0 5px ${getComplementaryColor(
+                                                                  color
+                                                              )}40, -1px -1px 0 ${getComplementaryColor(
+                                                                  color
+                                                              )}40, 1px -1px 0 ${getComplementaryColor(
+                                                                  color
+                                                              )}40, -1px 1px 0 ${getComplementaryColor(
+                                                                  color
+                                                              )}40, 1px 1px 0 ${getComplementaryColor(color)}40`
+                                                            : `0 0 5px ${getComplementaryColor(
+                                                                  color
+                                                              )}40, -1px -1px 0 ${getComplementaryColor(
+                                                                  color
+                                                              )}40, 1px -1px 0 ${getComplementaryColor(
+                                                                  color
+                                                              )}40, -1px 1px 0 ${getComplementaryColor(
+                                                                  color
+                                                              )}40, 1px 1px 0 ${getComplementaryColor(color)}40`,
+                                                    }}
+                                                >
+                                                    {index + 1}
+                                                </Typography>
+                                            </TableCell>
+                                        )}
                                         {/* Name cell */}
                                         <TableCell
                                             className="cell-content"
@@ -434,7 +491,7 @@ const TableView = (props: TableViewProps) => {
                                         </TableCell>
 
                                         {/* Render data cells for each column (excluding name since it's already rendered) */}
-                                        {columns.slice(1).map((column) => {
+                                        {columns.slice(2).map((column) => {
                                             // Default value for display
                                             let displayValue: React.ReactNode = '—'
 
@@ -547,7 +604,6 @@ const TableView = (props: TableViewProps) => {
                                                     )
                                                 )
                                             } else if (moduleType === ModuleTypes.BOUNTY) {
-                                                // console.log('target', { target, column })
                                                 if (column.key === 'character.type') {
                                                     displayValue = t(
                                                         `characters.type.${
@@ -597,11 +653,26 @@ const TableView = (props: TableViewProps) => {
                                                     key={column.key}
                                                     align="center"
                                                     sx={{
-                                                        color: readerMode
-                                                            ? colors.grays.gray400
-                                                            : colors.neons.cyan.default,
+                                                        color:
+                                                            column.key === 'status'
+                                                                ? displayValue === 'Dead'
+                                                                    ? colors.grays.gray000
+                                                                    : displayValue === 'Captured'
+                                                                    ? colors.grays.gray900
+                                                                    : colors.neons.red.default
+                                                                : readerMode
+                                                                ? colors.grays.gray400
+                                                                : colors.neons.cyan.default,
                                                         fontWeight: 500,
                                                         borderBottom: `1px solid ${colors.neons.cyan.dark}`,
+                                                        textShadow:
+                                                            column.key === 'status'
+                                                                ? displayValue === 'Dead'
+                                                                    ? `0 0 5px ${colors.grays.gray900}`
+                                                                    : displayValue === 'Captured'
+                                                                    ? `0 0 5px ${colors.grays.gray000}`
+                                                                    : `0 0 5px ${colors.grays.gray000}`
+                                                                : 'none',
                                                     }}
                                                     className="cell-content"
                                                 >

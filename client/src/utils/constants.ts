@@ -14,7 +14,9 @@ export enum ModuleTypes {
 
 // Bounty columns used in the bounty table view
 export const bountyColumns: TableColumn[] = [
+    { key: 'index', label: 'rank' },
     { key: 'character.name', label: 'name' },
+    { key: 'status', label: 'status.title' },
     { key: 'character.type', label: 'type' },
     { key: 'speciality', label: 'speciality' },
     { key: 'rep', label: 'rep' },
