@@ -3,6 +3,7 @@ import {
     FormControl,
     Grid,
     IconButton,
+    InputAdornment,
     InputLabel,
     MenuItem,
     Select,
@@ -15,10 +16,17 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../contexts/dataHooks.ts'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
-import { Bounty, BountyRep, Character, CrimeType } from '../../../graphql/types.ts'
+import { Bounty, BountyRep, BountyStatus, Character, CrimeType } from '../../../graphql/types.ts'
 import colors from '../../../utils/colors.ts'
 import { getCrimeTargetType, getRandomElement } from '../../../utils/functions.ts'
 import { baseBountyRewardPerSpeciality, getTarget } from '../../../utils/generators/generatorBounty.ts'
+import {
+    BribeTargetRank,
+    ContrabandTargetRank,
+    DrugTargetRank,
+    MurderTargetRank,
+    TheftTargetRank,
+} from '../../../utils/types.ts'
 import { flicker } from '../Animations.tsx'
 import ImageField from './ImageField.tsx'
 
@@ -56,6 +64,29 @@ const FormBounty = (props: FormBountyProps) => {
             ) as Character,
         }
     }, [editedTarget, characters])
+
+    const getTargetRank = (target: string, crimeType: CrimeType) => {
+        let rank = 0
+        switch (crimeType) {
+            case CrimeType.THEFT:
+                rank = TheftTargetRank[target as keyof typeof TheftTargetRank] || 0
+                return rank
+            case CrimeType.MURDER:
+                rank = MurderTargetRank[target as keyof typeof MurderTargetRank] || 0
+                return rank
+            case CrimeType.CONTRABAND:
+                rank = ContrabandTargetRank[target as keyof typeof ContrabandTargetRank] || 0
+                return rank
+            case CrimeType.DRUG:
+                rank = DrugTargetRank[target as keyof typeof DrugTargetRank] || 0
+                return rank
+            case CrimeType.BRIBE:
+                rank = BribeTargetRank[target as keyof typeof BribeTargetRank] || 0
+                return rank
+            default:
+                return 0
+        }
+    }
 
     return (
         <>
@@ -114,22 +145,6 @@ const FormBounty = (props: FormBountyProps) => {
                         />
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
-                        {/* Rep */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('bounties.labels.rep')}</InputLabel>
-                            <Select
-                                value={updatedTarget.rep || ''}
-                                onChange={(e) => handleChange('rep', e.target.value)}
-                                label={t('bounties.labels.rep')}
-                                sx={selectStyle}
-                            >
-                                {Object.values(BountyRep).map((value) => (
-                                    <MenuItem key={value} value={value}>
-                                        {t(`bounties.rep.${value}`)}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
                         {/* Speciality */}
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel sx={inputLabelStyle}>{t('bounties.labels.speciality')}</InputLabel>
@@ -154,7 +169,44 @@ const FormBounty = (props: FormBountyProps) => {
                             variant="outlined"
                             sx={textFieldOutlinedStyle}
                             disabled
+                            InputProps={{
+                                endAdornment: <InputAdornment position="end">{'€$'}</InputAdornment>,
+                            }}
                         />
+                    </Stack>
+                    <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
+                        {/* Rep */}
+                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
+                            <InputLabel sx={inputLabelStyle}>{t('bounties.labels.rep')}</InputLabel>
+                            <Select
+                                value={updatedTarget.rep || ''}
+                                onChange={(e) => handleChange('rep', e.target.value)}
+                                label={t('bounties.labels.rep')}
+                                sx={selectStyle}
+                            >
+                                {Object.values(BountyRep).map((value) => (
+                                    <MenuItem key={value} value={value}>
+                                        {t(`bounties.rep.${value}`)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        {/* Status */}
+                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
+                            <InputLabel sx={inputLabelStyle}>{t('bounties.labels.status.title')}</InputLabel>
+                            <Select
+                                value={updatedTarget.status || ''}
+                                onChange={(e) => handleChange('status', e.target.value)}
+                                label={t('bounties.labels.status.title')}
+                                sx={selectStyle}
+                            >
+                                {Object.values(BountyStatus).map((value) => (
+                                    <MenuItem key={value} value={value}>
+                                        {t(`bounties.labels.status.${value}`)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                     </Stack>
                 </Stack>
             </Grid>
@@ -319,11 +371,20 @@ const FormBounty = (props: FormBountyProps) => {
                                     label={t('bounties.labels.target')}
                                     sx={selectStyle}
                                 >
-                                    {Object.values(getCrimeTargetType(crime.crimeType)).map((value) => (
-                                        <MenuItem key={value} value={value}>
-                                            {t(`bounties.target.${value}`)}
-                                        </MenuItem>
-                                    ))}
+                                    {(() => {
+                                        const targets = Object.values(getCrimeTargetType(crime.crimeType))
+                                        return targets
+                                            .sort((a, b) => {
+                                                const rankA = getTargetRank(a, crime.crimeType)
+                                                const rankB = getTargetRank(b, crime.crimeType)
+                                                return rankA - rankB
+                                            })
+                                            .map((value) => (
+                                                <MenuItem key={value} value={value}>
+                                                    {t(`bounties.target.${value}`)}
+                                                </MenuItem>
+                                            ))
+                                    })()}
                                 </Select>
                             </FormControl>
                             <TextField
@@ -351,6 +412,9 @@ const FormBounty = (props: FormBountyProps) => {
                                 variant="outlined"
                                 sx={textFieldOutlinedStyle}
                                 disabled
+                                InputProps={{
+                                    endAdornment: <InputAdornment position="end">{'€$'}</InputAdornment>,
+                                }}
                             />
                         </Stack>
                     ))}

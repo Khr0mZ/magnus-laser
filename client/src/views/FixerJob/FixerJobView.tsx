@@ -223,9 +223,12 @@ const FixerJobView = () => {
         setFixerJobToDelete(null)
     }
 
-    const handleEditClick = (index: number) => {
-        setFixerJobToEdit(fixerJobs[index])
-        setEditDialogOpen(true)
+    const handleEditClick = (ID: string) => {
+        const fixerJob = fixerJobs.find((fixerJob) => fixerJob.ID === ID)
+        if (fixerJob) {
+            setFixerJobToEdit(fixerJob)
+            setEditDialogOpen(true)
+        }
     }
 
     const handleEditSave = (editedTarget: FixerJob) => {

@@ -46,7 +46,7 @@ type GridViewProps = {
     targetArray: (Gang | Building | FixerJob | Character | Item | Bounty)[]
     onDelete: (index: number) => void
     moduleType: ModuleTypes
-    onEdit: (index: number) => void
+    onEdit: (ID: string) => void
     filterDead?: boolean
     filterCaptured?: boolean
 }
@@ -292,7 +292,7 @@ const GridView = (props: GridViewProps) => {
                     return (
                         <Card
                             key={index}
-                            onClick={() => onEdit(index)}
+                            onClick={() => onEdit(target.ID)}
                             sx={{
                                 bgcolor: '#0e1630',
                                 border: 'none',

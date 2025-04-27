@@ -122,32 +122,32 @@ export const getTarget = (crimeType: CrimeType, rewardMultiplier: number) => {
             case 4:
             case 5:
                 return {
-                    target: MurderTarget.NOBODY,
-                    multiplier: Math.max(multiplier - 6, 1),
-                    reward: 50 * rewardMultiplier,
-                }
-            case 6:
-            case 7:
-                return {
                     target: MurderTarget.CITIZEN,
                     multiplier: Math.max(multiplier - 6, 1),
                     reward: 100 * rewardMultiplier,
                 }
-            case 8:
+            case 6:
+            case 7:
                 return {
                     target: MurderTarget.CORPO,
-                    multiplier: Math.max(multiplier - 8, 1),
+                    multiplier: Math.max(multiplier - 6, 1),
                     reward: 200 * rewardMultiplier,
                 }
-            case 9:
+            case 8:
                 return {
                     target: MurderTarget.COP,
                     multiplier: Math.max(multiplier - 8, 1),
                     reward: 500 * rewardMultiplier,
                 }
-            case 10:
+            case 9:
                 return {
                     target: MurderTarget.EXEC,
+                    multiplier: Math.max(multiplier - 8, 1),
+                    reward: 700 * rewardMultiplier,
+                }
+            case 10:
+                return {
+                    target: MurderTarget.POLITICIAN,
                     multiplier: Math.max(multiplier - 9, 1),
                     reward: 1000 * rewardMultiplier,
                 }
@@ -180,11 +180,12 @@ export const getTarget = (crimeType: CrimeType, rewardMultiplier: number) => {
                 return { target: DrugTarget.SMASH, multiplier: multiplier, reward: 10 * rewardMultiplier }
             case 4:
             case 5:
+                return { target: DrugTarget.STIM, multiplier: multiplier, reward: 10 * rewardMultiplier }
             case 6:
-                return { target: DrugTarget.BLUE_GLASS, multiplier: multiplier, reward: 20 * rewardMultiplier }
             case 7:
+                return { target: DrugTarget.BLUE_GLASS, multiplier: multiplier, reward: 20 * rewardMultiplier }
             case 8:
-                return { target: DrugTarget.SYNTHCOKE, multiplier: multiplier, reward: 50 * rewardMultiplier }
+                return { target: DrugTarget.SYNTHCOKE, multiplier: multiplier, reward: 20 * rewardMultiplier }
             case 9:
                 return { target: DrugTarget.BOOST, multiplier: multiplier, reward: 50 * rewardMultiplier }
             case 10:
@@ -194,22 +195,23 @@ export const getTarget = (crimeType: CrimeType, rewardMultiplier: number) => {
         switch (targetRoll) {
             case 1:
             case 2:
-                return { target: BribeTarget.CITIZEN, multiplier: 1, reward: 50 * rewardMultiplier }
             case 3:
+                return { target: BribeTarget.GANGER, multiplier: 1, reward: 20 * rewardMultiplier }
             case 4:
             case 5:
-                return { target: BribeTarget.CORPO, multiplier: 1, reward: 200 * rewardMultiplier }
+                return { target: BribeTarget.CITIZEN, multiplier: 1, reward: 100 * rewardMultiplier }
             case 6:
             case 7:
-                return { target: BribeTarget.COP, multiplier: 1, reward: 500 * rewardMultiplier }
+                return { target: BribeTarget.CORPO, multiplier: 1, reward: 200 * rewardMultiplier }
             case 8:
+                return { target: BribeTarget.COP, multiplier: 1, reward: 500 * rewardMultiplier }
             case 9:
                 return { target: BribeTarget.EXEC, multiplier: 1, reward: 700 * rewardMultiplier }
             case 10:
                 return { target: BribeTarget.POLITICIAN, multiplier: 1, reward: 1000 * rewardMultiplier }
         }
     }
-    return { target: MurderTarget.NOBODY, multiplier: 1, reward: 0 }
+    return { target: MurderTarget.CITIZEN, multiplier: 1, reward: 0 }
 }
 
 /**

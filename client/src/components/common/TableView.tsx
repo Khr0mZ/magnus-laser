@@ -39,7 +39,7 @@ type TableViewProps = {
     targetArray: (Gang | Building | FixerJob | Character | Item | Bounty)[]
     onDelete: (index: number) => void
     moduleType: ModuleTypes
-    onEdit: (index: number) => void
+    onEdit: (ID: string) => void
     filterDead?: boolean
     filterCaptured?: boolean
 }
@@ -264,7 +264,7 @@ const TableView = (props: TableViewProps) => {
                             {columns.map((column) => (
                                 <TableCell
                                     key={column.key}
-                                    align={column.key === 'name' ? 'left' : 'center'}
+                                    align={'center'}
                                     sx={{
                                         fontWeight: 'bold',
                                         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
@@ -364,7 +364,7 @@ const TableView = (props: TableViewProps) => {
                                 return (
                                     <TableRow
                                         key={index}
-                                        onClick={() => onEdit(index)}
+                                        onClick={() => onEdit(target.ID)}
                                         sx={{
                                             '&:nth-of-type(odd)': {
                                                 bgcolor: readerMode ? 'rgba(0, 255, 255, 0.1)' : 'rgba(0, 15, 30, 0.4)',
@@ -491,7 +491,7 @@ const TableView = (props: TableViewProps) => {
                                         </TableCell>
 
                                         {/* Render data cells for each column (excluding name since it's already rendered) */}
-                                        {columns.slice(2).map((column) => {
+                                        {columns.slice(moduleType === ModuleTypes.BOUNTY ? 2 : 1).map((column) => {
                                             // Default value for display
                                             let displayValue: React.ReactNode = '—'
 

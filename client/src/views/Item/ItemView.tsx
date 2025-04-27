@@ -164,9 +164,12 @@ const ItemView = () => {
         setItemToDelete(null)
     }
 
-    const handleEditClick = (index: number) => {
-        setItemToEdit(items[index])
-        setEditDialogOpen(true)
+    const handleEditClick = (ID: string) => {
+        const item = items.find((item) => item.ID === ID)
+        if (item) {
+            setItemToEdit(item)
+            setEditDialogOpen(true)
+        }
     }
 
     const handleEditSave = (editedTarget: Item) => {

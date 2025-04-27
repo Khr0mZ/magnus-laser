@@ -88,34 +88,34 @@
             "BRIBE": "Bribe"
         },
         "rep": {
-            "BRAGGER": "Bragger",
-            "LOWPRO": "Low Profile"
+            "BRAGGER": "Bragger (Spec Reward x2)",
+            "LOWPRO": "Low Profile (Spec Reward x0.5)"
         },
         "target": {
-            "POOR_SOUL": "Poor soul",
-            "VENDIT": "Vendit",
-            "OASIS": "Oasis",
-            "PUBLIC_ELEMENT": "Public element",
-            "MINI_CORP": "Mini corp",
-            "MEGA_CORP": "Mega corp",
-            "GANGER": "Ganger",
-            "NOBODY": "Nobody",
-            "CITIZEN": "Citizen",
-            "CORPO": "Corpo",
-            "COP": "Cop",
-            "EXEC": "Exec",
-            "COSTLY": "Costly",
-            "PREMIUM": "Premium",
-            "EXPENSIVE": "Expensive",
-            "VERY_EXPENSIVE": "Very expensive",
-            "LUXURY": "Luxury",
-            "SUPER_LUXURY": "Super luxury",
-            "SMASH": "Smash",
-            "BLUE_GLASS": "Blue glass",
-            "SYNTHCOKE": "Synthcok",
-            "BOOST": "Boost",
-            "BLACK_LACE": "Black lace",
-            "POLITICIAN": "Politician"
+            "POOR_SOUL": "Poor soul (50 €$)",
+            "VENDIT": "Vendit (100 €$)",
+            "OASIS": "Oasis (200 €$)",
+            "PUBLIC_ELEMENT": "Public element (350 €$)",
+            "MINI_CORP": "Mini corp (500 €$)",
+            "MEGA_CORP": "Mega corp (1000 €$)",
+            "GANGER": "Ganger (20 €$)",
+            "CITIZEN": "Citizen (100 €$)",
+            "CORPO": "Corpo (200 €$)",
+            "COP": "Cop (500 €$)",
+            "EXEC": "Exec (700 €$)",
+            "COSTLY": "Costly (50 €$)",
+            "PREMIUM": "Premium (100 €$)",
+            "EXPENSIVE": "Expensive (200 €$)",
+            "VERY_EXPENSIVE": "Very expensive (400 €$)",
+            "LUXURY": "Luxury (2000 €$)",
+            "SUPER_LUXURY": "Super luxury (4000 €$)",
+            "SMASH": "Smash (10 €$)",
+            "STIM": "Stim (10 €$)",
+            "BLUE_GLASS": "Blue glass (20 €$)",
+            "SYNTHCOKE": "Synthcok (20 €$)",
+            "BOOST": "Boost (50 €$)",
+            "BLACK_LACE": "Black lace (50 €$)",
+            "POLITICIAN": "Politician (1000 €$)"
         },
         "labels": {
             "name": "Name",
@@ -142,7 +142,7 @@
         }
     },
     "characters": {
-        "title": "Dynamic Asset Database Connection",
+        "title": "Dynamic Asset Query Interface",
         "editTitle": "Character Prefs",
         "characterSelector": "Character",
         "type": {
@@ -182,7 +182,7 @@
         }
     },
     "items": {
-        "title": "Static Asset Database Connection",
+        "title": "Static Asset Array Link",
         "editTitle": "Item Prefs",
         "itemSelector": "Item",
         "type": {

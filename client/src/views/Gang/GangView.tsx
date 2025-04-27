@@ -164,9 +164,12 @@ const GangView = () => {
         setGangToDelete(null)
     }
 
-    const handleEditClick = (index: number) => {
-        setGangToEdit(gangs[index])
-        setEditDialogOpen(true)
+    const handleEditClick = (ID: string) => {
+        const gang = gangs.find((gang) => gang.ID === ID)
+        if (gang) {
+            setGangToEdit(gang)
+            setEditDialogOpen(true)
+        }
     }
 
     const handleEditSave = (editedTarget: Gang) => {

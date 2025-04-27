@@ -233,9 +233,12 @@ const BountyView = () => {
         setBountyToDelete(null)
     }
 
-    const handleEditClick = (index: number) => {
-        setBountyToEdit(bounties[index])
-        setEditDialogOpen(true)
+    const handleEditClick = (ID: string) => {
+        const bounty = bounties.find((bounty) => bounty.ID === ID)
+        if (bounty) {
+            setBountyToEdit(bounty)
+            setEditDialogOpen(true)
+        }
     }
 
     const handleEditSave = (editedTarget: Bounty) => {
@@ -315,6 +318,7 @@ const BountyView = () => {
                         isGenerating={isGenerating}
                         handleGenerate={handleAdvanceBounty}
                         label={t('bounties.labels.advance')}
+                        disabled={bounties.length === 0}
                     />
                     {viewPrefsLoaded && <ViewToggle compactView={compactView} onViewChange={handleViewChange} />}
                 </Stack>

@@ -171,9 +171,12 @@ const BuildingView = () => {
         setBuildingToDelete(null)
     }
 
-    const handleEditClick = (index: number) => {
-        setBuildingToEdit(buildings[index])
-        setEditDialogOpen(true)
+    const handleEditClick = (ID: string) => {
+        const building = buildings.find((building) => building.ID === ID)
+        if (building) {
+            setBuildingToEdit(building)
+            setEditDialogOpen(true)
+        }
     }
 
     const handleEditSave = (editedTarget: Building) => {

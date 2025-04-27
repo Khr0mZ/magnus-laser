@@ -22,11 +22,11 @@ enum TheftTarget {
 
 enum MurderTarget {
   GANGER
-  NOBODY
   CITIZEN
   CORPO
   COP
   EXEC
+  POLITICIAN
 }
 
 enum ContrabandTarget {
@@ -40,6 +40,7 @@ enum ContrabandTarget {
 
 enum DrugTarget {
   SMASH
+  STIM
   BLUE_GLASS
   SYNTHCOKE
   BOOST
@@ -47,6 +48,7 @@ enum DrugTarget {
 }
 
 enum BribeTarget {
+  GANGER
   CITIZEN
   CORPO
   COP

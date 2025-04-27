@@ -8,10 +8,11 @@ type GenerateButtonProps = {
     isGenerating: boolean
     handleGenerate: () => void
     label?: string
+    disabled?: boolean
 }
 
 const GenerateButton = (props: GenerateButtonProps) => {
-    const { isGenerating, handleGenerate, label } = props
+    const { isGenerating, handleGenerate, label, disabled } = props
     const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
 
@@ -20,7 +21,7 @@ const GenerateButton = (props: GenerateButtonProps) => {
             variant="contained"
             color="primary"
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || disabled}
             sx={{
                 position: 'relative',
                 bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',

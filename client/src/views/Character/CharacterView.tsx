@@ -164,9 +164,12 @@ const CharacterView = () => {
         setCharacterToDelete(null)
     }
 
-    const handleEditClick = (index: number) => {
-        setCharacterToEdit(characters[index])
-        setEditDialogOpen(true)
+    const handleEditClick = (ID: string) => {
+        const character = characters.find((character) => character.ID === ID)
+        if (character) {
+            setCharacterToEdit(character)
+            setEditDialogOpen(true)
+        }
     }
 
     const handleEditSave = (editedTarget: Character) => {

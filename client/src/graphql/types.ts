@@ -66,6 +66,7 @@ export enum BribeTarget {
   COP = 'COP',
   CORPO = 'CORPO',
   EXEC = 'EXEC',
+  GANGER = 'GANGER',
   POLITICIAN = 'POLITICIAN'
 }
 
@@ -304,6 +305,7 @@ export enum DrugTarget {
   BLUE_GLASS = 'BLUE_GLASS',
   BOOST = 'BOOST',
   SMASH = 'SMASH',
+  STIM = 'STIM',
   SYNTHCOKE = 'SYNTHCOKE'
 }
 
@@ -521,7 +523,7 @@ export enum MurderTarget {
   CORPO = 'CORPO',
   EXEC = 'EXEC',
   GANGER = 'GANGER',
-  NOBODY = 'NOBODY'
+  POLITICIAN = 'POLITICIAN'
 }
 
 export type Plot = {
