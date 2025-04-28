@@ -12,11 +12,11 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../contexts/dataHooks.ts'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
-import { Bounty, BountyRep, BountyStatus, Character, CrimeType } from '../../../graphql/types.ts'
+import { Bounty, BountyRep, BountyStatus, Character, Crime, CrimeType } from '../../../graphql/types.ts'
 import colors from '../../../utils/colors.ts'
 import { getCrimeTargetType, getRandomElement } from '../../../utils/functions.ts'
 import { baseBountyRewardPerSpeciality, getTarget } from '../../../utils/generators/generatorBounty.ts'
@@ -28,6 +28,7 @@ import {
     TheftTargetRank,
 } from '../../../utils/types.ts'
 import { flicker } from '../Animations.tsx'
+import VirtualizedList from '../VirtualizedList.tsx'
 import ImageField from './ImageField.tsx'
 
 export type FormBountyProps = {
@@ -39,6 +40,117 @@ export type FormBountyProps = {
     inputLabelStyle: SxProps
     selectStyle: SxProps
 }
+
+const CrimeRow = memo(
+    ({
+        crime,
+        index,
+        handleChange,
+        formControlStyle,
+        inputLabelStyle,
+        selectStyle,
+        textFieldOutlinedStyle,
+        getTargetRank,
+    }: {
+        crime: Crime
+        index: number
+        handleChange: (field: string, value: unknown) => void
+        formControlStyle: SxProps
+        inputLabelStyle: SxProps
+        selectStyle: SxProps
+        textFieldOutlinedStyle: SxProps
+        getTargetRank: (target: string, crimeType: CrimeType) => number
+    }) => {
+        const { t } = useTranslation()
+
+        return (
+            <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                    width: '100%',
+                    alignItems: 'center',
+                    py: 1,
+                }}
+            >
+                <FormControl fullWidth variant="outlined" sx={formControlStyle}>
+                    <InputLabel sx={inputLabelStyle}>{t('bounties.labels.crime')}</InputLabel>
+                    <Select
+                        value={crime.crimeType}
+                        onChange={(e) => {
+                            handleChange(`crimes.${index}.crimeType`, e.target.value)
+                            const targetType = getCrimeTargetType(e.target.value as CrimeType)
+                            handleChange(`crimes.${index}.target`, getRandomElement(Object.values(targetType)))
+                        }}
+                        label={t('bounties.labels.crime')}
+                        sx={selectStyle}
+                    >
+                        {Object.values(CrimeType).map((value) => (
+                            <MenuItem key={value} value={value}>
+                                {t(`bounties.speciality.${value}`)}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <FormControl fullWidth variant="outlined" sx={formControlStyle}>
+                    <InputLabel sx={inputLabelStyle}>{t('bounties.labels.target')}</InputLabel>
+                    <Select
+                        value={'target' in crime ? crime.target : ''}
+                        onChange={(e) => {
+                            handleChange(`crimes.${index}.target`, e.target.value)
+                        }}
+                        label={t('bounties.labels.target')}
+                        sx={selectStyle}
+                    >
+                        {(() => {
+                            const targets = Object.values(getCrimeTargetType(crime.crimeType))
+                            return targets
+                                .sort((a, b) => {
+                                    const rankA = getTargetRank(a, crime.crimeType)
+                                    const rankB = getTargetRank(b, crime.crimeType)
+                                    return rankA - rankB
+                                })
+                                .map((value) => (
+                                    <MenuItem key={value} value={value}>
+                                        {t(`bounties.target.${value}`)}
+                                    </MenuItem>
+                                ))
+                        })()}
+                    </Select>
+                </FormControl>
+                <TextField
+                    fullWidth
+                    label={t('bounties.labels.multiplier')}
+                    value={crime.multiplier}
+                    variant="outlined"
+                    sx={textFieldOutlinedStyle}
+                    onChange={(e) => handleChange(`crimes.${index}.multiplier`, e.target.value)}
+                />
+                <Typography variant="h4">X</Typography>
+                <TextField
+                    fullWidth
+                    label={t('bounties.labels.reward')}
+                    value={crime.reward}
+                    variant="outlined"
+                    sx={textFieldOutlinedStyle}
+                    onChange={(e) => handleChange(`crimes.${index}.reward`, e.target.value)}
+                />
+                <Typography variant="h4">=</Typography>
+                <TextField
+                    fullWidth
+                    label={t('bounties.labels.total')}
+                    value={crime.reward * crime.multiplier}
+                    variant="outlined"
+                    sx={textFieldOutlinedStyle}
+                    disabled
+                    InputProps={{
+                        endAdornment: <InputAdornment position="end">{'€$'}</InputAdornment>,
+                    }}
+                />
+            </Stack>
+        )
+    }
+)
 
 const FormBounty = (props: FormBountyProps) => {
     const {
@@ -65,7 +177,7 @@ const FormBounty = (props: FormBountyProps) => {
         }
     }, [editedTarget, characters])
 
-    const getTargetRank = (target: string, crimeType: CrimeType) => {
+    const getTargetRank = useCallback((target: string, crimeType: CrimeType) => {
         let rank = 0
         switch (crimeType) {
             case CrimeType.THEFT:
@@ -86,7 +198,36 @@ const FormBounty = (props: FormBountyProps) => {
             default:
                 return 0
         }
-    }
+    }, [])
+
+    const Row = useCallback(
+        ({ index, style }: { index: number; style: React.CSSProperties }) => {
+            const crime = updatedTarget.crimes[index]
+            return (
+                <div style={style}>
+                    <CrimeRow
+                        crime={crime}
+                        index={index}
+                        handleChange={handleChange}
+                        formControlStyle={formControlStyle}
+                        inputLabelStyle={inputLabelStyle}
+                        selectStyle={selectStyle}
+                        textFieldOutlinedStyle={textFieldOutlinedStyle}
+                        getTargetRank={getTargetRank}
+                    />
+                </div>
+            )
+        },
+        [
+            updatedTarget.crimes,
+            handleChange,
+            formControlStyle,
+            inputLabelStyle,
+            selectStyle,
+            textFieldOutlinedStyle,
+            getTargetRank,
+        ]
+    )
 
     return (
         <>
@@ -332,92 +473,13 @@ const FormBounty = (props: FormBountyProps) => {
                             />
                         </IconButton>
                     </Stack>
-                    {updatedTarget.crimes.map((crime, i) => (
-                        <Stack
-                            direction="row"
-                            spacing={2}
-                            key={i}
-                            sx={{
-                                width: '100%',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                                <InputLabel sx={inputLabelStyle}>{t('bounties.labels.crime')}</InputLabel>
-                                <Select
-                                    value={crime.crimeType}
-                                    onChange={(e) => {
-                                        handleChange(`crimes.${i}.crimeType`, e.target.value)
-                                        const targetType = getCrimeTargetType(e.target.value as CrimeType)
-                                        handleChange(`crimes.${i}.target`, getRandomElement(Object.values(targetType)))
-                                    }}
-                                    label={t('bounties.labels.crime')}
-                                    sx={selectStyle}
-                                >
-                                    {Object.values(CrimeType).map((value) => (
-                                        <MenuItem key={value} value={value}>
-                                            {t(`bounties.speciality.${value}`)}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                                <InputLabel sx={inputLabelStyle}>{t('bounties.labels.target')}</InputLabel>
-                                <Select
-                                    value={'target' in crime ? crime.target : ''}
-                                    onChange={(e) => {
-                                        handleChange(`crimes.${i}.target`, e.target.value)
-                                    }}
-                                    label={t('bounties.labels.target')}
-                                    sx={selectStyle}
-                                >
-                                    {(() => {
-                                        const targets = Object.values(getCrimeTargetType(crime.crimeType))
-                                        return targets
-                                            .sort((a, b) => {
-                                                const rankA = getTargetRank(a, crime.crimeType)
-                                                const rankB = getTargetRank(b, crime.crimeType)
-                                                return rankA - rankB
-                                            })
-                                            .map((value) => (
-                                                <MenuItem key={value} value={value}>
-                                                    {t(`bounties.target.${value}`)}
-                                                </MenuItem>
-                                            ))
-                                    })()}
-                                </Select>
-                            </FormControl>
-                            <TextField
-                                fullWidth
-                                label={t('bounties.labels.multiplier')}
-                                value={crime.multiplier}
-                                variant="outlined"
-                                sx={textFieldOutlinedStyle}
-                                onChange={(e) => handleChange(`crimes.${i}.multiplier`, e.target.value)}
-                            />
-                            <Typography variant="h4">X</Typography>
-                            <TextField
-                                fullWidth
-                                label={t('bounties.labels.reward')}
-                                value={crime.reward}
-                                variant="outlined"
-                                sx={textFieldOutlinedStyle}
-                                onChange={(e) => handleChange(`crimes.${i}.reward`, e.target.value)}
-                            />
-                            <Typography variant="h4">=</Typography>
-                            <TextField
-                                fullWidth
-                                label={t('bounties.labels.total')}
-                                value={crime.reward * crime.multiplier}
-                                variant="outlined"
-                                sx={textFieldOutlinedStyle}
-                                disabled
-                                InputProps={{
-                                    endAdornment: <InputAdornment position="end">{'€$'}</InputAdornment>,
-                                }}
-                            />
-                        </Stack>
-                    ))}
+                    <VirtualizedList
+                        height={Math.min(updatedTarget.crimes.length * 74, 400)}
+                        itemCount={updatedTarget.crimes.length}
+                        itemSize={74}
+                        width="100%"
+                        renderItem={Row}
+                    />
                 </Stack>
             </Grid>
         </>
