@@ -7,10 +7,11 @@ import { buttonGlitch, pulseGlowRed, scanlineFlow } from './common/Animations'
 type ClearAllButtonProps = {
     handleClearAllClick: () => void
     disabled: boolean
+    label?: string
 }
 
 const ClearAllButton = (props: ClearAllButtonProps) => {
-    const { handleClearAllClick, disabled } = props
+    const { handleClearAllClick, disabled, label } = props
     const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
 
@@ -109,7 +110,7 @@ const ClearAllButton = (props: ClearAllButtonProps) => {
                       }),
             }}
         >
-            {t('common.clear')}
+            {label || t('common.clear')}
         </Button>
     )
 }

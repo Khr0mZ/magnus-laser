@@ -9,6 +9,7 @@ enum NavigationPaths {
     CHARACTER = '/character',
     ITEM = '/item',
     SETTINGS = '/settings',
+    MAP = '/map',
 }
 
 export default NavigationPaths

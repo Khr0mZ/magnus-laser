@@ -7,6 +7,7 @@ import {
     Groups3,
     Hub,
     Nightlife,
+    SatelliteAlt,
     Settings,
     Warehouse,
 } from '@mui/icons-material'
@@ -88,6 +89,13 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
     if (module === ModuleTypes.SETTINGS)
         return (
             <Settings
+                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
+                fontSize={isNavigation ? 'large' : 'inherit'}
+            />
+        )
+    if (module === ModuleTypes.MAP)
+        return (
+            <SatelliteAlt
                 sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />

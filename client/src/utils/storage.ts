@@ -20,6 +20,13 @@ export type AppPreferences = {
     geminiApiKey: string
 }
 
+export type CustomMarker = {
+    position: [number, number]
+    buildingId: string
+    id: string
+    markerType: 'building' | 'gang' | 'contact'
+}
+
 // Default preferences
 const DEFAULT_PREFERENCES: AppPreferences = {
     viewPreferences: Object.values(ModuleTypes).reduce((acc, mod) => {
@@ -44,6 +51,7 @@ export const CHARACTERS_STORAGE_KEY = 'characters'
 export const FIXER_JOBS_STORAGE_KEY = 'fixer-jobs'
 export const PREFERENCES_STORAGE_KEY = 'preferences'
 export const BOUNTIES_STORAGE_KEY = 'bounties'
+export const MAP_MARKERS_STORAGE_KEY = 'map-markers'
 
 // Events
 export const DATA_IMPORT_EVENT = 'data-imported'
@@ -489,4 +497,14 @@ export const saveGeminiApiKey = async (key: string): Promise<void> => {
     const prefs = await loadPreferences()
     prefs.geminiApiKey = key
     await savePreferences(prefs)
+}
+
+export const loadMapMarkers = (): Promise<CustomMarker[]> => loadEntities<CustomMarker>(MAP_MARKERS_STORAGE_KEY)
+
+export const saveMapMarkers = (markers: CustomMarker[]): Promise<void> =>
+    saveEntities<CustomMarker>(MAP_MARKERS_STORAGE_KEY, markers)
+
+export const clearMapMarkers = async (): Promise<void> => {
+    cache.delete(MAP_MARKERS_STORAGE_KEY)
+    await localforage.removeItem(MAP_MARKERS_STORAGE_KEY)
 }

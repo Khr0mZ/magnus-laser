@@ -43,6 +43,7 @@ import {
     FIXER_JOBS_STORAGE_KEY,
     GANGS_STORAGE_KEY,
     ITEMS_STORAGE_KEY,
+    MAP_MARKERS_STORAGE_KEY,
     PREFERENCES_STORAGE_KEY,
     loadGeminiApiKey,
     loadHuggingFaceApiKey,
@@ -57,6 +58,7 @@ import {
     saveGeminiApiKey,
     saveHuggingFaceApiKey,
     saveItems,
+    saveMapMarkers,
     saveOpenAIApiKey,
     savePreferences,
 } from '../../utils/storage'
@@ -156,6 +158,13 @@ const SettingsView = () => {
                 const value = await localforage.getItem(key)
                 if (value) data[key] = value
             }
+
+            // Export markers and bounties
+            const markers = await localforage.getItem(MAP_MARKERS_STORAGE_KEY)
+            if (markers) data[MAP_MARKERS_STORAGE_KEY] = markers
+
+            const bounties = await localforage.getItem(BOUNTIES_STORAGE_KEY)
+            if (bounties) data[BOUNTIES_STORAGE_KEY] = bounties
 
             // Create a JSON file to download
             const fileName = `magnus-laser-data-${new Date().toISOString().split('T')[0]}.json`
@@ -306,6 +315,23 @@ const SettingsView = () => {
                             }
                         }
 
+                        // Handle markers and bounties separately
+                        if (data[MAP_MARKERS_STORAGE_KEY]) {
+                            await saveMapMarkers(data[MAP_MARKERS_STORAGE_KEY])
+                            importedCollections += 1
+                            if (Array.isArray(data[MAP_MARKERS_STORAGE_KEY])) {
+                                importedRegistries += data[MAP_MARKERS_STORAGE_KEY].length
+                            }
+                        }
+
+                        if (data[BOUNTIES_STORAGE_KEY]) {
+                            await saveBounties(data[BOUNTIES_STORAGE_KEY])
+                            importedCollections += 1
+                            if (Array.isArray(data[BOUNTIES_STORAGE_KEY])) {
+                                importedRegistries += data[BOUNTIES_STORAGE_KEY].length
+                            }
+                        }
+
                         // Show success notification if any collections imported
                         if (importedCollections > 0) {
                             // Make sure to trigger a preferences update if any data might have changed
@@ -426,7 +452,7 @@ const SettingsView = () => {
     }
 
     return (
-        <Container maxWidth={false} sx={{ py: 3 }}>
+        <Container maxWidth={false} sx={{ pb: 1 }}>
             {/* Import Warning Dialog */}
             <WarningDialog
                 open={importDialogOpen}

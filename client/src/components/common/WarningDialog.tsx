@@ -14,7 +14,7 @@ type WarningDialogProps = {
     confirmText?: string
     cancelText?: string
     confirmColor?: 'red' | 'cyan' | 'green' | 'blue'
-    moduleType?: ModuleTypes
+    moduleType?: ModuleTypes | string
     isDelete?: boolean
     isClearAll?: boolean
 }

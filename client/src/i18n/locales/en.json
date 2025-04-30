@@ -67,7 +67,10 @@
         "CLUB": "Club",
         "CLUB_DESCRIPTION": "Clubs are buildings your edgerunners can visit for fun.",
         "ITEM": "Item",
-        "ITEM_DESCRIPTION": "Items are objects your edgerunners can use."
+        "ITEM_DESCRIPTION": "Items are objects your edgerunners can use.",
+        "MAP": "Map",
+        "MAP_DESCRIPTION": "A map of the city your edgerunners can use.",
+        "MARKER": "Marker"
     },
     "dashboard": {
         "exportData": "Dump Data",
@@ -898,6 +901,9 @@
             "namePatternCorpoAdjNoun": "{{corpo}} {{adjective}} {{noun}}",
             "namePatternBuildingNounVerb": "The {{buildingStyle}} {{noun}} {{verb}}"
         }
+    },
+    "map": {
+        "title": "City Grid Satellite Uplink"
     },
     "settings": {
         "title": "System Kernel Prefs",

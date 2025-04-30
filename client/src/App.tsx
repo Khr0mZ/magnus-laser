@@ -1,6 +1,6 @@
-import { ThemeProvider } from '@emotion/react'
-import { CssBaseline } from '@mui/material'
-import { createTheme } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
+import 'leaflet/dist/leaflet.css'
 import { SnackbarProvider } from 'notistack'
 import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
@@ -17,13 +17,13 @@ import NavigationPaths from './navigation'
 import { getDesignTokens } from './utils/theme'
 import BountyView from './views/Bounty/BountyView.tsx'
 import BuildingView from './views/Building/BuildingView'
+import CharacterView from './views/Character/CharacterView.tsx'
 import ClubView from './views/Club/ClubView.tsx'
 import Dashboard from './views/Dashboard/Dashboard'
 import FixerJob from './views/FixerJob/FixerJobView'
 import GangView from './views/Gang/GangView'
-
-import CharacterView from './views/Character/CharacterView.tsx'
 import ItemView from './views/Item/ItemView.tsx'
+import MapView from './views/Map/MapView.tsx'
 import SettingsView from './views/Settings/SettingsView'
 
 const AppContent = (): JSX.Element => {
@@ -117,6 +117,7 @@ const AppContent = (): JSX.Element => {
                         <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
                             <Routes>
                                 <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
+                                <Route path={NavigationPaths.MAP} element={<MapView />} />
                                 <Route path={NavigationPaths.GANG} element={<GangView />} />
                                 <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
                                 <Route path={NavigationPaths.CLUB} element={<ClubView />} />

@@ -228,7 +228,7 @@ const BuildingView = () => {
     }
 
     return (
-        <Container maxWidth={false} sx={{ pt: 3 }}>
+        <Container maxWidth={false}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
             <Stack direction="row" alignItems="center" spacing={2} mr={1.5}>
                 <Typography

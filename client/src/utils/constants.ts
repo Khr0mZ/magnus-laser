@@ -9,6 +9,7 @@ export enum ModuleTypes {
     CLUB = 'CLUB',
     ITEM = 'ITEM',
     CHARACTER = 'CHARACTER',
+    MAP = 'MAP',
     SETTINGS = 'SETTINGS',
 }
 

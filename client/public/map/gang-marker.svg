@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Base shape with gradient -->
+    <defs>
+        <linearGradient id="gangGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFFF00" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#FF00FF" stop-opacity="0.4"/>
+        </linearGradient>
+        <linearGradient id="gangWindowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFFF00"/>
+            <stop offset="100%" stop-color="#FF00FF"/>
+        </linearGradient>
+    </defs>
+    
+    <!-- Base shape -->
+    <path d="M20 2L2 20L20 38L38 20L20 2Z" fill="url(#gangGradient)"/>
+    
+    <!-- Inner glow -->
+    <path d="M20 2L2 20L20 38L38 20L20 2Z" stroke="#FFFF00" stroke-width="1.5" stroke-linejoin="round"/>
+    
+    <!-- Gang structure -->
+    <path d="M20 6L6 20L20 34L34 20L20 6Z" fill="#FFFF00" fill-opacity="0.25"/>
+    <path d="M20 6L6 20L20 34L34 20L20 6Z" stroke="#FFFF00" stroke-width="1" stroke-linejoin="round"/>
+    
+    <!-- Windows with gradient -->
+    <rect x="14" y="13.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="18" y="13.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="22" y="13.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="14" y="17.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="18" y="17.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="22" y="17.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="14" y="21.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="18" y="21.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    <rect x="22" y="21.5" width="3" height="3" fill="url(#gangWindowGradient)" fill-opacity="0.9"/>
+    
+    <!-- Additional accents -->
+    <circle cx="6" cy="6" r="1" fill="#FF00FF" fill-opacity="0.8"/>
+    <circle cx="34" cy="6" r="1" fill="#FF00FF" fill-opacity="0.8"/>
+    <circle cx="6" cy="34" r="1" fill="#FF00FF" fill-opacity="0.8"/>
+    <circle cx="34" cy="34" r="1" fill="#FF00FF" fill-opacity="0.8"/>
+    
+    <!-- Outer glow effect -->
+    <filter id="glow">
+        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+        <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+    </filter>
+</svg> 
