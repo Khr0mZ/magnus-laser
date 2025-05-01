@@ -4,6 +4,28 @@ A cyberpunk-themed application for managing tabletop RPG game elements. This app
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+## Screenshots
+
+### Cyberpunk UI
+
+![Dashboard](./screenshots/dashboard.png)
+![Gang](./screenshots/gang.png)
+![Building](./screenshots/building.png)
+![Item](./screenshots/item.png)
+![Gig](./screenshots/gig.png)
+![Bounty](./screenshots/bounty.png)
+![System](./screenshots/system.png)
+
+### Reader Mode
+
+![Dashboard](./screenshots/dashboard_reader.png)
+![Gang](./screenshots/gang_reader.png)
+![Building](./screenshots/building_reader.png)
+![Item](./screenshots/item_reader.png)
+![Gig](./screenshots/gig_reader.png)
+![Bounty](./screenshots/bounty_reader.png)
+![System](./screenshots/system_reader.png)
+
 ## Features
 
 - Cyberpunk UI: Immersive interface with glitch effects, power lines, and neon elements.
