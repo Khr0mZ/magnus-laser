@@ -1,4 +1,4 @@
-schema: ../graphql/**/*.graphqls
+schema: ../../graphql/**/*.graphqls
 generates:
     ./src/graphql/types.ts:
         plugins:
