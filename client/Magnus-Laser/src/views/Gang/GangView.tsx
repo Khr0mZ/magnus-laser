@@ -219,7 +219,7 @@ const GangView = () => {
     }
 
     return (
-        <Container maxWidth={false}>
+        <Container maxWidth={false} sx={{ pt: 1 }}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
             <Stack direction="row" alignItems="center" spacing={2}>
                 <Typography

@@ -38,7 +38,7 @@ const MapView = () => {
     }
 
     return (
-        <Container maxWidth={false}>
+        <Container maxWidth={false} sx={{ pt: 1 }}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
             <Box sx={{ p: 0, height: 'calc(100vh - 184px)', width: '100%', position: 'relative' }}>
                 <Stack direction="row" spacing={2} sx={{ justifyContent: 'space-between' }}>

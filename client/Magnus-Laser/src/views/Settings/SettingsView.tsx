@@ -452,7 +452,7 @@ const SettingsView = () => {
     }
 
     return (
-        <Container maxWidth={false} sx={{ pb: 1 }}>
+        <Container maxWidth={false} sx={{ pb: 1, pt: 1 }}>
             {/* Import Warning Dialog */}
             <WarningDialog
                 open={importDialogOpen}

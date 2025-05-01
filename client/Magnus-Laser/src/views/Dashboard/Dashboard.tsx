@@ -16,7 +16,7 @@ const Dashboard = () => {
     useDocumentTitle(`Magnus Laser - ${t('modules.DASHBOARD')}`)
 
     return (
-        <Container maxWidth={false} sx={{ pt: 3 }}>
+        <Container maxWidth={false} sx={{ pt: 1 }}>
             <Box
                 sx={{
                     position: 'relative',

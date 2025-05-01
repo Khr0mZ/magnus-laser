@@ -2,9 +2,9 @@ import { Box, Drawer, Stack } from '@mui/material'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
+import WindowButtons from '../WindowButtons.tsx'
 import DrawerButton from './DrawerButton'
 import LogoButton from './LogoButton'
-
 const NavigationDrawer = (): JSX.Element => {
     const { readerMode } = useUserPreferences()
 
@@ -77,6 +77,7 @@ const NavigationDrawer = (): JSX.Element => {
                 />
 
                 <Stack
+                    data-tauri-drag-region
                     direction={{ xs: 'column', md: 'row' }}
                     sx={{
                         bgcolor: 'transparent',
@@ -89,6 +90,7 @@ const NavigationDrawer = (): JSX.Element => {
                 >
                     <LogoButton />
                     <Stack
+                        data-tauri-drag-region
                         direction={'row'}
                         sx={{
                             bgcolor: 'transparent',
@@ -102,6 +104,7 @@ const NavigationDrawer = (): JSX.Element => {
                             <DrawerButton key={module} module={module} />
                         ))}
                     </Stack>
+                    <WindowButtons />
                 </Stack>
             </Drawer>
         </Box>
