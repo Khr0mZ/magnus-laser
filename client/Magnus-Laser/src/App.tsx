@@ -26,7 +26,7 @@ import ItemView from './views/Item/ItemView.tsx'
 import MapView from './views/Map/MapView.tsx'
 import SettingsView from './views/Settings/SettingsView'
 
-const AppContent = (): JSX.Element => {
+const AppContent = () => {
     const { readerMode, loaderEnabled, isLoadingPreferences } = useUserPreferences()
 
     // Additional state for loader
@@ -135,7 +135,7 @@ const AppContent = (): JSX.Element => {
     )
 }
 
-const App = (): JSX.Element => {
+const App = () => {
     return (
         <DataProvider>
             <UserPreferencesProvider>

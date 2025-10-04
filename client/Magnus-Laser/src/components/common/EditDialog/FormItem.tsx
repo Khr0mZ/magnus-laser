@@ -1,4 +1,4 @@
-import { FormControl, Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
+import { FormControl, GridLegacy as Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
 import { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
@@ -23,7 +23,7 @@ export type FormItemProps = {
     formControlStyle: SxProps
     inputLabelStyle: SxProps
     selectStyle: SxProps
-    hiddenFileInput: JSX.Element
+    hiddenFileInput: React.JSX.Element
 }
 
 export const FormItem = (props: FormItemProps) => {

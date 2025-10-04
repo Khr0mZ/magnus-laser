@@ -8,7 +8,7 @@ import {
     Container,
     Divider,
     FormControlLabel,
-    Grid,
+    GridLegacy as Grid,
     Stack,
     Switch,
     TextField,

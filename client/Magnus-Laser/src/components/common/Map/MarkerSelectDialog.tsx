@@ -18,7 +18,7 @@ import { useState } from 'react'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import { Building, Character, Gang } from '../../../graphql/types'
 import colors from '../../../utils/colors'
-import CustomMarker from './CustomMarker'
+import { MarkerData } from './CustomMarker'
 
 type MaerkerSelectDialogProps = {
     open: boolean
@@ -27,7 +27,7 @@ type MaerkerSelectDialogProps = {
     buildings: Building[]
     gangs: Gang[]
     contacts: Character[]
-    existingMarkers: CustomMarker[]
+    existingMarkers: MarkerData[]
 }
 
 const MarkerSelectDialog = (props: MaerkerSelectDialogProps) => {

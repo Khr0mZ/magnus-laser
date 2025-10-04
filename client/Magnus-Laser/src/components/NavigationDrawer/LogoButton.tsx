@@ -5,7 +5,7 @@ import NavigationPaths from '../../navigation'
 import colors from '../../utils/colors'
 import { severeGlitch } from '../common/Animations.tsx'
 
-const LogoButton = (): JSX.Element => {
+const LogoButton = () => {
     const navigate = useNavigate()
     const { readerMode } = useUserPreferences()
 

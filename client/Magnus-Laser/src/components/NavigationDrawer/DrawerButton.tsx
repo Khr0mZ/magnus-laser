@@ -12,7 +12,7 @@ interface DrawerButtonProps {
     module: ModuleTypes
 }
 
-const DrawerButton = ({ module }: DrawerButtonProps): JSX.Element => {
+const DrawerButton = ({ module }: DrawerButtonProps) => {
     const navigate = useNavigate()
     const { pathname } = useLocation()
     const { t } = useTranslation()

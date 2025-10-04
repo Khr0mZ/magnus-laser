@@ -1,7 +1,7 @@
 import { Add } from '@mui/icons-material'
 import {
     FormControl,
-    Grid,
+    GridLegacy as Grid,
     IconButton,
     InputAdornment,
     InputLabel,

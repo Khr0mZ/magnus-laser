@@ -96,7 +96,7 @@ const CyberpunkLoader = ({
     onLoadComplete,
     readerMode,
     setStorageCleanupComplete,
-}: CyberpunkLoaderProps): JSX.Element => {
+}: CyberpunkLoaderProps) => {
     const { t } = useTranslation()
     const bootSequenceRef = useRef<HTMLDivElement>(null)
     const [isTimerElapsed, setIsTimerElapsed] = useState(false)
@@ -244,7 +244,6 @@ const CyberpunkLoader = ({
         return () => {
             clearInterval(textInterval)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bootTexts.length, dataEntries.length]) // Dependencies
 
     // Effect for scrolling boot sequence (remains the same)

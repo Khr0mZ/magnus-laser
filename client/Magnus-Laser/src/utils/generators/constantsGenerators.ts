@@ -1906,7 +1906,7 @@ export const buildingNameData: Record<BuildingType | BuildingStyle | BuildingOwn
                     return adj
                         .split(/[-\s]/)
                         .filter((part) => part !== 'and')
-                        .map((part) => part.toLowerCase())
+                        .map((part) => part.toLowerCase());
                 }
                 // Handle possessives
                 return adj.replace("'s", '').toLowerCase()

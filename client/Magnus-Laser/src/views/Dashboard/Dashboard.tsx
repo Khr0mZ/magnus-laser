@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, Container, Grid, Typography } from '@mui/material'
+import { Box, Card, CardContent, Container, GridLegacy as Grid, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'

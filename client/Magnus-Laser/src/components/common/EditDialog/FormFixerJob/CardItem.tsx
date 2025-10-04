@@ -4,7 +4,7 @@ import {
     AccordionDetails,
     AccordionSummary,
     FormControl,
-    Grid,
+    GridLegacy as Grid,
     InputLabel,
     MenuItem,
     Select,

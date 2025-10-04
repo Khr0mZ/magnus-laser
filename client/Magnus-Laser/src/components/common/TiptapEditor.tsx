@@ -68,7 +68,7 @@ const TiptapEditor = ({ label, value, onChange, sx }: TiptapEditorProps) => {
         // Avoid unnecessary updates and potential cursor jumps
         if (newHtml !== currentHtml) {
             // Use promises to ensure content is set before potentially triggering other effects
-            editor.commands.setContent(newHtml, false) // false prevents triggering onUpdate
+            editor.commands.setContent(newHtml, { emitUpdate: false }) // false prevents triggering onUpdate
         }
     }, [editor, value]) // Rerun when editor is ready or external value changes
 

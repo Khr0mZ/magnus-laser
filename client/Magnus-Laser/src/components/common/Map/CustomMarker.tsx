@@ -79,7 +79,7 @@ export type MapProps = {
     t: TFunction
 }
 
-type CustomMarker = {
+export type MarkerData = {
     position: [number, number]
     buildingId: string
     id: string
@@ -97,7 +97,7 @@ const CustomMarker = memo(
         t,
         onDragEnd,
     }: {
-        marker: CustomMarker
+        marker: MarkerData
         onDelete: (id: string) => void
         buildings: Building[]
         gangs: Gang[]

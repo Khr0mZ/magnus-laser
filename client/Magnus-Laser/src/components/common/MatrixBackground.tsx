@@ -28,7 +28,7 @@ interface MatrixColumn {
     opacity: number // Base opacity for glow calculation
 }
 
-const MatrixBackground = (): JSX.Element => {
+const MatrixBackground = () => {
     const [columns, setColumns] = useState<MatrixColumn[]>([])
 
     useEffect(() => {

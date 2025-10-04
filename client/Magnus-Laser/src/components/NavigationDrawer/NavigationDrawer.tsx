@@ -5,7 +5,7 @@ import { ModuleTypes } from '../../utils/constants'
 import WindowButtons from '../WindowButtons.tsx'
 import DrawerButton from './DrawerButton'
 import LogoButton from './LogoButton'
-const NavigationDrawer = (): JSX.Element => {
+const NavigationDrawer = () => {
     const { readerMode } = useUserPreferences()
 
     return (

@@ -1004,7 +1004,6 @@ export const handleRegenerateImage = async (
                 const newObj = { ...obj }
 
                 if (pathArray.length === 1) {
-                    // eslint-disable-next-line no-extra-semi
                     ;(newObj as Record<string, unknown>)[currentPath] = value
                     // Base case: directly set the property
                 } else {

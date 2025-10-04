@@ -1,6 +1,6 @@
 import {
     FormControl,
-    Grid,
+    GridLegacy as Grid,
     InputLabel,
     MenuItem,
     Select,
@@ -54,7 +54,7 @@ export type FormFixerJobProps = {
     formControlStyle: SxProps
     inputLabelStyle: SxProps
     selectStyle: SxProps
-    hiddenFileInput: JSX.Element // This might need duplication if upload needs separate inputs
+    hiddenFileInput: React.JSX.Element // This might need duplication if upload needs separate inputs
 }
 
 export const FormFixerJob = (props: FormFixerJobProps) => {
