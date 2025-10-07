@@ -45,7 +45,9 @@
         "generating": "SPOOLING...",
         "actions": "Operations",
         "delete": "Flatline",
-        "confirm": "Execute"
+        "confirm": "Execute",
+        "cancelAll": "Cancel All",
+        "acceptAll": "Accept All"
     },
     "modules": {
         "DASHBOARD": "Welcome to Magnus Laser Console, Choom.",
@@ -70,6 +72,8 @@
         "ITEM_DESCRIPTION": "Items are objects your edgerunners can use.",
         "MAP": "Map",
         "MAP_DESCRIPTION": "A map of the city your edgerunners can use.",
+        "COMBAT_SIM": "Combat",
+        "COMBAT_SIM_DESCRIPTION": "Kill 'em all.",
         "MARKER": "Marker"
     },
     "dashboard": {
@@ -904,6 +908,26 @@
     },
     "map": {
         "title": "City Grid Satellite Uplink"
+    },
+    "combatSim": {
+        "title": "Combat Simulator",
+        "map": "Map",
+        "gridSize": "Grid",
+        "snapToGrid": "Snap",
+        "addMap": "Load New Map",
+        "addToken": "+ Token",
+        "addImage": "Load New Image",
+        "image": "Image",
+        "noImage": "No Image",
+        "tokensPanel": "Tokens Panel",
+        "closePanel": "Close Panel",
+        "openPanel": "Open Panel",
+        "wallMode": "Wall Mode",
+        "eraser": "Wall Eraser Mode",
+        "wallColor": "Wall Color",
+        "gridColor": "Grid Color",
+        "measure": "Measure Mode",
+        "fit": "Fit Map"
     },
     "settings": {
         "title": "System Kernel Prefs",

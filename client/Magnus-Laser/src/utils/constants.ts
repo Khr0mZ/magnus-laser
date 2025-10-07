@@ -11,6 +11,7 @@ export enum ModuleTypes {
     CHARACTER = 'CHARACTER',
     MAP = 'MAP',
     SETTINGS = 'SETTINGS',
+    COMBAT_SIM = 'COMBAT_SIM',
 }
 
 // Bounty columns used in the bounty table view

@@ -9,6 +9,7 @@ import {
     Nightlife,
     SatelliteAlt,
     Settings,
+    SportsMma,
     Warehouse,
 } from '@mui/icons-material'
 import { TFunction } from 'i18next'
@@ -96,6 +97,13 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
     if (module === ModuleTypes.MAP)
         return (
             <SatelliteAlt
+                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
+                fontSize={isNavigation ? 'large' : 'inherit'}
+            />
+        )
+    if (module === ModuleTypes.COMBAT_SIM)
+        return (
+            <SportsMma
                 sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
                 fontSize={isNavigation ? 'large' : 'inherit'}
             />

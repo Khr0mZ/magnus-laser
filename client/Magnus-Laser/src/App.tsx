@@ -19,6 +19,7 @@ import BountyView from './views/Bounty/BountyView.tsx'
 import BuildingView from './views/Building/BuildingView'
 import CharacterView from './views/Character/CharacterView.tsx'
 import ClubView from './views/Club/ClubView.tsx'
+import CombatSimView from './views/CombatSim/CombatSimView.tsx'
 import Dashboard from './views/Dashboard/Dashboard'
 import FixerJob from './views/FixerJob/FixerJobView'
 import GangView from './views/Gang/GangView'
@@ -118,6 +119,7 @@ const AppContent = () => {
                             <Routes>
                                 <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
                                 <Route path={NavigationPaths.MAP} element={<MapView />} />
+                                <Route path={NavigationPaths.COMBAT_SIM} element={<CombatSimView />} />
                                 <Route path={NavigationPaths.GANG} element={<GangView />} />
                                 <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
                                 <Route path={NavigationPaths.CLUB} element={<ClubView />} />

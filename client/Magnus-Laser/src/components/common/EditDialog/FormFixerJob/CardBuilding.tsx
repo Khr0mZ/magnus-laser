@@ -4,7 +4,7 @@ import {
     AccordionDetails,
     AccordionSummary,
     FormControl,
-    GridLegacy as Grid,
+    Grid,
     InputLabel,
     MenuItem,
     Select,
@@ -183,9 +183,9 @@ export const CardBuilding = (props: CardBuildingProps) => {
                     </Select>
                 </FormControl>
                 {/* Building Basic Info */}
-                <Grid item container xs={12} spacing={2}>
+                <Grid container spacing={2} size={{ xs: 12 }}>
                     {/* Name */}
-                    <Grid item container xs={12}>
+                    <Grid container size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label={t('buildings.labels.name')}
@@ -195,7 +195,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                             disabled
                         />
                     </Grid>
-                    <Grid item container xs={12} md={8}>
+                    <Grid container size={{ xs: 12, md: 8 }}>
                         <Stack spacing={2} sx={{ width: '100%' }}>
                             <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                                 {/* Type */}
@@ -329,7 +329,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                         </Stack>
                     </Grid>
                     {/* Building Image */}
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel
                                 id="building-image-label"
@@ -358,7 +358,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                         </FormControl>
                     </Grid>
                     {/* Description */}
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label={t('buildings.labels.description')}
@@ -371,12 +371,12 @@ export const CardBuilding = (props: CardBuildingProps) => {
                     </Grid>
                 </Grid>
                 {/* Building Complication */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Typography variant="h6" sx={{ my: 2 }}>
                         {t('fixerJobs.labels.building.complication')}
                     </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel id="gang-complication-label" sx={inputLabelStyle}>
                             {t('fixerJobs.labels.complicationType')}

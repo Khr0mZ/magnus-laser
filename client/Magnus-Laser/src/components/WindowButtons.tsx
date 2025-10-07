@@ -26,7 +26,17 @@ const WindowButtons: React.FC = () => {
     useEffect(() => {
         const initializeWindowControls = () => {
             try {
-                const { getCurrentWindow } = window.__TAURI__.window
+                // Guard for non‑Tauri environments (web dev / preview)
+                type TauriWindowApi = {
+                    getCurrentWindow: () => {
+                        minimize: () => Promise<void>
+                        toggleMaximize: () => Promise<void>
+                        close: () => Promise<void>
+                    }
+                }
+                const tauriWin = (window as unknown as { __TAURI__?: { window?: TauriWindowApi } }).__TAURI__?.window
+                if (!tauriWin || typeof tauriWin.getCurrentWindow !== 'function') return
+                const { getCurrentWindow } = tauriWin
                 const appWindow = getCurrentWindow()
 
                 document.getElementById('titlebar-minimize')?.addEventListener('click', () => appWindow.minimize())

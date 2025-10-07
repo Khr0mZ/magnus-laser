@@ -304,7 +304,7 @@ const CyberpunkLoader = ({
     }, [setStorageCleanupComplete])
 
     return (
-        <Container maxWidth={false} sx={{ pt: 3 }}>
+        <Container maxWidth={false} sx={{ pt: 0.5 }}>
             <Box
                 sx={{
                     position: 'fixed',
