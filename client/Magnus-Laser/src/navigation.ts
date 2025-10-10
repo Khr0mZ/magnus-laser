@@ -10,6 +10,7 @@ enum NavigationPaths {
     ITEM = '/item',
     SETTINGS = '/settings',
     MAP = '/map',
+    COMBAT_SIM = '/combat',
 }
 
 export default NavigationPaths

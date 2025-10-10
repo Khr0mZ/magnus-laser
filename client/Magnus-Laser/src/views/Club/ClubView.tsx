@@ -10,7 +10,7 @@ const ClubView = () => {
     useDocumentTitle(`Magnus Laser - Club`)
 
     return (
-        <Container maxWidth={false} sx={{ pt: 1 }}>
+        <Container maxWidth={false} sx={{ pt: 0.5 }}>
             <Typography
                 variant="h3"
                 className="glitch-text"

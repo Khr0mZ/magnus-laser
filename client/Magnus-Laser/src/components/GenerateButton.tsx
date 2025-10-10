@@ -9,10 +9,11 @@ type GenerateButtonProps = {
     handleGenerate: () => void
     label?: string
     disabled?: boolean
+    children?: React.ReactNode
 }
 
 const GenerateButton = (props: GenerateButtonProps) => {
-    const { isGenerating, handleGenerate, label, disabled } = props
+    const { isGenerating, handleGenerate, label, disabled, children } = props
     const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
 
@@ -89,7 +90,7 @@ const GenerateButton = (props: GenerateButtonProps) => {
                       }),
             }}
         >
-            {isGenerating ? t('common.generating') : label || t('common.generate')}
+            {children ? children : isGenerating ? t('common.generating') : label || t('common.generate')}
         </Button>
     )
 }

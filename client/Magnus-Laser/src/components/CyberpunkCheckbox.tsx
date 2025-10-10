@@ -11,6 +11,8 @@ interface CyberpunkProps {
 const CyberpunkCheckbox = styled(Checkbox, {
     shouldForwardProp: (prop) => prop !== 'readerMode',
 })<CyberpunkProps>(({ readerMode }) => ({
+    height: 30,
+    width: 30,
     color: readerMode ? colors.neons.pink.default : colors.neons.cyan.default,
     '&.Mui-disabled': {
         color: readerMode ? 'unset' : `${colors.neons.cyan.dark}50`,

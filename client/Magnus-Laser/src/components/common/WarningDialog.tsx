@@ -66,49 +66,51 @@ export const WarningDialog = (props: WarningDialogProps) => {
         <Dialog
             open={open}
             onClose={onClose}
-            PaperProps={{
-                sx: readerMode
-                    ? {
-                          bgcolor: '#ffffff',
-                          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                          color: '#333',
-                      }
-                    : {
-                          bgcolor: 'rgba(10, 15, 30, 0.95)',
-                          backdropFilter: 'blur(4px)',
-                          border: `1px solid ${color.default}40`,
-                          boxShadow: `0 0 20px ${color.default}40`,
-                          color: '#fff',
-                          position: 'relative',
-                          '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%',
-                              backgroundImage: `linear-gradient(to right, rgba(${
-                                  confirmColor === 'red'
-                                      ? '255, 0, 0'
-                                      : confirmColor === 'green'
-                                      ? '0, 255, 0'
-                                      : confirmColor === 'blue'
-                                      ? '0, 0, 255'
-                                      : '0, 255, 255'
-                              }, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(${
-                                  confirmColor === 'red'
-                                      ? '255, 0, 0'
-                                      : confirmColor === 'green'
-                                      ? '0, 255, 0'
-                                      : confirmColor === 'blue'
-                                      ? '0, 0, 255'
-                                      : '0, 255, 255'
-                              }, 0.03) 1px, transparent 1px)`,
-                              backgroundSize: '20px 20px',
-                              pointerEvents: 'none',
-                              opacity: 0.5,
+            slotProps={{
+                paper: {
+                    sx: readerMode
+                        ? {
+                              bgcolor: '#ffffff',
+                              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                              color: '#333',
+                          }
+                        : {
+                              bgcolor: 'rgba(10, 15, 30, 0.95)',
+                              backdropFilter: 'blur(4px)',
+                              border: `1px solid ${color.default}40`,
+                              boxShadow: `0 0 20px ${color.default}40`,
+                              color: '#fff',
+                              position: 'relative',
+                              '&::before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  backgroundImage: `linear-gradient(to right, rgba(${
+                                      confirmColor === 'red'
+                                          ? '255, 0, 0'
+                                          : confirmColor === 'green'
+                                          ? '0, 255, 0'
+                                          : confirmColor === 'blue'
+                                          ? '0, 0, 255'
+                                          : '0, 255, 255'
+                                  }, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(${
+                                      confirmColor === 'red'
+                                          ? '255, 0, 0'
+                                          : confirmColor === 'green'
+                                          ? '0, 255, 0'
+                                          : confirmColor === 'blue'
+                                          ? '0, 0, 255'
+                                          : '0, 255, 255'
+                                  }, 0.03) 1px, transparent 1px)`,
+                                  backgroundSize: '20px 20px',
+                                  pointerEvents: 'none',
+                                  opacity: 0.5,
+                              },
                           },
-                      },
+                },
             }}
         >
             <DialogTitle

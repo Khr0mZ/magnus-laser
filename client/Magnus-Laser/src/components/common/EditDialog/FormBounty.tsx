@@ -1,7 +1,7 @@
 import { Add } from '@mui/icons-material'
 import {
     FormControl,
-    GridLegacy as Grid,
+    Grid,
     IconButton,
     InputAdornment,
     InputLabel,
@@ -232,7 +232,7 @@ const FormBounty = (props: FormBountyProps) => {
     return (
         <>
             {/* Character */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                     <InputLabel sx={inputLabelStyle}>{t('characters.labels.name')}</InputLabel>
                     <Select
@@ -252,7 +252,7 @@ const FormBounty = (props: FormBountyProps) => {
                 </FormControl>
             </Grid>
             {/* Name */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <TextField
                     fullWidth
                     label={t('characters.labels.name')}
@@ -263,7 +263,7 @@ const FormBounty = (props: FormBountyProps) => {
                 />
             </Grid>
 
-            <Grid item container xs={12} md={8}>
+            <Grid container size={{ xs: 12, md: 8 }}>
                 <Stack spacing={2} sx={{ width: '100%' }}>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Type */}
@@ -352,7 +352,7 @@ const FormBounty = (props: FormBountyProps) => {
                 </Stack>
             </Grid>
             {/* Image */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
                 <ImageField
                     image={updatedTarget.character.image}
                     downloadName={updatedTarget.character.name}
@@ -360,7 +360,7 @@ const FormBounty = (props: FormBountyProps) => {
                     disabled
                 />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <Stack
                     spacing={2}
                     sx={{

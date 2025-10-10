@@ -1,4 +1,4 @@
-import { FormControl, GridLegacy as Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
+import { FormControl, Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
 import { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
@@ -59,7 +59,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
         <>
             {hiddenFileInput}
             {/* Name */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <TextField
                     fullWidth
                     label={t('buildings.labels.name')}
@@ -70,7 +70,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                 />
             </Grid>
             {/* Description */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <TextField
                     fullWidth
                     label={t('common.description')}
@@ -81,7 +81,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                     multiline
                 />
             </Grid>
-            <Grid item container xs={12} md={8}>
+            <Grid container size={{ xs: 12, md: 8 }}>
                 <Stack spacing={2} sx={{ width: '100%' }}>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Type */}
@@ -299,7 +299,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                 </Stack>
             </Grid>
             {/* Image */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
                 <ImageField
                     image={editedTarget.image}
                     downloadName={editedTarget.name}

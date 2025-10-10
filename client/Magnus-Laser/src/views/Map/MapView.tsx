@@ -38,7 +38,7 @@ const MapView = () => {
     }
 
     return (
-        <Container maxWidth={false} sx={{ pt: 1 }}>
+        <Container maxWidth={false} sx={{ pt: 0.5 }}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
             <Box sx={{ p: 0, height: 'calc(100vh - 184px)', width: '100%', position: 'relative' }}>
                 <Stack direction="row" spacing={2} sx={{ justifyContent: 'space-between' }}>
@@ -72,8 +72,8 @@ const MapView = () => {
                 </Stack>
                 <Paper
                     sx={{
-                        p: 2,
-                        height: '100%',
+                        p: 0,
+                        height: 'calc(100vh - 197px)',
                         width: '100%',
                         bgcolor: colors.neons.cyan.default + '10',
                         border: `1px solid ${colors.neons.cyan.dark}`,

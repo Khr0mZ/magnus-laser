@@ -1,14 +1,14 @@
 import { BuildingOwnership, BuildingStyle, BuildingType, GangNameType, GangType } from '../../graphql/types'
 import { getRandomElement } from '../functions'
-import {
-    BUILDINGS_STORAGE_KEY,
-    CHARACTERS_STORAGE_KEY,
-    FIXER_JOBS_STORAGE_KEY,
-    GANGS_STORAGE_KEY,
-    ITEMS_STORAGE_KEY,
-    PREFERENCES_STORAGE_KEY,
-} from '../storage'
 import { NameComponents } from '../types'
+
+// Storage keys for backwards compatibility (used in import/export)
+const GANGS_STORAGE_KEY = 'gangs'
+const BUILDINGS_STORAGE_KEY = 'buildings'
+const FIXER_JOBS_STORAGE_KEY = 'fixerJobs'
+const PREFERENCES_STORAGE_KEY = 'preferences'
+const ITEMS_STORAGE_KEY = 'items'
+const CHARACTERS_STORAGE_KEY = 'characters'
 
 // Hugging Face constants
 export const TEXT_MODEL_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1' // Or your preferred HF text model
@@ -1906,7 +1906,7 @@ export const buildingNameData: Record<BuildingType | BuildingStyle | BuildingOwn
                     return adj
                         .split(/[-\s]/)
                         .filter((part) => part !== 'and')
-                        .map((part) => part.toLowerCase());
+                        .map((part) => part.toLowerCase())
                 }
                 // Handle possessives
                 return adj.replace("'s", '').toLowerCase()

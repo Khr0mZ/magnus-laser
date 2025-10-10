@@ -25,6 +25,7 @@ const CyberpunkFormControlLabel = styled(FormControlLabel, {
         },
         textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}`,
     },
+    gap: '0.5rem',
 }))
 
 export default CyberpunkFormControlLabel

@@ -280,7 +280,7 @@ const FixerJobView = () => {
     }
 
     return (
-        <Container maxWidth={false} sx={{ pt: 1 }}>
+        <Container maxWidth={false} sx={{ pt: 0.5 }}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
             <Stack direction="row" alignItems="center" spacing={2} mr={1.5}>
                 <Typography
@@ -324,7 +324,6 @@ const FixerJobView = () => {
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     <GenerateButton isGenerating={isGenerating} handleGenerate={handleGenerateFixerJob} />
-
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: 'center' }}>
                         <Typography
                             variant="body2"

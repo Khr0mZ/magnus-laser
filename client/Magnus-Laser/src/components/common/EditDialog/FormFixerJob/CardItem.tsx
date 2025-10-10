@@ -4,7 +4,7 @@ import {
     AccordionDetails,
     AccordionSummary,
     FormControl,
-    GridLegacy as Grid,
+    Grid,
     InputLabel,
     MenuItem,
     Select,
@@ -153,8 +153,8 @@ const CardItem = (props: CardItemProps) => {
                     </Select>
                 </FormControl>
 
-                <Grid item container xs={12} spacing={2}>
-                    <Grid item container xs={8}>
+                <Grid container size={{ xs: 12 }} spacing={2}>
+                    <Grid container size={{ xs: 8 }}>
                         <Stack spacing={2} sx={{ width: '100%' }}>
                             {/* Subject Name */}
                             <TextField
@@ -188,7 +188,7 @@ const CardItem = (props: CardItemProps) => {
                     </Grid>
 
                     {/* Item Image */}
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel
                                 id="item-image-label"

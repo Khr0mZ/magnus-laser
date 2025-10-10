@@ -1,31 +1,13 @@
-import localforage from 'localforage'
 import { Bounty, Building, Character, FixerJob, Gang, Item } from '../graphql/types'
 import { ModuleTypes } from './constants'
+import { AppPreferences, CustomMarker, db } from './db'
 
-localforage.config({
-    name: 'magnus-laser',
-    version: 1.0,
-    storeName: 'magnus-laser', // Should be alphanumeric, with underscores.
-    description: 'Magnus Laser data',
-})
+// Events
+export const DATA_IMPORT_EVENT = 'data-imported'
+export const PREFERENCES_CHANGED_EVENT = 'preferences-changed'
 
-// Preferences type definition
-export type AppPreferences = {
-    viewPreferences: Record<ModuleTypes, boolean>
-    readerMode: boolean
-    animationsEnabled: boolean
-    loaderEnabled: boolean
-    huggingFaceApiKey: string
-    openAIApiKey: string
-    geminiApiKey: string
-}
-
-export type CustomMarker = {
-    position: [number, number]
-    buildingId: string
-    id: string
-    markerType: 'building' | 'gang' | 'contact'
-}
+// Preferences ID (we only store one preferences object)
+const PREFERENCES_ID = 'app-preferences'
 
 // Default preferences
 const DEFAULT_PREFERENCES: AppPreferences = {
@@ -42,231 +24,287 @@ const DEFAULT_PREFERENCES: AppPreferences = {
 }
 
 /**
- * Storage keys
+ * Gangs
  */
-export const GANGS_STORAGE_KEY = 'gangs'
-export const BUILDINGS_STORAGE_KEY = 'buildings'
-export const ITEMS_STORAGE_KEY = 'items'
-export const CHARACTERS_STORAGE_KEY = 'characters'
-export const FIXER_JOBS_STORAGE_KEY = 'fixer-jobs'
-export const PREFERENCES_STORAGE_KEY = 'preferences'
-export const BOUNTIES_STORAGE_KEY = 'bounties'
-export const MAP_MARKERS_STORAGE_KEY = 'map-markers'
-
-// Events
-export const DATA_IMPORT_EVENT = 'data-imported'
-export const PREFERENCES_CHANGED_EVENT = 'preferences-changed'
-
-// In-memory cache for loaded collections
-const cache = new Map<string, unknown[]>()
-
-/**
- * Generic loader: caches in-memory, handles errors
- */
-async function loadEntities<T>(key: string): Promise<T[]> {
-    if (cache.has(key)) return cache.get(key)! as T[]
+export const loadGangs = async (): Promise<Gang[]> => {
     try {
-        const entities = await localforage.getItem<T[]>(key)
-        const result = entities ?? []
-        cache.set(key, result)
-        return result
+        return await db.gangs.toArray()
     } catch (error) {
-        console.warn(`Error loading ${key}:`, error)
+        console.warn('Error loading gangs:', error)
         return []
     }
 }
 
-/**
- * Generic saver: runs optional cleanup, updates cache
- */
-async function saveEntities<T>(key: string, newEntities: T[]): Promise<void> {
+export const saveGangs = async (gangs: Gang[]): Promise<void> => {
     try {
-        await localforage.setItem(key, newEntities)
-        cache.set(key, newEntities)
+        await db.gangs.bulkPut(gangs)
     } catch (error) {
-        console.warn(`Error saving ${key}:`, error)
+        console.warn('Error saving gangs:', error)
     }
 }
 
-/**
- * Merge two lists of entities (by .ID), preferring items from `incoming`
- */
-const mergeEntities = <T extends { ID: string }>(existing: T[], incoming: T[]): T[] => {
-    const map = new Map<string, T>()
-    // First, seed with existing
-    for (const e of existing) map.set(e.ID, e)
-    // Then overwrite/add with incoming
-    for (const entity of incoming) map.set(entity.ID, entity)
-    return Array.from(map.values())
+export const clearGangs = async (): Promise<void> => {
+    await db.gangs.clear()
 }
-
-/**
- * Gangs
- */
-export const loadGangs = (): Promise<Gang[]> => loadEntities<Gang>(GANGS_STORAGE_KEY)
-
-export const saveGangs = (gangs: Gang[]): Promise<void> => saveEntities<Gang>(GANGS_STORAGE_KEY, gangs)
 
 /**
  * Buildings
  */
-export const loadBuildings = (): Promise<Building[]> => loadEntities<Building>(BUILDINGS_STORAGE_KEY)
+export const loadBuildings = async (): Promise<Building[]> => {
+    try {
+        return await db.buildings.toArray()
+    } catch (error) {
+        console.warn('Error loading buildings:', error)
+        return []
+    }
+}
 
-export const saveBuildings = (buildings: Building[]): Promise<void> =>
-    saveEntities<Building>(BUILDINGS_STORAGE_KEY, buildings)
+export const saveBuildings = async (buildings: Building[]): Promise<void> => {
+    try {
+        await db.buildings.bulkPut(buildings)
+    } catch (error) {
+        console.warn('Error saving buildings:', error)
+    }
+}
+
+export const clearBuildings = async (): Promise<void> => {
+    await db.buildings.clear()
+}
 
 /**
  * Items
  */
-export const loadItems = (): Promise<Item[]> => loadEntities<Item>(ITEMS_STORAGE_KEY)
-
-export const saveItems = (items: Item[]): Promise<void> => saveEntities<Item>(ITEMS_STORAGE_KEY, items)
-
-/**
- * Bounty
- */
-
-export const loadBounties = (): Promise<Bounty[]> => loadEntities<Bounty>(BOUNTIES_STORAGE_KEY)
-
-export const saveBounties = async (bounties: Bounty[]): Promise<void> => {
-    const characters = await loadCharacters()
-    const newCharacters: Character[] = []
-
-    const toStore = bounties.map((bounty) => {
-        if (typeof bounty.character === 'object') {
-            const character = characters.find((c) => c.ID === bounty.character.ID)
-            if (!character) {
-                newCharacters.push(bounty.character)
-            }
-            return { ...bounty, character: bounty.character.ID }
-        } else if (typeof bounty.character === 'string') {
-            const characterID = bounty.character as string
-            const character = characters.find((c) => c.ID === characterID)
-            if (!character) {
-                newCharacters.push(bounty.character)
-            }
-            return {
-                ...bounty,
-                character: characterID,
-            }
-        }
-    })
-    if (newCharacters.length) {
-        const merged = mergeEntities(characters, newCharacters)
-        await saveCharacters(merged)
+export const loadItems = async (): Promise<Item[]> => {
+    try {
+        return await db.items.toArray()
+    } catch (error) {
+        console.warn('Error loading items:', error)
+        return []
     }
-    await localforage.setItem(BOUNTIES_STORAGE_KEY, toStore)
-    cache.set(BOUNTIES_STORAGE_KEY, toStore)
+}
+
+export const saveItems = async (items: Item[]): Promise<void> => {
+    try {
+        await db.items.bulkPut(items)
+    } catch (error) {
+        console.warn('Error saving items:', error)
+    }
+}
+
+export const clearItems = async (): Promise<void> => {
+    await db.items.clear()
 }
 
 /**
  * Characters
  */
-export const loadCharacters = (): Promise<Character[]> => loadEntities<Character>(CHARACTERS_STORAGE_KEY)
+export const loadCharacters = async (): Promise<Character[]> => {
+    try {
+        return await db.characters.toArray()
+    } catch (error) {
+        console.warn('Error loading characters:', error)
+        return []
+    }
+}
 
-export const saveCharacters = (characters: Character[]): Promise<void> =>
-    saveEntities<Character>(CHARACTERS_STORAGE_KEY, characters)
+export const saveCharacters = async (characters: Character[]): Promise<void> => {
+    try {
+        await db.characters.bulkPut(characters)
+    } catch (error) {
+        console.warn('Error saving characters:', error)
+    }
+}
+
+export const clearCharacters = async (): Promise<void> => {
+    await db.characters.clear()
+}
+
+/**
+ * Bounties
+ */
+export const loadBounties = async (): Promise<Bounty[]> => {
+    try {
+        return await db.bounties.toArray()
+    } catch (error) {
+        console.warn('Error loading bounties:', error)
+        return []
+    }
+}
+
+export const saveBounties = async (bounties: Bounty[]): Promise<void> => {
+    try {
+        // Use transaction for atomic operation
+        await db.transaction('rw', [db.bounties, db.characters], async () => {
+            const characters = await db.characters.toArray()
+            const newCharacters: Character[] = []
+
+            // Extract and collect new characters
+            bounties.forEach((bounty) => {
+                if (typeof bounty.character === 'object' && bounty.character) {
+                    const character = characters.find((c) => c.ID === bounty.character.ID)
+                    if (!character) {
+                        newCharacters.push(bounty.character)
+                    }
+                }
+            })
+
+            // Save new characters
+            if (newCharacters.length > 0) {
+                await db.characters.bulkPut(newCharacters)
+            }
+
+            // Save bounties
+            await db.bounties.bulkPut(bounties)
+        })
+    } catch (error) {
+        console.warn('Error saving bounties:', error)
+    }
+}
+
+export const clearBounties = async (): Promise<void> => {
+    await db.bounties.clear()
+}
 
 /**
  * FixerJobs
  */
-
-// ──────────────────────────────────────────────────────
-// Helper: pull out nested Gang/Building objects and persist
-// ──────────────────────────────────────────────────────
-const extractAndSaveReferencesFromFixerJob = async (fixerJobs: FixerJob[]): Promise<void> => {
-    const buildings: Building[] = []
-    const gangs: Gang[] = []
-    const characters: Character[] = []
-    const items: Item[] = []
-
-    fixerJobs.forEach((job) => {
-        const p = job.plot
-        if (!p) return
-
-        // If plotBuilding.building is an object, hoist it out
-        if (p.plotBuilding?.building && typeof p.plotBuilding.building === 'object') {
-            buildings.push(p.plotBuilding.building as Building)
-        }
-        const subject = p.plotSubject
-        if (subject && typeof subject === 'object') {
-            if ('gang' in subject) {
-                const maybeGang = subject['gang']
-                if (typeof maybeGang === 'object' && maybeGang !== null) {
-                    gangs.push(maybeGang as Gang)
-                }
-            }
-            if ('ID' in subject && !('gang' in subject)) {
-                if ('attitude' in subject) {
-                    characters.push(subject as Character)
-                } else if ('condition' in subject) {
-                    items.push(subject as Item)
-                }
-            }
-            if ('complication' in subject && subject.complication && typeof subject.complication === 'object') {
-                const sComp = subject.complication
-                if (sComp.character && typeof sComp.character === 'object') {
-                    characters.push(sComp.character as Character)
-                }
-                if (sComp.item && typeof sComp.item === 'object') {
-                    items.push(sComp.item as Item)
-                }
-            }
-        }
-        // Hoist nested Character/Item from plotComplication
-        if (p.plotComplication && typeof p.plotComplication === 'object') {
-            const comp = p.plotComplication
-            if (comp.character && typeof comp.character === 'object') {
-                characters.push(comp.character as Character)
-            }
-            if (comp.item && typeof comp.item === 'object') {
-                items.push(comp.item as Item)
-            }
-        }
-        // Hoist nested Character/Item from building complication
-        if (p.plotBuilding?.complication && typeof p.plotBuilding.complication === 'object') {
-            const bComp = p.plotBuilding.complication
-            if (bComp.character && typeof bComp.character === 'object') {
-                characters.push(bComp.character as Character)
-            }
-            if (bComp.item && typeof bComp.item === 'object') {
-                items.push(bComp.item as Item)
-            }
-        }
-    })
-
-    if (buildings.length) {
-        const existing = await loadBuildings()
-        const merged = mergeEntities(existing, buildings)
-        await saveBuildings(merged)
-    }
-    if (gangs.length) {
-        const existing = await loadGangs()
-        const merged = mergeEntities(existing, gangs)
-        await saveGangs(merged)
-    }
-    if (characters.length) {
-        const existing = await loadCharacters()
-        const merged = mergeEntities(existing, characters)
-        await saveCharacters(merged)
-    }
-    if (items.length) {
-        const existing = await loadItems()
-        const merged = mergeEntities(existing, items)
-        await saveItems(merged)
+export const loadFixerJobs = async (): Promise<FixerJob[]> => {
+    try {
+        return await db.fixerJobs.toArray()
+    } catch (error) {
+        console.warn('Error loading fixer jobs:', error)
+        return []
     }
 }
 
-export const loadFixerJobs = (): Promise<FixerJob[]> => loadEntities<FixerJob>(FIXER_JOBS_STORAGE_KEY)
-
 export const saveFixerJobs = async (fixerJobs: FixerJob[]): Promise<void> => {
-    await extractAndSaveReferencesFromFixerJob(fixerJobs)
-    const toStore: FixerJob[] = []
-    for (const job of fixerJobs) {
-        toStore.push(await processEntityForStorage(job))
+    try {
+        // Use transaction for atomic operation
+        await db.transaction('rw', [db.fixerJobs, db.gangs, db.buildings, db.characters, db.items], async () => {
+            const [gangs, buildings, characters, items] = await Promise.all([
+                db.gangs.toArray(),
+                db.buildings.toArray(),
+                db.characters.toArray(),
+                db.items.toArray(),
+            ])
+
+            const newGangs: Gang[] = []
+            const newBuildings: Building[] = []
+            const newCharacters: Character[] = []
+            const newItems: Item[] = []
+
+            // Extract nested entities from fixer jobs
+            fixerJobs.forEach((job) => {
+                const p = job.plot
+                if (!p) return
+
+                // Extract building
+                if (p.plotBuilding?.building && typeof p.plotBuilding.building === 'object') {
+                    const building = p.plotBuilding.building as Building
+                    if (!buildings.find((b) => b.ID === building.ID)) {
+                        newBuildings.push(building)
+                    }
+                }
+
+                // Extract gang from plotSubject
+                const subject = p.plotSubject
+                if (subject && typeof subject === 'object' && 'gang' in subject) {
+                    const gang = subject.gang
+                    if (gang && typeof gang === 'object' && 'ID' in gang) {
+                        if (!gangs.find((g) => g.ID === (gang as Gang).ID)) {
+                            newGangs.push(gang as Gang)
+                        }
+                    }
+                }
+
+                // Extract character/item from plotSubject
+                if (subject && typeof subject === 'object' && 'ID' in subject && !('gang' in subject)) {
+                    if ('attitude' in subject) {
+                        const character = subject as Character
+                        if (!characters.find((c) => c.ID === character.ID)) {
+                            newCharacters.push(character)
+                        }
+                    } else if ('condition' in subject) {
+                        const item = subject as Item
+                        if (!items.find((i) => i.ID === item.ID)) {
+                            newItems.push(item)
+                        }
+                    }
+                }
+
+                // Extract from subject complication
+                if (
+                    subject &&
+                    'complication' in subject &&
+                    subject.complication &&
+                    typeof subject.complication === 'object'
+                ) {
+                    const sComp = subject.complication
+                    if (sComp.character && typeof sComp.character === 'object') {
+                        const char = sComp.character as Character
+                        if (!characters.find((c) => c.ID === char.ID)) {
+                            newCharacters.push(char)
+                        }
+                    }
+                    if (sComp.item && typeof sComp.item === 'object') {
+                        const item = sComp.item as Item
+                        if (!items.find((i) => i.ID === item.ID)) {
+                            newItems.push(item)
+                        }
+                    }
+                }
+
+                // Extract from plotComplication
+                if (p.plotComplication && typeof p.plotComplication === 'object') {
+                    const comp = p.plotComplication
+                    if (comp.character && typeof comp.character === 'object') {
+                        const char = comp.character as Character
+                        if (!characters.find((c) => c.ID === char.ID)) {
+                            newCharacters.push(char)
+                        }
+                    }
+                    if (comp.item && typeof comp.item === 'object') {
+                        const item = comp.item as Item
+                        if (!items.find((i) => i.ID === item.ID)) {
+                            newItems.push(item)
+                        }
+                    }
+                }
+
+                // Extract from building complication
+                if (p.plotBuilding?.complication && typeof p.plotBuilding.complication === 'object') {
+                    const bComp = p.plotBuilding.complication
+                    if (bComp.character && typeof bComp.character === 'object') {
+                        const char = bComp.character as Character
+                        if (!characters.find((c) => c.ID === char.ID)) {
+                            newCharacters.push(char)
+                        }
+                    }
+                    if (bComp.item && typeof bComp.item === 'object') {
+                        const item = bComp.item as Item
+                        if (!items.find((i) => i.ID === item.ID)) {
+                            newItems.push(item)
+                        }
+                    }
+                }
+            })
+
+            // Save all new entities
+            if (newGangs.length > 0) await db.gangs.bulkPut(newGangs)
+            if (newBuildings.length > 0) await db.buildings.bulkPut(newBuildings)
+            if (newCharacters.length > 0) await db.characters.bulkPut(newCharacters)
+            if (newItems.length > 0) await db.items.bulkPut(newItems)
+
+            // Save fixer jobs
+            await db.fixerJobs.bulkPut(fixerJobs)
+        })
+    } catch (error) {
+        console.warn('Error saving fixer jobs:', error)
     }
-    await localforage.setItem(FIXER_JOBS_STORAGE_KEY, toStore)
-    cache.set(FIXER_JOBS_STORAGE_KEY, toStore)
+}
+
+export const clearFixerJobs = async (): Promise<void> => {
+    await db.fixerJobs.clear()
 }
 
 /**
@@ -274,8 +312,13 @@ export const saveFixerJobs = async (fixerJobs: FixerJob[]): Promise<void> => {
  */
 export const loadPreferences = async (): Promise<AppPreferences> => {
     try {
-        const prefs = await localforage.getItem<AppPreferences>(PREFERENCES_STORAGE_KEY)
-        return prefs ?? DEFAULT_PREFERENCES
+        const prefs = await db.preferences.get(PREFERENCES_ID)
+        if (prefs) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { id, ...preferences } = prefs
+            return preferences as AppPreferences
+        }
+        return { ...DEFAULT_PREFERENCES }
     } catch (error) {
         console.warn('Error loading preferences:', error)
         return { ...DEFAULT_PREFERENCES }
@@ -284,160 +327,40 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
 
 export const savePreferences = async (preferences: AppPreferences): Promise<void> => {
     try {
-        await localforage.setItem(PREFERENCES_STORAGE_KEY, preferences)
+        await db.preferences.put({ ...preferences, id: PREFERENCES_ID })
         window.dispatchEvent(new Event(PREFERENCES_CHANGED_EVENT))
     } catch (error) {
         console.warn('Error saving preferences:', error)
     }
 }
 
-/** ===== Reference resolution for entity relationships ===== **/
 /**
- * Process entities for storage: converts nested entity objects to ID references.
- * Base64 image data is kept as-is without any transformation.
+ * Map Markers
  */
-export const processEntityForStorage = async <T extends Record<string, unknown>>(entity: T): Promise<T> => {
-    const processedEntity = { ...entity }
-    const processObject = async (obj: Record<string, unknown>, path = ''): Promise<void> => {
-        for (const [key, value] of Object.entries(obj)) {
-            const currentPath = path ? `${path}.${key}` : key
-
-            // strip leftover nested plot refs for gang/building
-            if (
-                currentPath === 'plot.plotSubject.gang' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            if (
-                currentPath === 'plot.plotBuilding.building' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            // strip nested Character/Item from plotSubject
-            if (currentPath === 'plot.plotSubject' && value != null && typeof value === 'object' && 'ID' in value) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            // strip nested Character/Item from plotComplication
-            if (
-                currentPath === 'plot.plotComplication.character' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            if (
-                currentPath === 'plot.plotComplication.item' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            // strip nested Character/Item from building complication
-            if (
-                currentPath === 'plot.plotBuilding.complication.character' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            if (
-                currentPath === 'plot.plotBuilding.complication.item' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            // strip nested Character/Item from PlotGang complication
-            if (
-                currentPath === 'plot.plotSubject.complication.character' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            if (
-                currentPath === 'plot.plotSubject.complication.item' &&
-                value != null &&
-                typeof value === 'object' &&
-                'ID' in value
-            ) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            if (currentPath === 'character' && value != null && typeof value === 'object' && 'ID' in value) {
-                obj[key] = (value as { ID: string }).ID
-                continue
-            }
-            // nested objects/arrays
-            if (value && typeof value === 'object') {
-                await processObject(value as Record<string, unknown>, currentPath)
-            }
-        }
+export const loadMapMarkers = async (): Promise<CustomMarker[]> => {
+    try {
+        return await db.mapMarkers.toArray()
+    } catch (error) {
+        console.warn('Error loading map markers:', error)
+        return []
     }
-    await processObject(processedEntity)
-    return processedEntity
 }
 
-// 2) Dispatch events so components can listen
-export const notifyDataImported = (): void => {
-    window.dispatchEvent(new Event(DATA_IMPORT_EVENT))
+export const saveMapMarkers = async (markers: CustomMarker[]): Promise<void> => {
+    try {
+        await db.mapMarkers.bulkPut(markers)
+    } catch (error) {
+        console.warn('Error saving map markers:', error)
+    }
 }
 
-export const notifyPreferencesChanged = (): void => {
-    window.dispatchEvent(new Event(PREFERENCES_CHANGED_EVENT))
+export const clearMapMarkers = async (): Promise<void> => {
+    await db.mapMarkers.clear()
 }
 
-// 3) "Clear" helpers that wipe storage + cache
-export const clearGangs = async (): Promise<void> => {
-    cache.delete(GANGS_STORAGE_KEY)
-    await localforage.removeItem(GANGS_STORAGE_KEY)
-}
-
-export const clearBuildings = async (): Promise<void> => {
-    cache.delete(BUILDINGS_STORAGE_KEY)
-    await localforage.removeItem(BUILDINGS_STORAGE_KEY)
-}
-
-export const clearFixerJobs = async (): Promise<void> => {
-    cache.delete(FIXER_JOBS_STORAGE_KEY)
-    await localforage.removeItem(FIXER_JOBS_STORAGE_KEY)
-}
-
-export const clearItems = async (): Promise<void> => {
-    cache.delete(ITEMS_STORAGE_KEY)
-    await localforage.removeItem(ITEMS_STORAGE_KEY)
-}
-
-export const clearCharacters = async (): Promise<void> => {
-    cache.delete(CHARACTERS_STORAGE_KEY)
-    await localforage.removeItem(CHARACTERS_STORAGE_KEY)
-}
-
-export const clearBounties = async (): Promise<void> => {
-    cache.delete(BOUNTIES_STORAGE_KEY)
-    await localforage.removeItem(BOUNTIES_STORAGE_KEY)
-}
-
-// 4) View‑preference helpers
+/**
+ * View preference helpers
+ */
 export const loadAllViewPreferences = async (): Promise<Record<ModuleTypes, boolean>> => {
     const { viewPreferences } = await loadPreferences()
     return viewPreferences
@@ -449,7 +372,9 @@ export const saveViewPreference = async (module: ModuleTypes, value: boolean): P
     await savePreferences(prefs)
 }
 
-// 5) Individual preference getters/setters
+/**
+ * Individual preference getters/setters
+ */
 export const loadReaderMode = async (): Promise<boolean> => (await loadPreferences()).readerMode
 
 export const saveReaderMode = async (on: boolean): Promise<void> => {
@@ -474,7 +399,9 @@ export const saveLoaderEnabled = async (on: boolean): Promise<void> => {
     await savePreferences(prefs)
 }
 
-// 6) API‑key getters/setters
+/**
+ * API key getters/setters
+ */
 export const loadOpenAIApiKey = async (): Promise<string> => (await loadPreferences()).openAIApiKey
 
 export const saveOpenAIApiKey = async (key: string): Promise<void> => {
@@ -499,12 +426,16 @@ export const saveGeminiApiKey = async (key: string): Promise<void> => {
     await savePreferences(prefs)
 }
 
-export const loadMapMarkers = (): Promise<CustomMarker[]> => loadEntities<CustomMarker>(MAP_MARKERS_STORAGE_KEY)
-
-export const saveMapMarkers = (markers: CustomMarker[]): Promise<void> =>
-    saveEntities<CustomMarker>(MAP_MARKERS_STORAGE_KEY, markers)
-
-export const clearMapMarkers = async (): Promise<void> => {
-    cache.delete(MAP_MARKERS_STORAGE_KEY)
-    await localforage.removeItem(MAP_MARKERS_STORAGE_KEY)
+/**
+ * Event dispatchers
+ */
+export const notifyDataImported = (): void => {
+    window.dispatchEvent(new Event(DATA_IMPORT_EVENT))
 }
+
+export const notifyPreferencesChanged = (): void => {
+    window.dispatchEvent(new Event(PREFERENCES_CHANGED_EVENT))
+}
+
+// Export types for backward compatibility
+export type { AppPreferences, CustomMarker }
