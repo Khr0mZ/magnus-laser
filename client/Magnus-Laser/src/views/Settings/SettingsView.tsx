@@ -36,6 +36,7 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { db } from '../../utils/db'
 import {
+    loadCombatSimData,
     loadGeminiApiKey,
     loadHuggingFaceApiKey,
     loadOpenAIApiKey,
@@ -44,6 +45,7 @@ import {
     saveBounties,
     saveBuildings,
     saveCharacters,
+    saveCombatSimData,
     saveFixerJobs,
     saveGangs,
     saveGeminiApiKey,
@@ -159,6 +161,14 @@ const SettingsView = () => {
             if (bounties.length > 0) data.bounties = bounties
             if (preferences.length > 0) data.preferences = preferences[0] // Only one preferences object
             if (mapMarkers.length > 0) data.mapMarkers = mapMarkers
+
+            // Export combat simulator data
+            const combatSimData = await loadCombatSimData()
+            if (combatSimData.boardMaps.length > 0) data.combatSimBoardMaps = combatSimData.boardMaps
+            if (combatSimData.tokens.length > 0) data.combatSimTokens = combatSimData.tokens
+            if (combatSimData.maps.length > 0) data.combatSimMaps = combatSimData.maps
+            if (combatSimData.walls.length > 0) data.combatSimWalls = combatSimData.walls
+            if (combatSimData.images.length > 0) data.combatSimImages = combatSimData.images
 
             // Create a JSON file to download
             const fileName = `magnus-laser-data-${new Date().toISOString().split('T')[0]}.json`
@@ -307,6 +317,31 @@ const SettingsView = () => {
                                     break
                                 case 'mapMarkers':
                                     await saveMapMarkers(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'combatSimBoardMaps':
+                                    await saveCombatSimData({ boardMaps: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'combatSimTokens':
+                                    await saveCombatSimData({ tokens: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'combatSimMaps':
+                                    await saveCombatSimData({ maps: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'combatSimWalls':
+                                    await saveCombatSimData({ walls: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'combatSimImages':
+                                    await saveCombatSimData({ images: value })
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break

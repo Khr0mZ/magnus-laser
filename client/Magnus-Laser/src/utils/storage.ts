@@ -427,6 +427,150 @@ export const saveGeminiApiKey = async (key: string): Promise<void> => {
 }
 
 /**
+ * Helper function to convert Blob to base64 string
+ */
+const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            const base64String = reader.result as string
+            resolve(base64String)
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+    })
+}
+
+/**
+ * Helper function to convert base64 string to Blob
+ */
+const base64ToBlob = async (base64: string, _mimeType: string): Promise<Blob> => {
+    const response = await fetch(base64)
+    return await response.blob()
+}
+
+/**
+ * Combat Simulator Data
+ * Note: Combat sim uses a separate database, so we need to import it dynamically
+ */
+export const loadCombatSimData = async () => {
+    try {
+        // Dynamically import combat sim database
+        const { db: combatDb } = await import('../views/CombatSim/db')
+
+        const [boardMaps, tokens, maps, walls, images] = await Promise.all([
+            combatDb.boardMaps.toArray(),
+            combatDb.tokens.toArray(),
+            combatDb.maps.toArray(),
+            combatDb.walls.toArray(),
+            combatDb.images.toArray(),
+        ])
+
+        // Convert blobs to base64 for export
+        const mapsWithBase64 = await Promise.all(
+            maps.map(async (map) => ({
+                ...map,
+                blobData: await blobToBase64(map.blob),
+                blob: undefined, // Remove the blob property
+            }))
+        )
+
+        const imagesWithBase64 = await Promise.all(
+            images.map(async (image) => ({
+                ...image,
+                blobData: await blobToBase64(image.blob),
+                blob: undefined, // Remove the blob property
+            }))
+        )
+
+        return {
+            boardMaps,
+            tokens,
+            maps: mapsWithBase64,
+            walls,
+            images: imagesWithBase64,
+        }
+    } catch (error) {
+        console.warn('Error loading combat sim data:', error)
+        return { boardMaps: [], tokens: [], maps: [], walls: [], images: [] }
+    }
+}
+
+export const saveCombatSimData = async (data: {
+    boardMaps?: any[]
+    tokens?: any[]
+    maps?: any[]
+    walls?: any[]
+    images?: any[]
+}): Promise<void> => {
+    try {
+        // Dynamically import combat sim database
+        const { db: combatDb } = await import('../views/CombatSim/db')
+
+        if (data.boardMaps && data.boardMaps.length > 0) {
+            await combatDb.boardMaps.bulkPut(data.boardMaps)
+        }
+        if (data.tokens && data.tokens.length > 0) {
+            await combatDb.tokens.bulkPut(data.tokens)
+        }
+        if (data.maps && data.maps.length > 0) {
+            // Convert base64 back to blobs for maps
+            const mapsWithBlobs = await Promise.all(
+                data.maps.map(async (map: any) => {
+                    if (map.blobData && !map.blob) {
+                        const blob = await base64ToBlob(map.blobData, map.mimeType)
+                        return {
+                            ...map,
+                            blob,
+                            blobData: undefined, // Remove the base64 data
+                        }
+                    }
+                    return map
+                })
+            )
+            await combatDb.maps.bulkPut(mapsWithBlobs)
+        }
+        if (data.walls && data.walls.length > 0) {
+            await combatDb.walls.bulkPut(data.walls)
+        }
+        if (data.images && data.images.length > 0) {
+            // Convert base64 back to blobs for images
+            const imagesWithBlobs = await Promise.all(
+                data.images.map(async (image: any) => {
+                    if (image.blobData && !image.blob) {
+                        const blob = await base64ToBlob(image.blobData, image.mimeType)
+                        return {
+                            ...image,
+                            blob,
+                            blobData: undefined, // Remove the base64 data
+                        }
+                    }
+                    return image
+                })
+            )
+            await combatDb.images.bulkPut(imagesWithBlobs)
+        }
+    } catch (error) {
+        console.warn('Error saving combat sim data:', error)
+    }
+}
+
+export const clearCombatSimData = async (): Promise<void> => {
+    try {
+        const { db: combatDb } = await import('../views/CombatSim/db')
+        await Promise.all([
+            combatDb.boardMaps.clear(),
+            combatDb.tokens.clear(),
+            combatDb.maps.clear(),
+            combatDb.walls.clear(),
+            combatDb.images.clear(),
+        ])
+    } catch (error) {
+        console.warn('Error clearing combat sim data:', error)
+    }
+}
+
+/**
  * Event dispatchers
  */
 export const notifyDataImported = (): void => {
