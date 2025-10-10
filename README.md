@@ -227,7 +227,7 @@ The Combat Simulator is a fully-featured tactical combat system built with PixiJ
 - **Map Import**: Support for custom background images
 - **Persistent Storage**: Separate Dexie database for saving combat scenarios
 
-- You can find useful maps, for example, here: ![Maps](https://www.reddit.com/r/cyberpunkred/comments/1eko852/stop_making_assumptions_if_they_come_with_knives/)
+- You can find useful maps, for example, here: https://www.reddit.com/r/cyberpunkred/comments/1eko852/stop_making_assumptions_if_they_come_with_knives/
 
 ## Building for Release
 
