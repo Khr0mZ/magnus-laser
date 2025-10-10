@@ -1,13 +1,4 @@
-import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    GridLegacy as Grid,
-    Typography,
-} from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Typography } from '@mui/material'
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
@@ -245,34 +236,36 @@ export const EditDialog = (props: EditDialogProps) => {
                 onClose={onClose}
                 maxWidth="xl"
                 fullWidth
-                PaperProps={{
-                    sx: readerMode
-                        ? {
-                              bgcolor: colors.grays.gray800 + ' !important',
-                              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                              color: '#333',
-                          }
-                        : {
-                              bgcolor: 'rgba(10, 15, 30, 0.95)',
-                              backdropFilter: 'blur(4px)',
-                              border: `1px solid ${colors.neons.cyan.default}40`,
-                              boxShadow: `0 0 20px ${colors.neons.cyan.default}40`,
-                              color: '#fff',
-                              position: 'relative',
-                              '&::before': {
-                                  content: '""',
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                  backgroundImage:
-                                      'linear-gradient(to right, rgba(0, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 255, 255, 0.03) 1px, transparent 1px)',
-                                  backgroundSize: '20px 20px',
-                                  pointerEvents: 'none',
-                                  opacity: 0.5,
+                slotProps={{
+                    paper: {
+                        sx: readerMode
+                            ? {
+                                  bgcolor: colors.grays.gray800 + ' !important',
+                                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                  color: '#333',
+                              }
+                            : {
+                                  bgcolor: 'rgba(10, 15, 30, 0.95)',
+                                  backdropFilter: 'blur(4px)',
+                                  border: `1px solid ${colors.neons.cyan.default}40`,
+                                  boxShadow: `0 0 20px ${colors.neons.cyan.default}40`,
+                                  color: '#fff',
+                                  position: 'relative',
+                                  '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      backgroundImage:
+                                          'linear-gradient(to right, rgba(0, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 255, 255, 0.03) 1px, transparent 1px)',
+                                      backgroundSize: '20px 20px',
+                                      pointerEvents: 'none',
+                                      opacity: 0.5,
+                                  },
                               },
-                          },
+                    },
                 }}
             >
                 <DialogTitle
@@ -345,7 +338,7 @@ export const EditDialog = (props: EditDialogProps) => {
                     }}
                 >
                     <CustomScrollbar scrollDirection="vertical" height="100%">
-                        <Grid container spacing={2} sx={{ pr: 3, mt: 0 }}>
+                        <Grid container spacing={2} sx={{ pr: 3, mt: 3 }}>
                             {moduleType === ModuleTypes.GANG ? (
                                 <FormGang
                                     editedTarget={editedTarget as Gang}
@@ -525,15 +518,17 @@ export const EditDialog = (props: EditDialogProps) => {
                 maxWidth={false}
                 fullScreen
                 aria-labelledby="fullscreen-image-title"
-                PaperProps={{
-                    sx: {
-                        bgcolor: 'rgba(0, 0, 0, 0.5)',
-                        backdropFilter: 'blur(10px)',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        padding: 0,
-                        margin: 0,
-                        cursor: 'pointer',
+                slotProps={{
+                    paper: {
+                        sx: {
+                            bgcolor: 'rgba(0, 0, 0, 0.5)',
+                            backdropFilter: 'blur(10px)',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            padding: 0,
+                            margin: 0,
+                            cursor: 'pointer',
+                        },
                     },
                 }}
                 onClick={() => setFullscreenImage(false)}

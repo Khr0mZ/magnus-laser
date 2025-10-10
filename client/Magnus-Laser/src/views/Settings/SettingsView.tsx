@@ -8,14 +8,13 @@ import {
     Container,
     Divider,
     FormControlLabel,
-    GridLegacy as Grid,
+    Grid,
     Stack,
     Switch,
     TextField,
     Typography,
 } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
-import localforage from 'localforage'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -35,16 +34,8 @@ import { WarningDialog } from '../../components/common/WarningDialog'
 import StorageBanner from '../../components/StorageBanner'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
-import { APP_STORAGE_KEYS } from '../../utils/generators/constantsGenerators'
+import { db } from '../../utils/db'
 import {
-    BOUNTIES_STORAGE_KEY,
-    BUILDINGS_STORAGE_KEY,
-    CHARACTERS_STORAGE_KEY,
-    FIXER_JOBS_STORAGE_KEY,
-    GANGS_STORAGE_KEY,
-    ITEMS_STORAGE_KEY,
-    MAP_MARKERS_STORAGE_KEY,
-    PREFERENCES_STORAGE_KEY,
     loadGeminiApiKey,
     loadHuggingFaceApiKey,
     loadOpenAIApiKey,
@@ -62,13 +53,6 @@ import {
     saveOpenAIApiKey,
     savePreferences,
 } from '../../utils/storage'
-
-localforage.config({
-    name: 'magnus-laser',
-    version: 1.0,
-    storeName: 'magnus-laser', // Should be alphanumeric, with underscores.
-    description: 'Magnus Laser data',
-})
 
 const SettingsView = () => {
     const { t } = useTranslation()
@@ -153,18 +137,28 @@ const SettingsView = () => {
     const handleExport = async () => {
         try {
             const data: Record<string, unknown> = {}
-            // Export all application collections (no separate image store)
-            for (const key of APP_STORAGE_KEYS) {
-                const value = await localforage.getItem(key)
-                if (value) data[key] = value
-            }
 
-            // Export markers and bounties
-            const markers = await localforage.getItem(MAP_MARKERS_STORAGE_KEY)
-            if (markers) data[MAP_MARKERS_STORAGE_KEY] = markers
+            // Export all application data from Dexie
+            const [gangs, buildings, fixerJobs, characters, items, bounties, preferences, mapMarkers] =
+                await Promise.all([
+                    db.gangs.toArray(),
+                    db.buildings.toArray(),
+                    db.fixerJobs.toArray(),
+                    db.characters.toArray(),
+                    db.items.toArray(),
+                    db.bounties.toArray(),
+                    db.preferences.toArray(),
+                    db.mapMarkers.toArray(),
+                ])
 
-            const bounties = await localforage.getItem(BOUNTIES_STORAGE_KEY)
-            if (bounties) data[BOUNTIES_STORAGE_KEY] = bounties
+            if (gangs.length > 0) data.gangs = gangs
+            if (buildings.length > 0) data.buildings = buildings
+            if (fixerJobs.length > 0) data.fixerJobs = fixerJobs
+            if (characters.length > 0) data.characters = characters
+            if (items.length > 0) data.items = items
+            if (bounties.length > 0) data.bounties = bounties
+            if (preferences.length > 0) data.preferences = preferences[0] // Only one preferences object
+            if (mapMarkers.length > 0) data.mapMarkers = mapMarkers
 
             // Create a JSON file to download
             const fileName = `magnus-laser-data-${new Date().toISOString().split('T')[0]}.json`
@@ -273,69 +267,62 @@ const SettingsView = () => {
 
                         // Process each key in the imported data
                         for (const key of Object.keys(data)) {
-                            if (APP_STORAGE_KEYS.includes(key)) {
-                                const value = data[key]
+                            const value = data[key]
 
-                                // Use the appropriate save function for each type of data
-                                // This ensures both localStorage and the in-memory cache are updated
-                                switch (key) {
-                                    case GANGS_STORAGE_KEY:
-                                        await saveGangs(value)
-                                        break
-                                    case BUILDINGS_STORAGE_KEY:
-                                        await saveBuildings(value)
-                                        break
-                                    case FIXER_JOBS_STORAGE_KEY:
-                                        await saveFixerJobs(value)
-                                        break
-                                    case CHARACTERS_STORAGE_KEY:
-                                        await saveCharacters(value)
-                                        break
-                                    case ITEMS_STORAGE_KEY:
-                                        await saveItems(value)
-                                        break
-                                    case BOUNTIES_STORAGE_KEY:
-                                        await saveBounties(value)
-                                        break
-                                    case PREFERENCES_STORAGE_KEY:
-                                        await savePreferences(value)
-                                        break
-                                    default:
-                                        // Fallback for any future keys
-                                        await localforage.setItem(key, value)
-                                        break
-                                }
-
-                                // Notify that data has been imported for immediate UI updates
-                                notifyDataImported()
-
-                                // Count for the success message
-                                importedCollections += 1
-                                if (Array.isArray(value)) importedRegistries += value.length
+                            // Use the appropriate save function for each type of data
+                            switch (key) {
+                                case 'gangs':
+                                    await saveGangs(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'buildings':
+                                    await saveBuildings(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'fixerJobs':
+                                    await saveFixerJobs(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'characters':
+                                    await saveCharacters(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'items':
+                                    await saveItems(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'bounties':
+                                    await saveBounties(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'preferences':
+                                    await savePreferences(value)
+                                    importedCollections += 1
+                                    break
+                                case 'mapMarkers':
+                                    await saveMapMarkers(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                default:
+                                    // Skip unknown keys
+                                    break
                             }
                         }
 
-                        // Handle markers and bounties separately
-                        if (data[MAP_MARKERS_STORAGE_KEY]) {
-                            await saveMapMarkers(data[MAP_MARKERS_STORAGE_KEY])
-                            importedCollections += 1
-                            if (Array.isArray(data[MAP_MARKERS_STORAGE_KEY])) {
-                                importedRegistries += data[MAP_MARKERS_STORAGE_KEY].length
-                            }
-                        }
-
-                        if (data[BOUNTIES_STORAGE_KEY]) {
-                            await saveBounties(data[BOUNTIES_STORAGE_KEY])
-                            importedCollections += 1
-                            if (Array.isArray(data[BOUNTIES_STORAGE_KEY])) {
-                                importedRegistries += data[BOUNTIES_STORAGE_KEY].length
-                            }
-                        }
+                        // Notify that data has been imported for immediate UI updates
+                        notifyDataImported()
 
                         // Show success notification if any collections imported
                         if (importedCollections > 0) {
                             // Make sure to trigger a preferences update if any data might have changed
-                            if (data[PREFERENCES_STORAGE_KEY]) {
+                            if (data['preferences']) {
                                 notifyPreferencesChanged()
                             }
 
@@ -489,7 +476,7 @@ const SettingsView = () => {
 
             <Grid container spacing={3} sx={{ position: 'relative', zIndex: 3 }}>
                 {/* Export Data Card */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card
                         onClick={handleExport}
                         sx={{
@@ -654,7 +641,7 @@ const SettingsView = () => {
                     </Card>
                 </Grid>
                 {/* Import Data Card */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card
                         onClick={handleImportClick}
                         sx={{
@@ -819,7 +806,7 @@ const SettingsView = () => {
                     </Card>
                 </Grid>
                 {/* Display Card */}
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card
                         sx={{
                             position: 'relative',
@@ -1021,7 +1008,7 @@ const SettingsView = () => {
                 </Grid>
 
                 {/* API Keys Card */}
-                <Grid item xs={12} md={9}>
+                <Grid size={{ xs: 12, md: 9 }}>
                     <Card
                         sx={{
                             position: 'relative',

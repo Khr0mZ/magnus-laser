@@ -1,6 +1,6 @@
 import {
     FormControl,
-    GridLegacy as Grid,
+    Grid,
     InputLabel,
     MenuItem,
     Select,
@@ -10,7 +10,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { Dispatch, SetStateAction, useCallback } from 'react'
+import { Dispatch, SetStateAction, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks.ts'
@@ -78,7 +78,17 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
     } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const { fixerJobs, gangs, items, characters } = useData()
+    const { gangs, items, characters } = useData()
+
+    // Store original data when dialog opens to restore when switching categories
+    const originalJobRef = useRef<FixerJob | null>(null)
+
+    useEffect(() => {
+        // Store the original job data on mount or when editedTarget ID changes
+        if (editedTarget && (!originalJobRef.current || originalJobRef.current.ID !== editedTarget.ID)) {
+            originalJobRef.current = structuredClone(editedTarget)
+        }
+    }, [editedTarget?.ID])
 
     // --- Image Handlers ---
     // Create a single reusable regenerate handler that takes the path as an argument
@@ -125,38 +135,40 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
     const handleChangeSubjectCategory = (e: SelectChangeEvent<string>) => {
         // Handle different category types
         const newCategory = e.target.value
-        const fixerJob = fixerJobs.find((job) => job.ID === editedTarget.ID)
+        const original = originalJobRef.current
+
         // Reset subject data based on category
-        if (!fixerJob) return
         if (newCategory === 'CharacterVerbWrapper') {
-            if (fixerJob.plot.verb.__typename === 'CharacterVerbWrapper') {
-                handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
-                handleChange('plot.verb', fixerJob.plot.verb)
+            // Try to restore from original if it was the same category
+            if (original?.plot.verb.__typename === 'CharacterVerbWrapper') {
+                handleChange('plot.plotSubject', original.plot.plotSubject)
+                handleChange('plot.verb', original.plot.verb)
             } else {
-                handleChange('plot.plotSubject', characters[0])
+                // Initialize with defaults
+                handleChange('plot.plotSubject', characters[0] || null)
                 handleChange('plot.verb', {
                     __typename: 'CharacterVerbWrapper',
                     value: Object.values(CharacterVerb)[0],
                 })
             }
         } else if (newCategory === 'ItemVerbWrapper') {
-            if (fixerJob.plot.verb.__typename === 'ItemVerbWrapper') {
-                handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
-                handleChange('plot.verb', fixerJob.plot.verb)
+            if (original?.plot.verb.__typename === 'ItemVerbWrapper') {
+                handleChange('plot.plotSubject', original.plot.plotSubject)
+                handleChange('plot.verb', original.plot.verb)
             } else {
-                handleChange('plot.plotSubject', items[0])
+                handleChange('plot.plotSubject', items[0] || null)
                 handleChange('plot.verb', {
                     __typename: 'ItemVerbWrapper',
                     value: Object.values(ItemVerb)[0],
                 })
             }
         } else if (newCategory === 'PlotGangVerbWrapper') {
-            if (fixerJob.plot.verb.__typename === 'PlotGangVerbWrapper') {
-                handleChange('plot.plotSubject', fixerJob.plot.plotSubject)
-                handleChange('plot.verb', fixerJob.plot.verb)
+            if (original?.plot.verb.__typename === 'PlotGangVerbWrapper') {
+                handleChange('plot.plotSubject', original.plot.plotSubject)
+                handleChange('plot.verb', original.plot.verb)
             } else {
                 handleChange('plot.plotSubject', {
-                    gang: gangs[0],
+                    gang: gangs[0] || null,
                     complication: {
                         type: PlotGangComplicationType.POLICE_RAIDING,
                     },
@@ -167,9 +179,9 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 })
             }
         } else if (newCategory === 'PlotBuildingVerbWrapper') {
-            if (fixerJob.plot.verb.__typename === 'PlotBuildingVerbWrapper') {
+            if (original?.plot.verb.__typename === 'PlotBuildingVerbWrapper') {
                 handleChange('plot.plotSubject', null)
-                handleChange('plot.verb', fixerJob.plot.verb)
+                handleChange('plot.verb', original.plot.verb)
             } else {
                 handleChange('plot.plotSubject', null)
                 handleChange('plot.verb', {
@@ -185,7 +197,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
             {hiddenFileInput}
             {/* BASIC INFO SECTION */}
             {/* Name */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <TextField
                     fullWidth
                     label={t('common.name')}
@@ -196,7 +208,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 />
             </Grid>
             {/* Description */}
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <TextField
                     fullWidth
                     label={t('common.description')}
@@ -207,8 +219,8 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     multiline
                 />
             </Grid>
-            <Grid item container xs={12} spacing={2}>
-                <Grid item container xs={12} md={8}>
+            <Grid container size={{ xs: 12 }} spacing={2}>
+                <Grid container size={{ xs: 12, md: 8 }}>
                     <Stack spacing={2} sx={{ width: '100%' }}>
                         {/* --- PLOT SECTION --- */}
                         <Typography variant="h4" sx={{ mt: 2, mb: 1 }}>
@@ -279,7 +291,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     </Stack>
                 </Grid>
                 {/* Image (Main) */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <ImageField
                         image={editedTarget.image}
                         downloadName={editedTarget.name}
@@ -347,8 +359,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                         handleChangeGangComplicationItemTarget: 'plot.plotSubject.complication.item',
                         handleChangeGangComplicationTypeTarget: 'plot.plotSubject.complication.type',
                         chainStarter: editedTarget.plot.plotSubject as PlotGang,
-                        originalChainStarter: fixerJobs.find((job) => job.ID === editedTarget.ID)?.plot
-                            .plotSubject as PlotGang,
+                        originalChainStarter: originalJobRef.current?.plot.plotSubject as PlotGang,
                         character: {
                             ...(editedTarget.plot.plotSubject as PlotGang).complication.character!,
                             check:
@@ -382,8 +393,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     handleChangeBuildingComplicationItemTarget: 'plot.plotBuilding.complication.item',
                     handleChangeBuildingComplicationTypeTarget: 'plot.plotBuilding.complication.type',
                     chainStarter: editedTarget.plot.plotBuilding,
-                    originalChainStarter: fixerJobs.find((job) => job.ID === editedTarget.ID)?.plot
-                        .plotBuilding as PlotBuilding,
+                    originalChainStarter: originalJobRef.current?.plot.plotBuilding as PlotBuilding,
                     character: {
                         ...(editedTarget.plot.plotBuilding.complication.character as Character),
                         check: editedTarget.plot.plotBuilding.complication.type.includes('CHARACTER') || false,

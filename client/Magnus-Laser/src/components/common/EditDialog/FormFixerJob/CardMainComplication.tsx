@@ -4,7 +4,7 @@ import {
     AccordionDetails,
     AccordionSummary,
     FormControl,
-    GridLegacy as Grid,
+    Grid,
     InputLabel,
     MenuItem,
     Select,
@@ -69,7 +69,7 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
             </AccordionSummary>
             <AccordionDetails>
                 {/* Main Complication Type */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                         <InputLabel id="complication-label" sx={inputLabelStyle}>
                             {t('fixerJobs.labels.complicationType')}

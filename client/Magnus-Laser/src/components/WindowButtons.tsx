@@ -1,5 +1,5 @@
 import { Box, IconButton } from '@mui/material'
-import React, { useEffect } from 'react'
+import React from 'react'
 import colors from '../utils/colors'
 // Import necessary MUI icons
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank' // Maximize
@@ -23,34 +23,54 @@ declare global {
 }
 
 const WindowButtons: React.FC = () => {
-    useEffect(() => {
-        const initializeWindowControls = () => {
-            try {
-                // Guard for non‑Tauri environments (web dev / preview)
-                type TauriWindowApi = {
-                    getCurrentWindow: () => {
-                        minimize: () => Promise<void>
-                        toggleMaximize: () => Promise<void>
-                        close: () => Promise<void>
-                    }
+    // Handle window controls directly through onClick handlers
+    const handleMinimize = async () => {
+        try {
+            type TauriWindowApi = {
+                getCurrentWindow: () => {
+                    minimize: () => Promise<void>
                 }
-                const tauriWin = (window as unknown as { __TAURI__?: { window?: TauriWindowApi } }).__TAURI__?.window
-                if (!tauriWin || typeof tauriWin.getCurrentWindow !== 'function') return
-                const { getCurrentWindow } = tauriWin
-                const appWindow = getCurrentWindow()
-
-                document.getElementById('titlebar-minimize')?.addEventListener('click', () => appWindow.minimize())
-                document
-                    .getElementById('titlebar-maximize')
-                    ?.addEventListener('click', () => appWindow.toggleMaximize())
-                document.getElementById('titlebar-close')?.addEventListener('click', () => appWindow.close())
-            } catch (error) {
-                console.error('Failed to initialize window controls:', error)
             }
+            const tauriWin = (window as unknown as { __TAURI__?: { window?: TauriWindowApi } }).__TAURI__?.window
+            if (!tauriWin || typeof tauriWin.getCurrentWindow !== 'function') return
+            const appWindow = tauriWin.getCurrentWindow()
+            await appWindow.minimize()
+        } catch (error) {
+            console.error('Failed to minimize:', error)
         }
+    }
 
-        initializeWindowControls()
-    }, [])
+    const handleMaximize = async () => {
+        try {
+            type TauriWindowApi = {
+                getCurrentWindow: () => {
+                    toggleMaximize: () => Promise<void>
+                }
+            }
+            const tauriWin = (window as unknown as { __TAURI__?: { window?: TauriWindowApi } }).__TAURI__?.window
+            if (!tauriWin || typeof tauriWin.getCurrentWindow !== 'function') return
+            const appWindow = tauriWin.getCurrentWindow()
+            await appWindow.toggleMaximize()
+        } catch (error) {
+            console.error('Failed to toggle maximize:', error)
+        }
+    }
+
+    const handleClose = async () => {
+        try {
+            type TauriWindowApi = {
+                getCurrentWindow: () => {
+                    close: () => Promise<void>
+                }
+            }
+            const tauriWin = (window as unknown as { __TAURI__?: { window?: TauriWindowApi } }).__TAURI__?.window
+            if (!tauriWin || typeof tauriWin.getCurrentWindow !== 'function') return
+            const appWindow = tauriWin.getCurrentWindow()
+            await appWindow.close()
+        } catch (error) {
+            console.error('Failed to close:', error)
+        }
+    }
 
     // Define common styles for reuse
     const buttonBaseStyle = {
@@ -142,9 +162,9 @@ const WindowButtons: React.FC = () => {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'row', height: 'min-content' }}>
             <IconButton
-                id="titlebar-minimize"
                 size="small"
-                title="Minimize" // Add title for accessibility
+                title="Minimize"
+                onClick={handleMinimize}
                 sx={{
                     ...buttonBaseStyle,
                     bgcolor: 'rgba(0, 0, 40, 0.4)', // Keep distinct background hints
@@ -160,9 +180,9 @@ const WindowButtons: React.FC = () => {
             </IconButton>
 
             <IconButton
-                id="titlebar-maximize"
                 size="small"
-                title="Maximize" // Add title
+                title="Maximize"
+                onClick={handleMaximize}
                 sx={{
                     ...buttonBaseStyle,
                     bgcolor: 'rgba(40, 0, 40, 0.4)',
@@ -177,9 +197,9 @@ const WindowButtons: React.FC = () => {
                 <CheckBoxOutlineBlankIcon sx={iconBaseStyle(colors.neons.pink.default)} />
             </IconButton>
             <IconButton
-                id="titlebar-close"
                 size="small"
-                title="Close" // Add title
+                title="Close"
+                onClick={handleClose}
                 sx={{
                     ...buttonBaseStyle,
                     bgcolor: 'rgba(40, 0, 0, 0.4)',

@@ -5,10 +5,10 @@ import Menu from '@mui/icons-material/Menu'
 import MenuOpen from '@mui/icons-material/MenuOpen'
 import Straighten from '@mui/icons-material/Straighten'
 import {
-    Avatar,
     Box,
     Button,
     Container,
+    Dialog,
     MenuItem,
     Paper,
     Popper,
@@ -21,7 +21,6 @@ import { Colorful } from '@uiw/react-color'
 import { Texture } from 'pixi.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ClearAllButton from '../../components/ClearAllButton'
 import CyberpunkCheckbox from '../../components/CyberpunkCheckbox'
 import CyberpunkFormControlLabel from '../../components/CyberpunkFormControlLabel'
 import GenerateButton from '../../components/GenerateButton'
@@ -31,20 +30,21 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { randomNPCs } from '../../utils/generators/npc/npcs'
+import InitiativePanel from './InitiativePanel'
 import PixiBoard from './PixiBoard'
+import RollHistoryPanel from './RollHistoryPanel'
+import TokenDetailsDialog from './TokenDetailsDialog'
+import TokenPanel from './TokenPanel'
 import { db } from './db'
-import { BoardMap, Image, Map, NPC, Token, Wall } from './types'
+import { rollD10WithSpecial, rollDamage, rollToHit, type RollResult, type RollType } from './diceUtils'
+import type { BoardMap, Image, Map as MapType, RollHistoryEntry, Token, Wall } from './types'
 
-type DOMFile = globalThis.File
-type DOMHTMLImageElement = globalThis.HTMLImageElement
-type DOMImage = typeof globalThis.Image
-
-async function fileToImage(file: DOMFile): Promise<DOMHTMLImageElement> {
+async function fileToImage(file: globalThis.File): Promise<globalThis.HTMLImageElement> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onerror = () => reject(reader.error)
         reader.onload = () => {
-            const img = new (globalThis.Image as DOMImage)()
+            const img = new globalThis.Image()
             img.onload = () => resolve(img)
             img.onerror = reject
             img.src = String(reader.result)
@@ -53,10 +53,10 @@ async function fileToImage(file: DOMFile): Promise<DOMHTMLImageElement> {
     })
 }
 
-async function blobToImage(blob: Blob): Promise<DOMHTMLImageElement> {
+async function blobToImage(blob: Blob): Promise<globalThis.HTMLImageElement> {
     return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(blob)
-        const img = new (globalThis.Image as DOMImage)()
+        const img = new (globalThis.Image as typeof globalThis.Image)()
         img.onload = () => {
             URL.revokeObjectURL(url)
             resolve(img)
@@ -95,10 +95,10 @@ const CombatSimView = () => {
     const [wallAlpha, setWallAlpha] = useState(0.95)
     const fitRef = useRef<(() => void) | null>(null)
     const [currentMap, setCurrentMap] = useState<BoardMap | null>(null)
-    const [currentImage, setCurrentImage] = useState<Image | null>(null)
     const [tokens, setTokens] = useState<Token[]>([])
+    const [tokensNotInMap, setTokensNotInMap] = useState<Token[]>([])
     const [mapTexture, setMapTexture] = useState<Texture | null>(null)
-    const [maps, setMaps] = useState<Map[]>([])
+    const [maps, setMaps] = useState<MapType[]>([])
     const [images, setImages] = useState<Image[]>([])
     const [isSaving, setIsSaving] = useState(false)
     const [isMeasuring, setIsMeasuring] = useState(false)
@@ -109,11 +109,74 @@ const CombatSimView = () => {
     const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
     const acceptAllRef = useRef<(() => void) | null>(null)
     const cancelAllRef = useRef<(() => void) | null>(null)
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [deleteMapDialogOpen, setDeleteMapDialogOpen] = useState(false)
     const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
+    const [deleteTokenDialogOpen, setDeleteTokenDialogOpen] = useState<string | null>(null)
+    const [deleteAllWallsDialogOpen, setDeleteAllWallsDialogOpen] = useState(false)
+    const [fullscreenImage, setFullscreenImage] = useState<string>('')
     const paperRef = useRef<HTMLDivElement | null>(null)
     const [gridColorAnchor, setGridColorAnchor] = useState<HTMLElement | null>(null)
     const [wallColorAnchor, setWallColorAnchor] = useState<HTMLElement | null>(null)
+    const [tokenDialogOpen, setTokenDialogOpen] = useState<string>()
+    const [tokenClipboard, setTokenClipboard] = useState<Token | null>(null)
+
+    // Initiative and combat state
+    const [isTokenPanelOpen, setIsTokenPanelOpen] = useState(false)
+    const [isInitiativePanelOpen, setIsInitiativePanelOpen] = useState(false)
+    const [activeTokenId, setActiveTokenId] = useState<string | null>(null)
+    const [initiativeRolls, setInitiativeRolls] = useState<Map<string, number>>(new Map())
+    const [currentRound, setCurrentRound] = useState(1)
+    const [autoRerollInitiative, setAutoRerollInitiative] = useState(false)
+    const [rollHistory, setRollHistory] = useState<RollHistoryEntry[]>([])
+    const [isRollHistoryOpen, setIsRollHistoryOpen] = useState(false)
+    const [isCombatActive, setIsCombatActive] = useState(false)
+
+    const half = gridSize / 2
+    // Default tokens (not persisted, reset on reload)
+    const [defaultTokens, setDefaultTokens] = useState<Token[]>(() => {
+        return [
+            {
+                id: 'EASY',
+                mapId: '',
+                x: half,
+                y: half,
+                radius: half,
+                color: 0x00ff00,
+                stats: randomNPCs.EASY,
+                name: 'Easy',
+            },
+            {
+                id: 'TYPICAL',
+                mapId: '',
+                x: half,
+                y: half,
+                radius: half,
+                color: 0xffff00,
+                stats: randomNPCs.TYPICAL,
+                name: 'Typical',
+            },
+            {
+                id: 'DANGEROUS',
+                mapId: '',
+                x: half,
+                y: half,
+                radius: half,
+                color: 0xff0000,
+                stats: randomNPCs.DANGEROUS,
+                name: 'Dangerous',
+            },
+            {
+                id: 'DEADLY',
+                mapId: '',
+                x: half,
+                y: half,
+                radius: half,
+                color: 0xff00ff,
+                stats: randomNPCs.DEADLY,
+                name: 'Deadly',
+            },
+        ]
+    })
     const fieldSx = readerMode
         ? {
               '& .MuiOutlinedInput-root': {
@@ -128,51 +191,16 @@ const CombatSimView = () => {
               },
           }
 
-    const half = gridSize / 2
-    const defaultTokens: Token[] = [
-        {
-            id: 'EASY',
-            mapId: '',
-            x: half,
-            y: half,
-            radius: Math.max(1, Math.floor(half * 0.8)),
-            color: 0x00ff00,
-            npc: NPC.EASY,
-            imageId: undefined,
-        },
-        {
-            id: 'TYPICAL',
-            mapId: '',
-            x: half,
-            y: half,
-            radius: Math.max(1, Math.floor(half * 0.8)),
-            color: 0xffff00,
-            npc: NPC.TYPICAL,
-            imageId: undefined,
-        },
-        {
-            id: 'DANGEROUS',
-            mapId: '',
-            x: half,
-            y: half,
-            radius: Math.max(1, Math.floor(half * 0.8)),
-            color: 0xff0000,
-            npc: NPC.DANGEROUS,
-            imageId: undefined,
-        },
-        {
-            id: 'DEADLY',
-            mapId: '',
-            x: half,
-            y: half,
-            radius: Math.max(1, Math.floor(half * 0.8)),
-            color: 0x000000,
-            npc: NPC.DEADLY,
-            imageId: undefined,
-        },
-    ]
-
     const hexToPixi = (hex: string) => Number(`0x${hex.replace('#', '')}`)
+    const pixiToCss = (color: number) => `#${color.toString(16).padStart(6, '0')}`
+    const resolveImageUrl = (imageId: string | undefined, images: Image[]): string | undefined => {
+        if (!imageId) return undefined
+        // If it starts with '/', it's a default image path
+        if (imageId.startsWith('/')) return imageId
+        // Otherwise, it's an image ID, find the corresponding blob URL
+        const image = images.find((img) => img.id === imageId)
+        return image ? URL.createObjectURL(image.blob) : undefined
+    }
     const toAlphaHex = (a: number) =>
         Math.max(0, Math.min(255, Math.round(a * 255)))
             .toString(16)
@@ -208,7 +236,7 @@ const CombatSimView = () => {
                 let defaultMap = await db.maps.where('name').equals('Empty Map').first()
                 if (!defaultMap) {
                     const blankBlob = await createBlankPngBlob()
-                    const candidate: Map = {
+                    const candidate: MapType = {
                         id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
                         name: 'Empty Map',
                         mimeType: 'image/png',
@@ -248,6 +276,8 @@ const CombatSimView = () => {
             const activeKey = map.mapId ?? map.id
             const tks = await db.tokens.where('mapId').equals(activeKey).toArray()
             setTokens(tks)
+            const tksNotInMap = await db.tokens.where('mapId').notEqual(activeKey).toArray()
+            setTokensNotInMap(tksNotInMap)
             const ws = await db.walls.where('mapId').equals(activeKey).toArray()
             setWalls(ws)
             // map
@@ -255,7 +285,7 @@ const CombatSimView = () => {
                 const m = await db.maps.get(map.mapId)
                 if (m) {
                     const img = await blobToImage(m.blob)
-                    const texture = Texture.from(img as unknown as DOMHTMLImageElement)
+                    const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
                     setMapTexture(texture)
                     setGridSize(m.gridSize)
                     setSnapToGrid(m.snapToGrid)
@@ -289,19 +319,165 @@ const CombatSimView = () => {
         return currentMap.mapId ?? currentMap.id
     }
 
-    const onAddToken = async () => {
-        if (!currentMap) return
-        const t: Token = {
+    // Dice rolling and combat helpers
+    const addToRollHistory = (token: Token, rollType: RollType, result: RollResult, damageResult?: RollResult) => {
+        const entry: RollHistoryEntry = {
             id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
-            mapId: getActiveMapKey(),
-            x: half,
-            y: half,
-            radius: Math.max(1, Math.floor(half * 0.8)),
-            color: 0xff3b81,
+            timestamp: Date.now(),
+            tokenId: token.id,
+            tokenName: token.name,
+            rollType,
+            result,
+            damageResult,
         }
-        await db.tokens.add(t)
-        setTokens((prev) => [...prev, t])
+        setRollHistory((prev) => {
+            const newHistory = [entry, ...prev]
+            // Keep only last 100 entries
+            return newHistory.slice(0, 100)
+        })
+    }
+
+    const rollInitiative = (token: Token): number => {
+        const { value } = rollD10WithSpecial()
+        return value + (token.stats?.initiative ?? 0)
+    }
+
+    const rollAllInitiatives = () => {
+        const newRolls = new Map<string, number>()
+        tokens.forEach((token) => {
+            const initiative = rollInitiative(token)
+            newRolls.set(token.id, initiative)
+
+            // Add to roll history
+            const initiativeMod = token.stats?.initiative ?? 0
+            const { value, fumble, critical, rolls } = rollD10WithSpecial()
+            addToRollHistory(token, 'initiative', {
+                total: value + initiativeMod,
+                rolls,
+                fumble,
+                critical,
+                breakdown: `${value}${fumble ? ' (fumble)' : critical ? ' (critical)' : ''} + ${initiativeMod}`,
+            })
+        })
+        setInitiativeRolls(newRolls)
+    }
+
+    const handleMeleeAttack = (token: Token) => {
+        const combat = token.stats?.combat ?? 0
+        const hitResult = rollToHit(combat)
+
+        const diceCount = token.stats?.weapons?.melee?.d6 ?? 1
+        const damageResult = rollDamage(diceCount)
+
+        addToRollHistory(token, 'melee-hit', hitResult, damageResult)
+    }
+
+    const handleRangedAttack = (token: Token) => {
+        const combat = token.stats?.combat ?? 0
+        const hitResult = rollToHit(combat)
+
+        const diceCount = token.stats?.weapons?.ranged?.d6 ?? 1
+        const damageResult = rollDamage(diceCount)
+
+        addToRollHistory(token, 'ranged-hit', hitResult, damageResult)
+    }
+
+    const handleSkillCheck = (token: Token) => {
+        const skills = token.stats?.skills ?? 0
+        const result = rollToHit(skills)
+
+        addToRollHistory(token, 'skill', result)
+    }
+
+    const handleUpdateTokenCurrent = async (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => {
+        setTokens((prev) =>
+            prev.map((t) => {
+                if (t.id !== tokenId || !t.stats) return t
+                if (field === 'health') {
+                    return { ...t, stats: { ...t.stats, currentHealth: value } }
+                } else if (field === 'sph') {
+                    return {
+                        ...t,
+                        stats: { ...t.stats, armor: { ...t.stats.armor, currentSph: value } },
+                    }
+                } else {
+                    return {
+                        ...t,
+                        stats: { ...t.stats, armor: { ...t.stats.armor, currentSpb: value } },
+                    }
+                }
+            })
+        )
+
+        // Update in database
+        const token = tokens.find((t) => t.id === tokenId)
+        if (token && token.stats) {
+            if (field === 'health') {
+                await db.tokens.update(tokenId, { stats: { ...token.stats, currentHealth: value } })
+            } else if (field === 'sph') {
+                await db.tokens.update(tokenId, {
+                    stats: { ...token.stats, armor: { ...token.stats.armor, currentSph: value } },
+                })
+            } else {
+                await db.tokens.update(tokenId, {
+                    stats: { ...token.stats, armor: { ...token.stats.armor, currentSpb: value } },
+                })
+            }
+        }
+
         setIsSaving(true)
+    }
+
+    const handleNextTurn = () => {
+        // Show toast notification (could use a snackbar library)
+        console.log(t('combatSim.roundComplete', { round: currentRound }))
+
+        // Increment round
+        setCurrentRound((prev) => prev + 1)
+
+        // Reroll if enabled
+        if (autoRerollInitiative) {
+            rollAllInitiatives()
+        }
+
+        // Set to first token
+        const sorted = [...tokens].sort((a, b) => (initiativeRolls.get(b.id) ?? 0) - (initiativeRolls.get(a.id) ?? 0))
+        if (sorted.length > 0) {
+            setActiveTokenId(sorted[0].id)
+        }
+    }
+
+    const handleResetCombat = () => {
+        setCurrentRound(1)
+        setActiveTokenId(null)
+        rollAllInitiatives()
+    }
+
+    const handleToggleCombat = () => {
+        if (!isCombatActive) {
+            // Starting combat - roll initiatives
+            if (tokens.length > 0) {
+                rollAllInitiatives()
+                // Set first token as active after a brief delay to ensure rolls are set
+                setTimeout(() => {
+                    setInitiativeRolls((currentRolls) => {
+                        const sorted = [...tokens].sort(
+                            (a, b) => (currentRolls.get(b.id) ?? 0) - (currentRolls.get(a.id) ?? 0)
+                        )
+                        if (sorted.length > 0) {
+                            setActiveTokenId(sorted[0].id)
+                        }
+                        return currentRolls
+                    })
+                }, 50)
+            }
+        } else {
+            // Stopping combat - clear active token and initiatives
+            setActiveTokenId(null)
+            setInitiativeRolls(new Map())
+            setCurrentRound(1)
+        }
+        setIsCombatActive(!isCombatActive)
     }
 
     const onResetView = async () => {
@@ -311,15 +487,17 @@ const CombatSimView = () => {
         }
         await db.tokens.where('mapId').equals(getActiveMapKey()).delete()
         setTokens([])
+        const tksNotInMap = await db.tokens.toArray()
+        setTokensNotInMap(tksNotInMap)
         setIsSaving(true)
     }
 
-    const onUploadMap = async (file: DOMFile) => {
+    const onUploadMap = async (file: globalThis.File) => {
         const img = await fileToImage(file)
-        const texture = Texture.from(img as unknown as DOMHTMLImageElement)
+        const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
         setMapTexture(texture)
         if (!currentMap) return
-        const map: Map = {
+        const map: MapType = {
             id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
             name: file.name,
             mimeType: file.type,
@@ -344,19 +522,23 @@ const CombatSimView = () => {
         setIsSaving(true)
     }
 
-    const onUploadImage = async (file: DOMFile) => {
-        const img = await fileToImage(file)
-        const image: Image = {
-            id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
-            name: file.name,
-            mimeType: file.type,
-            width: img.width,
-            height: img.height,
-            blob: file,
+    const onUploadImage = async (file: globalThis.File) => {
+        try {
+            const img = await fileToImage(file)
+            const image: Image = {
+                id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
+                name: file.name,
+                mimeType: file.type,
+                width: img.width,
+                height: img.height,
+                blob: file,
+            }
+            await db.images.put(image)
+            setImages((prev) => [...prev, image])
+            setIsSaving(true)
+        } catch (error) {
+            console.error('Error uploading image:', error)
         }
-        await db.images.put(image)
-        setImages((prev) => [...prev, image])
-        setIsSaving(true)
     }
 
     const onSelectMap = async (id: string) => {
@@ -366,28 +548,19 @@ const CombatSimView = () => {
         const key = id || currentMap.id
         const tks = await db.tokens.where('mapId').equals(key).toArray()
         setTokens(tks)
+        const tksNotInMap = await db.tokens.where('mapId').notEqual(key).toArray()
+        setTokensNotInMap(tksNotInMap)
         const ws = await db.walls.where('mapId').equals(key).toArray()
         setWalls(ws)
         const map = await db.maps.get(id)
         if (!map) return
         const img = await blobToImage(map.blob)
-        const texture = Texture.from(img as unknown as DOMHTMLImageElement)
+        const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
         setMapTexture(texture)
         setGridSize(map.gridSize)
         setSnapToGrid(map.snapToGrid)
         setGridColorHex(map.gridColorHex)
         setGridAlpha(map.gridAlpha)
-    }
-
-    const onSelectImage = async (id: string) => {
-        const image = await db.images.get(id)
-        console.log('onSelectImage', id)
-        if (id === 'NO_IMAGE') {
-            setCurrentImage(null)
-            return
-        }
-        if (!image) return
-        setCurrentImage(image)
     }
 
     // Persist grid size to selected map
@@ -420,7 +593,34 @@ const CombatSimView = () => {
         setMaps((prev) => prev.filter((a) => a.id !== id))
         const tks = await db.tokens.where('mapId').equals(currentMap.id).toArray()
         setTokens(tks)
+        const tksNotInMap = await db.tokens.toArray()
+        setTokensNotInMap(tksNotInMap)
         setIsSaving(true)
+    }
+
+    const onDeleteToken = async () => {
+        if (!deleteTokenDialogOpen) return
+
+        // Remove from both tokens and tokensNotInMap
+        setTokens((prev) => prev.filter((t) => t.id !== deleteTokenDialogOpen))
+        setTokensNotInMap((prev) => prev.filter((t) => t.id !== deleteTokenDialogOpen))
+
+        await db.tokens.delete(deleteTokenDialogOpen)
+        setDeleteTokenDialogOpen(null)
+        setIsSaving(true)
+    }
+
+    const onDeleteAllWalls = async () => {
+        setWalls([])
+        await db.transaction('rw', db.walls, async () => {
+            await db.walls.where('mapId').equals(getActiveMapKey()).delete()
+        })
+        setDeleteAllWallsDialogOpen(false)
+        setIsSaving(true)
+    }
+
+    const toggleFullscreenImage = (image: string) => {
+        setFullscreenImage(image)
     }
 
     const sortedMaps = useMemo(() => {
@@ -435,18 +635,10 @@ const CombatSimView = () => {
         return arr
     }, [maps])
 
-    const sortedImages = useMemo(() => {
-        const arr = [...images]
-        arr.sort((a, b) => {
-            return a.name.localeCompare(b.name)
-        })
-        return arr
-    }, [images])
-
     return (
         <Container maxWidth={false} sx={{ pt: 0.5 }}>
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
-            <Stack direction="row" alignItems="center" spacing={2} mr={1.5}>
+            <Stack direction="row" alignItems="center" spacing={2} mb={2}>
                 <Typography
                     variant="h3"
                     className="glitch-text"
@@ -454,10 +646,19 @@ const CombatSimView = () => {
                     sx={{
                         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 10px ${colors.neons.cyan.default}`,
-                        flexGrow: 1,
                     }}
                 >
                     {t('combatSim.title')}
+                </Typography>
+                <Typography
+                    variant="h4"
+                    sx={{
+                        color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
+                        textShadow: `0 0 8px ${colors.neons.green.default}`,
+                        flexGrow: 1,
+                    }}
+                >
+                    {t(`modules.${ModuleTypes.COMBAT_SIM}_DESCRIPTION`)}
                 </Typography>
                 <Stack
                     direction="row"
@@ -581,8 +782,10 @@ const CombatSimView = () => {
                             />
                         </Stack>
                         <Button
-                            onClick={() => setDeleteDialogOpen(true)}
-                            disabled={!currentMap?.mapId}
+                            onClick={() => {
+                                setDeleteMapDialogOpen(true)
+                            }}
+                            disabled={maps.find((m) => m.id === currentMap?.mapId)?.name === 'Empty Map'}
                             sx={{
                                 minWidth: '30px',
                                 width: '36px',
@@ -599,7 +802,6 @@ const CombatSimView = () => {
                                 position: 'relative',
                                 fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
                                 fontWeight: 'bold',
-                                opacity: currentMap?.mapId ? 1 : 0.5,
                                 '&::before': !readerMode
                                     ? {
                                           content: '""',
@@ -646,161 +848,157 @@ const CombatSimView = () => {
                     </Stack>
                 </Stack>
             </Stack>
-            <Typography
-                variant="h4"
-                sx={{
-                    color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
-                    textShadow: `0 0 8px ${colors.neons.green.default}`,
-                    mb: 1,
-                }}
-            >
-                {t(`modules.${ModuleTypes.COMBAT_SIM}_DESCRIPTION`)}
-            </Typography>
-            <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <GenerateButton isGenerating={false} handleGenerate={onAddToken} label={t('combatSim.addToken')} />
-                </Box>
-                <GenerateButton
-                    isGenerating={false}
-                    handleGenerate={() => document.getElementById('combatsim-upload-image')?.click()}
-                    label={t('combatSim.addImage')}
-                />
-                <input
-                    id="combatsim-upload-image"
-                    hidden
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                        const f = e.target.files?.[0]
-                        if (f) onUploadImage(f)
-                        ;(e.target as HTMLInputElement).value = ''
-                    }}
-                />
-                <CyberpunkFormControlLabel
-                    readerMode={readerMode}
-                    disabled={images.length === 0}
-                    control={
-                        <Select
-                            displayEmpty
-                            value={currentImage?.id ?? 'NO_IMAGE'}
-                            onChange={(e) => onSelectImage(String(e.target.value))}
-                            sx={{ ml: 1, width: 200, height: 36.5, ...fieldSx }}
-                            slotProps={{
-                                input: {
-                                    sx: {
-                                        color: readerMode ? colors.neons.cyan.dark : colors.neons.cyan.default,
-                                    },
-                                },
-                            }}
-                        >
-                            <MenuItem key={null} value={'NO_IMAGE'}>
-                                {t('combatSim.noImage')}
-                            </MenuItem>
-                            {sortedImages
-                                .map((a) => ({ id: a.id, name: a.name }))
-                                .map((a) => (
-                                    <MenuItem key={a.id} value={a.id}>
-                                        {a.name}
-                                    </MenuItem>
-                                ))}
-                        </Select>
-                    }
-                    label={t('combatSim.image')}
-                    labelPlacement="start"
-                />
-                <ClearAllButton handleClearAllClick={() => setClearAllDialogOpen(true)} disabled={false} />
-            </Stack>
+
             <Paper
                 sx={{
                     p: 0,
-                    height: 'calc(100vh - 252px)',
+                    height: 'calc(100vh - 170px)',
                     width: '100%',
                     border: `1px solid ${colors.neons.cyan.dark}`,
                     borderRadius: 0.5,
                     position: 'relative',
                     display: 'flex',
                     overflow: 'hidden',
-                    filter: readerMode ? 'invert(1) hue-rotate(180deg)' : 'none',
                 }}
                 ref={paperRef}
             >
-                {/* Side panel */}
-                <Box
-                    sx={{
-                        width: isSidePanelOpen ? 260 : 0,
-                        flex: '0 0 auto',
-                        height: '100%',
-                        overflow: 'hidden',
-                        transition: 'width 220ms ease',
-                        willChange: 'width',
-                        borderRight: isSidePanelOpen ? `1px solid ${colors.neons.cyan.dark}` : 'none',
-                    }}
-                >
-                    <Box
-                        sx={{
-                            width: 260,
-                            height: '100%',
-                            background: `linear-gradient(0deg, ${colors.neons.pink.default}30, transparent)`,
-                            zIndex: 10,
-                            p: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1,
-                            opacity: isSidePanelOpen ? 1 : 0,
-                            transition: 'opacity 220ms ease',
+                {/* Left panels - can show both simultaneously */}
+                {isTokenPanelOpen && (
+                    <TokenPanel
+                        isSidePanelOpen={isSidePanelOpen && isTokenPanelOpen}
+                        images={images}
+                        setTokenDialogOpen={setTokenDialogOpen}
+                        getActiveMapKey={getActiveMapKey}
+                        setTokens={setTokens}
+                        setIsSaving={setIsSaving}
+                        pixiToCss={pixiToCss}
+                        resolveImageUrl={resolveImageUrl}
+                        gridSize={gridSize}
+                        tokens={tokens}
+                        tokensNotInMap={tokensNotInMap}
+                        defaultTokens={defaultTokens}
+                        onTokenDelete={(id) => setDeleteTokenDialogOpen(id)}
+                        onTokenDuplicate={async (id) => {
+                            const token = [...defaultTokens, ...tokens, ...tokensNotInMap].find((t) => t.id === id)
+                            if (token) {
+                                // Check if it's a default token to apply numbering
+                                const isDefaultToken = defaultTokens.some((t) => t.id === id)
+                                let newName = token.name
+
+                                if (isDefaultToken) {
+                                    // Count existing copies with the same base name
+                                    const baseName = token.name
+                                    const existingCopies = [...tokens, ...tokensNotInMap].filter((t) => {
+                                        return t.name.startsWith(baseName + ' ') || t.name === baseName
+                                    })
+                                    const copyNumber = existingCopies.length + 1
+                                    newName = `${baseName} ${copyNumber}`
+                                }
+
+                                const newToken: Token = {
+                                    ...token,
+                                    name: newName,
+                                    radius: gridSize / 2,
+                                    id: globalThis.crypto?.randomUUID
+                                        ? globalThis.crypto.randomUUID()
+                                        : String(Date.now()),
+                                    mapId: getActiveMapKey(),
+                                    // Keep same position as original token
+                                }
+                                await db.tokens.add(newToken)
+                                setTokens((prev) => [...prev, newToken])
+                                setIsSaving(true)
+                            }
                         }}
-                    >
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {t('combatSim.tokensPanel')}
-                        </Typography>
-                        {defaultTokens.map((token) => {
-                            return (
-                                <Stack
-                                    key={token.id}
-                                    direction="row"
-                                    spacing={1}
-                                    alignItems="center"
-                                    sx={{
-                                        width: '100%',
-                                        height: '32px',
-                                        background: `linear-gradient(0deg, ${colors.neons.pink.default}30, transparent)`,
-                                        borderRadius: '6px',
-                                        p: 1,
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            backgroundColor: readerMode ? 'rgba(0, 0, 40, 0.7)' : 'rgba(0, 0, 40, 0.6)',
-                                            boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                                            '&::after': {
-                                                opacity: 0.8,
-                                                height: '100%',
-                                            },
-                                        },
-                                    }}
-                                    onClick={async () => {
-                                        const newToken = { ...token, mapId: getActiveMapKey() }
-                                        await db.tokens.add(newToken)
-                                        setTokens((prev) => [...prev, newToken])
-                                        setIsSaving(true)
-                                    }}
-                                >
-                                    <Avatar
-                                        key={token.id}
-                                        sx={{ width: 32, height: 32, backgroundColor: token.color }}
-                                    />
-                                    <Typography variant="body1">{randomNPCs[token.npc!].name}</Typography>
-                                </Stack>
-                            )
-                        })}
-                    </Box>
-                </Box>
+                        onTokenCut={async (id) => {
+                            // Check in both tokens and tokensNotInMap
+                            const tokenInMap = tokens.find((t) => t.id === id)
+                            const tokenNotInMap = tokensNotInMap.find((t) => t.id === id)
+                            const token = tokenInMap || tokenNotInMap
+                            if (token) {
+                                const newToken: Token = {
+                                    ...token,
+                                    radius: gridSize / 2,
+                                }
+                                setTokenClipboard(newToken)
+                                // Cut removes the token but stores it in clipboard
+                                if (tokenInMap) {
+                                    setTokens((prev) => prev.filter((t) => t.id !== id))
+                                } else {
+                                    setTokensNotInMap((prev) => prev.filter((t) => t.id !== id))
+                                }
+                                await db.tokens.delete(id)
+                                setIsSaving(true)
+                            }
+                        }}
+                        onTokenCopy={(id) => {
+                            const token = [...defaultTokens, ...tokens, ...tokensNotInMap].find((t) => t.id === id)
+                            if (token) {
+                                // Check if it's a default token to apply numbering
+                                const isDefaultToken = defaultTokens.some((t) => t.id === id)
+                                let newName = token.name + ' (Copy)'
+
+                                if (isDefaultToken) {
+                                    // Count existing copies with the same base name
+                                    const baseName = token.name
+                                    const existingCopies = [...tokens, ...tokensNotInMap].filter((t) => {
+                                        return t.name.startsWith(baseName + ' ') || t.name === baseName
+                                    })
+                                    const copyNumber = existingCopies.length + 1
+                                    newName = `${baseName} ${copyNumber}`
+                                }
+
+                                // Create a copy with new ID for clipboard
+                                const clipboardToken = {
+                                    ...token,
+                                    name: newName,
+                                    radius: gridSize / 2,
+                                    id: globalThis.crypto?.randomUUID
+                                        ? globalThis.crypto.randomUUID()
+                                        : String(Date.now()),
+                                }
+                                setTokenClipboard(clipboardToken)
+                            }
+                        }}
+                    />
+                )}
+
+                {isInitiativePanelOpen && (
+                    <InitiativePanel
+                        isSidePanelOpen={isSidePanelOpen && isInitiativePanelOpen}
+                        tokens={tokens}
+                        initiativeRolls={initiativeRolls}
+                        activeTokenId={activeTokenId}
+                        currentRound={currentRound}
+                        autoRerollInitiative={autoRerollInitiative}
+                        onSetAutoReroll={setAutoRerollInitiative}
+                        onTokenClick={setActiveTokenId}
+                        onNextTurn={handleNextTurn}
+                        onResetCombat={handleResetCombat}
+                        onUpdateTokenCurrent={handleUpdateTokenCurrent}
+                        onMeleeAttack={handleMeleeAttack}
+                        onRangedAttack={handleRangedAttack}
+                        onSkillCheck={handleSkillCheck}
+                        images={images}
+                        resolveImageUrl={resolveImageUrl}
+                        pixiToCss={pixiToCss}
+                        isCombatActive={isCombatActive}
+                        onToggleCombat={handleToggleCombat}
+                    />
+                )}
+
+                {isRollHistoryOpen && (
+                    <RollHistoryPanel
+                        isOpen={isSidePanelOpen && isRollHistoryOpen}
+                        rollHistory={rollHistory}
+                        onClear={() => setRollHistory([])}
+                    />
+                )}
+
                 {/* Pixi board */}
-                <Box sx={{ position: 'relative', flex: 1 }}>
+                <Box sx={{ position: 'relative', flex: 1, minWidth: 0 }}>
                     <PixiBoard
+                        tokenClipboard={tokenClipboard}
                         width={dimensions.width}
                         height={dimensions.height}
                         gridSize={gridSize}
@@ -810,12 +1008,11 @@ const CombatSimView = () => {
                         isErasingWalls={isErasingWalls}
                         mapKey={getActiveMapKey()}
                         walls={walls}
-                        onWallsChange={async (updated: Wall[]) => {
+                        onWallsChange={async (updated: Wall[], mapKey: string) => {
                             setWalls(updated)
-                            const key = updated[0]?.mapId || getActiveMapKey()
-                            if (!key) return
+                            if (!mapKey) return
                             await db.transaction('rw', db.walls, async () => {
-                                await db.walls.where('mapId').equals(key).delete()
+                                await db.walls.where('mapId').equals(mapKey).delete()
                                 if (updated.length > 0) {
                                     await db.walls.bulkAdd(updated)
                                 }
@@ -831,6 +1028,7 @@ const CombatSimView = () => {
                         }}
                         mapTexture={mapTexture}
                         tokens={tokens}
+                        images={images}
                         onTokenMove={async (id, x, y) => {
                             setTokens((prev) => prev.map((tk) => (tk.id === id ? { ...tk, x, y } : tk)))
                             await db.tokens.update(id, { x, y })
@@ -839,10 +1037,74 @@ const CombatSimView = () => {
                         gridAlpha={gridAlpha}
                         wallColor={hexToPixi(wallColorHex)}
                         wallAlpha={wallAlpha}
+                        onTokenClick={(id) => setTokenDialogOpen(id)}
+                        onTokenDelete={(id) => setDeleteTokenDialogOpen(id)}
+                        onTokenDuplicate={async (id) => {
+                            const token = tokens.find((t) => t.id === id)
+                            if (token) {
+                                const newToken = {
+                                    ...token,
+                                    name: token.name + ' (Copy)',
+                                    id: globalThis.crypto?.randomUUID
+                                        ? globalThis.crypto.randomUUID()
+                                        : String(Date.now()),
+                                    // Keep same position as original token
+                                }
+                                await db.tokens.add(newToken)
+                                setTokens((prev) => [...prev, newToken])
+                                setIsSaving(true)
+                            }
+                        }}
+                        onTokenCut={async (id) => {
+                            const token = tokens.find((t) => t.id === id)
+                            if (token) {
+                                // Cut removes the token but stores it in clipboard
+                                setTokens((prev) => prev.filter((t) => t.id !== id))
+                                await db.tokens.delete(id)
+                                setIsSaving(true)
+                            }
+                        }}
+                        onTokenCopy={(id) => {
+                            const token = tokens.find((t) => t.id === id)
+                            if (token) {
+                                // Create a copy with new ID for clipboard
+                                const clipboardToken = {
+                                    ...token,
+                                    name: token.name + ' (Copy)',
+                                    id: globalThis.crypto?.randomUUID
+                                        ? globalThis.crypto.randomUUID()
+                                        : String(Date.now()),
+                                }
+                                setTokenClipboard(clipboardToken)
+                            }
+                        }}
+                        onMapDeleteAllTokens={() => setClearAllDialogOpen(true)}
+                        onMapDeleteAllWalls={() => setDeleteAllWallsDialogOpen(true)}
+                        onMapPasteToken={async (token) => {
+                            const newToken: Token = {
+                                ...token,
+                                radius: gridSize / 2,
+                                mapId: getActiveMapKey(),
+                            }
+                            await db.tokens.add(newToken)
+                            setTokens((prev) => [...prev, token])
+                            setIsSaving(true)
+                        }}
+                        activeTokenId={activeTokenId}
                     />
                     {/* Debug info */}
                     {mapTexture && (
-                        <Typography sx={{ position: 'absolute', top: 10, left: 54, fontSize: 10, opacity: 0.6 }}>
+                        <Typography
+                            sx={{
+                                position: 'absolute',
+                                bottom: 10,
+                                right: 10,
+                                fontSize: 10,
+                                opacity: readerMode ? 0.9 : 0.6,
+                                color: readerMode ? colors.grays.gray900 : colors.neons.cyan.default,
+                                userSelect: 'none',
+                            }}
+                        >
                             Grid{' '}
                             {Intl.NumberFormat('en-GB', { maximumFractionDigits: 5 }).format(
                                 mapTexture.width / gridSize
@@ -855,7 +1117,18 @@ const CombatSimView = () => {
                     )}
                     {/* Drawer toggle button */}
                     <Box
-                        onClick={() => setIsSidePanelOpen((v) => !v)}
+                        onClick={() => {
+                            setIsSidePanelOpen((v) => {
+                                const newValue = !v
+                                // Close all panels when closing the side panel
+                                if (!newValue) {
+                                    setIsTokenPanelOpen(false)
+                                    setIsInitiativePanelOpen(false)
+                                    setIsRollHistoryOpen(false)
+                                }
+                                return newValue
+                            })
+                        }}
                         sx={{
                             position: 'absolute',
                             top: 10,
@@ -903,6 +1176,152 @@ const CombatSimView = () => {
                             />
                         )}
                     </Box>
+
+                    {/* Panel mode toggle buttons (when panel is open) */}
+                    {isSidePanelOpen && (
+                        <Stack
+                            direction="row"
+                            spacing={0.5}
+                            sx={{
+                                position: 'absolute',
+                                top: 10,
+                                left: 52,
+                            }}
+                        >
+                            <Box
+                                onClick={() => {
+                                    setIsTokenPanelOpen((v) => !v)
+                                    if (!isSidePanelOpen) setIsSidePanelOpen(true)
+                                }}
+                                sx={{
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: isTokenPanelOpen
+                                        ? 'rgba(255, 0, 255, 0.3)'
+                                        : readerMode
+                                        ? 'rgba(0, 0, 40, 0.7)'
+                                        : 'rgba(0, 0, 40, 0.6)',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: `1px solid ${
+                                        isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default
+                                    }60`,
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                        border: `1px solid ${colors.neons.pink.default}60`,
+                                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                                    },
+                                }}
+                                title={t('combatSim.tokensPanel')}
+                            >
+                                <Box
+                                    sx={{
+                                        fontSize: '20px',
+                                        color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            scale: 1.5,
+                                        },
+                                    }}
+                                >
+                                    👨‍🎤
+                                </Box>
+                            </Box>
+                            <Box
+                                onClick={() => {
+                                    setIsInitiativePanelOpen((v) => !v)
+                                    if (!isSidePanelOpen) setIsSidePanelOpen(true)
+                                }}
+                                sx={{
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: isInitiativePanelOpen
+                                        ? 'rgba(255, 0, 255, 0.3)'
+                                        : readerMode
+                                        ? 'rgba(0, 0, 40, 0.7)'
+                                        : 'rgba(0, 0, 40, 0.6)',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: `1px solid ${
+                                        isInitiativePanelOpen ? colors.neons.pink.default : colors.neons.blue.default
+                                    }60`,
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                        border: `1px solid ${colors.neons.pink.default}60`,
+                                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                                    },
+                                }}
+                                title={t('combatSim.initiativePanel')}
+                            >
+                                <Box
+                                    sx={{
+                                        fontSize: '20px',
+                                        color: isInitiativePanelOpen
+                                            ? colors.neons.pink.default
+                                            : colors.neons.blue.default,
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            scale: 1.5,
+                                        },
+                                    }}
+                                >
+                                    ⚔️
+                                </Box>
+                            </Box>
+                            {/* Roll History toggle button (independent of other panels) */}
+                            <Box
+                                onClick={() => setIsRollHistoryOpen((v) => !v)}
+                                sx={{
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: isRollHistoryOpen
+                                        ? 'rgba(255, 0, 255, 0.3)'
+                                        : readerMode
+                                        ? 'rgba(0, 0, 40, 0.7)'
+                                        : 'rgba(0, 0, 40, 0.6)',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: `1px solid ${
+                                        isRollHistoryOpen ? colors.neons.pink.default : colors.neons.blue.default
+                                    }60`,
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                        border: `1px solid ${colors.neons.pink.default}60`,
+                                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                                    },
+                                }}
+                                title={t('combatSim.rollHistory')}
+                            >
+                                <Box
+                                    sx={{
+                                        fontSize: '20px',
+                                        color: isRollHistoryOpen
+                                            ? colors.neons.pink.default
+                                            : colors.neons.blue.default,
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            scale: 1.5,
+                                        },
+                                    }}
+                                >
+                                    🎲
+                                </Box>
+                            </Box>
+                        </Stack>
+                    )}
+
                     {/* Fit button */}
                     <Box
                         onClick={() => fitRef.current?.()}
@@ -1127,10 +1546,17 @@ const CombatSimView = () => {
                         <Stack
                             direction="row"
                             spacing={1}
-                            sx={{ position: 'absolute', top: 10, right: isSidePanelOpen ? 270 : 10 }}
+                            sx={{
+                                position: 'absolute',
+                                top: 52,
+                                right: 10,
+                            }}
                         >
                             <Box
-                                onClick={() => cancelAllRef.current?.()}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    cancelAllRef.current?.()
+                                }}
                                 sx={{
                                     width: '36px',
                                     height: '36px',
@@ -1162,7 +1588,10 @@ const CombatSimView = () => {
                                 />
                             </Box>
                             <Box
-                                onClick={() => acceptAllRef.current?.()}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    acceptAllRef.current?.()
+                                }}
                                 sx={{
                                     width: '36px',
                                     height: '36px',
@@ -1199,13 +1628,12 @@ const CombatSimView = () => {
             </Paper>
 
             {/* Confirmation dialogs */}
-
             <WarningDialog
-                open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
+                open={deleteMapDialogOpen}
+                onClose={() => setDeleteMapDialogOpen(false)}
                 onConfirm={() => {
                     onDeleteMap().then(() => {
-                        setDeleteDialogOpen(false)
+                        setDeleteMapDialogOpen(false)
                     })
                 }}
                 title={t('common.deleteConfirmTitle')}
@@ -1231,6 +1659,84 @@ const CombatSimView = () => {
                 moduleType={ModuleTypes.COMBAT_SIM}
                 isDelete={true}
                 isClearAll={true}
+            />
+            <WarningDialog
+                open={deleteTokenDialogOpen !== null}
+                onClose={() => setDeleteTokenDialogOpen(null)}
+                onConfirm={() => {
+                    onDeleteToken().then(() => {
+                        setDeleteTokenDialogOpen(null)
+                    })
+                }}
+                title={t('common.deleteConfirmTitle')}
+                message={t('common.deleteConfirmMessage', {
+                    type: 'token',
+                })}
+                moduleType={ModuleTypes.COMBAT_SIM}
+                isDelete={true}
+                isClearAll={false}
+            />
+            <WarningDialog
+                open={deleteAllWallsDialogOpen}
+                onClose={() => setDeleteAllWallsDialogOpen(false)}
+                onConfirm={() => {
+                    onDeleteAllWalls().then(() => {
+                        setDeleteAllWallsDialogOpen(false)
+                    })
+                }}
+                title={t('common.clearAllConfirmTitle')}
+                message={t('common.clearAllConfirmMessage', {
+                    type: 'walls',
+                })}
+                moduleType={ModuleTypes.COMBAT_SIM}
+                isDelete={true}
+                isClearAll={true}
+            />
+
+            {/* Token dialog */}
+            <TokenDetailsDialog
+                maps={sortedMaps}
+                tokenDialogOpen={tokenDialogOpen}
+                setTokenDialogOpen={setTokenDialogOpen}
+                tokens={[...defaultTokens, ...tokens, ...tokensNotInMap]}
+                images={images}
+                gridSize={gridSize}
+                onUpdateToken={async (tokenId, updates) => {
+                    // Check if it's a default token
+                    const isDefaultToken = defaultTokens.some((t) => t.id === tokenId)
+
+                    if (isDefaultToken) {
+                        // Update default token in state only (not persisted)
+                        setDefaultTokens((prev) => prev.map((t) => (t.id === tokenId ? { ...t, ...updates } : t)))
+                    } else {
+                        // Update regular token in state and database
+                        // Try to update in tokens first
+                        const isInCurrentMap = tokens.some((t) => t.id === tokenId)
+                        if (isInCurrentMap) {
+                            setTokens((prev) => prev.map((t) => (t.id === tokenId ? { ...t, ...updates } : t)))
+                            await db.tokens.update(tokenId, updates)
+                        } else {
+                            // Must be in tokensNotInMap
+                            const updatesTyped = updates as Partial<Token>
+
+                            setTokensNotInMap((prev) =>
+                                prev.map((t) => {
+                                    if (t.id === tokenId) {
+                                        // Apply all updates - if mapId is in updates, it will be used
+                                        return { ...t, ...updatesTyped }
+                                    }
+                                    return t
+                                })
+                            )
+                            // Update database with all changes
+                            await db.tokens.update(tokenId, updatesTyped)
+                        }
+                        setIsSaving(true)
+                    }
+                }}
+                onDeleteToken={(id) => setDeleteTokenDialogOpen(id)}
+                onUploadImage={onUploadImage}
+                toggleFullscreenImage={toggleFullscreenImage}
             />
 
             {/* Grid color picker */}
@@ -1285,6 +1791,101 @@ const CombatSimView = () => {
                     />
                 </Box>
             </Popper>
+
+            {/* Fullscreen Image Dialog */}
+            <Dialog
+                open={fullscreenImage !== ''}
+                onClose={() => setFullscreenImage('')}
+                maxWidth={false}
+                fullScreen
+                aria-labelledby="fullscreen-image-title"
+                slotProps={{
+                    paper: {
+                        sx: {
+                            bgcolor: 'rgba(0, 0, 0, 0.5)',
+                            backdropFilter: 'blur(10px)',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            padding: 0,
+                            margin: 0,
+                            cursor: 'pointer',
+                        },
+                    },
+                }}
+                onClick={() => setFullscreenImage('')}
+                keepMounted={false}
+                disablePortal={false}
+                disableEnforceFocus={false}
+                disableAutoFocus={false}
+            >
+                <Box
+                    sx={{
+                        width: '100vw',
+                        height: '100vh',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        padding: 0,
+                        margin: 0,
+                        position: 'relative',
+                        overflowY: 'hidden',
+                        '&::after': !readerMode
+                            ? {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  background:
+                                      'radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.9) 100%)',
+                                  pointerEvents: 'none',
+                                  zIndex: 1,
+                              }
+                            : {},
+                    }}
+                >
+                    {fullscreenImage && (
+                        <Box
+                            component="img"
+                            src={fullscreenImage}
+                            alt={t('common.itemImageAlt', { name: 'token' })}
+                            id="fullscreen-image-title"
+                            tabIndex={0}
+                            sx={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                position: 'absolute',
+                                padding: 0,
+                                top: 0,
+                                left: 0,
+                            }}
+                        />
+                    )}
+                </Box>
+                <Typography
+                    variant="caption"
+                    sx={{
+                        position: 'absolute',
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        textAlign: 'center',
+                        color: readerMode ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.7)',
+                        zIndex: 10,
+                        textShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
+                        padding: '8px 16px',
+                        backdropFilter: 'blur(5px)',
+                        backgroundColor: readerMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+                        margin: '0 auto',
+                        width: 'fit-content',
+                        borderRadius: '4px',
+                    }}
+                >
+                    {t('common.clickToClose')}
+                </Typography>
+            </Dialog>
         </Container>
     )
 }

@@ -71,7 +71,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
         building,
     } = props
     const { t } = useTranslation()
-    const { buildings, fixerJobs } = useData()
+    const { buildings } = useData()
     const [selectedBuilding, setSelectedBuilding] = useState<Building>(() => {
         // Get the building from chainStarter based on ID or direct reference
         const buildingRef = building.chainStarter?.building
@@ -116,29 +116,38 @@ export const CardBuilding = (props: CardBuildingProps) => {
 
     const handleChangeBuildingComplication = (e: SelectChangeEvent<string>) => {
         const newComplication = e.target.value
-        const fixerJob = fixerJobs.find((job) => job.ID === editedTarget.ID)
+
         // Reset subject data based on complication type
-        if (!fixerJob) return
         if (newComplication.includes('CHARACTER')) {
-            if (building.originalChainStarter?.complication?.character) {
+            // Try to restore from current state or original if available
+            if (building.chainStarter?.complication?.character) {
                 handleChange(
                     building.handleChangeBuildingComplicationCharacterTarget,
-                    building.originalChainStarter?.complication?.character
+                    building.chainStarter.complication.character
                 )
-                handleChange(building.handleChangeBuildingComplicationItemTarget, null)
+            } else if (building.originalChainStarter?.complication?.character) {
+                handleChange(
+                    building.handleChangeBuildingComplicationCharacterTarget,
+                    building.originalChainStarter.complication.character
+                )
             } else {
                 handleChange(building.handleChangeBuildingComplicationCharacterTarget, null)
-                handleChange(building.handleChangeBuildingComplicationItemTarget, null)
             }
+            handleChange(building.handleChangeBuildingComplicationItemTarget, null)
         } else if (newComplication.includes('ITEM')) {
-            if (building.originalChainStarter?.complication?.item) {
-                handleChange(building.handleChangeBuildingComplicationCharacterTarget, null)
+            handleChange(building.handleChangeBuildingComplicationCharacterTarget, null)
+            // Try to restore from current state or original if available
+            if (building.chainStarter?.complication?.item) {
                 handleChange(
                     building.handleChangeBuildingComplicationItemTarget,
-                    building.originalChainStarter?.complication?.item
+                    building.chainStarter.complication.item
+                )
+            } else if (building.originalChainStarter?.complication?.item) {
+                handleChange(
+                    building.handleChangeBuildingComplicationItemTarget,
+                    building.originalChainStarter.complication.item
                 )
             } else {
-                handleChange(building.handleChangeBuildingComplicationCharacterTarget, null)
                 handleChange(building.handleChangeBuildingComplicationItemTarget, null)
             }
         } else {

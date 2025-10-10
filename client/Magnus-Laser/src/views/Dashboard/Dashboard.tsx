@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, Container, GridLegacy as Grid, Typography } from '@mui/material'
+import { Box, Card, CardContent, Container, Grid, Typography } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -56,7 +56,7 @@ const Dashboard = () => {
             <Grid container spacing={3} sx={{ position: 'relative', zIndex: 3 }}>
                 {/* Module Cards */}
                 {Object.values(ModuleTypes).map((module) => (
-                    <Grid item xs={12} md={6} lg={4} xl={3} xxl={3} key={module}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4, xl: 3, xxl: 3 }} key={module}>
                         <Card
                             onClick={() => {
                                 navigate(NavigationPaths[module])

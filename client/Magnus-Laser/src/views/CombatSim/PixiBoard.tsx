@@ -2,7 +2,24 @@ import { Viewport } from 'pixi-viewport'
 import type { FederatedPointerEvent } from 'pixi.js'
 import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Token, Wall } from './types'
+import { useUserPreferences } from '../../contexts/userPreferencesHooks'
+import { MapContextMenu } from './MapContextMenu'
+import { TokenContextMenu } from './TokenContextMenu'
+import { TokenTooltip } from './TokenTooltip'
+import { schedulePathAnimation } from './animationUtils'
+import { getTargetSize, segmentsIntersect } from './geometryUtils'
+import { drawGrid, snapToNinePoints } from './gridUtils'
+import { applyBackgroundTexture } from './pixiUtils'
+import { preloadTextures, renderTokens, renderTokensWithPending } from './tokenRenderer'
+import type { Image as ImageData, Token, Wall } from './types'
+
+// PIXI DisplayObject minimal interface for event targets
+interface PixiDisplayObject {
+    eventMode?: string
+    cursor?: string
+    zIndex?: number
+    parent?: PixiDisplayObject | undefined
+}
 
 const DEFAULT_WALL_COLOR = 0xff3b81
 const DEFAULT_WALL_ALPHA = 0.95
@@ -10,25 +27,35 @@ const DEFAULT_WALL_ALPHA = 0.95
 type PixiBoardProps = {
     width: number
     height: number
-    gridSize?: number
-    snapToGrid?: boolean
-    isMeasuring?: boolean
-    isWallMode?: boolean
-    mapKey?: string
-    onResetBind?: (fn: () => void) => void
-    mapTexture?: Texture | null
-    onBindFit?: (fn: () => void) => void
-    tokens?: Token[]
-    onTokenMove?: (id: string, x: number, y: number) => void
-    onPendingCountChange?: (count: number) => void
-    onBindPendingControls?: (acceptAll: () => void, cancelAll: () => void) => void
-    gridColor?: number
-    gridAlpha?: number
-    wallColor?: number
-    wallAlpha?: number
-    walls?: Wall[]
-    onWallsChange?: (walls: Wall[]) => void
-    isErasingWalls?: boolean
+    gridSize: number
+    snapToGrid: boolean
+    isMeasuring: boolean
+    isWallMode: boolean
+    mapKey: string
+    mapTexture: Texture | null
+    onBindFit: (fn: () => void) => void
+    tokens: Token[]
+    images: ImageData[]
+    onTokenMove: (id: string, x: number, y: number) => void
+    onPendingCountChange: (count: number) => void
+    onBindPendingControls: (acceptAll: () => void, cancelAll: () => void) => void
+    gridColor: number
+    gridAlpha: number
+    wallColor: number
+    wallAlpha: number
+    walls: Wall[]
+    onWallsChange: (walls: Wall[], mapKey: string) => void
+    isErasingWalls: boolean
+    onTokenClick: (id: string) => void
+    onTokenDelete: (id: string) => void
+    onTokenDuplicate: (id: string) => void
+    onTokenCut: (id: string) => void
+    onTokenCopy: (id: string) => void
+    onMapDeleteAllTokens: () => void
+    onMapDeleteAllWalls: () => void
+    onMapPasteToken: (token: Token) => void
+    tokenClipboard: Token | null
+    activeTokenId: string | null
 }
 
 const PixiBoard = ({
@@ -38,10 +65,10 @@ const PixiBoard = ({
     snapToGrid = true,
     isMeasuring = false,
     isWallMode = false,
-    onResetBind,
     mapTexture: backgroundTexture,
     onBindFit,
     tokens = [],
+    images = [],
     onTokenMove,
     onPendingCountChange,
     onBindPendingControls,
@@ -53,7 +80,18 @@ const PixiBoard = ({
     walls: wallsProp = [],
     onWallsChange,
     isErasingWalls = false,
+    onTokenClick,
+    onTokenDelete,
+    onTokenDuplicate,
+    onTokenCut,
+    onTokenCopy,
+    onMapDeleteAllTokens,
+    onMapDeleteAllWalls,
+    onMapPasteToken,
+    tokenClipboard,
+    activeTokenId,
 }: PixiBoardProps) => {
+    const { readerMode } = useUserPreferences()
     const hostRef = useRef<HTMLDivElement | null>(null)
     const appRef = useRef<Application | null>(null)
     const viewportRef = useRef<Viewport | null>(null)
@@ -92,9 +130,11 @@ const PixiBoard = ({
     const measureLayerRef = useRef<Graphics | null>(null)
     const measureLabelRef = useRef<Text | null>(null)
     const measureStartRef = useRef<{ x: number; y: number } | null>(null)
+    const wallLabelRef = useRef<Text | null>(null)
     const backgroundRef = useRef<Sprite | null>(null)
     const draggingRef = useRef<{ id: string | null; offsetX: number; offsetY: number } | null>(null)
     const tokensRef = useRef<Token[]>(tokens)
+    const prevTokensRef = useRef<Token[]>(tokens)
     const gridSizeRef = useRef<number>(gridSize)
     const snapRef = useRef<boolean>(snapToGrid)
     const gridColorRef = useRef<number>(gridColor)
@@ -107,11 +147,150 @@ const PixiBoard = ({
     const measuringRef = useRef<boolean>(isMeasuring)
     const wallModeRef = useRef<boolean>(isWallMode)
     const erasingRef = useRef<boolean>(isErasingWalls)
+    const imagesRef = useRef<ImageData[]>(images)
+
+    // Update images ref when images prop changes
+    useEffect(() => {
+        imagesRef.current = images
+        // Preload textures for the images
+        preloadTextures(images)
+    }, [images])
+
+    // Update activeTokenId ref when prop changes and force crosshair redraw
+    useEffect(() => {
+        activeTokenIdRef.current = activeTokenId
+
+        // Force crosshair update immediately when active token changes
+        const crosshair = crosshairLayerRef.current
+        if (crosshair && activeTokenId) {
+            const token = tokensRef.current.find((t) => t.id === activeTokenId)
+            if (token) {
+                const pending = pendingMovesRef.current.get(token.id)
+                const x = pending ? pending.endX : token.x
+                const y = pending ? pending.endY : token.y
+
+                // Create a pulsing effect based on time
+                const time = Date.now() / 1000
+                const pulse = Math.sin(time * 3) * 0.2 + 0.8
+                const ringRadius = token.radius * 1.5
+
+                crosshair.clear()
+
+                // Draw outer ring with pulsing alpha
+                crosshair.setStrokeStyle({ width: 4, color: 0xffff00, alpha: pulse })
+                crosshair.circle(x, y, ringRadius)
+                crosshair.stroke()
+
+                // Draw inner ring
+                crosshair.setStrokeStyle({ width: 2, color: 0xff00ff, alpha: 0.9 })
+                crosshair.circle(x, y, ringRadius * 0.8)
+                crosshair.stroke()
+
+                // Draw crosshair lines
+                crosshair.setStrokeStyle({ width: 3, color: 0x00ffff, alpha: 0.7 })
+                const lineLength = token.radius * 2.5
+                crosshair.moveTo(x - lineLength, y)
+                crosshair.lineTo(x + lineLength, y)
+                crosshair.moveTo(x, y - lineLength)
+                crosshair.lineTo(x, y + lineLength)
+                crosshair.stroke()
+            } else {
+                crosshair.clear()
+            }
+        } else if (crosshair) {
+            crosshair.clear()
+        }
+    }, [activeTokenId])
     const dragStartRef = useRef<{ id: string; x: number; y: number } | null>(null)
     const dragPreviewRef = useRef<{ id: string; x: number; y: number } | null>(null)
+    const clickCandidateRef = useRef<{ id: string; x: number; y: number } | null>(null)
+    // Context menu state
+    const [tokenContextMenuAnchor, setTokenContextMenuAnchor] = useState<HTMLElement | null>(null)
+    const [mapContextMenuAnchor, setMapContextMenuAnchor] = useState<HTMLElement | null>(null)
+    const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null)
+    // Token clipboard for cut/copy/paste
+
+    // Tooltip state for hovering tokens
+    const [hoveredToken, setHoveredToken] = useState<Token | null>(null)
+    const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
+
+    // Active token ref for crosshair
+    const activeTokenIdRef = useRef<string | null>(activeTokenId)
+    const crosshairLayerRef = useRef<Graphics | null>(null)
+
+    // Refs to store canvas event handlers for proper cleanup
+    const globalCtxBlockerRef = useRef<((e: globalThis.MouseEvent) => void) | null>(null)
+    const preventContextMenuRef = useRef<((e: Event) => void) | null>(null)
+    const preventRightMouseDownRef = useRef<((e: globalThis.MouseEvent) => void) | null>(null)
+
+    // Animation state for smooth token movement
+    const animationsRef = useRef<
+        Map<
+            string,
+            {
+                segments: { sx: number; sy: number; ex: number; ey: number; len: number }[]
+                startTime: number
+                totalMs: number
+                totalLen: number
+            }
+        >
+    >(new Map())
 
     const notifyPendingCount = () => {
-        onPendingCountChange?.(pendingMovesRef.current.size)
+        onPendingCountChange(pendingMovesRef.current.size)
+    }
+
+    const handleTokenDelete = (tokenId: string) => {
+        onTokenDelete(tokenId)
+    }
+
+    const handleTokenDuplicate = (tokenId: string) => {
+        onTokenDuplicate(tokenId)
+    }
+
+    const handleTokenCopy = (tokenId: string) => {
+        onTokenCopy(tokenId)
+    }
+
+    const handleTokenCut = (tokenId: string) => {
+        onTokenCut(tokenId)
+    }
+
+    const handleMapDeleteAllTokens = () => {
+        onMapDeleteAllTokens()
+    }
+
+    const handleMapDeleteAllWalls = () => {
+        onMapDeleteAllWalls()
+    }
+
+    const handleMapPasteToken = (pasteX?: number, pasteY?: number) => {
+        if (!tokenClipboard || !pasteX || !pasteY) return
+
+        // Create new token with new ID and position
+        const newToken = {
+            ...tokenClipboard,
+            id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now() + Math.random()),
+            x: pasteX,
+            y: pasteY,
+        }
+
+        onMapPasteToken(newToken)
+        // Keep clipboard intact for multiple pastes
+    }
+
+    const closeContextMenus = () => {
+        // Clean up anchor elements
+        if (tokenContextMenuAnchor && tokenContextMenuAnchor.parentNode) {
+            tokenContextMenuAnchor.parentNode.removeChild(tokenContextMenuAnchor)
+        }
+        if (mapContextMenuAnchor && mapContextMenuAnchor.parentNode) {
+            mapContextMenuAnchor.parentNode.removeChild(mapContextMenuAnchor)
+        }
+
+        setTokenContextMenuAnchor(null)
+        setMapContextMenuAnchor(null)
+        setSelectedTokenId(null)
     }
 
     // Sync walls from prop
@@ -145,34 +324,6 @@ const PixiBoard = ({
         mapKeyRef.current = mapKey
     }, [mapKey])
 
-    // Helper: snap to nearest of 9 points per cell (vertices, edge centers, cell center)
-    const snapToNinePoints = (x: number, y: number) => {
-        if (!snapRef.current) return { x, y }
-        const step = gridSizeRef.current
-        const half = step / 2
-        const vx = Math.round(x / step) * step
-        const vy = Math.round(y / step) * step
-        const cx = Math.round((x - half) / step) * step + half
-        const cy = Math.round((y - half) / step) * step + half
-        const candidates = [
-            { x: vx, y: vy }, // vertex
-            { x: cx, y: cy }, // center
-            { x: cx, y: vy }, // edge center (horizontal)
-            { x: vx, y: cy }, // edge center (vertical)
-        ]
-        let best = candidates[0]
-        let bestD = (best.x - x) * (best.x - x) + (best.y - y) * (best.y - y)
-        for (let i = 1; i < candidates.length; i++) {
-            const c = candidates[i]
-            const d = (c.x - x) * (c.x - x) + (c.y - y) * (c.y - y)
-            if (d < bestD) {
-                best = c
-                bestD = d
-            }
-        }
-        return best
-    }
-
     // Keep refs in sync
     useEffect(() => {
         gridColorRef.current = gridColor
@@ -199,6 +350,8 @@ const PixiBoard = ({
         wallPreviewRef.current = null
         eraseStartRef.current = null
         erasePreviewRef.current = null
+        // Hide wall label when switching to erase mode
+        if (wallLabelRef.current) wallLabelRef.current.visible = false
         if (wallLayerRef.current) {
             const g = wallLayerRef.current
             g.clear()
@@ -216,7 +369,7 @@ const PixiBoard = ({
     // Redraw grid when color/alpha change
     useEffect(() => {
         if (!gridRef.current) return
-        const { w: gw, h: gh } = getTargetSize()
+        const { w: gw, h: gh } = getTargetSize(backgroundRef.current, worldDims)
         gridRef.current.clear()
         drawGrid(gridRef.current, gw, gh, gridSizeRef.current, gridColorRef.current, gridAlphaRef.current)
     }, [gridColor, gridAlpha])
@@ -239,9 +392,15 @@ const PixiBoard = ({
     }
 
     const acceptAllPending = () => {
-        // Commit all pending moves, then clear overlays
+        // Commit all pending moves, schedule animations, then clear overlays
         for (const [id, e] of pendingMovesRef.current) {
-            onTokenMove?.(id, e.endX, e.endY)
+            const pts = [...e.points]
+            const last = pts[pts.length - 1]
+            if (!last || last.x !== e.endX || last.y !== e.endY) {
+                pts.push({ x: e.endX, y: e.endY })
+            }
+            schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
+            onTokenMove(id, e.endX, e.endY)
             try {
                 e.line.destroy()
                 e.label.destroy()
@@ -275,7 +434,7 @@ const PixiBoard = ({
                 antialias: true,
                 resolution: Math.min(window.devicePixelRatio || 1, 2),
                 backgroundAlpha: 1,
-                background: 0x06181f,
+                background: readerMode ? 0x00b3ff : 0x06181f,
                 width,
                 height,
             })
@@ -286,6 +445,44 @@ const PixiBoard = ({
             try {
                 hostRef.current.appendChild(app.canvas)
                 appRef.current = app
+
+                const canvas = app.canvas
+
+                // Cancel default context menu ONLY when inside the PIXI canvas
+                const onCtxMenu = (ev: globalThis.MouseEvent) => {
+                    // Prefer composedPath; fall back to coordinate check
+                    const path = (ev.composedPath?.() ?? []) as globalThis.EventTarget[]
+                    const inCanvasPath = path.includes(canvas)
+
+                    if (inCanvasPath) {
+                        ev.preventDefault()
+                        ev.stopPropagation()
+                        return
+                    }
+
+                    const r = canvas.getBoundingClientRect()
+                    const { clientX: x, clientY: y } = ev
+                    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+                        ev.preventDefault()
+                        ev.stopPropagation()
+                    }
+                }
+                document.addEventListener('contextmenu', onCtxMenu, true)
+                globalCtxBlockerRef.current = onCtxMenu
+
+                // (optional) keep these canvas-level guards too
+                const preventContextMenu = (e: Event) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                }
+                canvas.addEventListener('contextmenu', preventContextMenu, { capture: true })
+                preventContextMenuRef.current = preventContextMenu
+
+                const preventRightMouseDown = (e: globalThis.MouseEvent) => {
+                    if (e.button === 2) e.preventDefault()
+                }
+                canvas.addEventListener('mousedown', preventRightMouseDown, { capture: true })
+                preventRightMouseDownRef.current = preventRightMouseDown
             } catch {
                 console.error('Failed to initialize PIXI Application + Viewport')
             }
@@ -310,13 +507,22 @@ const PixiBoard = ({
             backgroundRef.current = bg
             viewport.addChild(bg)
 
-            if (bgTextureRef.current) applyBackgroundTexture(bgTextureRef.current)
+            if (bgTextureRef.current)
+                applyBackgroundTexture(
+                    bgTextureRef.current,
+                    viewport,
+                    backgroundRef,
+                    gridRef,
+                    gridSizeRef.current,
+                    gridColorRef.current,
+                    gridAlphaRef.current
+                )
             setReady(true)
 
             const grid = new Graphics()
             gridRef.current = grid
             viewport.addChild(grid)
-            const { w: gw, h: gh } = getTargetSize()
+            const { w: gw, h: gh } = getTargetSize(backgroundRef.current, worldDims)
             drawGrid(grid, gw, gh, gridSizeRef.current, gridColorRef.current, gridAlphaRef.current)
 
             const wallLayer = new Graphics()
@@ -328,6 +534,108 @@ const PixiBoard = ({
             tokenLayerRef.current = tokenLayer
             tokenLayer.zIndex = 2
             viewport.addChild(tokenLayer)
+
+            // Crosshair layer for active token (below tokens)
+            const crosshairLayer = new Graphics()
+            crosshairLayerRef.current = crosshairLayer
+            crosshairLayer.zIndex = 1.5 // Between walls (1) and tokens (2)
+            crosshairLayer.eventMode = 'none' // Don't intercept pointer events
+            crosshairLayer.visible = true
+            viewport.addChild(crosshairLayer)
+
+            // Ticker to drive token movement animations
+            const ease = (t: number) => {
+                // Blend mostly-linear with a softer ease to avoid very slow starts/ends
+                const cubic = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+                const linearWeight = 0.85 // higher -> closer to linear at ends
+                return linearWeight * t + (1 - linearWeight) * cubic
+            }
+            app.ticker.add(() => {
+                const layer = tokenLayerRef.current
+                if (!layer) return
+                const anims = animationsRef.current
+                // If dragging live, rendering is handled in pointermove; still animate others
+                if (anims.size === 0) return
+                const now = globalThis.performance.now()
+                // Build override positions from animations using a single eased progress along total path length
+                const override = new Map<string, { endX: number; endY: number }>()
+                for (const [id, a] of anims) {
+                    const elapsed = now - a.startTime
+                    if (elapsed >= a.totalMs) {
+                        const last = a.segments[a.segments.length - 1]
+                        if (last) override.set(id, { endX: last.ex, endY: last.ey })
+                        anims.delete(id)
+                        continue
+                    }
+                    const t = Math.max(0, Math.min(1, elapsed / Math.max(1, a.totalMs)))
+                    const k = ease(t)
+                    const targetDist = k * a.totalLen
+                    // Find segment containing targetDist
+                    let accLen = 0
+                    let segIndex = 0
+                    while (segIndex < a.segments.length && accLen + a.segments[segIndex].len < targetDist) {
+                        accLen += a.segments[segIndex].len
+                        segIndex++
+                    }
+                    const seg = a.segments[Math.min(segIndex, a.segments.length - 1)]
+                    const segProgress = a.totalLen > 0 ? (targetDist - accLen) / Math.max(1, seg.len) : 1
+                    const cx = seg.sx + (seg.ex - seg.sx) * segProgress
+                    const cy = seg.sy + (seg.ey - seg.sy) * segProgress
+                    override.set(id, { endX: cx, endY: cy })
+                }
+                // Begin with current pending endpoints so those keep priority
+                const merged = new Map(
+                    Array.from(pendingMovesRef.current.entries()).map(([id, e]) => [id, { endX: e.endX, endY: e.endY }])
+                )
+                // Apply animation overrides for any ids without active pendings
+                for (const [id, pos] of override) {
+                    if (!merged.has(id)) merged.set(id, pos)
+                }
+                // Include live drag override if present
+                const live = dragPreviewRef.current
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, merged, live?.id, live?.x, live?.y)
+
+                // Draw crosshair for active token - using a pulsing ring for visibility
+                const crosshair = crosshairLayerRef.current
+                if (crosshair && activeTokenIdRef.current) {
+                    const token = tokensRef.current.find((t) => t.id === activeTokenIdRef.current)
+                    if (token) {
+                        const pending = pendingMovesRef.current.get(token.id)
+                        const x = pending ? pending.endX : token.x
+                        const y = pending ? pending.endY : token.y
+
+                        // Create a pulsing effect based on time
+                        const time = Date.now() / 1000
+                        const pulse = Math.sin(time * 3) * 0.2 + 0.8 // Oscillates between 0.6 and 1.0
+                        const ringRadius = token.radius * 1.5
+
+                        crosshair.clear()
+
+                        // Draw outer ring with pulsing alpha
+                        crosshair.setStrokeStyle({ width: 4, color: 0xffff00, alpha: pulse })
+                        crosshair.circle(x, y, ringRadius)
+                        crosshair.stroke()
+
+                        // Draw inner ring
+                        crosshair.setStrokeStyle({ width: 2, color: 0xff00ff, alpha: 0.9 })
+                        crosshair.circle(x, y, ringRadius * 0.8)
+                        crosshair.stroke()
+
+                        // Draw crosshair lines
+                        crosshair.setStrokeStyle({ width: 3, color: 0x00ffff, alpha: 0.7 })
+                        const lineLength = token.radius * 2.5
+                        crosshair.moveTo(x - lineLength, y)
+                        crosshair.lineTo(x + lineLength, y)
+                        crosshair.moveTo(x, y - lineLength)
+                        crosshair.lineTo(x, y + lineLength)
+                        crosshair.stroke()
+                    } else {
+                        crosshair.clear()
+                    }
+                } else if (crosshair) {
+                    crosshair.clear()
+                }
+            })
 
             // Helper to create/update a pending move overlay for a token
             const upsertPendingOverlay = (id: string, sx: number, sy: number, ex: number, ey: number) => {
@@ -395,6 +703,13 @@ const PixiBoard = ({
                         const e = pendingMovesRef.current.get(id)
                         if (!e) return
                         if (ok) {
+                            // Schedule path animation across all waypoints including final
+                            const pts = [...e.points]
+                            const last = pts[pts.length - 1]
+                            if (!last || last.x !== e.endX || last.y !== e.endY) {
+                                pts.push({ x: e.endX, y: e.endY })
+                            }
+                            schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
                             onTokenMove?.(id, e.endX, e.endY)
                         } else {
                             // Redraw tokens with remaining pendings so others stay put
@@ -425,8 +740,39 @@ const PixiBoard = ({
                         )
                         renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMapAfter)
                     }
-                    entry.acceptContainer.on('pointertap', () => finalize(true))
-                    entry.cancelContainer.on('pointertap', () => finalize(false))
+                    entry.acceptContainer.on('pointertap', (event) => {
+                        event.stopPropagation()
+                        finalize(true)
+                    })
+                    entry.cancelContainer.on('pointertap', (event) => {
+                        event.stopPropagation()
+                        // Cancel last waypoint instead of entire movement
+                        const e = pendingMovesRef.current.get(id)
+                        if (!e) return
+
+                        if (e.points.length < 4) {
+                            // Only start point exists, cancel entire movement
+                            finalize(false)
+                        } else {
+                            // Remove last waypoint and update end position
+                            e.points.pop()
+                            const newLastPoint = e.points[e.points.length - 1]
+                            if (newLastPoint) {
+                                e.endX = newLastPoint.x
+                                e.endY = newLastPoint.y
+                                // Update the overlay with new end position
+                                upsertPendingOverlay(id, e.startX, e.startY, e.endX, e.endY)
+                                // Update token rendering to show token at new position
+                                const pendingMap = new Map(
+                                    Array.from(pendingMovesRef.current.entries()).map(([pid, v]) => [
+                                        pid,
+                                        { endX: v.endX, endY: v.endY },
+                                    ])
+                                )
+                                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMap)
+                            }
+                        }
+                    })
                     // Hover styles
                     const drawBtn = (
                         bg: Graphics,
@@ -646,6 +992,11 @@ const PixiBoard = ({
             measureLabel.zIndex = 4
             measureLabelRef.current = measureLabel
             viewport.addChild(measureLabel)
+            const wallLabel = new Text({ text: '', style: { fill: 0xffffff, fontSize: 12 } })
+            wallLabel.visible = false
+            wallLabel.zIndex = 4
+            wallLabelRef.current = wallLabel
+            viewport.addChild(wallLabel)
 
             // Pointer drag with grid-snap across tokens
             viewport.on('pointerdown', (e: FederatedPointerEvent) => {
@@ -653,6 +1004,25 @@ const PixiBoard = ({
                 const x = global.x
                 const y = global.y
                 const btn = e.button ?? 0 // 0: left, 1: middle, 2: right
+
+                // Hide tooltip on pointer down
+                setHoveredToken(null)
+                setTooltipPosition(null)
+
+                // Prevent default browser context menu on right clicks
+                // Must prevent on native event, not FederatedPointerEvent
+                if (btn === 2) {
+                    e.preventDefault?.()
+                    // Access native event to prevent browser context menu
+                    const eventWithNative = e as unknown as { nativeEvent?: Event; originalEvent?: Event }
+                    const nativeEvent = eventWithNative.nativeEvent || eventWithNative.originalEvent
+                    if (nativeEvent) {
+                        nativeEvent.preventDefault?.()
+                        nativeEvent.stopPropagation?.()
+                    }
+                }
+
+                // Context menu closing is handled by MUI Menu
                 // Eraser mode: only start with left button
                 if (wallModeRef.current && erasingRef.current) {
                     if (btn !== 0) return
@@ -663,7 +1033,7 @@ const PixiBoard = ({
                 // Wall draw mode: only start with left button
                 if (wallModeRef.current) {
                     if (btn !== 0) return
-                    const snapped = snapToNinePoints(x, y)
+                    const snapped = snapToNinePoints(x, y, gridSizeRef.current, snapRef.current)
                     wallStartRef.current = { x: snapped.x, y: snapped.y }
                     wallPreviewRef.current = null
                     // prevent panning start
@@ -685,29 +1055,99 @@ const PixiBoard = ({
                     measureStartRef.current = { x: sx, y: sy }
                     return
                 }
-                // Token drag: only with left button
-                if (btn !== 0) return
-                // Hit test using displayed positions (respect pending endpoints)
-                let hit: Token | null = null
-                let minDist = Number.POSITIVE_INFINITY
-                for (const t of tokensRef.current) {
-                    const pending = pendingMovesRef.current.get(t.id)
-                    const tx = pending ? pending.endX : t.x
-                    const ty = pending ? pending.endY : t.y
-                    const d = Math.hypot(tx - x, ty - y)
-                    if (d <= t.radius && d < minDist) {
-                        hit = { ...t, x: tx, y: ty }
-                        minDist = d
+                // Token interaction: handle left click (drag) and right click (context menu)
+                if (btn === 0 || btn === 2) {
+                    // Check if the event target is a waypoint button or other interactive element
+                    let target: PixiDisplayObject | undefined = e.target as PixiDisplayObject
+                    while (target && target !== viewport) {
+                        // Check if this is a waypoint button container (zIndex 6, eventMode static, cursor pointer)
+                        if (target.eventMode === 'static' && target.cursor === 'pointer' && target.zIndex === 6) {
+                            return // Skip token processing for waypoint button clicks
+                        }
+                        target = target.parent
                     }
-                }
-                if (hit) {
-                    draggingRef.current = { id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y }
-                    // if token already has pending waypoints, start from last end
-                    const existing = pendingMovesRef.current.get(hit.id)
-                    if (existing) {
-                        dragStartRef.current = { id: hit.id, x: existing.endX, y: existing.endY }
-                    } else {
-                        dragStartRef.current = { id: hit.id, x: hit.x, y: hit.y }
+
+                    // Hit test using displayed positions (respect pending endpoints)
+                    let hit: Token | null = null
+                    let minDist = Number.POSITIVE_INFINITY
+                    for (const t of tokensRef.current) {
+                        const pending = pendingMovesRef.current.get(t.id)
+                        const tx = pending ? pending.endX : t.x
+                        const ty = pending ? pending.endY : t.y
+                        const d = Math.hypot(tx - x, ty - y)
+                        if (d <= t.radius && d < minDist) {
+                            hit = { ...t, x: tx, y: ty }
+                            minDist = d
+                        }
+                    }
+
+                    if (hit) {
+                        if (btn === 2) {
+                            // Right click - show token context menu
+                            // Create a temporary anchor element at the click position
+                            const anchorEl = document.createElement('div')
+                            anchorEl.style.position = 'fixed'
+
+                            // Get the screen position accounting for viewport transforms
+                            const screenPos = viewport.toScreen(x, y)
+                            const rect = hostRef.current?.getBoundingClientRect()
+                            if (rect) {
+                                anchorEl.style.left = `${rect.left + screenPos.x}px`
+                                anchorEl.style.top = `${rect.top + screenPos.y}px`
+                            } else {
+                                anchorEl.style.left = `${screenPos.x}px`
+                                anchorEl.style.top = `${screenPos.y}px`
+                            }
+
+                            anchorEl.style.width = '1px'
+                            anchorEl.style.height = '1px'
+                            anchorEl.style.pointerEvents = 'auto'
+                            document.body.appendChild(anchorEl)
+
+                            setTokenContextMenuAnchor(anchorEl)
+                            setSelectedTokenId(hit.id)
+
+                            return
+                        } else {
+                            // Left click - start drag
+                            draggingRef.current = { id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y }
+                            // if token already has pending waypoints, start from last end
+                            const existing = pendingMovesRef.current.get(hit.id)
+                            if (existing) {
+                                dragStartRef.current = { id: hit.id, x: existing.endX, y: existing.endY }
+                            } else {
+                                dragStartRef.current = { id: hit.id, x: hit.x, y: hit.y }
+                            }
+                            clickCandidateRef.current = { id: hit.id, x, y }
+                        }
+                    } else if (btn === 2) {
+                        // Right click on empty space - show map context menu
+                        const anchorEl = document.createElement('div')
+                        anchorEl.style.position = 'fixed'
+
+                        // Get the screen position accounting for viewport transforms
+                        const screenPos = viewport.toScreen(x, y)
+                        const rect = hostRef.current?.getBoundingClientRect()
+                        if (rect) {
+                            anchorEl.style.left = `${rect.left + screenPos.x}px`
+                            anchorEl.style.top = `${rect.top + screenPos.y}px`
+                        } else {
+                            anchorEl.style.left = `${screenPos.x}px`
+                            anchorEl.style.top = `${screenPos.y}px`
+                        }
+
+                        anchorEl.style.width = '1px'
+                        anchorEl.style.height = '1px'
+                        anchorEl.style.pointerEvents = 'auto'
+                        document.body.appendChild(anchorEl)
+
+                        // Store the paste coordinates
+                        anchorEl.dataset.pasteX = x.toString()
+                        anchorEl.dataset.pasteY = y.toString()
+
+                        setMapContextMenuAnchor(anchorEl)
+
+                        return
                     }
                 }
             })
@@ -721,7 +1161,8 @@ const PixiBoard = ({
                         const s2 = { x: end.x, y: end.y }
                         const keep: typeof wallsRef.current = []
                         for (const w of wallsRef.current) {
-                            if (segmentsIntersect(s1, s2, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })) {
+                            const intersects = segmentsIntersect(s1, s2, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })
+                            if (intersects) {
                                 continue
                             }
                             keep.push(w)
@@ -737,7 +1178,8 @@ const PixiBoard = ({
                                 y2: w.y2,
                                 color: w.color ?? DEFAULT_WALL_COLOR,
                                 alpha: w.alpha ?? DEFAULT_WALL_ALPHA,
-                            }))
+                            })),
+                            mapKeyRef.current || ''
                         )
                     }
                     eraseStartRef.current = null
@@ -783,12 +1225,15 @@ const PixiBoard = ({
                                     y2: w.y2,
                                     color: w.color ?? DEFAULT_WALL_COLOR,
                                     alpha: w.alpha ?? DEFAULT_WALL_ALPHA,
-                                }))
+                                })),
+                                mapKeyRef.current || ''
                             )
                         }
                     }
                     wallStartRef.current = null
                     wallPreviewRef.current = null
+                    // Hide wall label after wall is committed
+                    if (wallLabelRef.current) wallLabelRef.current.visible = false
                     // redraw solid walls without preview
                     const g = wallLayerRef.current
                     g.clear()
@@ -812,9 +1257,24 @@ const PixiBoard = ({
                             e.endY = dragPreviewRef.current.y
                             upsertPendingOverlay(endedId, e.points[0].x, e.points[0].y, e.endX, e.endY)
                         }
+                        // dragged -> not a click
+                        clickCandidateRef.current = null
+                    } else {
+                        // treat as click (no drag preview)
+                        const cand = clickCandidateRef.current
+                        if (
+                            cand &&
+                            cand.id === endedId &&
+                            !wallModeRef.current &&
+                            !measuringRef.current &&
+                            typeof onTokenClick === 'function'
+                        ) {
+                            onTokenClick(cand.id)
+                        }
                     }
                     dragPreviewRef.current = null
                 }
+                clickCandidateRef.current = null
                 if (measureStartRef.current) {
                     measureStartRef.current = null
                     if (measureLayerRef.current) measureLayerRef.current.clear()
@@ -828,6 +1288,54 @@ const PixiBoard = ({
             // Accept/Cancel handlers for token drag are bound per overlay
             viewport.on('pointermove', (e: FederatedPointerEvent) => {
                 const global = viewport.toWorld(e.global)
+                // hover cursor over tokens and show tooltip
+                if (!wallModeRef.current && !measuringRef.current) {
+                    let over = false
+                    let hoveredTokenData: Token | null = null
+
+                    for (const t of tokensRef.current) {
+                        const pending = pendingMovesRef.current.get(t.id)
+                        const tx = pending ? pending.endX : t.x
+                        const ty = pending ? pending.endY : t.y
+                        const d = Math.hypot(tx - global.x, ty - global.y)
+                        if (d <= t.radius) {
+                            over = true
+                            hoveredTokenData = t
+                            break
+                        }
+                    }
+
+                    viewport.cursor = over ? 'pointer' : 'default'
+
+                    // Update tooltip
+                    if (hoveredTokenData && hoveredTokenData.stats) {
+                        // Check if it's not a default token
+                        const isDefaultToken =
+                            (hoveredTokenData.id === 'EASY' ||
+                                hoveredTokenData.id === 'TYPICAL' ||
+                                hoveredTokenData.id === 'DANGEROUS' ||
+                                hoveredTokenData.id === 'DEADLY') &&
+                            hoveredTokenData.mapId === ''
+
+                        if (!isDefaultToken) {
+                            const screenPos = viewport.toScreen(global.x, global.y)
+                            const rect = hostRef.current?.getBoundingClientRect()
+                            if (rect) {
+                                setHoveredToken(hoveredTokenData)
+                                setTooltipPosition({
+                                    x: rect.left + screenPos.x,
+                                    y: rect.top + screenPos.y,
+                                })
+                            }
+                        } else {
+                            setHoveredToken(null)
+                            setTooltipPosition(null)
+                        }
+                    } else {
+                        setHoveredToken(null)
+                        setTooltipPosition(null)
+                    }
+                }
                 if (wallModeRef.current && erasingRef.current && eraseStartRef.current && wallLayerRef.current) {
                     // live eraser preview line
                     const g = wallLayerRef.current
@@ -860,7 +1368,7 @@ const PixiBoard = ({
                     return
                 }
                 if (wallModeRef.current && wallStartRef.current && wallLayerRef.current) {
-                    const snapped = snapToNinePoints(global.x, global.y)
+                    const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapRef.current)
                     const ex = snapped.x
                     const ey = snapped.y
                     wallPreviewRef.current = { x: ex, y: ey }
@@ -880,17 +1388,38 @@ const PixiBoard = ({
                     g.moveTo(wallStartRef.current.x, wallStartRef.current.y)
                     g.lineTo(ex, ey)
                     g.stroke()
+
+                    // Show wall length label
+                    const wallLabel = wallLabelRef.current
+                    if (wallLabel) {
+                        const dx = ex - wallStartRef.current.x
+                        const dy = ey - wallStartRef.current.y
+                        const length = Math.sqrt(dx * dx + dy * dy)
+                        const gridLength = snapRef.current
+                            ? Math.round(length / gridSizeRef.current)
+                            : (length / gridSizeRef.current).toFixed(2)
+
+                        wallLabel.text = snapRef.current ? `${gridLength}` : `${gridLength}`
+                        wallLabel.style.fontSize = Math.max(24, 24 / Math.max(0.1, viewport.scale.x))
+                        wallLabel.visible = true
+                        wallLabel.x = ex + 8
+                        wallLabel.y = ey - 8
+                    }
                     return
                 }
                 if (!draggingRef.current || !draggingRef.current.id) return
                 let nx = global.x - draggingRef.current.offsetX
                 let ny = global.y - draggingRef.current.offsetY
+                // movement threshold cancels click candidate
+                const cand = clickCandidateRef.current
+                if (cand) {
+                    const moved = Math.hypot(global.x - cand.x, global.y - cand.y)
+                    if (moved > 4) clickCandidateRef.current = null
+                }
                 if (snapRef.current) {
-                    const step = gridSizeRef.current
-                    const half = step / 2
-                    // Snap to nearest cell center instead of vertex
-                    nx = Math.round((nx - half) / step) * step + half
-                    ny = Math.round((ny - half) / step) * step + half
+                    const snapped = snapToNinePoints(nx, ny, gridSizeRef.current, snapRef.current)
+                    nx = snapped.x
+                    ny = snapped.y
                 }
                 // preview draw only (do not commit move yet), include any other pending previews
                 renderTokensWithPending(
@@ -955,15 +1484,6 @@ const PixiBoard = ({
                 }
             })
 
-            // Expose reset method
-            if (onResetBind) {
-                onResetBind(() => {
-                    const { w, h } = getTargetSize()
-                    viewport.setZoom(1, true)
-                    viewport.moveCenter(w / 2, h / 2)
-                })
-            }
-
             // Expose accept/cancel-all controls
             onBindPendingControls?.(acceptAllPending, cancelAllPending)
         }
@@ -971,6 +1491,22 @@ const PixiBoard = ({
         init()
         return () => {
             destroyed = true
+
+            if (globalCtxBlockerRef.current) {
+                document.removeEventListener('contextmenu', globalCtxBlockerRef.current, true)
+                globalCtxBlockerRef.current = null
+            }
+
+            const canvasEl = appRef.current?.canvas
+            if (canvasEl && preventContextMenuRef.current) {
+                canvasEl.removeEventListener('contextmenu', preventContextMenuRef.current, true)
+                preventContextMenuRef.current = null
+            }
+            if (canvasEl && preventRightMouseDownRef.current) {
+                canvasEl.removeEventListener('mousedown', preventRightMouseDownRef.current, true)
+                preventRightMouseDownRef.current = null
+            }
+
             if (appRef.current) {
                 appRef.current.destroy(true)
                 appRef.current = null
@@ -987,7 +1523,7 @@ const PixiBoard = ({
         viewportRef.current.resize(width, height, worldDims.worldWidth, worldDims.worldHeight)
         // Redraw grid aligned to current target size after resize
         if (gridRef.current) {
-            const { w: gw, h: gh } = getTargetSize()
+            const { w: gw, h: gh } = getTargetSize(backgroundRef.current, worldDims)
             gridRef.current.clear()
             drawGrid(gridRef.current, gw, gh, gridSizeRef.current, gridColorRef.current, gridAlphaRef.current)
         }
@@ -1044,6 +1580,11 @@ const PixiBoard = ({
     // Keep measuring ref in sync so event handlers see latest value
     useEffect(() => {
         measuringRef.current = isMeasuring
+        // Hide tooltip when entering measuring mode
+        if (isMeasuring) {
+            setHoveredToken(null)
+            setTooltipPosition(null)
+        }
     }, [isMeasuring])
 
     // When measure toggles off, clear overlay; no need to pause drag since it's on middle button
@@ -1055,49 +1596,16 @@ const PixiBoard = ({
         }
     }, [isMeasuring])
 
-    // Helper to apply background texture when ready
-    const applyBackgroundTexture = (tex: Texture) => {
-        if (!viewportRef.current || !backgroundRef.current) return
-        // Replace old background sprite to avoid stale state
-        const viewport = viewportRef.current
-        if (!viewport) return
-        if (backgroundRef.current) {
-            try {
-                viewport.removeChild(backgroundRef.current)
-                backgroundRef.current.destroy({ children: false, texture: false })
-            } catch {
-                console.error('Failed to remove old background sprite')
-            }
-        }
-        const bg = new Sprite(tex)
-        bg.tint = 0xffffff
-        bg.alpha = 1
-        bg.zIndex = 0
-        backgroundRef.current = bg
-        viewport.addChildAt(bg, 0)
-        const base = tex
-        const fit = () => {
-            const w = base.width || bg.width || 1
-            const h = base.height || bg.height || 1
-            bg.width = w
-            bg.height = h
-            const sw = viewport.screenWidth
-            const sh = viewport.screenHeight
-            const scale = Math.min(sw / w, sh / h)
-            viewport.setZoom(scale, true)
-            viewport.moveCenter(w / 2, h / 2)
-            // Redraw grid to match new background dimensions
-            if (gridRef.current) {
-                gridRef.current.clear()
-                drawGrid(gridRef.current, w, h, gridSizeRef.current, gridColorRef.current, gridAlphaRef.current)
-            }
-        }
-        if (!base.width || !base.height) {
-            tex.once('update', fit)
+    // When wall mode toggles off, hide wall label
+    useEffect(() => {
+        if (!isWallMode) {
+            if (wallLabelRef.current) wallLabelRef.current.visible = false
         } else {
-            fit()
+            // Hide tooltip when entering wall mode
+            setHoveredToken(null)
+            setTooltipPosition(null)
         }
-    }
+    }, [isWallMode])
 
     // Sync bg texture ref and apply when either texture prop or viewport becomes available
     useEffect(() => {
@@ -1106,7 +1614,15 @@ const PixiBoard = ({
             return
         }
         if (backgroundTexture && viewportRef.current && backgroundRef.current) {
-            applyBackgroundTexture(backgroundTexture)
+            applyBackgroundTexture(
+                backgroundTexture,
+                viewportRef.current,
+                backgroundRef,
+                gridRef,
+                gridSizeRef.current,
+                gridColorRef.current,
+                gridAlphaRef.current
+            )
         } else if (!backgroundTexture && backgroundRef.current) {
             backgroundRef.current.texture = Texture.WHITE
             backgroundRef.current.tint = 0x000000
@@ -1131,7 +1647,7 @@ const PixiBoard = ({
         if (!onBindFit) return
         const viewport = viewportRef.current
         onBindFit(() => {
-            const { w, h } = getTargetSize()
+            const { w, h } = getTargetSize(backgroundRef.current, worldDims)
             const sw = viewport.screenWidth
             const sh = viewport.screenHeight
             const scale = Math.min(sw / w, sh / h)
@@ -1140,31 +1656,65 @@ const PixiBoard = ({
         })
     }, [onBindFit])
 
-    const getTargetSize = () => {
-        const bg = backgroundRef.current
-        if (bg && bg.texture) {
-            return { w: bg.width || 1, h: bg.height || 1 }
-        }
-        // fallback to world dims if no bg
-        return { w: worldDims.worldWidth, h: worldDims.worldHeight }
-    }
-
-    // Redraw tokens on token prop change and sync ref
+    // Redraw tokens on token prop change, start movement animations (single segment) for non-pending external moves
     useEffect(() => {
         tokensRef.current = tokens
-        // When tokens change from parent, redraw while preserving any pending previews
-        renderTokensWithPending(
-            tokenLayerRef.current,
-            tokens,
-            pendingMovesRef.current as unknown as Map<string, { endX: number; endY: number }>
-        )
-    }, [tokens])
+        const prev = prevTokensRef.current
+        const prevById = new Map<string, Token>(prev.map((t) => [t.id, t]))
+        let anyAnimated = false
+        // Build animation entries for moved tokens that are not currently pending and not already animating
+        for (const t of tokens) {
+            const p = prevById.get(t.id)
+            if (!p) continue
+            if (pendingMovesRef.current.has(t.id)) continue
+            if (animationsRef.current.has(t.id)) continue
+            if (p.x !== t.x || p.y !== t.y) {
+                schedulePathAnimation(
+                    t.id,
+                    [
+                        { x: p.x, y: p.y },
+                        { x: t.x, y: t.y },
+                    ],
+                    gridSizeRef.current,
+                    animationsRef.current
+                )
+                anyAnimated = true
+            }
+        }
+        prevTokensRef.current = tokens
+        if (anyAnimated) {
+            // Render once at animation start to avoid flicker
+            const override = new Map<string, { endX: number; endY: number }>()
+            for (const [id, a] of animationsRef.current) {
+                const first = a.segments[0]
+                if (first) override.set(id, { endX: first.sx, endY: first.sy })
+            }
+            // Merge pending endpoints (take precedence)
+            for (const [id, e] of pendingMovesRef.current) {
+                override.set(id, { endX: e.endX, endY: e.endY })
+            }
+            const live = dragPreviewRef.current
+            renderTokensWithPending(tokenLayerRef.current, tokensRef.current, override, live?.id, live?.x, live?.y)
+        } else {
+            // No animations; check if there are pending moves
+            if (pendingMovesRef.current.size > 0) {
+                renderTokensWithPending(
+                    tokenLayerRef.current,
+                    tokens,
+                    pendingMovesRef.current as unknown as Map<string, { endX: number; endY: number }>
+                )
+            } else {
+                // No pending moves, just render tokens normally
+                renderTokens(tokenLayerRef.current, tokens)
+            }
+        }
+    }, [tokens, images])
 
     // Keep refs in sync for grid and snap
     useEffect(() => {
         gridSizeRef.current = gridSize
         if (gridRef.current) {
-            const { w: gw, h: gh } = getTargetSize()
+            const { w: gw, h: gh } = getTargetSize(backgroundRef.current, worldDims)
             gridRef.current.clear()
             drawGrid(gridRef.current, gw, gh, gridSize, gridColorRef.current, gridAlphaRef.current)
         }
@@ -1173,100 +1723,51 @@ const PixiBoard = ({
         snapRef.current = snapToGrid
     }, [snapToGrid])
 
-    return <div ref={hostRef} style={{ width: '100%', height: '100%' }} />
-}
+    return (
+        <>
+            <div ref={hostRef} style={{ width: '100%', height: '100%', position: 'relative' }} />
 
-function drawGrid(g: Graphics, worldWidth: number, worldHeight: number, step: number, color: number, alpha: number) {
-    g.setStrokeStyle({ width: 1, color, alpha })
-    for (let x = 0; x <= worldWidth; x += step) {
-        g.moveTo(x, 0)
-        g.lineTo(x, worldHeight)
-    }
-    for (let y = 0; y <= worldHeight; y += step) {
-        g.moveTo(0, y)
-        g.lineTo(worldWidth, y)
-    }
-    g.stroke()
+            {/* Token tooltip overlay */}
+            {hoveredToken && tooltipPosition && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: `${tooltipPosition.x + gridSize / 2}px`,
+                        top: `${tooltipPosition.y + gridSize / 2}px`,
+                        zIndex: 9999,
+                        pointerEvents: 'none',
+                        transform: 'translateY(-100%)',
+                    }}
+                >
+                    <TokenTooltip token={hoveredToken} />
+                </div>
+            )}
+
+            <TokenContextMenu
+                anchorEl={tokenContextMenuAnchor}
+                tokenId={selectedTokenId}
+                onDelete={handleTokenDelete}
+                onDuplicate={handleTokenDuplicate}
+                onCopy={handleTokenCopy}
+                onCut={handleTokenCut}
+                onClose={closeContextMenus}
+            />
+            <MapContextMenu
+                anchorEl={mapContextMenuAnchor}
+                onDeleteAllTokens={handleMapDeleteAllTokens}
+                onDeleteAllWalls={handleMapDeleteAllWalls}
+                onPasteToken={() => {
+                    if (mapContextMenuAnchor) {
+                        const pasteX = parseFloat(mapContextMenuAnchor.dataset.pasteX || '0')
+                        const pasteY = parseFloat(mapContextMenuAnchor.dataset.pasteY || '0')
+                        handleMapPasteToken(pasteX, pasteY)
+                    }
+                }}
+                canPaste={tokenClipboard !== null}
+                onClose={closeContextMenus}
+            />
+        </>
+    )
 }
 
 export default PixiBoard
-
-function renderTokens(
-    layer: Graphics | null,
-    tokens: Token[],
-    overrideId?: string,
-    overrideX?: number,
-    overrideY?: number
-) {
-    if (!layer) return
-    layer.clear()
-    for (const t of tokens) {
-        const x = overrideId === t.id && overrideX != null ? overrideX : t.x
-        const y = overrideId === t.id && overrideY != null ? overrideY : t.y
-        layer.circle(x, y, t.radius).fill({ color: t.color })
-    }
-}
-
-// Render tokens considering any pending move overlays and an optional live override for the token currently being dragged
-function renderTokensWithPending(
-    layer: Graphics | null,
-    tokens: Token[],
-    pending: Map<
-        string,
-        {
-            endX: number
-            endY: number
-        }
-    >,
-    liveId?: string,
-    liveX?: number,
-    liveY?: number
-) {
-    if (!layer) return
-    layer.clear()
-    for (const t of tokens) {
-        let x = t.x
-        let y = t.y
-        if (pending.has(t.id)) {
-            const p = pending.get(t.id)!
-            x = p.endX
-            y = p.endY
-        }
-        if (liveId === t.id && liveX != null && liveY != null) {
-            x = liveX
-            y = liveY
-        }
-        layer.circle(x, y, t.radius).fill({ color: t.color })
-    }
-}
-
-// Segment intersection test for eraser
-function segmentsIntersect(
-    a1: { x: number; y: number },
-    a2: { x: number; y: number },
-    b1: { x: number; y: number },
-    b2: { x: number; y: number }
-) {
-    const cross = (x1: number, y1: number, x2: number, y2: number) => x1 * y2 - y1 * x2
-    const dxa = a2.x - a1.x
-    const dya = a2.y - a1.y
-    const dxb = b2.x - b1.x
-    const dyb = b2.y - b1.y
-    const denom = cross(dxa, dya, dxb, dyb)
-    if (denom === 0) {
-        // Parallel; check collinearity and overlap
-        const cross2 = cross(b1.x - a1.x, b1.y - a1.y, dxa, dya)
-        if (Math.abs(cross2) > 1e-6) return false
-        const proj = (p: { x: number; y: number }) => (p.x - a1.x) * dxa + (p.y - a1.y) * dya
-        const t0 = proj(b1)
-        const t1 = proj(b2)
-        const tmin = Math.min(t0, t1)
-        const tmax = Math.max(t0, t1)
-        const zero = 0
-        const one = dxa * dxa + dya * dya
-        return !(tmax < zero || tmin > one)
-    }
-    const ua = cross(b1.x - a1.x, b1.y - a1.y, dxb, dyb) / denom
-    const ub = cross(b1.x - a1.x, b1.y - a1.y, dxa, dya) / denom
-    return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1
-}

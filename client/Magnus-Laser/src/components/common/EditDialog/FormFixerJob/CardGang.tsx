@@ -4,7 +4,7 @@ import {
     AccordionDetails,
     AccordionSummary,
     FormControl,
-    GridLegacy as Grid,
+    Grid,
     InputLabel,
     MenuItem,
     Select,
@@ -64,7 +64,7 @@ const CardGang = (props: CardGangProps) => {
         gang,
     } = props
     const { t } = useTranslation()
-    const { gangs, fixerJobs } = useData()
+    const { gangs } = useData()
     const [selectedGang, setSelectedGang] = useState<Gang>(() => {
         // Get the gang from chainStarter based on ID or direct reference
         const gangRef = gang.chainStarter?.gang
@@ -130,26 +130,29 @@ const CardGang = (props: CardGangProps) => {
 
     const handleChangeGangComplication = (e: SelectChangeEvent<string>) => {
         const newComplication = e.target.value
-        const fixerJob = fixerJobs.find((job) => job.ID === editedTarget.ID)
+
         // Reset subject data based on complication type
-        if (!fixerJob) return
         if (newComplication.includes('CHARACTER')) {
-            if (gang.originalChainStarter?.complication?.character) {
+            // Try to restore from current state or original if available
+            if (gang.chainStarter?.complication?.character) {
+                handleChange(gang.handleChangeGangComplicationCharacterTarget, gang.chainStarter.complication.character)
+            } else if (gang.originalChainStarter?.complication?.character) {
                 handleChange(
                     gang.handleChangeGangComplicationCharacterTarget,
-                    gang.originalChainStarter?.complication?.character
+                    gang.originalChainStarter.complication.character
                 )
-                handleChange(gang.handleChangeGangComplicationItemTarget, null)
             } else {
                 handleChange(gang.handleChangeGangComplicationCharacterTarget, null)
-                handleChange(gang.handleChangeGangComplicationItemTarget, null)
             }
+            handleChange(gang.handleChangeGangComplicationItemTarget, null)
         } else if (newComplication.includes('ITEM')) {
-            if (gang.originalChainStarter?.complication?.item) {
-                handleChange(gang.handleChangeGangComplicationCharacterTarget, null)
-                handleChange(gang.handleChangeGangComplicationItemTarget, gang.originalChainStarter?.complication?.item)
+            handleChange(gang.handleChangeGangComplicationCharacterTarget, null)
+            // Try to restore from current state or original if available
+            if (gang.chainStarter?.complication?.item) {
+                handleChange(gang.handleChangeGangComplicationItemTarget, gang.chainStarter.complication.item)
+            } else if (gang.originalChainStarter?.complication?.item) {
+                handleChange(gang.handleChangeGangComplicationItemTarget, gang.originalChainStarter.complication.item)
             } else {
-                handleChange(gang.handleChangeGangComplicationCharacterTarget, null)
                 handleChange(gang.handleChangeGangComplicationItemTarget, null)
             }
         } else {
@@ -194,9 +197,9 @@ const CardGang = (props: CardGangProps) => {
                     </Select>
                 </FormControl>
                 {/* Gang Basic Info */}
-                <Grid item container xs={12} spacing={2}>
+                <Grid container size={{ xs: 12 }} spacing={2}>
                     {/* Name */}
-                    <Grid item container xs={12}>
+                    <Grid container size={{ xs: 12 }}>
                         <TextField
                             fullWidth
                             label={t('gangs.labels.name')}
@@ -206,7 +209,7 @@ const CardGang = (props: CardGangProps) => {
                             disabled
                         />
                     </Grid>
-                    <Grid item container xs={12} md={8}>
+                    <Grid container size={{ xs: 12, md: 8 }}>
                         <Stack spacing={2} sx={{ width: '100%' }}>
                             <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                                 <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
@@ -351,7 +354,7 @@ const CardGang = (props: CardGangProps) => {
                         </Stack>
                     </Grid>
                     {/* Gang Image */}
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                             <InputLabel
                                 id="gang-image-label"
@@ -381,7 +384,7 @@ const CardGang = (props: CardGangProps) => {
                     </Grid>
                 </Grid>
                 {/* Description */}
-                <Grid item xs={12} mt={2}>
+                <Grid size={{ xs: 12 }} mt={2}>
                     <TextField
                         fullWidth
                         label={t('gangs.labels.description')}
@@ -407,7 +410,7 @@ const CardGang = (props: CardGangProps) => {
                         <Typography variant="h6">{t('fixerJobs.labels.gang.complication')}</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                                 <InputLabel id="gang-complication-label" sx={inputLabelStyle}>
                                     {t('fixerJobs.labels.complicationType')}
