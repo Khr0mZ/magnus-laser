@@ -5,11 +5,13 @@ import {
     Avatar,
     Box,
     Button,
+    Checkbox,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
     FormControl,
+    FormControlLabel,
     Grid,
     IconButton,
     InputLabel,
@@ -628,6 +630,25 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     }}
                                 />
                             </Grid>
+                            {/* Current Grenades/Special Ammo */}
+                            {editedToken.mapId !== '' && (
+                                <Grid size={2}>
+                                    <TextField
+                                        fullWidth
+                                        label={t('combatSim.currentGrenadesOrSpecialAmmo')}
+                                        type="tel"
+                                        value={editedToken.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0}
+                                        onChange={(e) =>
+                                            handleFieldChange(
+                                                'stats.weapons.currentGrenadesOrSpecialAmmo',
+                                                Number(e.target.value) || 0
+                                            )
+                                        }
+                                        variant="outlined"
+                                        sx={textFieldOutlinedStyle}
+                                    />
+                                </Grid>
+                            )}
                             {/* Color Picker */}
                             <Grid size={editedToken.mapId !== '' ? 1.75 : 2}>
                                 <FormControl fullWidth variant="outlined" sx={formControlStyle}>
@@ -760,6 +781,38 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                         <MenuItem value={4}>{t('combatSim.gargantuan')}</MenuItem>
                                     </Select>
                                 </FormControl>
+                            </Grid>
+                            {/* Ignore Seriously Wounded Penalty */}
+                            <Grid size={12}>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={editedToken.stats?.ignoreSeriouslyWoundedPenalty ?? false}
+                                            onChange={(e) =>
+                                                handleFieldChange(
+                                                    'stats.ignoreSeriouslyWoundedPenalty',
+                                                    e.target.checked
+                                                )
+                                            }
+                                            sx={{
+                                                color: readerMode ? colors.grays.gray700 : colors.neons.cyan.default,
+                                                '&.Mui-checked': {
+                                                    color: readerMode ? colors.grays.gray900 : colors.neons.cyan.light,
+                                                },
+                                            }}
+                                        />
+                                    }
+                                    label={
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: readerMode ? colors.grays.gray900 : colors.neons.cyan.light,
+                                            }}
+                                        >
+                                            {t('combatSim.ignoreSeriouslyWoundedPenalty')}
+                                        </Typography>
+                                    }
+                                />
                             </Grid>
                         </Grid>
 

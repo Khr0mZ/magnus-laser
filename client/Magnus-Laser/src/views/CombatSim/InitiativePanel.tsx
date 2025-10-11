@@ -1,4 +1,4 @@
-import { PlayArrow, Refresh, Stop } from '@mui/icons-material'
+import { PlayArrow, SkipNext, Stop } from '@mui/icons-material'
 import {
     Avatar,
     Box,
@@ -27,16 +27,18 @@ interface InitiativePanelProps {
     onSetAutoReroll: (value: boolean) => void
     onTokenClick: (tokenId: string) => void
     onNextTurn: () => void
-    onResetCombat: () => void
     onUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => void
+    onUpdateInitiative: (tokenId: string, value: number) => void
     onMeleeAttack: (token: Token) => void
     onRangedAttack: (token: Token) => void
     onSkillCheck: (token: Token) => void
+    onGrenadeAttack: (token: Token) => void
     images: Image[]
     resolveImageUrl: (imageId: string | undefined, images: Image[]) => string | undefined
     pixiToCss: (color: number) => string
     isCombatActive: boolean
     onToggleCombat: () => void
+    isSeriouslyWounded: (token: Token) => boolean
 }
 
 const InitiativePanel = ({
@@ -49,16 +51,18 @@ const InitiativePanel = ({
     onSetAutoReroll,
     onTokenClick,
     onNextTurn,
-    onResetCombat,
     onUpdateTokenCurrent,
+    onUpdateInitiative,
     onMeleeAttack,
     onRangedAttack,
     onSkillCheck,
+    onGrenadeAttack,
     images,
     resolveImageUrl,
     pixiToCss,
     isCombatActive,
     onToggleCombat,
+    isSeriouslyWounded,
 }: InitiativePanelProps) => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
@@ -145,7 +149,7 @@ const InitiativePanel = ({
                             {t('combatSim.round')} {currentRound}
                         </Typography>
                         <IconButton
-                            onClick={onResetCombat}
+                            onClick={onNextTurn}
                             disabled={!isCombatActive}
                             sx={{
                                 color: colors.neons.yellow.default,
@@ -162,9 +166,9 @@ const InitiativePanel = ({
                                     borderColor: colors.grays.gray700,
                                 },
                             }}
-                            title={t('combatSim.resetCombat')}
+                            title={t('combatSim.nextRound')}
                         >
-                            <Refresh />
+                            <SkipNext />
                         </IconButton>
                     </Stack>
                     <FormControlLabel
@@ -249,17 +253,31 @@ const InitiativePanel = ({
                                                 {token.name}
                                             </Typography>
                                         </Box>
-                                        <Typography
-                                            variant="h6"
-                                            sx={{
-                                                color: colors.neons.yellow.default,
-                                                fontWeight: 700,
-                                                minWidth: 30,
-                                                textAlign: 'right',
+                                        <TextField
+                                            size="small"
+                                            type="tel"
+                                            value={initiative}
+                                            disabled={!isCombatActive}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value) || 0
+                                                onUpdateInitiative(token.id, val)
                                             }}
-                                        >
-                                            {initiative}
-                                        </Typography>
+                                            onClick={(e) => e.stopPropagation()}
+                                            sx={{
+                                                width: 50,
+                                                '& input': {
+                                                    padding: '4px 8px',
+                                                    fontSize: '1rem',
+                                                    color: colors.neons.yellow.default,
+                                                    fontWeight: 700,
+                                                    textAlign: 'center',
+                                                },
+                                                '& input:disabled': {
+                                                    color: colors.grays.gray600,
+                                                    WebkitTextFillColor: colors.grays.gray600,
+                                                },
+                                            }}
+                                        />
                                     </Stack>
 
                                     {/* Stats row */}
@@ -305,6 +323,19 @@ const InitiativePanel = ({
                                                 >
                                                     / {stats.health}
                                                 </Typography>
+                                                {isSeriouslyWounded(token) &&
+                                                    !token.stats?.ignoreSeriouslyWoundedPenalty && (
+                                                        <Typography
+                                                            sx={{
+                                                                fontSize: '14px',
+                                                                lineHeight: 1,
+                                                                ml: 0.5,
+                                                            }}
+                                                            title="Seriously Wounded (-2 to hit/skill rolls)"
+                                                        >
+                                                            🩸
+                                                        </Typography>
+                                                    )}
                                             </Stack>
 
                                             {/* Armor */}
@@ -448,6 +479,59 @@ const InitiativePanel = ({
                                                     size="small"
                                                     onClick={(e) => {
                                                         e.stopPropagation()
+                                                        const isDisabled =
+                                                            !isCombatActive ||
+                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
+                                                                0
+                                                        if (isDisabled) return
+                                                        onGrenadeAttack(token)
+                                                    }}
+                                                    sx={{
+                                                        flex: 1,
+                                                        color:
+                                                            !isCombatActive ||
+                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
+                                                                0
+                                                                ? colors.grays.gray600
+                                                                : '#ff8c00',
+                                                        border: `1px solid ${
+                                                            !isCombatActive ||
+                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
+                                                                0
+                                                                ? colors.grays.gray700
+                                                                : '#cc7000'
+                                                        }`,
+                                                        borderRadius: 1,
+                                                        fontSize: '12px',
+                                                        cursor:
+                                                            !isCombatActive ||
+                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
+                                                                0
+                                                                ? 'not-allowed'
+                                                                : 'pointer',
+                                                        '&:hover': {
+                                                            bgcolor:
+                                                                !isCombatActive ||
+                                                                (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ??
+                                                                    0) <= 0
+                                                                    ? 'transparent'
+                                                                    : 'rgba(255, 140, 0, 0.1)',
+                                                            boxShadow:
+                                                                !isCombatActive ||
+                                                                (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ??
+                                                                    0) <= 0
+                                                                    ? 'none'
+                                                                    : `0 0 6px #ff8c0060`,
+                                                        },
+                                                    }}
+                                                    title={t('combatSim.grenadeAttack')}
+                                                >
+                                                    {token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0} 💣
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
                                                         onSkillCheck(token)
                                                     }}
                                                     sx={{
@@ -479,7 +563,7 @@ const InitiativePanel = ({
                     <Button
                         variant="outlined"
                         onClick={handlePrevious}
-                        disabled={currentIndex <= 0}
+                        disabled={!isCombatActive || currentIndex <= 0}
                         sx={{
                             flex: 1,
                             color: colors.neons.cyan.default,
@@ -499,7 +583,7 @@ const InitiativePanel = ({
                     <Button
                         variant="outlined"
                         onClick={handleNext}
-                        disabled={sortedTokens.length === 0}
+                        disabled={!isCombatActive || sortedTokens.length === 0}
                         sx={{
                             flex: 1,
                             color: colors.neons.pink.default,

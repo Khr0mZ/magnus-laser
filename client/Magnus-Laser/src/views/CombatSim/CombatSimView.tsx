@@ -127,6 +127,7 @@ const CombatSimView = () => {
     const [initiativeRolls, setInitiativeRolls] = useState<Map<string, number>>(new Map())
     const [currentRound, setCurrentRound] = useState(1)
     const [autoRerollInitiative, setAutoRerollInitiative] = useState(false)
+    const [autoRollDamage, setAutoRollDamage] = useState(false)
     const [rollHistory, setRollHistory] = useState<RollHistoryEntry[]>([])
     const [isRollHistoryOpen, setIsRollHistoryOpen] = useState(false)
     const [isCombatActive, setIsCombatActive] = useState(false)
@@ -329,12 +330,52 @@ const CombatSimView = () => {
             rollType,
             result,
             damageResult,
+            damageRevealed: damageResult ? autoRollDamage : undefined, // Auto-reveal if setting is enabled
         }
         setRollHistory((prev) => {
             const newHistory = [entry, ...prev]
             // Keep only last 100 entries
             return newHistory.slice(0, 100)
         })
+    }
+
+    const handleRevealDamage = (entryId: string) => {
+        setRollHistory((prev) =>
+            prev.map((entry) => (entry.id === entryId ? { ...entry, damageRevealed: true } : entry))
+        )
+    }
+
+    const handleUpdateInitiative = (tokenId: string, value: number) => {
+        setInitiativeRolls((prev) => {
+            const newRolls = new Map(prev)
+            newRolls.set(tokenId, value)
+            return newRolls
+        })
+    }
+
+    // Track active token changes and add turn-start entries
+    useEffect(() => {
+        if (activeTokenId && isCombatActive) {
+            const token = tokens.find((t) => t.id === activeTokenId)
+            if (token) {
+                addToRollHistory(token, 'turn-start', {
+                    total: 0,
+                    rolls: [],
+                    fumble: false,
+                    critical: false,
+                    breakdown: '',
+                })
+            }
+        }
+    }, [activeTokenId, isCombatActive])
+
+    // Check if token is seriously wounded (current HP < half of max HP)
+    const isSeriouslyWounded = (token: Token): boolean => {
+        if (!token.stats) return false
+        const maxHP = token.stats.health
+        const currentHP = token.stats.currentHealth ?? maxHP
+        const threshold = Math.ceil(maxHP / 2)
+        return currentHP < threshold
     }
 
     const rollInitiative = (token: Token): number => {
@@ -360,11 +401,13 @@ const CombatSimView = () => {
             })
         })
         setInitiativeRolls(newRolls)
+        return newRolls
     }
 
     const handleMeleeAttack = (token: Token) => {
         const combat = token.stats?.combat ?? 0
-        const hitResult = rollToHit(combat)
+        const woundedPenalty = isSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
+        const hitResult = rollToHit(combat, woundedPenalty)
 
         const diceCount = token.stats?.weapons?.melee?.d6 ?? 1
         const damageResult = rollDamage(diceCount)
@@ -374,7 +417,8 @@ const CombatSimView = () => {
 
     const handleRangedAttack = (token: Token) => {
         const combat = token.stats?.combat ?? 0
-        const hitResult = rollToHit(combat)
+        const woundedPenalty = isSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
+        const hitResult = rollToHit(combat, woundedPenalty)
 
         const diceCount = token.stats?.weapons?.ranged?.d6 ?? 1
         const damageResult = rollDamage(diceCount)
@@ -384,9 +428,51 @@ const CombatSimView = () => {
 
     const handleSkillCheck = (token: Token) => {
         const skills = token.stats?.skills ?? 0
-        const result = rollToHit(skills)
+        const woundedPenalty = isSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
+        const result = rollToHit(skills, woundedPenalty)
 
         addToRollHistory(token, 'skill', result)
+    }
+
+    const handleGrenadeAttack = async (token: Token) => {
+        const combat = token.stats?.combat ?? 0
+        const woundedPenalty = isSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
+        const hitResult = rollToHit(combat, woundedPenalty)
+        const damageResult = rollDamage(6) // 6d6
+
+        addToRollHistory(token, 'grenade-hit', hitResult, damageResult)
+
+        // Decrease currentGrenadesOrSpecialAmmo by 1
+        const newCount = Math.max(0, (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) - 1)
+
+        setTokens((prev) =>
+            prev.map((t) => {
+                if (t.id !== token.id || !t.stats) return t
+                return {
+                    ...t,
+                    stats: {
+                        ...t.stats,
+                        weapons: {
+                            ...t.stats.weapons,
+                            currentGrenadesOrSpecialAmmo: newCount,
+                        },
+                    },
+                }
+            })
+        )
+
+        // Also update database if not default token
+        if (token.mapId !== '') {
+            try {
+                await db.tokens.update(token.id, {
+                    'stats.weapons.currentGrenadesOrSpecialAmmo': newCount,
+                })
+            } catch (error) {
+                console.error('Error updating grenades:', error)
+            }
+        }
+
+        setIsSaving(true)
     }
 
     const handleUpdateTokenCurrent = async (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => {
@@ -435,22 +521,14 @@ const CombatSimView = () => {
         // Increment round
         setCurrentRound((prev) => prev + 1)
 
-        // Reroll if enabled
-        if (autoRerollInitiative) {
-            rollAllInitiatives()
-        }
+        // Reroll if enabled and use the new rolls for sorting
+        const rollsToUse = autoRerollInitiative ? rollAllInitiatives() : initiativeRolls
 
         // Set to first token
-        const sorted = [...tokens].sort((a, b) => (initiativeRolls.get(b.id) ?? 0) - (initiativeRolls.get(a.id) ?? 0))
+        const sorted = [...tokens].sort((a, b) => (rollsToUse.get(b.id) ?? 0) - (rollsToUse.get(a.id) ?? 0))
         if (sorted.length > 0) {
             setActiveTokenId(sorted[0].id)
         }
-    }
-
-    const handleResetCombat = () => {
-        setCurrentRound(1)
-        setActiveTokenId(null)
-        rollAllInitiatives()
     }
 
     const handleToggleCombat = () => {
@@ -458,6 +536,55 @@ const CombatSimView = () => {
             // Starting combat - roll initiatives
             if (tokens.length > 0) {
                 rollAllInitiatives()
+
+                // Initialize grenades/special ammo if not already set
+                setTokens((prev) =>
+                    prev.map((t) => {
+                        if (!t.stats || t.stats.weapons.currentGrenadesOrSpecialAmmo !== undefined) return t
+
+                        const grenades = t.stats.weapons.grenadesOrSpecialAmmo
+                        if (!grenades) return t
+
+                        // Roll the grenades dice
+                        let count = 0
+                        if (grenades.d4) {
+                            for (let i = 0; i < grenades.d4; i++) {
+                                count += Math.floor(Math.random() * 4) + 1
+                            }
+                        }
+                        if (grenades.d6) {
+                            for (let i = 0; i < grenades.d6; i++) {
+                                count += Math.floor(Math.random() * 6) + 1
+                            }
+                        }
+                        if (grenades.d8) {
+                            for (let i = 0; i < grenades.d8; i++) {
+                                count += Math.floor(Math.random() * 8) + 1
+                            }
+                        }
+
+                        // Update database for non-default tokens
+                        if (t.mapId !== '') {
+                            db.tokens
+                                .update(t.id, {
+                                    'stats.weapons.currentGrenadesOrSpecialAmmo': count,
+                                })
+                                .catch(console.error)
+                        }
+
+                        return {
+                            ...t,
+                            stats: {
+                                ...t.stats,
+                                weapons: {
+                                    ...t.stats.weapons,
+                                    currentGrenadesOrSpecialAmmo: count,
+                                },
+                            },
+                        }
+                    })
+                )
+
                 // Set first token as active after a brief delay to ensure rolls are set
                 setTimeout(() => {
                     setInitiativeRolls((currentRolls) => {
@@ -621,6 +748,44 @@ const CombatSimView = () => {
 
     const toggleFullscreenImage = (image: string) => {
         setFullscreenImage(image)
+    }
+
+    const handleTokenDrop = async (tokenId: string, worldX: number, worldY: number) => {
+        const token = [...tokens, ...tokensNotInMap].find((t) => t.id === tokenId)
+        if (!token) return
+
+        const currentMapId = getActiveMapKey()
+
+        // Update token position and map
+        const updatedToken: Token = {
+            ...token,
+            mapId: currentMapId,
+            x: worldX,
+            y: worldY,
+        }
+
+        // Update in database (only for non-default tokens)
+        if (token.mapId !== '') {
+            try {
+                await db.tokens.update(tokenId, {
+                    mapId: currentMapId,
+                    x: worldX,
+                    y: worldY,
+                })
+            } catch (error) {
+                console.error('Error updating token:', error)
+            }
+        }
+
+        // Update state
+        setTokens((prev) => {
+            const filtered = prev.filter((t) => t.id !== tokenId)
+            return [...filtered, updatedToken]
+        })
+
+        setTokensNotInMap((prev) => prev.filter((t) => t.id !== tokenId))
+
+        setIsSaving(true)
     }
 
     const sortedMaps = useMemo(() => {
@@ -974,16 +1139,18 @@ const CombatSimView = () => {
                         onSetAutoReroll={setAutoRerollInitiative}
                         onTokenClick={setActiveTokenId}
                         onNextTurn={handleNextTurn}
-                        onResetCombat={handleResetCombat}
                         onUpdateTokenCurrent={handleUpdateTokenCurrent}
+                        onUpdateInitiative={handleUpdateInitiative}
                         onMeleeAttack={handleMeleeAttack}
                         onRangedAttack={handleRangedAttack}
                         onSkillCheck={handleSkillCheck}
+                        onGrenadeAttack={handleGrenadeAttack}
                         images={images}
                         resolveImageUrl={resolveImageUrl}
                         pixiToCss={pixiToCss}
                         isCombatActive={isCombatActive}
                         onToggleCombat={handleToggleCombat}
+                        isSeriouslyWounded={isSeriouslyWounded}
                     />
                 )}
 
@@ -991,7 +1158,11 @@ const CombatSimView = () => {
                     <RollHistoryPanel
                         isOpen={isSidePanelOpen && isRollHistoryOpen}
                         rollHistory={rollHistory}
+                        autoRollDamage={autoRollDamage}
+                        onSetAutoRollDamage={setAutoRollDamage}
                         onClear={() => setRollHistory([])}
+                        onDelete={(id) => setRollHistory((prev) => prev.filter((entry) => entry.id !== id))}
+                        onRevealDamage={handleRevealDamage}
                     />
                 )}
 
@@ -1091,6 +1262,7 @@ const CombatSimView = () => {
                             setIsSaving(true)
                         }}
                         activeTokenId={activeTokenId}
+                        onTokenDrop={handleTokenDrop}
                     />
                     {/* Debug info */}
                     {mapTexture && (

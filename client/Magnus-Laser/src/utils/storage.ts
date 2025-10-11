@@ -314,9 +314,15 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
     try {
         const prefs = await db.preferences.get(PREFERENCES_ID)
         if (prefs) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { id, ...preferences } = prefs
-            return preferences as AppPreferences
+            return {
+                viewPreferences: prefs.viewPreferences,
+                readerMode: prefs.readerMode,
+                animationsEnabled: prefs.animationsEnabled,
+                loaderEnabled: prefs.loaderEnabled,
+                huggingFaceApiKey: prefs.huggingFaceApiKey,
+                openAIApiKey: prefs.openAIApiKey,
+                geminiApiKey: prefs.geminiApiKey,
+            }
         }
         return { ...DEFAULT_PREFERENCES }
     } catch (error) {
@@ -444,7 +450,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 /**
  * Helper function to convert base64 string to Blob
  */
-const base64ToBlob = async (base64: string, _mimeType: string): Promise<Blob> => {
+const base64ToBlob = async (base64: string): Promise<Blob> => {
     const response = await fetch(base64)
     return await response.blob()
 }
@@ -497,28 +503,28 @@ export const loadCombatSimData = async () => {
 }
 
 export const saveCombatSimData = async (data: {
-    boardMaps?: any[]
-    tokens?: any[]
-    maps?: any[]
-    walls?: any[]
-    images?: any[]
+    boardMaps?: Array<Record<string, unknown>>
+    tokens?: Array<Record<string, unknown>>
+    maps?: Array<Record<string, unknown>>
+    walls?: Array<Record<string, unknown>>
+    images?: Array<Record<string, unknown>>
 }): Promise<void> => {
     try {
         // Dynamically import combat sim database
         const { db: combatDb } = await import('../views/CombatSim/db')
 
         if (data.boardMaps && data.boardMaps.length > 0) {
-            await combatDb.boardMaps.bulkPut(data.boardMaps)
+            await combatDb.boardMaps.bulkPut(data.boardMaps as never)
         }
         if (data.tokens && data.tokens.length > 0) {
-            await combatDb.tokens.bulkPut(data.tokens)
+            await combatDb.tokens.bulkPut(data.tokens as never)
         }
         if (data.maps && data.maps.length > 0) {
             // Convert base64 back to blobs for maps
             const mapsWithBlobs = await Promise.all(
-                data.maps.map(async (map: any) => {
+                data.maps.map(async (map: Record<string, unknown>) => {
                     if (map.blobData && !map.blob) {
-                        const blob = await base64ToBlob(map.blobData, map.mimeType)
+                        const blob = await base64ToBlob(map.blobData as string)
                         return {
                             ...map,
                             blob,
@@ -528,17 +534,17 @@ export const saveCombatSimData = async (data: {
                     return map
                 })
             )
-            await combatDb.maps.bulkPut(mapsWithBlobs)
+            await combatDb.maps.bulkPut(mapsWithBlobs as never)
         }
         if (data.walls && data.walls.length > 0) {
-            await combatDb.walls.bulkPut(data.walls)
+            await combatDb.walls.bulkPut(data.walls as never)
         }
         if (data.images && data.images.length > 0) {
             // Convert base64 back to blobs for images
             const imagesWithBlobs = await Promise.all(
-                data.images.map(async (image: any) => {
+                data.images.map(async (image: Record<string, unknown>) => {
                     if (image.blobData && !image.blob) {
-                        const blob = await base64ToBlob(image.blobData, image.mimeType)
+                        const blob = await base64ToBlob(image.blobData as string)
                         return {
                             ...image,
                             blob,
@@ -548,7 +554,7 @@ export const saveCombatSimData = async (data: {
                     return image
                 })
             )
-            await combatDb.images.bulkPut(imagesWithBlobs)
+            await combatDb.images.bulkPut(imagesWithBlobs as never)
         }
     } catch (error) {
         console.warn('Error saving combat sim data:', error)

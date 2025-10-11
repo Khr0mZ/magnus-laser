@@ -1,4 +1,13 @@
-export type RollType = 'initiative' | 'melee-hit' | 'melee-damage' | 'ranged-hit' | 'ranged-damage' | 'skill'
+export type RollType =
+    | 'initiative'
+    | 'melee-hit'
+    | 'melee-damage'
+    | 'ranged-hit'
+    | 'ranged-damage'
+    | 'skill'
+    | 'turn-start'
+    | 'grenade-hit'
+    | 'grenade-damage'
 
 export interface RollResult {
     total: number
@@ -49,15 +58,20 @@ export const rollDamage = (diceCount: number): RollResult => {
 }
 
 // Roll to-hit (1d10 + modifier)
-export const rollToHit = (modifier: number): RollResult => {
+export const rollToHit = (modifier: number, woundedPenalty: number = 0): RollResult => {
     const { value, fumble, critical, rolls } = rollD10WithSpecial()
-    const total = value + modifier
+    const total = value + modifier + woundedPenalty
+
+    const breakdownParts = [`${rolls.length}D10 [${rolls.join(', ')}]`, `+ ${modifier}`]
+    if (woundedPenalty !== 0) {
+        breakdownParts.push(`${woundedPenalty < 0 ? '' : '+'}${woundedPenalty} (🩸)`)
+    }
 
     return {
         total,
         rolls,
         fumble,
         critical,
-        breakdown: `${rolls.length}D10 [${rolls.join(', ')}] + ${modifier}`,
+        breakdown: breakdownParts.join(' '),
     }
 }

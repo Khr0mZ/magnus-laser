@@ -56,6 +56,7 @@ type PixiBoardProps = {
     onMapPasteToken: (token: Token) => void
     tokenClipboard: Token | null
     activeTokenId: string | null
+    onTokenDrop?: (tokenId: string, worldX: number, worldY: number) => void
 }
 
 const PixiBoard = ({
@@ -90,6 +91,7 @@ const PixiBoard = ({
     onMapPasteToken,
     tokenClipboard,
     activeTokenId,
+    onTokenDrop,
 }: PixiBoardProps) => {
     const { readerMode } = useUserPreferences()
     const hostRef = useRef<HTMLDivElement | null>(null)
@@ -133,6 +135,8 @@ const PixiBoard = ({
     const wallLabelRef = useRef<Text | null>(null)
     const backgroundRef = useRef<Sprite | null>(null)
     const draggingRef = useRef<{ id: string | null; offsetX: number; offsetY: number } | null>(null)
+    const keyDownHandlerRef = useRef<((e: Event) => void) | null>(null)
+    const keyUpHandlerRef = useRef<((e: Event) => void) | null>(null)
     const tokensRef = useRef<Token[]>(tokens)
     const prevTokensRef = useRef<Token[]>(tokens)
     const gridSizeRef = useRef<number>(gridSize)
@@ -637,6 +641,47 @@ const PixiBoard = ({
                 }
             })
 
+            // WASD keyboard navigation
+            const pressedKeys = new Set<string>()
+            const panSpeed = 10 // pixels per frame at normal zoom
+
+            const handleKeyDown = (e: Event) => {
+                const key = (e as unknown as { key: string }).key.toLowerCase()
+                if (['w', 'a', 's', 'd'].includes(key)) {
+                    pressedKeys.add(key)
+                    e.preventDefault()
+                }
+            }
+
+            const handleKeyUp = (e: Event) => {
+                const key = (e as unknown as { key: string }).key.toLowerCase()
+                pressedKeys.delete(key)
+            }
+
+            keyDownHandlerRef.current = handleKeyDown
+            keyUpHandlerRef.current = handleKeyUp
+            window.addEventListener('keydown', handleKeyDown)
+            window.addEventListener('keyup', handleKeyUp)
+
+            // Add WASD panning to ticker
+            app.ticker.add(() => {
+                if (pressedKeys.size === 0) return
+                const vp = viewportRef.current
+                if (!vp) return
+
+                let dx = 0
+                let dy = 0
+
+                if (pressedKeys.has('w')) dy += panSpeed
+                if (pressedKeys.has('s')) dy -= panSpeed
+                if (pressedKeys.has('a')) dx += panSpeed
+                if (pressedKeys.has('d')) dx -= panSpeed
+
+                // Apply movement independent of zoom level
+                vp.x += dx
+                vp.y += dy
+            })
+
             // Helper to create/update a pending move overlay for a token
             const upsertPendingOverlay = (id: string, sx: number, sy: number, ex: number, ey: number) => {
                 const viewport = viewportRef.current
@@ -1049,10 +1094,8 @@ const PixiBoard = ({
                         console.error('Failed to stop propagation or prevent default')
                     }
                     const step = gridSizeRef.current
-                    const half = step / 2
-                    const sx = snapRef.current ? Math.round((x - half) / step) * step + half : x
-                    const sy = snapRef.current ? Math.round((y - half) / step) * step + half : y
-                    measureStartRef.current = { x: sx, y: sy }
+                    const startSnapped = snapToNinePoints(x, y, step, snapRef.current)
+                    measureStartRef.current = { x: startSnapped.x, y: startSnapped.y }
                     return
                 }
                 // Token interaction: handle left click (drag) and right click (context menu)
@@ -1448,13 +1491,14 @@ const PixiBoard = ({
                 if (!measureStartRef.current) return
                 const global = viewport.toWorld(e.global)
                 const step = gridSizeRef.current
-                const half = step / 2
                 const sx = measureStartRef.current.x
                 const sy = measureStartRef.current.y
-                const ex = snapRef.current ? Math.round((global.x - half) / step) * step + half : global.x
-                const ey = snapRef.current ? Math.round((global.y - half) / step) * step + half : global.y
+                const endSnapped = snapToNinePoints(global.x, global.y, step, snapRef.current)
+                const ex = endSnapped.x
+                const ey = endSnapped.y
                 const dx = Math.abs(ex - sx)
                 const dy = Math.abs(ey - sy)
+                // Measure distance in grid cells (9-point snapping gives precision, but display in cells)
                 const cells = Math.hypot(dx, dy) / step
                 const g = measureLayerRef.current
                 if (!g) return
@@ -1491,6 +1535,16 @@ const PixiBoard = ({
         init()
         return () => {
             destroyed = true
+
+            // Remove keyboard event listeners
+            if (keyDownHandlerRef.current) {
+                window.removeEventListener('keydown', keyDownHandlerRef.current)
+                keyDownHandlerRef.current = null
+            }
+            if (keyUpHandlerRef.current) {
+                window.removeEventListener('keyup', keyUpHandlerRef.current)
+                keyUpHandlerRef.current = null
+            }
 
             if (globalCtxBlockerRef.current) {
                 document.removeEventListener('contextmenu', globalCtxBlockerRef.current, true)
@@ -1725,7 +1779,52 @@ const PixiBoard = ({
 
     return (
         <>
-            <div ref={hostRef} style={{ width: '100%', height: '100%', position: 'relative' }} />
+            <div
+                ref={hostRef}
+                style={{ width: '100%', height: '100%', position: 'relative' }}
+                onDragOver={(e) => {
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                }}
+                onDrop={(e) => {
+                    e.preventDefault()
+                    if (!onTokenDrop) return
+
+                    try {
+                        const tokenData = JSON.parse(e.dataTransfer.getData('application/json'))
+                        if (!tokenData?.id) return
+
+                        // Get viewport reference from appRef
+                        const app = appRef.current
+                        if (!app) return
+
+                        const vp = app.stage.children[0] as unknown as Viewport
+                        if (!vp) return
+
+                        // Convert drop coordinates to world coordinates
+                        const rect = hostRef.current?.getBoundingClientRect()
+                        if (!rect) return
+
+                        const clientX = e.clientX - rect.left
+                        const clientY = e.clientY - rect.top
+                        const worldPos = vp.toWorld({ x: clientX, y: clientY })
+
+                        let finalX = worldPos.x
+                        let finalY = worldPos.y
+
+                        // Apply snapping if enabled
+                        if (snapRef.current) {
+                            const snapped = snapToNinePoints(worldPos.x, worldPos.y, gridSizeRef.current, true)
+                            finalX = snapped.x
+                            finalY = snapped.y
+                        }
+
+                        onTokenDrop(tokenData.id, finalX, finalY)
+                    } catch (error) {
+                        console.error('Error handling token drop:', error)
+                    }
+                }}
+            />
 
             {/* Token tooltip overlay */}
             {hoveredToken && tooltipPosition && (

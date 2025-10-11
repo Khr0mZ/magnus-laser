@@ -70,6 +70,72 @@ const TokenPanel = ({
                 direction="row"
                 spacing={1}
                 alignItems="center"
+                draggable={!isDefault}
+                onDragStart={(e) => {
+                    if (!isDefault) {
+                        e.dataTransfer.effectAllowed = 'move'
+                        e.dataTransfer.setData('application/json', JSON.stringify(token))
+
+                        // Use the existing avatar as drag image if available
+                        const avatarElement = e.currentTarget.querySelector('img')
+                        if (avatarElement) {
+                            // Clone and style the avatar for drag preview
+                            const dragPreview = document.createElement('div')
+                            dragPreview.style.position = 'absolute'
+                            dragPreview.style.top = '-1000px'
+                            dragPreview.style.left = '-1000px'
+                            dragPreview.style.width = '50px'
+                            dragPreview.style.height = '50px'
+                            dragPreview.style.borderRadius = '50%'
+                            dragPreview.style.overflow = 'hidden'
+                            dragPreview.style.backgroundColor = pixiToCss(token.color)
+
+                            const imgClone = avatarElement.cloneNode(true) as HTMLElement
+                            imgClone.style.width = '100%'
+                            imgClone.style.height = '100%'
+                            // Set objectFit if it exists (will be on img elements)
+                            if ('objectFit' in imgClone.style) {
+                                ;(imgClone.style as { objectFit: string }).objectFit = 'cover'
+                            }
+                            dragPreview.appendChild(imgClone)
+
+                            document.body.appendChild(dragPreview)
+                            e.dataTransfer.setDragImage(dragPreview, 25, 25)
+
+                            setTimeout(() => {
+                                document.body.removeChild(dragPreview)
+                            }, 0)
+                        } else {
+                            // Fallback: Use simple colored circle with name
+                            const dragPreview = document.createElement('div')
+                            dragPreview.style.position = 'absolute'
+                            dragPreview.style.top = '-1000px'
+                            dragPreview.style.left = '-1000px'
+                            dragPreview.style.width = '50px'
+                            dragPreview.style.height = '50px'
+                            dragPreview.style.borderRadius = '50%'
+                            dragPreview.style.backgroundColor = pixiToCss(token.color)
+                            dragPreview.style.display = 'flex'
+                            dragPreview.style.alignItems = 'center'
+                            dragPreview.style.justifyContent = 'center'
+                            dragPreview.style.fontSize = '9px'
+                            dragPreview.style.fontWeight = 'bold'
+                            dragPreview.style.color = '#fff'
+                            dragPreview.style.textShadow = '0 0 4px rgba(0,0,0,0.8)'
+                            dragPreview.style.textAlign = 'center'
+                            dragPreview.style.padding = '2px'
+                            dragPreview.style.wordBreak = 'break-word'
+                            dragPreview.textContent = token.name
+
+                            document.body.appendChild(dragPreview)
+                            e.dataTransfer.setDragImage(dragPreview, 25, 25)
+
+                            setTimeout(() => {
+                                document.body.removeChild(dragPreview)
+                            }, 0)
+                        }
+                    }
+                }}
                 sx={{
                     width: '100%',
                     height: '40px',
@@ -87,6 +153,13 @@ const TokenPanel = ({
                             opacity: 0.8,
                             height: '100%',
                         },
+                    },
+                    '&[draggable="true"]': {
+                        cursor: 'grab',
+                    },
+                    '&:active[draggable="true"]': {
+                        cursor: 'grabbing',
+                        opacity: 0.5,
                     },
                 }}
                 onClick={() => setTokenDialogOpen(token.id)}

@@ -35,7 +35,9 @@ export type Stats = {
         melee: Dices
         ranged: Dices
         grenadesOrSpecialAmmo?: Dices
+        currentGrenadesOrSpecialAmmo?: number
     }
+    ignoreSeriouslyWoundedPenalty?: boolean
 }
 
 export type Map = {
@@ -79,4 +81,5 @@ export interface RollHistoryEntry {
     rollType: RollType
     result: RollResult
     damageResult?: RollResult // for attacks that include damage
+    damageRevealed?: boolean // whether damage has been revealed (starts hidden)
 }
