@@ -310,7 +310,7 @@ const InitiativePanel = ({
                                                             fontSize: '0.75rem',
                                                             color: readerMode
                                                                 ? colors.grays.gray900
-                                                                : colors.neons.green.light,
+                                                                : colors.neons.red.default,
                                                             textAlign: 'center',
                                                         },
                                                     }}
@@ -318,7 +318,9 @@ const InitiativePanel = ({
                                                 <Typography
                                                     variant="caption"
                                                     sx={{
-                                                        color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
+                                                        color: readerMode
+                                                            ? colors.grays.gray700
+                                                            : colors.neons.red.default,
                                                     }}
                                                 >
                                                     / {stats.health}
@@ -368,7 +370,7 @@ const InitiativePanel = ({
                                                                 fontSize: '0.70rem',
                                                                 color: readerMode
                                                                     ? colors.grays.gray900
-                                                                    : colors.neons.cyan.light,
+                                                                    : colors.neons.green.default,
                                                                 textAlign: 'center',
                                                             },
                                                         }}
@@ -378,7 +380,7 @@ const InitiativePanel = ({
                                                         sx={{
                                                             color: readerMode
                                                                 ? colors.grays.gray700
-                                                                : colors.grays.gray900,
+                                                                : colors.neons.green.default,
                                                         }}
                                                     >
                                                         /{stats.armor.sph}
@@ -413,7 +415,7 @@ const InitiativePanel = ({
                                                                 fontSize: '0.70rem',
                                                                 color: readerMode
                                                                     ? colors.grays.gray900
-                                                                    : colors.neons.cyan.light,
+                                                                    : colors.neons.green.default,
                                                                 textAlign: 'center',
                                                             },
                                                         }}
@@ -423,7 +425,7 @@ const InitiativePanel = ({
                                                         sx={{
                                                             color: readerMode
                                                                 ? colors.grays.gray700
-                                                                : colors.grays.gray900,
+                                                                : colors.neons.green.default,
                                                         }}
                                                     >
                                                         /{stats.armor.spb}

@@ -444,7 +444,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             </Grid>
                             {/* Health */}
                             {editedToken.mapId !== '' && (
-                                <Grid size={2}>
+                                <Grid size={2} sx={{ border: '2px solid red', borderRadius: '4px', mt: '-2px' }}>
                                     <TextField
                                         fullWidth
                                         label={t('combatSim.currentHealth')}
@@ -454,6 +454,15 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                             handleFieldChange('stats.currentHealth', Number(e.target.value) || 0)
                                         }
                                         variant="outlined"
+                                        slotProps={{
+                                            input: {
+                                                sx: {
+                                                    color: readerMode
+                                                        ? colors.grays.gray900
+                                                        : colors.neons.red.default + ' !important',
+                                                },
+                                            },
+                                        }}
                                         sx={textFieldOutlinedStyle}
                                     />
                                 </Grid>
@@ -472,7 +481,14 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
 
                             {/* Armor SPH */}
                             {editedToken.mapId !== '' && (
-                                <Grid size={1.75}>
+                                <Grid
+                                    size={1.75}
+                                    sx={{
+                                        border: `2px solid ${colors.neons.green.default}`,
+                                        borderRadius: '4px',
+                                        mt: '-2px',
+                                    }}
+                                >
                                     <TextField
                                         fullWidth
                                         label={t('combatSim.currentSph')}
@@ -482,6 +498,15 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                             handleFieldChange('stats.armor.currentSph', Number(e.target.value) || 0)
                                         }
                                         variant="outlined"
+                                        slotProps={{
+                                            input: {
+                                                sx: {
+                                                    color: readerMode
+                                                        ? colors.grays.gray900
+                                                        : colors.neons.green.default + ' !important',
+                                                },
+                                            },
+                                        }}
                                         sx={textFieldOutlinedStyle}
                                     />
                                 </Grid>
@@ -499,7 +524,14 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             </Grid>
                             {/* Armor SPB */}
                             {editedToken.mapId !== '' && (
-                                <Grid size={1.75}>
+                                <Grid
+                                    size={1.75}
+                                    sx={{
+                                        border: `2px solid ${colors.neons.green.default}`,
+                                        borderRadius: '4px',
+                                        mt: '-2px',
+                                    }}
+                                >
                                     <TextField
                                         fullWidth
                                         label={t('combatSim.currentSpb')}
@@ -509,6 +541,15 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                             handleFieldChange('stats.armor.currentSpb', Number(e.target.value) || 0)
                                         }
                                         variant="outlined"
+                                        slotProps={{
+                                            input: {
+                                                sx: {
+                                                    color: readerMode
+                                                        ? colors.grays.gray900
+                                                        : colors.neons.green.default + ' !important',
+                                                },
+                                            },
+                                        }}
                                         sx={textFieldOutlinedStyle}
                                     />
                                 </Grid>
@@ -569,7 +610,42 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     }}
                                 />
                             </Grid>
-                            <Grid size={editedToken.mapId !== '' ? 2 : 2}>
+                            {/* Current Grenades/Special Ammo */}
+                            {editedToken.mapId !== '' && (
+                                <Grid
+                                    size={2}
+                                    sx={{
+                                        border: `2px solid ${colors.oranges.default}`,
+                                        borderRadius: '4px',
+                                        mt: '-2px',
+                                    }}
+                                >
+                                    <TextField
+                                        fullWidth
+                                        label={t('combatSim.currentGrenadesOrSpecialAmmo')}
+                                        type="tel"
+                                        value={editedToken.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0}
+                                        onChange={(e) =>
+                                            handleFieldChange(
+                                                'stats.weapons.currentGrenadesOrSpecialAmmo',
+                                                Number(e.target.value) || 0
+                                            )
+                                        }
+                                        variant="outlined"
+                                        slotProps={{
+                                            input: {
+                                                sx: {
+                                                    color: readerMode
+                                                        ? colors.grays.gray900
+                                                        : colors.oranges.default + ' !important',
+                                                },
+                                            },
+                                        }}
+                                        sx={textFieldOutlinedStyle}
+                                    />
+                                </Grid>
+                            )}
+                            <Grid size={editedToken.mapId !== '' ? 1.6125 : 2}>
                                 <FormControl fullWidth variant="outlined" sx={formControlStyle}>
                                     <InputLabel sx={inputLabelStyle}>{t('combatSim.amount')}</InputLabel>
                                     <Select
@@ -597,7 +673,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid size={editedToken.mapId !== '' ? 3.25 : 4}>
+                            <Grid size={editedToken.mapId !== '' ? 1.6125 : 4}>
                                 <TextField
                                     fullWidth
                                     label={t('combatSim.grenadesOrSpecialAmmo')}
@@ -630,25 +706,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     }}
                                 />
                             </Grid>
-                            {/* Current Grenades/Special Ammo */}
-                            {editedToken.mapId !== '' && (
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.currentGrenadesOrSpecialAmmo')}
-                                        type="tel"
-                                        value={editedToken.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0}
-                                        onChange={(e) =>
-                                            handleFieldChange(
-                                                'stats.weapons.currentGrenadesOrSpecialAmmo',
-                                                Number(e.target.value) || 0
-                                            )
-                                        }
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-                            )}
+
                             {/* Color Picker */}
                             <Grid size={editedToken.mapId !== '' ? 1.75 : 2}>
                                 <FormControl fullWidth variant="outlined" sx={formControlStyle}>
