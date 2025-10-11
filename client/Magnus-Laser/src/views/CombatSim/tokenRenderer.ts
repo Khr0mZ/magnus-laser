@@ -1,4 +1,4 @@
-import { Graphics, Sprite, Texture } from 'pixi.js'
+import { Graphics, Sprite, Text, Texture } from 'pixi.js'
 import type { Image as ImageData, Token } from './types'
 
 // Texture cache for preloaded images
@@ -6,6 +6,9 @@ const textureCache = new Map<string, Texture>()
 
 // Simple sprite cache for each render call
 const spriteCache = new Map<string, Sprite>()
+
+// Name label cache for each render call
+const labelCache = new Map<string, Text>()
 
 // Preload textures for images
 export function preloadTextures(images: ImageData[]) {
@@ -70,6 +73,15 @@ export function renderTokens(
     }
     spriteCache.clear()
 
+    // Clear label cache from previous render
+    for (const label of labelCache.values()) {
+        if (label.parent) {
+            label.parent.removeChild(label)
+        }
+        label.destroy()
+    }
+    labelCache.clear()
+
     for (const t of tokens) {
         const x = overrideId === t.id && overrideX != null ? overrideX : t.x
         const y = overrideId === t.id && overrideY != null ? overrideY : t.y
@@ -103,6 +115,26 @@ export function renderTokens(
             // Render as colored circle
             layer.circle(x, y, t.radius).fill({ color: t.color })
         }
+
+        // Add name label above the token
+        const label = new Text({
+            text: t.name,
+            style: {
+                fill: 0xffffff,
+                fontSize: 14,
+                fontWeight: 'bold',
+                stroke: { color: 0x000000, width: 3 },
+            },
+        })
+        label.anchor.set(0.5, 1) // Center horizontally, anchor at bottom
+        label.x = x
+        label.y = y - t.radius - 4 // Position above the token with 4px gap
+        label.zIndex = 10 // Higher than tokens
+        labelCache.set(t.id, label)
+
+        if (layer.parent) {
+            layer.parent.addChild(label)
+        }
     }
 }
 
@@ -134,6 +166,15 @@ export function renderTokensWithPending(
         sprite.destroy()
     }
     spriteCache.clear()
+
+    // Clear label cache from previous render
+    for (const label of labelCache.values()) {
+        if (label.parent) {
+            label.parent.removeChild(label)
+        }
+        label.destroy()
+    }
+    labelCache.clear()
 
     for (const t of tokens) {
         let x = t.x
@@ -178,6 +219,26 @@ export function renderTokensWithPending(
             // Render as colored circle
             layer.circle(x, y, t.radius).fill({ color: t.color })
         }
+
+        // Add name label above the token
+        const label = new Text({
+            text: t.name,
+            style: {
+                fill: 0xffffff,
+                fontSize: 14,
+                fontWeight: 'bold',
+                stroke: { color: 0x000000, width: 3 },
+            },
+        })
+        label.anchor.set(0.5, 1) // Center horizontally, anchor at bottom
+        label.x = x
+        label.y = y - t.radius - 4 // Position above the token with 4px gap
+        label.zIndex = 10 // Higher than tokens
+        labelCache.set(t.id, label)
+
+        if (layer.parent) {
+            layer.parent.addChild(label)
+        }
     }
 
     // Draw pending overlays (ghosts at original positions)
@@ -207,6 +268,27 @@ export function renderTokensWithPending(
         } else {
             // Draw a semi-transparent version at the original position
             layer.circle(t.x, t.y, t.radius).fill({ color: t.color, alpha: 0.5 })
+        }
+
+        // Add ghost name label at original position
+        const ghostLabel = new Text({
+            text: t.name,
+            style: {
+                fill: 0xffffff,
+                fontSize: 14,
+                fontWeight: 'bold',
+                stroke: { color: 0x000000, width: 3 },
+            },
+        })
+        ghostLabel.anchor.set(0.5, 1)
+        ghostLabel.x = t.x
+        ghostLabel.y = t.y - t.radius - 4
+        ghostLabel.zIndex = 10
+        ghostLabel.alpha = 0.5
+        labelCache.set(`${id}_ghost_label`, ghostLabel)
+
+        if (layer.parent) {
+            layer.parent.addChild(ghostLabel)
         }
     }
 }
