@@ -340,6 +340,30 @@ const InitiativePanel = ({
                                                     )}
                                             </Stack>
 
+                                            {/* Movement */}
+                                            <Stack direction="row" spacing={0.5} alignItems="center" mb={0.5}>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
+                                                        minWidth: 35,
+                                                    }}
+                                                >
+                                                    {t('combatSim.move')}:
+                                                </Typography>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: readerMode
+                                                            ? colors.grays.gray900
+                                                            : colors.neons.purple.default,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    {stats.currentMovement} / {stats.movement}
+                                                </Typography>
+                                            </Stack>
+
                                             {/* Armor */}
                                             <Stack direction="row" spacing={1} mb={0.5}>
                                                 {/* SPH */}

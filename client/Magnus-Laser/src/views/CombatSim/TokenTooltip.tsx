@@ -74,6 +74,23 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                             {stats.currentHealth}/ {stats.health}
                         </Typography>
                     </Grid>
+                    <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
+                        <Typography
+                            sx={{
+                                color: readerMode ? colors.blues.default : colors.neons.purple.default,
+                                fontWeight: 700,
+                            }}
+                        >
+                            {t('combatSim.movement')}:
+                        </Typography>
+                        <Typography
+                            sx={{
+                                color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
+                            }}
+                        >
+                            {stats.currentMovement} / {stats.movement}
+                        </Typography>
+                    </Grid>
                     <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
                         <Typography
                             sx={{

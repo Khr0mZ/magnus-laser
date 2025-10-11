@@ -118,7 +118,7 @@ const CombatSimView = () => {
     const [gridColorAnchor, setGridColorAnchor] = useState<HTMLElement | null>(null)
     const [wallColorAnchor, setWallColorAnchor] = useState<HTMLElement | null>(null)
     const [tokenDialogOpen, setTokenDialogOpen] = useState<string>()
-    const [tokenClipboard, setTokenClipboard] = useState<Token | null>(null)
+    const [tokenClipboard, setTokenClipboard] = useState<Token[] | null>(null)
 
     // Initiative and combat state
     const [isTokenPanelOpen, setIsTokenPanelOpen] = useState(false)
@@ -475,7 +475,11 @@ const CombatSimView = () => {
         setIsSaving(true)
     }
 
-    const handleUpdateTokenCurrent = async (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => {
+    const handleUpdateTokenCurrent = async (
+        tokenId: string,
+        field: 'health' | 'sph' | 'spb' | 'movement',
+        value: number
+    ) => {
         setTokens((prev) =>
             prev.map((t) => {
                 if (t.id !== tokenId || !t.stats) return t
@@ -486,11 +490,13 @@ const CombatSimView = () => {
                         ...t,
                         stats: { ...t.stats, armor: { ...t.stats.armor, currentSph: value } },
                     }
-                } else {
+                } else if (field === 'spb') {
                     return {
                         ...t,
                         stats: { ...t.stats, armor: { ...t.stats.armor, currentSpb: value } },
                     }
+                } else {
+                    return { ...t, stats: { ...t.stats, currentMovement: value } }
                 }
             })
         )
@@ -504,10 +510,12 @@ const CombatSimView = () => {
                 await db.tokens.update(tokenId, {
                     stats: { ...token.stats, armor: { ...token.stats.armor, currentSph: value } },
                 })
-            } else {
+            } else if (field === 'spb') {
                 await db.tokens.update(tokenId, {
                     stats: { ...token.stats, armor: { ...token.stats.armor, currentSpb: value } },
                 })
+            } else {
+                await db.tokens.update(tokenId, { stats: { ...token.stats, currentMovement: value } })
             }
         }
 
@@ -524,10 +532,15 @@ const CombatSimView = () => {
         // Reroll if enabled and use the new rolls for sorting
         const rollsToUse = autoRerollInitiative ? rollAllInitiatives() : initiativeRolls
 
-        // Set to first token
+        // Set to first token and reset its movement
         const sorted = [...tokens].sort((a, b) => (rollsToUse.get(b.id) ?? 0) - (rollsToUse.get(a.id) ?? 0))
         if (sorted.length > 0) {
-            setActiveTokenId(sorted[0].id)
+            const firstToken = sorted[0]
+            setActiveTokenId(firstToken.id)
+            // Reset movement for the new active token
+            if (firstToken.stats) {
+                handleUpdateTokenCurrent(firstToken.id, 'movement', firstToken.stats.movement)
+            }
         }
     }
 
@@ -537,51 +550,67 @@ const CombatSimView = () => {
             if (tokens.length > 0) {
                 rollAllInitiatives()
 
-                // Initialize grenades/special ammo if not already set
+                // Initialize grenades/special ammo and movement if not already set
                 setTokens((prev) =>
                     prev.map((t) => {
-                        if (!t.stats || t.stats.weapons.currentGrenadesOrSpecialAmmo !== undefined) return t
+                        if (!t.stats) return t
 
-                        const grenades = t.stats.weapons.grenadesOrSpecialAmmo
-                        if (!grenades) return t
+                        let updatedStats = { ...t.stats }
+                        let needsUpdate = false
 
-                        // Roll the grenades dice
-                        let count = 0
-                        if (grenades.d4) {
-                            for (let i = 0; i < grenades.d4; i++) {
-                                count += Math.floor(Math.random() * 4) + 1
+                        // Initialize grenades
+                        if (t.stats.weapons.currentGrenadesOrSpecialAmmo === undefined) {
+                            const grenades = t.stats.weapons.grenadesOrSpecialAmmo
+                            if (grenades) {
+                                // Roll the grenades dice
+                                let count = 0
+                                if (grenades.d4) {
+                                    for (let i = 0; i < grenades.d4; i++) {
+                                        count += Math.floor(Math.random() * 4) + 1
+                                    }
+                                }
+                                if (grenades.d6) {
+                                    for (let i = 0; i < grenades.d6; i++) {
+                                        count += Math.floor(Math.random() * 6) + 1
+                                    }
+                                }
+                                if (grenades.d8) {
+                                    for (let i = 0; i < grenades.d8; i++) {
+                                        count += Math.floor(Math.random() * 8) + 1
+                                    }
+                                }
+
+                                updatedStats = {
+                                    ...updatedStats,
+                                    weapons: {
+                                        ...updatedStats.weapons,
+                                        currentGrenadesOrSpecialAmmo: count,
+                                    },
+                                }
+                                needsUpdate = true
                             }
                         }
-                        if (grenades.d6) {
-                            for (let i = 0; i < grenades.d6; i++) {
-                                count += Math.floor(Math.random() * 6) + 1
-                            }
+
+                        // Initialize currentMovement to movement
+                        updatedStats = {
+                            ...updatedStats,
+                            currentMovement: updatedStats.movement,
                         }
-                        if (grenades.d8) {
-                            for (let i = 0; i < grenades.d8; i++) {
-                                count += Math.floor(Math.random() * 8) + 1
-                            }
-                        }
+                        needsUpdate = true
 
                         // Update database for non-default tokens
-                        if (t.mapId !== '') {
-                            db.tokens
-                                .update(t.id, {
-                                    'stats.weapons.currentGrenadesOrSpecialAmmo': count,
-                                })
-                                .catch(console.error)
+                        if (needsUpdate && t.mapId !== '') {
+                            const updates: Record<string, unknown> = {
+                                'stats.currentMovement': updatedStats.movement,
+                            }
+                            if (updatedStats.weapons.currentGrenadesOrSpecialAmmo !== undefined) {
+                                updates['stats.weapons.currentGrenadesOrSpecialAmmo'] =
+                                    updatedStats.weapons.currentGrenadesOrSpecialAmmo
+                            }
+                            db.tokens.update(t.id, updates).catch(console.error)
                         }
 
-                        return {
-                            ...t,
-                            stats: {
-                                ...t.stats,
-                                weapons: {
-                                    ...t.stats.weapons,
-                                    currentGrenadesOrSpecialAmmo: count,
-                                },
-                            },
-                        }
+                        return needsUpdate ? { ...t, stats: updatedStats } : t
                     })
                 )
 
@@ -756,12 +785,13 @@ const CombatSimView = () => {
 
         const currentMapId = getActiveMapKey()
 
-        // Update token position and map
+        // Update token position, map, and radius based on current grid size
         const updatedToken: Token = {
             ...token,
             mapId: currentMapId,
             x: worldX,
             y: worldY,
+            radius: Math.max(1, Math.floor(gridSize / 2)),
         }
 
         // Update in database (only for non-default tokens)
@@ -771,6 +801,7 @@ const CombatSimView = () => {
                     mapId: currentMapId,
                     x: worldX,
                     y: worldY,
+                    radius: Math.max(1, Math.floor(gridSize / 2)),
                 })
             } catch (error) {
                 console.error('Error updating token:', error)
@@ -1063,7 +1094,7 @@ const CombatSimView = () => {
                                 const newToken: Token = {
                                     ...token,
                                     name: newName,
-                                    radius: gridSize / 2,
+                                    radius: Math.max(1, Math.floor(gridSize / 2)),
                                     id: globalThis.crypto?.randomUUID
                                         ? globalThis.crypto.randomUUID()
                                         : String(Date.now()),
@@ -1083,9 +1114,9 @@ const CombatSimView = () => {
                             if (token) {
                                 const newToken: Token = {
                                     ...token,
-                                    radius: gridSize / 2,
+                                    radius: Math.max(1, Math.floor(gridSize / 2)),
                                 }
-                                setTokenClipboard(newToken)
+                                setTokenClipboard([newToken])
                                 // Cut removes the token but stores it in clipboard
                                 if (tokenInMap) {
                                     setTokens((prev) => prev.filter((t) => t.id !== id))
@@ -1117,12 +1148,12 @@ const CombatSimView = () => {
                                 const clipboardToken = {
                                     ...token,
                                     name: newName,
-                                    radius: gridSize / 2,
+                                    radius: Math.max(1, Math.floor(gridSize / 2)),
                                     id: globalThis.crypto?.randomUUID
                                         ? globalThis.crypto.randomUUID()
                                         : String(Date.now()),
                                 }
-                                setTokenClipboard(clipboardToken)
+                                setTokenClipboard([clipboardToken])
                             }
                         }}
                     />
@@ -1137,7 +1168,14 @@ const CombatSimView = () => {
                         currentRound={currentRound}
                         autoRerollInitiative={autoRerollInitiative}
                         onSetAutoReroll={setAutoRerollInitiative}
-                        onTokenClick={setActiveTokenId}
+                        onTokenClick={(tokenId) => {
+                            setActiveTokenId(tokenId)
+                            // Reset movement when token becomes active
+                            const token = tokens.find((t) => t.id === tokenId)
+                            if (token?.stats) {
+                                handleUpdateTokenCurrent(tokenId, 'movement', token.stats.movement)
+                            }
+                        }}
                         onNextTurn={handleNextTurn}
                         onUpdateTokenCurrent={handleUpdateTokenCurrent}
                         onUpdateInitiative={handleUpdateInitiative}
@@ -1177,6 +1215,7 @@ const CombatSimView = () => {
                         isMeasuring={isMeasuring}
                         isWallMode={isWallMode}
                         isErasingWalls={isErasingWalls}
+                        isCombatActive={isCombatActive}
                         mapKey={getActiveMapKey()}
                         walls={walls}
                         onWallsChange={async (updated: Wall[], mapKey: string) => {
@@ -1200,9 +1239,44 @@ const CombatSimView = () => {
                         mapTexture={mapTexture}
                         tokens={tokens}
                         images={images}
-                        onTokenMove={async (id, x, y) => {
-                            setTokens((prev) => prev.map((tk) => (tk.id === id ? { ...tk, x, y } : tk)))
-                            await db.tokens.update(id, { x, y })
+                        onTokenMove={async (id, x, y, distanceTraveled) => {
+                            setTokens((prev) =>
+                                prev.map((tk) => {
+                                    if (tk.id !== id) return tk
+                                    // If distance traveled is provided, update currentMovement
+                                    if (distanceTraveled !== undefined && tk.stats) {
+                                        const newCurrentMovement = Math.max(
+                                            0,
+                                            tk.stats.currentMovement - distanceTraveled
+                                        )
+                                        return {
+                                            ...tk,
+                                            x,
+                                            y,
+                                            stats: {
+                                                ...tk.stats,
+                                                currentMovement: newCurrentMovement,
+                                            },
+                                        }
+                                    }
+                                    return { ...tk, x, y }
+                                })
+                            )
+                            // Update database
+                            const token = tokens.find((t) => t.id === id)
+                            if (distanceTraveled !== undefined && token?.stats) {
+                                const newCurrentMovement = Math.max(0, token.stats.currentMovement - distanceTraveled)
+                                await db.tokens.update(id, {
+                                    x,
+                                    y,
+                                    stats: {
+                                        ...token.stats,
+                                        currentMovement: newCurrentMovement,
+                                    },
+                                })
+                            } else {
+                                await db.tokens.update(id, { x, y })
+                            }
                         }}
                         gridColor={hexToPixi(gridColorHex)}
                         gridAlpha={gridAlpha}
@@ -1246,19 +1320,35 @@ const CombatSimView = () => {
                                         ? globalThis.crypto.randomUUID()
                                         : String(Date.now()),
                                 }
-                                setTokenClipboard(clipboardToken)
+                                setTokenClipboard([clipboardToken])
                             }
                         }}
                         onMapDeleteAllTokens={() => setClearAllDialogOpen(true)}
                         onMapDeleteAllWalls={() => setDeleteAllWallsDialogOpen(true)}
-                        onMapPasteToken={async (token) => {
-                            const newToken: Token = {
-                                ...token,
-                                radius: gridSize / 2,
-                                mapId: getActiveMapKey(),
+                        onMapCutAllTokens={async () => {
+                            // Copy all current map tokens to clipboard
+                            const tokensWithUpdatedRadius = tokens.map((t) => ({
+                                ...t,
+                                radius: Math.max(1, Math.floor(gridSize / 2)),
+                            }))
+                            setTokenClipboard(tokensWithUpdatedRadius)
+                            // Delete all tokens from map
+                            for (const token of tokens) {
+                                await db.tokens.delete(token.id)
                             }
-                            await db.tokens.add(newToken)
-                            setTokens((prev) => [...prev, token])
+                            setTokens([])
+                            setIsSaving(true)
+                        }}
+                        onMapPasteToken={async (tokens) => {
+                            for (const token of tokens) {
+                                const newToken: Token = {
+                                    ...token,
+                                    radius: Math.max(1, Math.floor(gridSize / 2)),
+                                    mapId: getActiveMapKey(),
+                                }
+                                await db.tokens.add(newToken)
+                                setTokens((prev) => [...prev, newToken])
+                            }
                             setIsSaving(true)
                         }}
                         activeTokenId={activeTokenId}

@@ -942,6 +942,9 @@
         "initiative": "Initiative",
         "health": "HP",
         "currentHealth": "HP Current",
+        "movement": "Movement",
+        "currentMovement": "Movement Current",
+        "move": "Move",
         "armor": "Armor",
         "weapons": "Weapons",
         "melee": "Melee",
@@ -956,6 +959,7 @@
         },
         "mapContextMenu": {
             "pasteToken": "Paste Token",
+            "cutAllTokens": "Cut All Tokens",
             "deleteAllTokens": "Delete Map Tokens",
             "deleteAllWalls": "Delete Map Walls"
         },

@@ -219,6 +219,8 @@ const TokenPanel = ({
                                     skills: token.stats?.skills ?? 0,
                                     initiative: token.stats?.initiative ?? 0,
                                     health: token.stats?.health ?? 0,
+                                    movement: token.stats?.movement ?? 0,
+                                    currentMovement: token.stats?.movement ?? 0,
                                     weapons: {
                                         melee: { d6: token.stats?.weapons?.melee?.d6 ?? 0 },
                                         ranged: { d6: token.stats?.weapons?.ranged?.d6 ?? 0 },
@@ -283,6 +285,9 @@ const TokenPanel = ({
     }
 
     const renderAccordion = (tokens: Token[], title: string, isDefault?: boolean) => {
+        // Sort tokens alphabetically by name for non-default tokens
+        const sortedTokens = isDefault ? tokens : [...tokens].sort((a, b) => a.name.localeCompare(b.name))
+
         return (
             <Accordion
                 sx={{
@@ -331,7 +336,7 @@ const TokenPanel = ({
                         bgcolor: readerMode ? colors.grays.gray400 : 'transparent',
                     }}
                 >
-                    {tokens.map((token) => {
+                    {sortedTokens.map((token) => {
                         return renderToken(token, isDefault)
                     })}
                 </AccordionDetails>

@@ -20,6 +20,8 @@ export type Token = {
 }
 
 export type Stats = {
+    movement: number
+    currentMovement: number
     combat: number
     skills: number
     initiative: number

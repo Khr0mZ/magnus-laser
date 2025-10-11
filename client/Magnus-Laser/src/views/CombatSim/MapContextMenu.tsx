@@ -1,4 +1,5 @@
 import Clear from '@mui/icons-material/Clear'
+import ContentCut from '@mui/icons-material/ContentCut'
 import ContentPaste from '@mui/icons-material/ContentPaste'
 import DeleteSweep from '@mui/icons-material/DeleteSweep'
 import ListItemIcon from '@mui/material/ListItemIcon'
@@ -12,6 +13,7 @@ interface MapContextMenuProps {
     anchorEl: HTMLElement | null
     onDeleteAllTokens: () => void
     onDeleteAllWalls: () => void
+    onCutAllTokens: () => void
     onPasteToken: () => void
     canPaste: boolean
     onClose: () => void
@@ -21,6 +23,7 @@ export const MapContextMenu: React.FC<MapContextMenuProps> = ({
     anchorEl,
     onDeleteAllTokens,
     onDeleteAllWalls,
+    onCutAllTokens,
     onPasteToken,
     canPaste,
     onClose,
@@ -33,6 +36,11 @@ export const MapContextMenu: React.FC<MapContextMenuProps> = ({
 
     const handleDeleteAllWalls = () => {
         onDeleteAllWalls()
+        onClose()
+    }
+
+    const handleCutAllTokens = () => {
+        onCutAllTokens()
         onClose()
     }
 
@@ -76,6 +84,12 @@ export const MapContextMenu: React.FC<MapContextMenuProps> = ({
                 <ListItemText sx={{ color: canPaste ? '#fff' : '#666' }}>
                     {t('combatSim.mapContextMenu.pasteToken')}
                 </ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleCutAllTokens}>
+                <ListItemIcon sx={{ color: '#ffa500' }}>
+                    <ContentCut fontSize="small" />
+                </ListItemIcon>
+                <ListItemText sx={{ color: '#ffa500' }}>{t('combatSim.mapContextMenu.cutAllTokens')}</ListItemText>
             </MenuItem>
             <MenuItem onClick={handleDeleteAllTokens}>
                 <ListItemIcon sx={{ color: '#ff6b6b' }}>

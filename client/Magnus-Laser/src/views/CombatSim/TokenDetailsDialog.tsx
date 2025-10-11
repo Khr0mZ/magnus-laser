@@ -442,6 +442,50 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     sx={textFieldOutlinedStyle}
                                 />
                             </Grid>
+                            {/* Movement */}
+                            <Grid size={editedToken.mapId !== '' ? 1.5 : 2}>
+                                <TextField
+                                    fullWidth
+                                    label={t('combatSim.movement')}
+                                    type="tel"
+                                    value={editedToken.stats?.movement}
+                                    onChange={(e) => handleFieldChange('stats.movement', Number(e.target.value) || 0)}
+                                    variant="outlined"
+                                    sx={textFieldOutlinedStyle}
+                                />
+                            </Grid>
+                            {/* Current Movement */}
+                            {editedToken.mapId !== '' && (
+                                <Grid
+                                    size={1.75}
+                                    sx={{
+                                        border: `2px solid ${colors.neons.purple.default}`,
+                                        borderRadius: '4px',
+                                        mt: '-2px',
+                                    }}
+                                >
+                                    <TextField
+                                        fullWidth
+                                        label={t('combatSim.currentMovement')}
+                                        type="tel"
+                                        value={editedToken.stats?.currentMovement}
+                                        onChange={(e) =>
+                                            handleFieldChange('stats.currentMovement', Number(e.target.value) || 0)
+                                        }
+                                        variant="outlined"
+                                        slotProps={{
+                                            input: {
+                                                sx: {
+                                                    color: readerMode
+                                                        ? colors.grays.gray900
+                                                        : colors.neons.purple.default + ' !important',
+                                                },
+                                            },
+                                        }}
+                                        sx={textFieldOutlinedStyle}
+                                    />
+                                </Grid>
+                            )}
                             {/* Health */}
                             {editedToken.mapId !== '' && (
                                 <Grid size={2} sx={{ border: '2px solid red', borderRadius: '4px', mt: '-2px' }}>

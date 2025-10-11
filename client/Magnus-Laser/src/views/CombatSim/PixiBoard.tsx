@@ -36,7 +36,7 @@ type PixiBoardProps = {
     onBindFit: (fn: () => void) => void
     tokens: Token[]
     images: ImageData[]
-    onTokenMove: (id: string, x: number, y: number) => void
+    onTokenMove: (id: string, x: number, y: number, distanceTraveled?: number) => void
     onPendingCountChange: (count: number) => void
     onBindPendingControls: (acceptAll: () => void, cancelAll: () => void) => void
     gridColor: number
@@ -46,6 +46,7 @@ type PixiBoardProps = {
     walls: Wall[]
     onWallsChange: (walls: Wall[], mapKey: string) => void
     isErasingWalls: boolean
+    isCombatActive: boolean
     onTokenClick: (id: string) => void
     onTokenDelete: (id: string) => void
     onTokenDuplicate: (id: string) => void
@@ -53,8 +54,9 @@ type PixiBoardProps = {
     onTokenCopy: (id: string) => void
     onMapDeleteAllTokens: () => void
     onMapDeleteAllWalls: () => void
-    onMapPasteToken: (token: Token) => void
-    tokenClipboard: Token | null
+    onMapCutAllTokens: () => void
+    onMapPasteToken: (tokens: Token[]) => void
+    tokenClipboard: Token[] | null
     activeTokenId: string | null
     onTokenDrop?: (tokenId: string, worldX: number, worldY: number) => void
 }
@@ -81,6 +83,7 @@ const PixiBoard = ({
     walls: wallsProp = [],
     onWallsChange,
     isErasingWalls = false,
+    isCombatActive = false,
     onTokenClick,
     onTokenDelete,
     onTokenDuplicate,
@@ -88,6 +91,7 @@ const PixiBoard = ({
     onTokenCopy,
     onMapDeleteAllTokens,
     onMapDeleteAllWalls,
+    onMapCutAllTokens,
     onMapPasteToken,
     tokenClipboard,
     activeTokenId,
@@ -141,6 +145,7 @@ const PixiBoard = ({
     const prevTokensRef = useRef<Token[]>(tokens)
     const gridSizeRef = useRef<number>(gridSize)
     const snapRef = useRef<boolean>(snapToGrid)
+    const isCombatActiveRef = useRef<boolean>(isCombatActive)
     const gridColorRef = useRef<number>(gridColor)
     const gridAlphaRef = useRef<number>(gridAlpha)
     const wallColorRef = useRef<number>(wallColor)
@@ -269,17 +274,17 @@ const PixiBoard = ({
     }
 
     const handleMapPasteToken = (pasteX?: number, pasteY?: number) => {
-        if (!tokenClipboard || !pasteX || !pasteY) return
+        if (!tokenClipboard || tokenClipboard.length === 0 || !pasteX || !pasteY) return
 
-        // Create new token with new ID and position
-        const newToken = {
-            ...tokenClipboard,
+        // Create new tokens with new IDs and positions
+        const newTokens = tokenClipboard.map((token) => ({
+            ...token,
             id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now() + Math.random()),
             x: pasteX,
             y: pasteY,
-        }
+        }))
 
-        onMapPasteToken(newToken)
+        onMapPasteToken(newTokens)
         // Keep clipboard intact for multiple pastes
     }
 
@@ -403,8 +408,37 @@ const PixiBoard = ({
             if (!last || last.x !== e.endX || last.y !== e.endY) {
                 pts.push({ x: e.endX, y: e.endY })
             }
+
+            // Calculate total distance traveled
+            const step = gridSizeRef.current
+            let totalDistance = 0
+            for (let i = 1; i < pts.length; i++) {
+                const dxs = Math.abs(pts[i].x - pts[i - 1].x)
+                const dys = Math.abs(pts[i].y - pts[i - 1].y)
+                totalDistance += Math.hypot(dxs, dys) / step
+            }
+
+            // Round distance to integer
+            totalDistance = Math.round(totalDistance)
+
+            // Decrement currentMovement by distance traveled (only if combat active)
+            if (isCombatActiveRef.current) {
+                const token = tokensRef.current.find((t) => t.id === id)
+                if (token?.stats) {
+                    const newCurrentMovement = Math.max(0, token.stats.currentMovement - totalDistance)
+                    const updatedToken = {
+                        ...token,
+                        stats: {
+                            ...token.stats,
+                            currentMovement: newCurrentMovement,
+                        },
+                    }
+                    tokensRef.current = tokensRef.current.map((t) => (t.id === id ? updatedToken : t))
+                }
+            }
+
             schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
-            onTokenMove(id, e.endX, e.endY)
+            onTokenMove(id, e.endX, e.endY, isCombatActiveRef.current ? totalDistance : undefined)
             try {
                 e.line.destroy()
                 e.label.destroy()
@@ -646,6 +680,12 @@ const PixiBoard = ({
             const panSpeed = 10 // pixels per frame at normal zoom
 
             const handleKeyDown = (e: Event) => {
+                // Don't process WASD if user is typing in an input field
+                const target = e.target as HTMLElement
+                const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+
+                if (isTyping) return
+
                 const key = (e as unknown as { key: string }).key.toLowerCase()
                 if (['w', 'a', 's', 'd'].includes(key)) {
                     pressedKeys.add(key)
@@ -654,6 +694,12 @@ const PixiBoard = ({
             }
 
             const handleKeyUp = (e: Event) => {
+                // Don't process WASD if user is typing in an input field
+                const target = e.target as HTMLElement
+                const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+
+                if (isTyping) return
+
                 const key = (e as unknown as { key: string }).key.toLowerCase()
                 pressedKeys.delete(key)
             }
@@ -748,14 +794,43 @@ const PixiBoard = ({
                         const e = pendingMovesRef.current.get(id)
                         if (!e) return
                         if (ok) {
-                            // Schedule path animation across all waypoints including final
+                            // Calculate total distance traveled
+                            const step = gridSizeRef.current
+                            let totalDistance = 0
                             const pts = [...e.points]
                             const last = pts[pts.length - 1]
                             if (!last || last.x !== e.endX || last.y !== e.endY) {
                                 pts.push({ x: e.endX, y: e.endY })
                             }
+                            for (let i = 1; i < pts.length; i++) {
+                                const dxs = Math.abs(pts[i].x - pts[i - 1].x)
+                                const dys = Math.abs(pts[i].y - pts[i - 1].y)
+                                totalDistance += Math.hypot(dxs, dys) / step
+                            }
+
+                            // Round distance to integer
+                            totalDistance = Math.round(totalDistance)
+
+                            // Decrement currentMovement by distance traveled (only if combat active)
+                            if (isCombatActiveRef.current) {
+                                const token = tokensRef.current.find((t) => t.id === id)
+                                if (token?.stats) {
+                                    const newCurrentMovement = Math.max(0, token.stats.currentMovement - totalDistance)
+                                    // Update token's currentMovement
+                                    const updatedToken = {
+                                        ...token,
+                                        stats: {
+                                            ...token.stats,
+                                            currentMovement: newCurrentMovement,
+                                        },
+                                    }
+                                    // Update tokensRef immediately so subsequent moves see the updated value
+                                    tokensRef.current = tokensRef.current.map((t) => (t.id === id ? updatedToken : t))
+                                }
+                            }
+
                             schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
-                            onTokenMove?.(id, e.endX, e.endY)
+                            onTokenMove?.(id, e.endX, e.endY, isCombatActiveRef.current ? totalDistance : undefined)
                         } else {
                             // Redraw tokens with remaining pendings so others stay put
                             const pendingMap = new Map(
@@ -890,7 +965,32 @@ const PixiBoard = ({
                     labelX = ex
                     labelY = ey
                 }
-                const txt = snapRef.current ? `${Math.round(cells)}` : `${cells.toFixed(2)}`
+
+                // Get token's current movement
+                const token = tokensRef.current.find((t) => t.id === id)
+                const currentMovement = token?.stats?.currentMovement ?? 0
+
+                // Always round distance to integer
+                const distanceText = `${Math.round(cells)}`
+
+                // Show remaining movement or just distance if combat not active
+                let txt: string
+                if (isCombatActiveRef.current) {
+                    const remaining = Math.max(0, currentMovement - Math.round(cells))
+                    txt = `${distanceText} / ${remaining}`
+
+                    // Change label color if exceeding movement
+                    if (Math.round(cells) > currentMovement) {
+                        entry.label.style.fill = 0xff3b81 // Red when exceeding
+                    } else {
+                        entry.label.style.fill = 0xffffff // White normally
+                    }
+                } else {
+                    // When combat not active, just show distance
+                    txt = distanceText
+                    entry.label.style.fill = 0xffffff // White
+                }
+
                 entry.label.text = txt
                 const zoom = viewport.scale.x
                 entry.label.style.fontSize = Math.max(24, 24 / Math.max(0.1, zoom))
@@ -1295,10 +1395,35 @@ const PixiBoard = ({
                     if (dragPreviewRef.current && dragPreviewRef.current.id === endedId) {
                         const e = pendingMovesRef.current.get(endedId)
                         if (e) {
-                            e.points.push({ x: dragPreviewRef.current.x, y: dragPreviewRef.current.y })
-                            e.endX = dragPreviewRef.current.x
-                            e.endY = dragPreviewRef.current.y
-                            upsertPendingOverlay(endedId, e.points[0].x, e.points[0].y, e.endX, e.endY)
+                            // Check if adding this waypoint would exceed movement (only if combat active)
+                            let canAddWaypoint = true
+
+                            if (isCombatActiveRef.current) {
+                                const token = tokensRef.current.find((t) => t.id === endedId)
+                                const currentMovement = token?.stats?.currentMovement ?? 0
+                                const step = gridSizeRef.current
+                                let totalDistance = 0
+                                const pts = e.points
+                                for (let i = 1; i < pts.length; i++) {
+                                    const dxs = Math.abs(pts[i].x - pts[i - 1].x)
+                                    const dys = Math.abs(pts[i].y - pts[i - 1].y)
+                                    totalDistance += Math.hypot(dxs, dys) / step
+                                }
+                                const last = pts[pts.length - 1]
+                                const dxp = Math.abs(dragPreviewRef.current.x - last.x)
+                                const dyp = Math.abs(dragPreviewRef.current.y - last.y)
+                                totalDistance += Math.hypot(dxp, dyp) / step
+
+                                // Only add waypoint if within movement limit when combat is active
+                                canAddWaypoint = Math.round(totalDistance) <= currentMovement
+                            }
+
+                            if (canAddWaypoint) {
+                                e.points.push({ x: dragPreviewRef.current.x, y: dragPreviewRef.current.y })
+                                e.endX = dragPreviewRef.current.x
+                                e.endY = dragPreviewRef.current.y
+                                upsertPendingOverlay(endedId, e.points[0].x, e.points[0].y, e.endX, e.endY)
+                            }
                         }
                         // dragged -> not a click
                         clickCandidateRef.current = null
@@ -1777,6 +1902,10 @@ const PixiBoard = ({
         snapRef.current = snapToGrid
     }, [snapToGrid])
 
+    useEffect(() => {
+        isCombatActiveRef.current = isCombatActive
+    }, [isCombatActive])
+
     return (
         <>
             <div
@@ -1862,7 +1991,8 @@ const PixiBoard = ({
                         handleMapPasteToken(pasteX, pasteY)
                     }
                 }}
-                canPaste={tokenClipboard !== null}
+                canPaste={tokenClipboard !== null && tokenClipboard.length > 0}
+                onCutAllTokens={onMapCutAllTokens}
                 onClose={closeContextMenus}
             />
         </>
