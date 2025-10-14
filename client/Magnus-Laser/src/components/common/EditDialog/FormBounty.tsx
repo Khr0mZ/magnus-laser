@@ -1,10 +1,8 @@
 import { Add } from '@mui/icons-material'
 import {
-    FormControl,
     Grid,
     IconButton,
     InputAdornment,
-    InputLabel,
     MenuItem,
     Select,
     Stack,
@@ -27,6 +25,7 @@ import {
     MurderTargetRank,
     TheftTargetRank,
 } from '../../../utils/types.ts'
+import CyberpunkFormControl from '../../CyberpunkFormControl'
 import { flicker } from '../Animations.tsx'
 import VirtualizedList from '../VirtualizedList.tsx'
 import ImageField from './ImageField.tsx'
@@ -36,8 +35,6 @@ export type FormBountyProps = {
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
     toggleFullscreenImage: (image: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
 }
 
@@ -46,20 +43,18 @@ const CrimeRow = memo(
         crime,
         index,
         handleChange,
-        formControlStyle,
-        inputLabelStyle,
         selectStyle,
         textFieldOutlinedStyle,
         getTargetRank,
+        readerMode,
     }: {
         crime: Crime
         index: number
         handleChange: (field: string, value: unknown) => void
-        formControlStyle: SxProps
-        inputLabelStyle: SxProps
         selectStyle: SxProps
         textFieldOutlinedStyle: SxProps
         getTargetRank: (target: string, crimeType: CrimeType) => number
+        readerMode: boolean
     }) => {
         const { t } = useTranslation()
 
@@ -73,8 +68,7 @@ const CrimeRow = memo(
                     py: 1,
                 }}
             >
-                <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                    <InputLabel sx={inputLabelStyle}>{t('bounties.labels.crime')}</InputLabel>
+                <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.crime')}>
                     <Select
                         value={crime.crimeType}
                         onChange={(e) => {
@@ -91,9 +85,8 @@ const CrimeRow = memo(
                             </MenuItem>
                         ))}
                     </Select>
-                </FormControl>
-                <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                    <InputLabel sx={inputLabelStyle}>{t('bounties.labels.target')}</InputLabel>
+                </CyberpunkFormControl>
+                <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.target')}>
                     <Select
                         value={'target' in crime ? crime.target : ''}
                         onChange={(e) => {
@@ -117,7 +110,7 @@ const CrimeRow = memo(
                                 ))
                         })()}
                     </Select>
-                </FormControl>
+                </CyberpunkFormControl>
                 <TextField
                     fullWidth
                     label={t('bounties.labels.multiplier')}
@@ -153,15 +146,7 @@ const CrimeRow = memo(
 )
 
 const FormBounty = (props: FormBountyProps) => {
-    const {
-        editedTarget,
-        textFieldOutlinedStyle,
-        handleChange,
-        toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
-        selectStyle,
-    } = props
+    const { editedTarget, textFieldOutlinedStyle, handleChange, toggleFullscreenImage, selectStyle } = props
     const { t } = useTranslation()
     const { characters } = useData()
     const { readerMode } = useUserPreferences()
@@ -209,32 +194,22 @@ const FormBounty = (props: FormBountyProps) => {
                         crime={crime}
                         index={index}
                         handleChange={handleChange}
-                        formControlStyle={formControlStyle}
-                        inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
                         getTargetRank={getTargetRank}
+                        readerMode={readerMode}
                     />
                 </div>
             )
         },
-        [
-            updatedTarget.crimes,
-            handleChange,
-            formControlStyle,
-            inputLabelStyle,
-            selectStyle,
-            textFieldOutlinedStyle,
-            getTargetRank,
-        ]
+        [updatedTarget.crimes, handleChange, selectStyle, textFieldOutlinedStyle, getTargetRank]
     )
 
     return (
         <>
             {/* Character */}
             <Grid size={{ xs: 12 }}>
-                <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                    <InputLabel sx={inputLabelStyle}>{t('characters.labels.name')}</InputLabel>
+                <CyberpunkFormControl readerMode={readerMode} label={t('characters.labels.name')}>
                     <Select
                         value={updatedTarget.character.ID}
                         onChange={(e) =>
@@ -249,7 +224,7 @@ const FormBounty = (props: FormBountyProps) => {
                             </MenuItem>
                         ))}
                     </Select>
-                </FormControl>
+                </CyberpunkFormControl>
             </Grid>
             {/* Name */}
             <Grid size={{ xs: 12 }}>
@@ -287,8 +262,7 @@ const FormBounty = (props: FormBountyProps) => {
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Speciality */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('bounties.labels.speciality')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.speciality')}>
                             <Select
                                 value={updatedTarget.speciality || ''}
                                 onChange={(e) => handleChange('speciality', e.target.value)}
@@ -301,7 +275,7 @@ const FormBounty = (props: FormBountyProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Base Bounty */}
                         <TextField
                             fullWidth
@@ -317,8 +291,7 @@ const FormBounty = (props: FormBountyProps) => {
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Rep */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('bounties.labels.rep')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.rep')}>
                             <Select
                                 value={updatedTarget.rep || ''}
                                 onChange={(e) => handleChange('rep', e.target.value)}
@@ -331,10 +304,9 @@ const FormBounty = (props: FormBountyProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Status */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('bounties.labels.status.title')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.status.title')}>
                             <Select
                                 value={updatedTarget.status || ''}
                                 onChange={(e) => handleChange('status', e.target.value)}
@@ -347,7 +319,7 @@ const FormBounty = (props: FormBountyProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                 </Stack>
             </Grid>

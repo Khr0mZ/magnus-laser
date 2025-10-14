@@ -1,11 +1,11 @@
-import { Box, FormControl, InputLabel, SxProps, Theme, useTheme } from '@mui/material'
+import { Box, SxProps, Theme, useTheme } from '@mui/material'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { marked } from 'marked'
 import { useEffect, useId } from 'react'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
-import { pulseGlowBlue, pulseGlowCyan } from './Animations'
+import CyberpunkFormControl from '../CyberpunkFormControl'
 
 type TiptapEditorProps = {
     label?: string
@@ -72,15 +72,9 @@ const TiptapEditor = ({ label, value, onChange, sx }: TiptapEditorProps) => {
         }
     }, [editor, value]) // Rerun when editor is ready or external value changes
 
-    // Mimic MUI TextField Label styles (from EditDialog's textFieldOutlinedStyle)
-    const muiInputLabelStyle: SxProps<Theme> = {
-        color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
-        borderRadius: '4px',
-        bgcolor: readerMode ? theme.palette.background.paper : 'rgba(10, 15, 30, 0.95)',
-        p: 0.5,
-        py: 0.25,
+    // Custom label styles for TiptapEditor (overrides CyberpunkFormControl defaults)
+    const customLabelSx: SxProps<Theme> = {
         fontSize: '16px',
-        border: readerMode ? '1px solid rgba(0, 0, 0, 0.23)' : `1px solid ${colors.neons.cyan.default}`,
         '&.MuiInputLabel-shrink': {
             transform: 'translate(14px, -9px) scale(0.75)',
             bgcolor: readerMode ? theme.palette.background.paper : 'rgba(10, 15, 30, 0.95)',
@@ -141,32 +135,17 @@ const TiptapEditor = ({ label, value, onChange, sx }: TiptapEditorProps) => {
         },
     }
 
-    // Simplified FormControl styles - only width and user overrides
-    const formControlStyles: SxProps<Theme> = {
-        width: '100%',
-        // Re-add label animation on hover (matching EditDialog)
-        '&:hover .MuiInputLabel-root': {
-            animation: `${!readerMode ? pulseGlowCyan : pulseGlowBlue} 2s infinite`,
-        },
-        // Re-add label animation on focus (matching EditDialog)
-        '&.Mui-focused .MuiInputLabel-root': {
-            animation: `${!readerMode ? pulseGlowCyan : pulseGlowBlue} 2s infinite`,
-        },
-        ...sx, // Allow overriding form control styles
-    }
-
-    return (
-        <FormControl fullWidth variant="outlined" sx={disabled ? {} : formControlStyles}>
-            {label && (
-                <InputLabel
-                    id={labelId}
-                    htmlFor={inputId}
-                    sx={muiInputLabelStyle}
-                    shrink={!!value || editor?.isFocused}
-                >
-                    {label}
-                </InputLabel>
-            )}
+    return label ? (
+        <CyberpunkFormControl
+            readerMode={readerMode}
+            label={label}
+            labelId={labelId}
+            htmlFor={inputId}
+            labelSx={customLabelSx}
+            shrink={!!value || editor?.isFocused}
+            disabled={disabled}
+            sx={sx}
+        >
             <Box
                 className="tiptap-input-slot"
                 id={inputId}
@@ -178,7 +157,18 @@ const TiptapEditor = ({ label, value, onChange, sx }: TiptapEditorProps) => {
                     <EditorContent editor={editor} />
                 </Box>
             </Box>
-        </FormControl>
+        </CyberpunkFormControl>
+    ) : (
+        <Box
+            className="tiptap-input-slot"
+            id={inputId}
+            sx={inputSlotStyle}
+            onClick={() => editor?.chain().focus().run()}
+        >
+            <Box className="prosemirror-editor-content-wrapper" sx={editorContentStyle}>
+                <EditorContent editor={editor} />
+            </Box>
+        </Box>
     )
 }
 

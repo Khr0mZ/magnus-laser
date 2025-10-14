@@ -1,10 +1,11 @@
-import { FormControl, Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
+import { Grid, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
 import { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
 import { Item, ItemCondition, ItemType } from '../../../graphql/types.ts'
 import { handleRegenerateImage } from '../../../utils/apiUtils.tsx'
 import { ModuleTypes } from '../../../utils/constants.ts'
+import CyberpunkFormControl from '../../CyberpunkFormControl'
 import ImageField from './ImageField.tsx'
 
 export type FormItemProps = {
@@ -20,8 +21,6 @@ export type FormItemProps = {
     handleImageUploadClick: () => void
     openDeleteImageDialog: () => void
     toggleFullscreenImage: (image: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     hiddenFileInput: React.JSX.Element
 }
@@ -40,8 +39,6 @@ export const FormItem = (props: FormItemProps) => {
         handleImageUploadClick,
         openDeleteImageDialog,
         toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
         selectStyle,
         hiddenFileInput,
     } = props
@@ -78,10 +75,11 @@ export const FormItem = (props: FormItemProps) => {
                 <Stack spacing={2} sx={{ width: '100%' }}>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Type */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel id="type-label" sx={inputLabelStyle}>
-                                {t('items.labels.type')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('items.labels.type')}
+                            labelId="type-label"
+                        >
                             <Select
                                 labelId="type-label"
                                 value={editedTarget.type || ''}
@@ -95,10 +93,9 @@ export const FormItem = (props: FormItemProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Condition */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('items.labels.condition')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('items.labels.condition')}>
                             <Select
                                 value={editedTarget.condition || ''}
                                 onChange={(e) => handleChange('condition', e.target.value)}
@@ -111,7 +108,7 @@ export const FormItem = (props: FormItemProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                 </Stack>
             </Grid>

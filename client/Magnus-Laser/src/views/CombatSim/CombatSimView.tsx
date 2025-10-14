@@ -1,9 +1,5 @@
-import { Carpenter, Construction, FitScreen } from '@mui/icons-material'
 import Close from '@mui/icons-material/Close'
 import Done from '@mui/icons-material/Done'
-import Menu from '@mui/icons-material/Menu'
-import MenuOpen from '@mui/icons-material/MenuOpen'
-import Straighten from '@mui/icons-material/Straighten'
 import {
     Box,
     Button,
@@ -21,6 +17,7 @@ import { Colorful } from '@uiw/react-color'
 import { Texture } from 'pixi.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ClearAllButton from '../../components/ClearAllButton'
 import CyberpunkCheckbox from '../../components/CyberpunkCheckbox'
 import CyberpunkFormControlLabel from '../../components/CyberpunkFormControlLabel'
 import GenerateButton from '../../components/GenerateButton'
@@ -30,6 +27,7 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { randomNPCs } from '../../utils/generators/npc/npcs'
+import BlastsPanel from './BlastsPanel'
 import InitiativePanel from './InitiativePanel'
 import PixiBoard from './PixiBoard'
 import RollHistoryPanel from './RollHistoryPanel'
@@ -37,7 +35,8 @@ import TokenDetailsDialog from './TokenDetailsDialog'
 import TokenPanel from './TokenPanel'
 import { db } from './db'
 import { rollD10WithSpecial, rollDamage, rollToHit, type RollResult, type RollType } from './diceUtils'
-import type { BoardMap, Image, Map as MapType, RollHistoryEntry, Token, Wall } from './types'
+import { snapToNinePoints } from './gridUtils'
+import type { Blast, BlastType, BoardMap, Image, Map as MapType, RollHistoryEntry, Token, Wall } from './types'
 
 async function fileToImage(file: globalThis.File): Promise<globalThis.HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -88,6 +87,7 @@ const CombatSimView = () => {
     const { readerMode } = useUserPreferences()
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
     const [gridSize, setGridSize] = useState(0.1)
+    const prevGridSizeRef = useRef(gridSize)
     const [snapToGrid, setSnapToGrid] = useState(true)
     const [gridColorHex, setGridColorHex] = useState('#ffffff')
     const [gridAlpha, setGridAlpha] = useState(0.5)
@@ -106,7 +106,6 @@ const CombatSimView = () => {
     const [pendingCount, setPendingCount] = useState(0)
     const [isErasingWalls, setIsErasingWalls] = useState(false)
     const [walls, setWalls] = useState<Wall[]>([])
-    const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
     const acceptAllRef = useRef<(() => void) | null>(null)
     const cancelAllRef = useRef<(() => void) | null>(null)
     const [deleteMapDialogOpen, setDeleteMapDialogOpen] = useState(false)
@@ -126,11 +125,19 @@ const CombatSimView = () => {
     const [activeTokenId, setActiveTokenId] = useState<string | null>(null)
     const [initiativeRolls, setInitiativeRolls] = useState<Map<string, number>>(new Map())
     const [currentRound, setCurrentRound] = useState(1)
+    const [roundBannerRound, setRoundBannerRound] = useState<number | null>(null)
     const [autoRerollInitiative, setAutoRerollInitiative] = useState(false)
     const [autoRollDamage, setAutoRollDamage] = useState(false)
     const [rollHistory, setRollHistory] = useState<RollHistoryEntry[]>([])
     const [isRollHistoryOpen, setIsRollHistoryOpen] = useState(false)
     const [isCombatActive, setIsCombatActive] = useState(false)
+
+    // Blast state
+    const [blasts, setBlasts] = useState<Blast[]>([])
+    const [blastsNotInMap, setBlastsNotInMap] = useState<Blast[]>([])
+    const [isBlastPanelOpen, setIsBlastPanelOpen] = useState(true)
+    const [blastDrawMode, setBlastDrawMode] = useState<BlastType | null>(null)
+    const [blastClipboard, setBlastClipboard] = useState<Blast[] | null>(null)
 
     const half = gridSize / 2
     // Default tokens (not persisted, reset on reload)
@@ -273,7 +280,7 @@ const CombatSimView = () => {
             // maps dropdown
             const allMaps = await db.maps.toArray()
             setMaps(allMaps)
-            // tokens and walls
+            // tokens, walls, and blasts
             const activeKey = map.mapId ?? map.id
             const tks = await db.tokens.where('mapId').equals(activeKey).toArray()
             setTokens(tks)
@@ -281,6 +288,10 @@ const CombatSimView = () => {
             setTokensNotInMap(tksNotInMap)
             const ws = await db.walls.where('mapId').equals(activeKey).toArray()
             setWalls(ws)
+            const bls = await db.blasts.where('mapId').equals(activeKey).toArray()
+            setBlasts(bls)
+            const blsNotInMap = await db.blasts.where('mapId').notEqual(activeKey).toArray()
+            setBlastsNotInMap(blsNotInMap)
             // map
             if (map.mapId) {
                 const m = await db.maps.get(map.mapId)
@@ -289,6 +300,7 @@ const CombatSimView = () => {
                     const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
                     setMapTexture(texture)
                     setGridSize(m.gridSize)
+                    prevGridSizeRef.current = m.gridSize
                     setSnapToGrid(m.snapToGrid)
                     setGridColorHex(m.gridColorHex)
                     setGridAlpha(m.gridAlpha)
@@ -523,8 +535,8 @@ const CombatSimView = () => {
     }
 
     const handleNextTurn = () => {
-        // Show toast notification (could use a snackbar library)
-        console.log(t('combatSim.roundComplete', { round: currentRound }))
+        // Trigger StorageBanner snackbar for round complete
+        setRoundBannerRound(currentRound)
 
         // Increment round
         setCurrentRound((prev) => prev + 1)
@@ -672,9 +684,40 @@ const CombatSimView = () => {
         const tks = await db.tokens.where('mapId').equals(map.id).toArray()
         setTokens(tks)
         setGridSize(map.gridSize)
+        prevGridSizeRef.current = map.gridSize
         setSnapToGrid(map.snapToGrid)
         setGridColorHex(map.gridColorHex)
         setGridAlpha(map.gridAlpha)
+        setIsSaving(true)
+    }
+
+    const onReplaceMap = async (file: globalThis.File) => {
+        if (!currentMap?.mapId) return
+
+        const existingMap = await db.maps.get(currentMap.mapId)
+        if (!existingMap) return
+
+        const img = await fileToImage(file)
+        const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
+        setMapTexture(texture)
+
+        // Update only the image-related fields, preserve everything else
+        await db.maps.update(currentMap.mapId, {
+            blob: file,
+            width: img.width,
+            height: img.height,
+            mimeType: file.type,
+        })
+
+        // Update the maps state with the new image data
+        setMaps((prev) =>
+            prev.map((m) =>
+                m.id === currentMap.mapId
+                    ? { ...m, blob: file, width: img.width, height: img.height, mimeType: file.type }
+                    : m
+            )
+        )
+
         setIsSaving(true)
     }
 
@@ -708,23 +751,90 @@ const CombatSimView = () => {
         setTokensNotInMap(tksNotInMap)
         const ws = await db.walls.where('mapId').equals(key).toArray()
         setWalls(ws)
+        const bls = await db.blasts.where('mapId').equals(key).toArray()
+        setBlasts(bls)
+        const blsNotInMap = await db.blasts.where('mapId').notEqual(key).toArray()
+        setBlastsNotInMap(blsNotInMap)
         const map = await db.maps.get(id)
         if (!map) return
         const img = await blobToImage(map.blob)
         const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
         setMapTexture(texture)
         setGridSize(map.gridSize)
+        prevGridSizeRef.current = map.gridSize
         setSnapToGrid(map.snapToGrid)
         setGridColorHex(map.gridColorHex)
         setGridAlpha(map.gridAlpha)
     }
 
-    // Persist grid size to selected map
+    // Persist grid size to selected map and update token radii
     useEffect(() => {
         const persistGridSize = async () => {
             if (!currentMap?.mapId) return
+
+            const oldGridSize = prevGridSizeRef.current
+
+            // Skip token update if gridSize hasn't actually changed
+            // This prevents recalculation when loading a map
+            const hasGridSizeChanged = oldGridSize !== gridSize
+
+            // Update the ref immediately to prevent race conditions with multiple quick changes
+            prevGridSizeRef.current = gridSize
+
             await db.maps.update(currentMap.mapId, { gridSize })
             setMaps((prev) => prev.map((a) => (a.id === currentMap.mapId ? { ...a, gridSize } : a)))
+
+            // Only update tokens if the grid size actually changed
+            if (hasGridSizeChanged && oldGridSize > 0) {
+                // Update all tokens in the current map with new radius and position
+                const activeMapKey = getActiveMapKey()
+
+                // Get fresh tokens from database to avoid stale closure
+                const tokensInCurrentMap = await db.tokens.where('mapId').equals(activeMapKey).toArray()
+
+                // Update tokens in database and calculate new positions/radii
+                const updates = tokensInCurrentMap.map((token) => {
+                    // Get size multiplier (1=medium, 2=large, 3=huge, 4=gargantuan)
+                    const multiplier = Math.round(token.radius / (oldGridSize / 2))
+                    // Calculate new radius based on new grid size
+                    // Keep it simple - just apply the multiplier to the new grid
+                    const newRadius = (gridSize / 2) * multiplier
+
+                    // Calculate new position (snap if enabled)
+                    let newX = token.x
+                    let newY = token.y
+                    if (snapToGrid) {
+                        const snapped = snapToNinePoints(token.x, token.y, gridSize, true)
+                        newX = snapped.x
+                        newY = snapped.y
+                    }
+
+                    return {
+                        token,
+                        newRadius,
+                        newX,
+                        newY,
+                    }
+                })
+
+                // Update tokens in database
+                await Promise.all(
+                    updates.map(({ token, newRadius, newX, newY }) =>
+                        db.tokens.update(token.id, { radius: newRadius, x: newX, y: newY })
+                    )
+                )
+
+                // Update tokens state
+                setTokens((prev) =>
+                    prev.map((t) => {
+                        const update = updates.find((u) => u.token.id === t.id)
+                        if (update) {
+                            return { ...t, radius: update.newRadius, x: update.newX, y: update.newY }
+                        }
+                        return t
+                    })
+                )
+            }
         }
         persistGridSize()
     }, [gridSize])
@@ -743,14 +853,50 @@ const CombatSimView = () => {
         if (!currentMap?.mapId) return
         const id = currentMap.mapId
         await db.maps.delete(id)
-        await db.boardMaps.update(currentMap.id, { mapId: undefined })
-        setCurrentMap({ ...currentMap, mapId: undefined })
-        setMapTexture(null)
+
+        // Find and select the Empty Map
+        const emptyMap = await db.maps.where('name').equals('Empty Map').first()
+        if (emptyMap) {
+            await db.boardMaps.update(currentMap.id, { mapId: emptyMap.id })
+            setCurrentMap({ ...currentMap, mapId: emptyMap.id })
+
+            // Load the Empty Map texture and settings
+            const img = await blobToImage(emptyMap.blob)
+            const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
+            setMapTexture(texture)
+            setGridSize(emptyMap.gridSize)
+            prevGridSizeRef.current = emptyMap.gridSize
+            setSnapToGrid(emptyMap.snapToGrid)
+            setGridColorHex(emptyMap.gridColorHex)
+            setGridAlpha(emptyMap.gridAlpha)
+
+            const key = emptyMap.id
+            const tks = await db.tokens.where('mapId').equals(key).toArray()
+            setTokens(tks)
+            const tksNotInMap = await db.tokens.where('mapId').notEqual(key).toArray()
+            setTokensNotInMap(tksNotInMap)
+            const ws = await db.walls.where('mapId').equals(key).toArray()
+            setWalls(ws)
+            const bls = await db.blasts.where('mapId').equals(key).toArray()
+            setBlasts(bls)
+            const blsNotInMap = await db.blasts.where('mapId').notEqual(key).toArray()
+            setBlastsNotInMap(blsNotInMap)
+        } else {
+            // Fallback to undefined if Empty Map doesn't exist
+            await db.boardMaps.update(currentMap.id, { mapId: undefined })
+            setCurrentMap({ ...currentMap, mapId: undefined })
+            setMapTexture(null)
+            const tks = await db.tokens.where('mapId').equals(currentMap.id).toArray()
+            setTokens(tks)
+            const tksNotInMap = await db.tokens.toArray()
+            setTokensNotInMap(tksNotInMap)
+            const bls = await db.blasts.where('mapId').equals(currentMap.id).toArray()
+            setBlasts(bls)
+            const blsNotInMap = await db.blasts.toArray()
+            setBlastsNotInMap(blsNotInMap)
+        }
+
         setMaps((prev) => prev.filter((a) => a.id !== id))
-        const tks = await db.tokens.where('mapId').equals(currentMap.id).toArray()
-        setTokens(tks)
-        const tksNotInMap = await db.tokens.toArray()
-        setTokensNotInMap(tksNotInMap)
         setIsSaving(true)
     }
 
@@ -819,6 +965,134 @@ const CombatSimView = () => {
         setIsSaving(true)
     }
 
+    // Blast handlers
+    const onActivateDrawMode = (type: BlastType) => {
+        // Toggle off if clicking the same mode
+        if (blastDrawMode === type) {
+            setBlastDrawMode(null)
+            return
+        }
+
+        // Deactivate other modes
+        setIsMeasuring(false)
+        setIsWallMode(false)
+        setBlastDrawMode(type)
+    }
+
+    const handleBlastDrop = async (blastData: { type: BlastType; id?: string }, worldX: number, worldY: number) => {
+        const currentMapId = getActiveMapKey()
+
+        // Check if it's a grenade template or an existing blast
+        if (blastData.type === 'grenade' && !blastData.id) {
+            // Create new grenade blast with auto-numbered name
+            const existingGrenades = blasts.filter((b) => b.type === 'grenade')
+            const grenadeNumber = existingGrenades.length + 1
+
+            const newBlast: Blast = {
+                id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
+                mapId: currentMapId,
+                type: 'grenade',
+                name: `Grenade ${grenadeNumber}`,
+                x: worldX,
+                y: worldY,
+                alpha: 0.7,
+                locked: false,
+            }
+            await db.blasts.add(newBlast)
+            setBlasts((prev) => [...prev, newBlast])
+            setIsSaving(true)
+        } else if (blastData.id) {
+            // Move existing blast; translate cone endpoint if present
+            const existing = blasts.find((b) => b.id === blastData.id)
+            const oldX = existing?.x ?? (blastData as unknown as Blast).x ?? worldX
+            const oldY = existing?.y ?? (blastData as unknown as Blast).y ?? worldY
+            const dx = worldX - oldX
+            const dy = worldY - oldY
+
+            const updatePayload: Partial<Blast> = {
+                mapId: currentMapId,
+                x: worldX,
+                y: worldY,
+            }
+            const prevX2 = existing?.x2 ?? (blastData as unknown as Blast).x2
+            const prevY2 = existing?.y2 ?? (blastData as unknown as Blast).y2
+            if (typeof prevX2 === 'number' && typeof prevY2 === 'number') {
+                updatePayload.x2 = prevX2 + dx
+                updatePayload.y2 = prevY2 + dy
+            }
+
+            await db.blasts.update(blastData.id, updatePayload)
+
+            // Update state
+            const updatedBlast: Blast = {
+                ...(existing ?? (blastData as unknown as Blast)),
+                ...updatePayload,
+                id: blastData.id!,
+                alpha: existing?.alpha ?? (blastData as unknown as Blast).alpha ?? 0.7,
+                locked: existing?.locked ?? false,
+            }
+            setBlasts((prev) => {
+                const filtered = prev.filter((b) => b.id !== blastData.id)
+                return [...filtered, updatedBlast]
+            })
+            setBlastsNotInMap((prev) => prev.filter((b) => b.id !== blastData.id))
+        }
+
+        setIsSaving(true)
+    }
+
+    const onBlastMove = async (blastId: string, worldX: number, worldY: number) => {
+        const blast = blasts.find((b) => b.id === blastId)
+        if (!blast || blast.locked) return
+
+        const dx = worldX - blast.x
+        const dy = worldY - blast.y
+        const updatePayload: Partial<Blast> = { x: worldX, y: worldY }
+        if (blast.type === 'cone' && typeof blast.x2 === 'number' && typeof blast.y2 === 'number') {
+            updatePayload.x2 = blast.x2 + dx
+            updatePayload.y2 = blast.y2 + dy
+        }
+
+        await db.blasts.update(blastId, updatePayload)
+        setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, ...updatePayload } : b)))
+        setIsSaving(true)
+    }
+
+    const onBlastComplete = async (blast: Blast) => {
+        await db.blasts.add(blast)
+        setBlasts((prev) => [...prev, blast])
+        // Reset draw mode after completing a blast
+        setBlastDrawMode(null)
+        setIsSaving(true)
+    }
+
+    const onBlastDelete = async (blastId: string) => {
+        await db.blasts.delete(blastId)
+        setBlasts((prev) => prev.filter((b) => b.id !== blastId))
+        setBlastsNotInMap((prev) => prev.filter((b) => b.id !== blastId))
+        setIsSaving(true)
+    }
+
+    const onBlastCopy = (blastId: string) => {
+        const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === blastId)
+        if (!blast) return
+        setBlastClipboard([blast])
+    }
+
+    const onBlastCut = async (blastId: string) => {
+        const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === blastId)
+        if (!blast) return
+        setBlastClipboard([blast])
+        await onBlastDelete(blastId)
+    }
+
+    const onBlastLock = async (blastId: string, locked: boolean) => {
+        await db.blasts.update(blastId, { locked })
+        setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, locked } : b)))
+        setBlastsNotInMap((prev) => prev.map((b) => (b.id === blastId ? { ...b, locked } : b)))
+        setIsSaving(true)
+    }
+
     const sortedMaps = useMemo(() => {
         const arr = [...maps]
         arr.sort((a, b) => {
@@ -833,7 +1107,12 @@ const CombatSimView = () => {
 
     return (
         <Container maxWidth={false} sx={{ pt: 0.5 }}>
-            <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
+            <StorageBanner
+                isSaving={isSaving}
+                onSavingDone={() => setIsSaving(false)}
+                roundCompleteRound={roundBannerRound}
+                onRoundCompleteDone={() => setRoundBannerRound(null)}
+            />
             <Stack direction="row" alignItems="center" spacing={2} mb={2}>
                 <Typography
                     variant="h3"
@@ -865,10 +1144,28 @@ const CombatSimView = () => {
                         justifyContent: 'flex-end',
                     }}
                 >
+                    <ClearAllButton
+                        disabled={maps.length === 0}
+                        handleClearAllClick={() => document.getElementById('combatsim-replace-map')?.click()}
+                        label={t('combatSim.replaceMap')}
+                    />
                     <GenerateButton
                         isGenerating={false}
                         handleGenerate={() => document.getElementById('combatsim-upload-map')?.click()}
                         label={t('combatSim.addMap')}
+                    />
+                    <input
+                        id="combatsim-replace-map"
+                        hidden
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                            const f = e.target.files?.[0]
+                            if (f)
+                                onReplaceMap(f)
+                                // reset value so selecting the same file again still fires change
+                            ;(e.target as HTMLInputElement).value = ''
+                        }}
                     />
                     <input
                         id="combatsim-upload-map"
@@ -1061,7 +1358,7 @@ const CombatSimView = () => {
                 {/* Left panels - can show both simultaneously */}
                 {isTokenPanelOpen && (
                     <TokenPanel
-                        isSidePanelOpen={isSidePanelOpen && isTokenPanelOpen}
+                        isSidePanelOpen={isTokenPanelOpen}
                         images={images}
                         setTokenDialogOpen={setTokenDialogOpen}
                         getActiveMapKey={getActiveMapKey}
@@ -1161,7 +1458,7 @@ const CombatSimView = () => {
 
                 {isInitiativePanelOpen && (
                     <InitiativePanel
-                        isSidePanelOpen={isSidePanelOpen && isInitiativePanelOpen}
+                        isSidePanelOpen={isInitiativePanelOpen}
                         tokens={tokens}
                         initiativeRolls={initiativeRolls}
                         activeTokenId={activeTokenId}
@@ -1194,13 +1491,29 @@ const CombatSimView = () => {
 
                 {isRollHistoryOpen && (
                     <RollHistoryPanel
-                        isOpen={isSidePanelOpen && isRollHistoryOpen}
+                        isOpen={isRollHistoryOpen}
                         rollHistory={rollHistory}
                         autoRollDamage={autoRollDamage}
                         onSetAutoRollDamage={setAutoRollDamage}
                         onClear={() => setRollHistory([])}
                         onDelete={(id) => setRollHistory((prev) => prev.filter((entry) => entry.id !== id))}
                         onRevealDamage={handleRevealDamage}
+                    />
+                )}
+
+                {isBlastPanelOpen && (
+                    <BlastsPanel
+                        isSidePanelOpen={isBlastPanelOpen}
+                        gridSize={gridSize}
+                        blasts={blasts}
+                        blastsNotInMap={blastsNotInMap}
+                        blastDrawMode={blastDrawMode}
+                        onActivateDrawMode={onActivateDrawMode}
+                        onBlastDelete={onBlastDelete}
+                        onBlastCopy={onBlastCopy}
+                        onBlastCut={onBlastCut}
+                        onBlastLock={onBlastLock}
+                        mapKey={getActiveMapKey()}
                     />
                 )}
 
@@ -1325,6 +1638,13 @@ const CombatSimView = () => {
                         }}
                         onMapDeleteAllTokens={() => setClearAllDialogOpen(true)}
                         onMapDeleteAllWalls={() => setDeleteAllWallsDialogOpen(true)}
+                        onMapDeleteAllBlasts={async () => {
+                            // Delete all blasts from the current map
+                            const mapId = getActiveMapKey()
+                            await db.blasts.where('mapId').equals(mapId).delete()
+                            setBlasts([])
+                            setIsSaving(true)
+                        }}
                         onMapCutAllTokens={async () => {
                             // Copy all current map tokens to clipboard
                             const tokensWithUpdatedRadius = tokens.map((t) => ({
@@ -1351,8 +1671,41 @@ const CombatSimView = () => {
                             }
                             setIsSaving(true)
                         }}
+                        onMapPasteBlast={async (newBlasts) => {
+                            for (const blast of newBlasts) {
+                                const blastToAdd: Blast = {
+                                    ...blast,
+                                    mapId: getActiveMapKey(),
+                                }
+                                await db.blasts.add(blastToAdd)
+                                setBlasts((prev) => [...prev, blastToAdd])
+                            }
+                            setIsSaving(true)
+                        }}
                         activeTokenId={activeTokenId}
+                        blastClipboard={blastClipboard}
                         onTokenDrop={handleTokenDrop}
+                        blasts={blasts}
+                        blastDrawMode={blastDrawMode}
+                        onBlastDrop={handleBlastDrop}
+                        onBlastMove={onBlastMove}
+                        onBlastComplete={onBlastComplete}
+                        onBlastUpdateCone={async (blastId, x2, y2) => {
+                            await db.blasts.update(blastId, { x2, y2 })
+                            setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, x2, y2 } : b)))
+                            setBlastsNotInMap((prev) => prev.map((b) => (b.id === blastId ? { ...b, x2, y2 } : b)))
+                            setIsSaving(true)
+                        }}
+                        onBlastDelete={onBlastDelete}
+                        onBlastCopy={onBlastCopy}
+                        onBlastCut={onBlastCut}
+                        onBlastLock={onBlastLock}
+                        sidePanelWidth={
+                            (isTokenPanelOpen ? 260 : 0) +
+                            (isInitiativePanelOpen ? 260 : 0) +
+                            (isRollHistoryOpen ? 260 : 0) +
+                            (isBlastPanelOpen ? 260 : 0)
+                        }
                     />
                     {/* Debug info */}
                     {mapTexture && (
@@ -1377,223 +1730,18 @@ const CombatSimView = () => {
                             )}
                         </Typography>
                     )}
-                    {/* Drawer toggle button */}
+                    {/* Fit button */}
                     <Box
-                        onClick={() => {
-                            setIsSidePanelOpen((v) => {
-                                const newValue = !v
-                                // Close all panels when closing the side panel
-                                if (!newValue) {
-                                    setIsTokenPanelOpen(false)
-                                    setIsInitiativePanelOpen(false)
-                                    setIsRollHistoryOpen(false)
-                                }
-                                return newValue
-                            })
-                        }}
+                        onClick={() => fitRef.current?.()}
                         sx={{
                             position: 'absolute',
                             top: 10,
                             left: 10,
                             width: '36px',
                             height: '36px',
-                            display: 'block',
-                            backgroundColor: readerMode ? 'rgba(0, 0, 40, 0.7)' : 'rgba(0, 0, 40, 0.6)',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            border: `1px solid ${
-                                isSidePanelOpen ? colors.neons.pink.default : colors.neons.blue.default
-                            }60`,
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                                border: `1px solid ${colors.neons.pink.default}60`,
-                                boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                            },
-                            '&:hover .drawer-toggle-icon': {
-                                color: colors.neons.pink.default,
-                            },
-                        }}
-                        title={isSidePanelOpen ? t('combatSim.closePanel') : t('combatSim.openPanel')}
-                    >
-                        {isSidePanelOpen ? (
-                            <MenuOpen
-                                className="drawer-toggle-icon"
-                                sx={{
-                                    m: '6px',
-                                    fontSize: '24px',
-                                    lineHeight: '24px',
-                                    color: isSidePanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
-                                }}
-                            />
-                        ) : (
-                            <Menu
-                                className="drawer-toggle-icon"
-                                sx={{
-                                    m: '6px',
-                                    fontSize: '24px',
-                                    lineHeight: '24px',
-                                    color: colors.neons.blue.default,
-                                }}
-                            />
-                        )}
-                    </Box>
-
-                    {/* Panel mode toggle buttons (when panel is open) */}
-                    {isSidePanelOpen && (
-                        <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{
-                                position: 'absolute',
-                                top: 10,
-                                left: 52,
-                            }}
-                        >
-                            <Box
-                                onClick={() => {
-                                    setIsTokenPanelOpen((v) => !v)
-                                    if (!isSidePanelOpen) setIsSidePanelOpen(true)
-                                }}
-                                sx={{
-                                    width: '36px',
-                                    height: '36px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: isTokenPanelOpen
-                                        ? 'rgba(255, 0, 255, 0.3)'
-                                        : readerMode
-                                        ? 'rgba(0, 0, 40, 0.7)'
-                                        : 'rgba(0, 0, 40, 0.6)',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    border: `1px solid ${
-                                        isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default
-                                    }60`,
-                                    transition: 'all 0.2s',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                                        border: `1px solid ${colors.neons.pink.default}60`,
-                                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                                    },
-                                }}
-                                title={t('combatSim.tokensPanel')}
-                            >
-                                <Box
-                                    sx={{
-                                        fontSize: '20px',
-                                        color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
-                                        transition: 'all 0.2s',
-                                        '&:hover': {
-                                            scale: 1.5,
-                                        },
-                                    }}
-                                >
-                                    👨‍🎤
-                                </Box>
-                            </Box>
-                            <Box
-                                onClick={() => {
-                                    setIsInitiativePanelOpen((v) => !v)
-                                    if (!isSidePanelOpen) setIsSidePanelOpen(true)
-                                }}
-                                sx={{
-                                    width: '36px',
-                                    height: '36px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: isInitiativePanelOpen
-                                        ? 'rgba(255, 0, 255, 0.3)'
-                                        : readerMode
-                                        ? 'rgba(0, 0, 40, 0.7)'
-                                        : 'rgba(0, 0, 40, 0.6)',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    border: `1px solid ${
-                                        isInitiativePanelOpen ? colors.neons.pink.default : colors.neons.blue.default
-                                    }60`,
-                                    transition: 'all 0.2s',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                                        border: `1px solid ${colors.neons.pink.default}60`,
-                                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                                    },
-                                }}
-                                title={t('combatSim.initiativePanel')}
-                            >
-                                <Box
-                                    sx={{
-                                        fontSize: '20px',
-                                        color: isInitiativePanelOpen
-                                            ? colors.neons.pink.default
-                                            : colors.neons.blue.default,
-                                        transition: 'all 0.2s',
-                                        '&:hover': {
-                                            scale: 1.5,
-                                        },
-                                    }}
-                                >
-                                    ⚔️
-                                </Box>
-                            </Box>
-                            {/* Roll History toggle button (independent of other panels) */}
-                            <Box
-                                onClick={() => setIsRollHistoryOpen((v) => !v)}
-                                sx={{
-                                    width: '36px',
-                                    height: '36px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: isRollHistoryOpen
-                                        ? 'rgba(255, 0, 255, 0.3)'
-                                        : readerMode
-                                        ? 'rgba(0, 0, 40, 0.7)'
-                                        : 'rgba(0, 0, 40, 0.6)',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    border: `1px solid ${
-                                        isRollHistoryOpen ? colors.neons.pink.default : colors.neons.blue.default
-                                    }60`,
-                                    transition: 'all 0.2s',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                                        border: `1px solid ${colors.neons.pink.default}60`,
-                                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                                    },
-                                }}
-                                title={t('combatSim.rollHistory')}
-                            >
-                                <Box
-                                    sx={{
-                                        fontSize: '20px',
-                                        color: isRollHistoryOpen
-                                            ? colors.neons.pink.default
-                                            : colors.neons.blue.default,
-                                        transition: 'all 0.2s',
-                                        '&:hover': {
-                                            scale: 1.5,
-                                        },
-                                    }}
-                                >
-                                    🎲
-                                </Box>
-                            </Box>
-                        </Stack>
-                    )}
-
-                    {/* Fit button */}
-                    <Box
-                        onClick={() => fitRef.current?.()}
-                        sx={{
-                            position: 'absolute',
-                            top: 52,
-                            left: 10,
-                            width: '36px',
-                            height: '36px',
-                            display: 'block',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             backgroundColor: readerMode ? 'rgba(0, 0, 40, 0.7)' : 'rgba(0, 0, 40, 0.6)',
                             borderRadius: '6px',
                             cursor: 'pointer',
@@ -1610,15 +1758,18 @@ const CombatSimView = () => {
                         }}
                         title={t('combatSim.fit')}
                     >
-                        <FitScreen
-                            className="fit-icon"
+                        <Box
                             sx={{
-                                m: '6px',
-                                fontSize: '24px',
-                                lineHeight: '24px',
-                                color: colors.neons.blue.default,
+                                fontSize: isMeasuring ? '30px' : '20px',
+                                color: isMeasuring ? colors.neons.pink.default : colors.neons.blue.default,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    fontSize: '30px',
+                                },
                             }}
-                        />
+                        >
+                            🗺️
+                        </Box>
                     </Box>
                     {/* Measure button */}
                     <Box
@@ -1629,18 +1780,25 @@ const CombatSimView = () => {
                                     setIsWallMode(false)
                                     setIsErasingWalls(false)
                                     setWallColorAnchor(null)
+                                    setBlastDrawMode(null)
                                 }
                                 return nv
                             })
                         }
                         sx={{
                             position: 'absolute',
-                            top: 136,
+                            top: 52,
                             left: 10,
                             width: '36px',
                             height: '36px',
-                            display: 'block',
-                            backgroundColor: readerMode ? 'rgba(0, 0, 40, 0.7)' : 'rgba(0, 0, 40, 0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isMeasuring
+                                ? 'rgba(255, 0, 255, 0.3)'
+                                : readerMode
+                                ? 'rgba(0, 0, 40, 0.7)'
+                                : 'rgba(0, 0, 40, 0.6)',
                             borderRadius: '6px',
                             cursor: 'pointer',
                             border: `1px solid ${
@@ -1658,15 +1816,18 @@ const CombatSimView = () => {
                         }}
                         title={t('combatSim.measure')}
                     >
-                        <Straighten
-                            className="measure-icon"
+                        <Box
                             sx={{
-                                m: '6px',
-                                fontSize: '24px',
-                                lineHeight: '24px',
+                                fontSize: isMeasuring ? '30px' : '20px',
                                 color: isMeasuring ? colors.neons.pink.default : colors.neons.blue.default,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    fontSize: '30px',
+                                },
                             }}
-                        />
+                        >
+                            📏
+                        </Box>
                     </Box>
                     {/* Wall mode button */}
                     <Box
@@ -1675,6 +1836,7 @@ const CombatSimView = () => {
                                 const nv = !v
                                 if (nv) {
                                     setIsMeasuring(false)
+                                    setBlastDrawMode(null)
                                 }
                                 if (!nv) {
                                     setIsErasingWalls(false)
@@ -1689,8 +1851,14 @@ const CombatSimView = () => {
                             left: 10,
                             width: '36px',
                             height: '36px',
-                            display: 'block',
-                            backgroundColor: readerMode ? 'rgba(0, 0, 40, 0.7)' : 'rgba(0, 0, 40, 0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isWallMode
+                                ? 'rgba(255, 0, 255, 0.3)'
+                                : readerMode
+                                ? 'rgba(0, 0, 40, 0.7)'
+                                : 'rgba(0, 0, 40, 0.6)',
                             borderRadius: '6px',
                             cursor: 'pointer',
                             border: `1px solid ${
@@ -1708,15 +1876,194 @@ const CombatSimView = () => {
                         }}
                         title={t('combatSim.wallMode')}
                     >
-                        <Construction
-                            className="wall-mode-icon"
+                        <Box
                             sx={{
-                                m: '6px',
-                                fontSize: '24px',
-                                lineHeight: '24px',
-                                color: isWallMode ? colors.neons.green.default : colors.neons.blue.default,
+                                fontSize: isWallMode ? '30px' : '20px',
+                                color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    fontSize: '30px',
+                                },
                             }}
-                        />
+                        >
+                            🧱
+                        </Box>
+                    </Box>
+                    {/* Token Panel button */}
+                    <Box
+                        onClick={() => setIsTokenPanelOpen((v) => !v)}
+                        sx={{
+                            position: 'absolute',
+                            top: 136,
+                            left: 10,
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isTokenPanelOpen
+                                ? 'rgba(255, 0, 255, 0.3)'
+                                : readerMode
+                                ? 'rgba(0, 0, 40, 0.7)'
+                                : 'rgba(0, 0, 40, 0.6)',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            border: `1px solid ${
+                                isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default
+                            }60`,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                border: `1px solid ${colors.neons.pink.default}60`,
+                                boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                            },
+                        }}
+                        title={t('combatSim.tokensPanel')}
+                    >
+                        <Box
+                            sx={{
+                                fontSize: isTokenPanelOpen ? '30px' : '20px',
+                                color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    fontSize: '30px',
+                                },
+                            }}
+                        >
+                            👨‍🎤
+                        </Box>
+                    </Box>
+                    {/* Initiative Panel button */}
+                    <Box
+                        onClick={() => setIsInitiativePanelOpen((v) => !v)}
+                        sx={{
+                            position: 'absolute',
+                            top: 178,
+                            left: 10,
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isInitiativePanelOpen
+                                ? 'rgba(255, 0, 255, 0.3)'
+                                : readerMode
+                                ? 'rgba(0, 0, 40, 0.7)'
+                                : 'rgba(0, 0, 40, 0.6)',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            border: `1px solid ${
+                                isInitiativePanelOpen ? colors.neons.pink.default : colors.neons.blue.default
+                            }60`,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                border: `1px solid ${colors.neons.pink.default}60`,
+                                boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                            },
+                        }}
+                        title={t('combatSim.initiativePanel')}
+                    >
+                        <Box
+                            sx={{
+                                fontSize: isInitiativePanelOpen ? '30px' : '20px',
+                                color: isInitiativePanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    fontSize: '30px',
+                                },
+                            }}
+                        >
+                            ⚔️
+                        </Box>
+                    </Box>
+                    {/* Roll History button */}
+                    <Box
+                        onClick={() => setIsRollHistoryOpen((v) => !v)}
+                        sx={{
+                            position: 'absolute',
+                            top: 220,
+                            left: 10,
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isRollHistoryOpen
+                                ? 'rgba(255, 0, 255, 0.3)'
+                                : readerMode
+                                ? 'rgba(0, 0, 40, 0.7)'
+                                : 'rgba(0, 0, 40, 0.6)',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            border: `1px solid ${
+                                isRollHistoryOpen ? colors.neons.pink.default : colors.neons.blue.default
+                            }60`,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                border: `1px solid ${colors.neons.pink.default}60`,
+                                boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                            },
+                        }}
+                        title={t('combatSim.rollHistory')}
+                    >
+                        <Box
+                            sx={{
+                                fontSize: isRollHistoryOpen ? '30px' : '20px',
+                                color: isRollHistoryOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    fontSize: '30px',
+                                },
+                            }}
+                        >
+                            🎲
+                        </Box>
+                    </Box>
+                    {/* Blasts button */}
+                    <Box
+                        onClick={() => setIsBlastPanelOpen((v) => !v)}
+                        sx={{
+                            position: 'absolute',
+                            top: 262,
+                            left: 10,
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isBlastPanelOpen
+                                ? 'rgba(255, 0, 255, 0.3)'
+                                : readerMode
+                                ? 'rgba(0, 0, 40, 0.7)'
+                                : 'rgba(0, 0, 40, 0.6)',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            border: `1px solid ${
+                                isBlastPanelOpen ? colors.neons.pink.default : colors.neons.blue.default
+                            }60`,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                border: `1px solid ${colors.neons.pink.default}60`,
+                                boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                            },
+                        }}
+                        title="Blasts"
+                    >
+                        <Box
+                            sx={{
+                                fontSize: isBlastPanelOpen ? '30px' : '20px',
+                                color: isBlastPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    fontSize: '30px',
+                                },
+                            }}
+                        >
+                            🔥
+                        </Box>
                     </Box>
                     {/* Eraser & Wall color (visible in wall mode) */}
                     {isWallMode && (
@@ -1728,6 +2075,7 @@ const CombatSimView = () => {
                                         if (nv) {
                                             setIsWallMode(true)
                                             setIsMeasuring(false)
+                                            setBlastDrawMode(null)
                                         }
                                         return nv
                                     })
@@ -1738,7 +2086,9 @@ const CombatSimView = () => {
                                     left: 54,
                                     width: '36px',
                                     height: '36px',
-                                    display: 'block',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     backgroundColor: readerMode ? 'rgba(0, 0, 40, 0.7)' : 'rgba(0, 0, 40, 0.6)',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
@@ -1751,19 +2101,22 @@ const CombatSimView = () => {
                                         border: `1px solid ${colors.neons.red.default}60`,
                                         boxShadow: `0 0 8px ${colors.neons.red.default}80`,
                                     },
-                                    '&:hover .wall-eraser-mode-icon': { color: colors.neons.red.default },
                                 }}
                                 title={t('combatSim.eraser')}
                             >
-                                <Carpenter
+                                <Box
                                     className="wall-eraser-mode-icon"
                                     sx={{
-                                        m: '6px',
-                                        fontSize: '24px',
-                                        lineHeight: '24px',
+                                        fontSize: isErasingWalls ? '30px' : '20px',
                                         color: isErasingWalls ? colors.neons.red.default : colors.neons.blue.default,
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            fontSize: '30px',
+                                        },
                                     }}
-                                />
+                                >
+                                    ♻️
+                                </Box>
                             </Box>
                             <Box
                                 onClick={(e) => {
@@ -1810,7 +2163,7 @@ const CombatSimView = () => {
                             spacing={1}
                             sx={{
                                 position: 'absolute',
-                                top: 52,
+                                top: 10,
                                 right: 10,
                             }}
                         >

@@ -3,9 +3,7 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
-    FormControl,
     Grid,
-    InputLabel,
     MenuItem,
     Select,
     SelectChangeEvent,
@@ -17,8 +15,10 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import { Character, FixerJob, Maybe } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
+import CyberpunkFormControl from '../../../CyberpunkFormControl'
 import ImageField from '../ImageField'
 
 export type CardCharacterProps = {
@@ -26,8 +26,6 @@ export type CardCharacterProps = {
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
     toggleFullscreenImage: (image: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     character: Character & {
         chain: Maybe<Character>
@@ -37,17 +35,9 @@ export type CardCharacterProps = {
 }
 
 const CardCharacter = (props: CardCharacterProps) => {
-    const {
-        editedTarget,
-        textFieldOutlinedStyle,
-        handleChange,
-        toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
-        selectStyle,
-        character,
-    } = props
+    const { editedTarget, textFieldOutlinedStyle, handleChange, toggleFullscreenImage, selectStyle, character } = props
     const { t } = useTranslation()
+    const { readerMode } = useUserPreferences()
     const { characters } = useData()
     const [selectedCharacter, setSelectedCharacter] = useState<Character>(() => {
         // Get the character from chainStarter based on ID or direct reference
@@ -136,10 +126,12 @@ const CardCharacter = (props: CardCharacterProps) => {
             </AccordionSummary>
             <AccordionDetails>
                 {/* Character selection */}
-                <FormControl fullWidth variant="outlined" sx={{ ...formControlStyle, mb: 2 }}>
-                    <InputLabel id="character-label" sx={inputLabelStyle}>
-                        {t('characters.characterSelector')}
-                    </InputLabel>
+                <CyberpunkFormControl
+                    readerMode={readerMode}
+                    label={t('characters.characterSelector')}
+                    labelId="character-label"
+                    sx={{ mb: 2 }}
+                >
                     <Select
                         labelId="character-label"
                         value={selectedCharacter?.ID}
@@ -152,7 +144,7 @@ const CardCharacter = (props: CardCharacterProps) => {
                             </MenuItem>
                         ))}
                     </Select>
-                </FormControl>
+                </CyberpunkFormControl>
                 <Grid container size={{ xs: 12 }} spacing={2}>
                     <Grid container size={{ xs: 8 }}>
                         <Stack spacing={2} sx={{ width: '100%' }}>
@@ -187,25 +179,23 @@ const CardCharacter = (props: CardCharacterProps) => {
                     </Grid>
                     {/* Character Image */}
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel
-                                id="character-image-label"
-                                sx={{
-                                    ...inputLabelStyle,
-                                    top: -25,
-                                    lineHeight: '1 !important',
-                                    py: '0 !important',
-                                }}
-                            >
-                                <Typography variant="caption">{t('fixerJobs.labels.character.image')}</Typography>
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('fixerJobs.labels.character.image')}
+                            labelId="character-image-label"
+                            labelSx={{
+                                top: -25,
+                                lineHeight: '1 !important',
+                                py: '0 !important',
+                            }}
+                        >
                             <ImageField
                                 image={selectedCharacter.image}
                                 downloadName={selectedCharacter.name}
                                 toggleFullscreenImage={toggleFullscreenImage}
                                 disabled
                             />
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Grid>
                 </Grid>
             </AccordionDetails>

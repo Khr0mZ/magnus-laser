@@ -1,4 +1,4 @@
-import { Box, FormControl, Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
+import { Box, Grid, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
 import { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
@@ -18,6 +18,7 @@ import {
 import { handleRegenerateImage } from '../../../utils/apiUtils'
 import { ModuleTypes } from '../../../utils/constants'
 import { getGangColorValue } from '../../../utils/functions'
+import CyberpunkFormControl from '../../CyberpunkFormControl'
 import ImageField from './ImageField'
 
 export type FormGangProps = {
@@ -33,8 +34,6 @@ export type FormGangProps = {
     handleImageUploadClick: () => void
     openDeleteImageDialog: () => void
     toggleFullscreenImage: (image: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     hiddenFileInput: React.JSX.Element
 }
@@ -53,8 +52,6 @@ export const FormGang = (props: FormGangProps) => {
         handleImageUploadClick,
         openDeleteImageDialog,
         toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
         selectStyle,
         hiddenFileInput,
     } = props
@@ -91,10 +88,11 @@ export const FormGang = (props: FormGangProps) => {
                 <Stack spacing={2} sx={{ width: '100%' }}>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Type */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel id="type-label" sx={inputLabelStyle}>
-                                {t('gangs.labels.type')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('gangs.labels.type')}
+                            labelId="type-label"
+                        >
                             <Select
                                 labelId="type-label"
                                 value={editedTarget.type || ''}
@@ -108,10 +106,9 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Cyberware Quality */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('gangs.labels.cyberwareQuality')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('gangs.labels.cyberwareQuality')}>
                             <Select
                                 value={editedTarget.cyberwareQuality || ''}
                                 onChange={(e) => handleChange('cyberwareQuality', e.target.value)}
@@ -124,10 +121,9 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Sin */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('gangs.labels.sin')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('gangs.labels.sin')}>
                             <Select
                                 value={editedTarget.sin || ''}
                                 onChange={(e) => handleChange('sin', e.target.value)}
@@ -140,7 +136,7 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Skill */}
@@ -211,8 +207,7 @@ export const FormGang = (props: FormGangProps) => {
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Color */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('gangs.labels.color')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('gangs.labels.color')}>
                             <Select
                                 labelId="color-label"
                                 value={editedTarget.color || ''}
@@ -238,12 +233,12 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Known For Part 1 */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>
-                                {t('gangs.labels.knownForPart1', 'Known For Part 1')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('gangs.labels.knownForPart1', 'Known For Part 1')}
+                        >
                             <Select
                                 value={editedTarget.knownFor?.knownForPart1 || ''}
                                 onChange={(e) =>
@@ -261,12 +256,12 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Known For Part 2 */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>
-                                {t('gangs.labels.knownForPart2', 'Known For Part 2')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('gangs.labels.knownForPart2', 'Known For Part 2')}
+                        >
                             <Select
                                 value={editedTarget.knownFor?.knownForPart2 || ''}
                                 onChange={(e) =>
@@ -284,12 +279,11 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Status */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('gangs.labels.status')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('gangs.labels.status')}>
                             <Select
                                 value={editedTarget.status || ''}
                                 onChange={(e) => handleChange('status', e.target.value)}
@@ -302,11 +296,10 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
 
                         {/* Flaw */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('gangs.labels.flaw')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('gangs.labels.flaw')}>
                             <Select
                                 value={editedTarget.flaw || ''}
                                 onChange={(e) => handleChange('flaw', e.target.value)}
@@ -319,12 +312,11 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Current Attitude */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('gangs.labels.currentAttitude')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('gangs.labels.currentAttitude')}>
                             <Select
                                 value={editedTarget.currentAttitude || ''}
                                 onChange={(e) => handleChange('currentAttitude', e.target.value)}
@@ -337,10 +329,12 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* News The Leader Is Receiving */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('gangs.labels.newsTheLeaderIsReceiving')}</InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('gangs.labels.newsTheLeaderIsReceiving')}
+                        >
                             <Select
                                 value={editedTarget.newsTheLeaderIsReceiving || ''}
                                 onChange={(e) => handleChange('newsTheLeaderIsReceiving', e.target.value)}
@@ -353,7 +347,7 @@ export const FormGang = (props: FormGangProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                 </Stack>
             </Grid>

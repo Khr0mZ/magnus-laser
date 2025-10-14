@@ -1,4 +1,4 @@
-import { FormControl, Grid, InputLabel, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
+import { Grid, MenuItem, Select, Stack, SxProps, TextField } from '@mui/material'
 import { Dispatch, SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
@@ -13,6 +13,7 @@ import {
 } from '../../../graphql/types'
 import { handleRegenerateImage } from '../../../utils/apiUtils'
 import { ModuleTypes } from '../../../utils/constants'
+import CyberpunkFormControl from '../../CyberpunkFormControl'
 import ImageField from './ImageField'
 
 export type FormBuildingProps = {
@@ -28,8 +29,6 @@ export type FormBuildingProps = {
     handleImageUploadClick: () => void
     openDeleteImageDialog: () => void
     toggleFullscreenImage: (image: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     hiddenFileInput: React.JSX.Element
 }
@@ -48,8 +47,6 @@ export const FormBuilding = (props: FormBuildingProps) => {
         handleImageUploadClick,
         openDeleteImageDialog,
         toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
         selectStyle,
         hiddenFileInput,
     } = props
@@ -85,10 +82,11 @@ export const FormBuilding = (props: FormBuildingProps) => {
                 <Stack spacing={2} sx={{ width: '100%' }}>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Type */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel id="type-label" sx={inputLabelStyle}>
-                                {t('buildings.labels.type')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('buildings.labels.type')}
+                            labelId="type-label"
+                        >
                             <Select
                                 labelId="type-label"
                                 value={editedTarget.type || ''}
@@ -102,10 +100,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* BuildingStyle */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.style')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.style')}>
                             <Select
                                 value={editedTarget.style || ''}
                                 onChange={(e) => handleChange('style', e.target.value)}
@@ -118,12 +115,11 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Is Abandoned */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.isAbandoned')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.isAbandoned')}>
                             <Select
                                 value={editedTarget.isAbandoned ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('isAbandoned', e.target.value === 'yes')}
@@ -133,10 +129,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Elevators */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.elevators')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.elevators')}>
                             <Select
                                 value={editedTarget.elevators ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('elevators', e.target.value === 'yes')}
@@ -146,10 +141,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Parking */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.parking')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.parking')}>
                             <Select
                                 value={editedTarget.parking ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('parking', e.target.value === 'yes')}
@@ -159,10 +153,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Gatehouse / Front Desk */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.gatehouseFrontDesk')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.gatehouseFrontDesk')}>
                             <Select
                                 value={editedTarget.gatehouseFrontDesk ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('gatehouseFrontDesk', e.target.value === 'yes')}
@@ -172,12 +165,11 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Emergency Exit */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.emergencyExit')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.emergencyExit')}>
                             <Select
                                 value={editedTarget.emergencyExit ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('emergencyExit', e.target.value === 'yes')}
@@ -187,10 +179,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Backup Lights */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.backupLights')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.backupLights')}>
                             <Select
                                 value={editedTarget.backupLights ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('backupLights', e.target.value === 'yes')}
@@ -200,10 +191,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Landing Pad */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.landingPad')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.landingPad')}>
                             <Select
                                 value={editedTarget.landingPad ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('landingPad', e.target.value === 'yes')}
@@ -213,10 +203,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* BuildingSecret / Alt Entrance */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.secretOrAltEntrance')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.secretOrAltEntrance')}>
                             <Select
                                 value={editedTarget.secretOrAltEntrance ? 'yes' : 'no'}
                                 onChange={(e) => handleChange('secretOrAltEntrance', e.target.value === 'yes')}
@@ -226,12 +215,11 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 <MenuItem value="yes">{t('common.yes', 'Yes')}</MenuItem>
                                 <MenuItem value="no">{t('common.no', 'No')}</MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* Security Personnel */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.securityPersonnel')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.securityPersonnel')}>
                             <Select
                                 value={editedTarget.securityPersonnel || ''}
                                 onChange={(e) => handleChange('securityPersonnel', e.target.value)}
@@ -244,10 +232,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* BuildingOwnership */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.ownership')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.ownership')}>
                             <Select
                                 value={editedTarget.ownership || ''}
                                 onChange={(e) => handleChange('ownership', e.target.value)}
@@ -260,12 +247,11 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                     <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
                         {/* BuildingEvent */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.event')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.event')}>
                             <Select
                                 value={editedTarget.event || ''}
                                 onChange={(e) => handleChange('event', e.target.value)}
@@ -278,10 +264,9 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* BuildingSecret */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel sx={inputLabelStyle}>{t('buildings.labels.secret')}</InputLabel>
+                        <CyberpunkFormControl readerMode={readerMode} label={t('buildings.labels.secret')}>
                             <Select
                                 value={editedTarget.secret || ''}
                                 onChange={(e) => handleChange('secret', e.target.value)}
@@ -294,7 +279,7 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                 </Stack>
             </Grid>

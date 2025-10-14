@@ -3,9 +3,7 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
-    FormControl,
     Grid,
-    InputLabel,
     MenuItem,
     Select,
     SelectChangeEvent,
@@ -17,8 +15,10 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import { Character, FixerJob, Gang, Item, Maybe, PlotGang, PlotGangComplicationType } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
+import CyberpunkFormControl from '../../../CyberpunkFormControl'
 import ImageField from '../ImageField'
 import CardCharacter from './CardCharacter'
 import CardItem from './CardItem'
@@ -28,8 +28,6 @@ export type CardGangProps = {
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
     toggleFullscreenImage: (targetField: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     gang: {
         main: boolean
@@ -53,17 +51,9 @@ export type CardGangProps = {
 }
 
 const CardGang = (props: CardGangProps) => {
-    const {
-        editedTarget,
-        textFieldOutlinedStyle,
-        handleChange,
-        toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
-        selectStyle,
-        gang,
-    } = props
+    const { editedTarget, textFieldOutlinedStyle, handleChange, toggleFullscreenImage, selectStyle, gang } = props
     const { t } = useTranslation()
+    const { readerMode } = useUserPreferences()
     const { gangs } = useData()
     const [selectedGang, setSelectedGang] = useState<Gang>(() => {
         // Get the gang from chainStarter based on ID or direct reference
@@ -179,10 +169,12 @@ const CardGang = (props: CardGangProps) => {
             </AccordionSummary>
             <AccordionDetails>
                 {/* Gang selection */}
-                <FormControl fullWidth variant="outlined" sx={{ ...formControlStyle, mb: 2 }}>
-                    <InputLabel id="gang-label" sx={inputLabelStyle}>
-                        {t('gangs.gangSelector')}
-                    </InputLabel>
+                <CyberpunkFormControl
+                    readerMode={readerMode}
+                    label={t('gangs.gangSelector')}
+                    labelId="gang-label"
+                    sx={{ mb: 2 }}
+                >
                     <Select
                         labelId="gang-label"
                         value={selectedGang?.ID}
@@ -195,7 +187,7 @@ const CardGang = (props: CardGangProps) => {
                             </MenuItem>
                         ))}
                     </Select>
-                </FormControl>
+                </CyberpunkFormControl>
                 {/* Gang Basic Info */}
                 <Grid container size={{ xs: 12 }} spacing={2}>
                     {/* Name */}
@@ -355,20 +347,16 @@ const CardGang = (props: CardGangProps) => {
                     </Grid>
                     {/* Gang Image */}
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel
-                                id="gang-image-label"
-                                sx={{
-                                    ...inputLabelStyle,
-                                    top: -25,
-                                    lineHeight: '1 !important',
-                                    py: '0 !important',
-                                }}
-                            >
-                                <Typography variant="caption" sx={{ mt: -20 }}>
-                                    {t('gangs.labels.image')}
-                                </Typography>
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('gangs.labels.image')}
+                            labelId="gang-image-label"
+                            labelSx={{
+                                top: -25,
+                                lineHeight: '1 !important',
+                                py: '0 !important',
+                            }}
+                        >
                             <ImageField
                                 image={selectedGang?.image}
                                 downloadName={selectedGang?.name}
@@ -380,7 +368,7 @@ const CardGang = (props: CardGangProps) => {
                                 isGeneratingImage={false}
                                 disabled
                             />
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Grid>
                 </Grid>
                 {/* Description */}
@@ -411,10 +399,11 @@ const CardGang = (props: CardGangProps) => {
                     </AccordionSummary>
                     <AccordionDetails>
                         <Grid size={{ xs: 12 }}>
-                            <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                                <InputLabel id="gang-complication-label" sx={inputLabelStyle}>
-                                    {t('fixerJobs.labels.complicationType')}
-                                </InputLabel>
+                            <CyberpunkFormControl
+                                readerMode={readerMode}
+                                label={t('fixerJobs.labels.complicationType')}
+                                labelId="gang-complication-label"
+                            >
                                 <Select
                                     labelId="gang-complication-label"
                                     value={
@@ -429,15 +418,13 @@ const CardGang = (props: CardGangProps) => {
                                         </MenuItem>
                                     ))}
                                 </Select>
-                            </FormControl>
+                            </CyberpunkFormControl>
                         </Grid>
 
                         {gang.character.check && (
                             <CardCharacter
                                 textFieldOutlinedStyle={textFieldOutlinedStyle}
                                 toggleFullscreenImage={toggleFullscreenImage}
-                                formControlStyle={formControlStyle}
-                                inputLabelStyle={inputLabelStyle}
                                 selectStyle={selectStyle}
                                 character={{
                                     ...gang.character,
@@ -452,8 +439,6 @@ const CardGang = (props: CardGangProps) => {
                             <CardItem
                                 textFieldOutlinedStyle={textFieldOutlinedStyle}
                                 toggleFullscreenImage={toggleFullscreenImage}
-                                formControlStyle={formControlStyle}
-                                inputLabelStyle={inputLabelStyle}
                                 selectStyle={selectStyle}
                                 item={{
                                     ...gang.item,

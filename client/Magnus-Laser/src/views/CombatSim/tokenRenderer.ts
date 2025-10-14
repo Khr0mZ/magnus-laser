@@ -59,26 +59,34 @@ export function renderTokens(
     overrideX?: number,
     overrideY?: number
 ) {
-    if (!layer) return
+    if (!layer || !layer.parent) return
 
     // Clear the graphics layer (for colored circles)
     layer.clear()
 
     // Clear sprite cache from previous render
     for (const sprite of spriteCache.values()) {
-        if (sprite.parent) {
-            sprite.parent.removeChild(sprite)
+        try {
+            if (sprite.parent) {
+                sprite.parent.removeChild(sprite)
+            }
+            sprite.destroy()
+        } catch (error) {
+            console.warn('Error destroying sprite:', error)
         }
-        sprite.destroy()
     }
     spriteCache.clear()
 
     // Clear label cache from previous render
     for (const label of labelCache.values()) {
-        if (label.parent) {
-            label.parent.removeChild(label)
+        try {
+            if (label.parent) {
+                label.parent.removeChild(label)
+            }
+            label.destroy()
+        } catch (error) {
+            console.warn('Error destroying label:', error)
         }
-        label.destroy()
     }
     labelCache.clear()
 
@@ -153,26 +161,34 @@ export function renderTokensWithPending(
     liveX?: number,
     liveY?: number
 ) {
-    if (!layer) return
+    if (!layer || !layer.parent) return
 
     // Clear the graphics layer (for colored circles)
     layer.clear()
 
     // Clear sprite cache from previous render
     for (const sprite of spriteCache.values()) {
-        if (sprite.parent) {
-            sprite.parent.removeChild(sprite)
+        try {
+            if (sprite.parent) {
+                sprite.parent.removeChild(sprite)
+            }
+            sprite.destroy()
+        } catch (error) {
+            console.warn('Error destroying sprite:', error)
         }
-        sprite.destroy()
     }
     spriteCache.clear()
 
     // Clear label cache from previous render
     for (const label of labelCache.values()) {
-        if (label.parent) {
-            label.parent.removeChild(label)
+        try {
+            if (label.parent) {
+                label.parent.removeChild(label)
+            }
+            label.destroy()
+        } catch (error) {
+            console.warn('Error destroying label:', error)
         }
-        label.destroy()
     }
     labelCache.clear()
 

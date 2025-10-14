@@ -75,6 +75,27 @@ export type Wall = {
     alpha?: number
 }
 
+export type BlastType = 'grenade' | 'circle' | 'square' | 'cone'
+
+export type Blast = {
+    id: string
+    mapId: string
+    type: BlastType
+    name?: string // optional name (e.g., "Grenade 1")
+    x: number // center or start point
+    y: number // center or start point
+    // For grenade: fixed 5x5 grid cells (10m x 10m)
+    // For circle: radius in grid cells
+    // For square: width/height in grid cells
+    // For cone: endpoint x2, y2
+    size?: number // radius for circle, width for square, length for cone
+    sizeY?: number // height for rectangle (square type only)
+    x2?: number // cone endpoint
+    y2?: number // cone endpoint
+    alpha?: number // opacity (default 0.7)
+    locked?: boolean // if true, blast only responds to right-click, can't be moved
+}
+
 export interface RollHistoryEntry {
     id: string
     timestamp: number

@@ -1,4 +1,4 @@
-import { Box, Button, FormControlLabel, Typography } from '@mui/material'
+import { Box, Button } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
@@ -7,6 +7,7 @@ import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { getModuleIcon } from '../../utils/functions.tsx'
 import { flicker, glitch, neonColorCycle, severeGlitch } from '../common/Animations.tsx'
+import CyberpunkFormControlLabel from '../CyberpunkFormControlLabel.tsx'
 
 interface DrawerButtonProps {
     module: ModuleTypes
@@ -140,7 +141,9 @@ const DrawerButton = ({ module }: DrawerButtonProps) => {
                       }),
             }}
         >
-            <FormControlLabel
+            <CyberpunkFormControlLabel
+                readerMode={readerMode}
+                noGap={true}
                 control={
                     <Box
                         className="icon-glitch"
@@ -182,54 +185,7 @@ const DrawerButton = ({ module }: DrawerButtonProps) => {
                         {getModuleIcon(module, true)}
                     </Box>
                 }
-                label={
-                    <Typography
-                        variant={'caption'}
-                        sx={{
-                            color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
-                            position: 'relative',
-                            transition: 'all 0.3s',
-                            textTransform: 'uppercase',
-                            ...(readerMode
-                                ? {
-                                      ...(active && {
-                                          fontWeight: 900,
-                                          color: colors.neons.blue.default,
-                                      }),
-                                  }
-                                : {
-                                      fontWeight: active ? 800 : 400,
-                                      letterSpacing: active ? '1px' : 'inherit',
-                                      ...(active &&
-                                          animationsEnabled && {
-                                              color: colors.neons.cyan.default,
-                                              textShadow: `0 0 8px ${colors.neons.cyan.default}`,
-                                              '&::before': {
-                                                  content: 'attr(data-text)',
-                                                  position: 'absolute',
-                                                  left: -2,
-                                                  top: 0,
-                                                  color: colors.neons.pink.default,
-                                                  opacity: 0.8,
-                                                  animation: `${glitch} 2s ease-out infinite alternate-reverse`,
-                                              },
-                                              '&::after': {
-                                                  content: 'attr(data-text)',
-                                                  position: 'absolute',
-                                                  left: 2,
-                                                  top: 0,
-                                                  color: colors.neons.green.default,
-                                                  opacity: 0.8,
-                                                  animation: `${glitch} 3s ease-in infinite alternate`,
-                                              },
-                                          }),
-                                  }),
-                        }}
-                        data-text={t(`modules.${module}`)}
-                    >
-                        {t(`modules.${module}`)}
-                    </Typography>
-                }
+                label={t(`modules.${module}`)}
                 labelPlacement={'bottom'}
             />
         </Button>

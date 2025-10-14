@@ -3,9 +3,7 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
-    FormControl,
     Grid,
-    InputLabel,
     MenuItem,
     Select,
     SelectChangeEvent,
@@ -17,16 +15,16 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import { FixerJob, Item, Maybe } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
+import CyberpunkFormControl from '../../../CyberpunkFormControl'
 import ImageField from '../ImageField'
 export type CardItemProps = {
     editedTarget: FixerJob
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
     toggleFullscreenImage: (image: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     item: Item & {
         chain: Maybe<Item>
@@ -36,17 +34,9 @@ export type CardItemProps = {
 }
 
 const CardItem = (props: CardItemProps) => {
-    const {
-        editedTarget,
-        textFieldOutlinedStyle,
-        toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
-        selectStyle,
-        item,
-        handleChange,
-    } = props
+    const { editedTarget, textFieldOutlinedStyle, toggleFullscreenImage, selectStyle, item, handleChange } = props
     const { t } = useTranslation()
+    const { readerMode } = useUserPreferences()
     const { items } = useData()
     const [selectedItem, setSelectedItem] = useState<Item>(() => {
         // Get the character from chainStarter based on ID or direct reference
@@ -135,10 +125,12 @@ const CardItem = (props: CardItemProps) => {
             </AccordionSummary>
             <AccordionDetails>
                 {/* Item selection */}
-                <FormControl fullWidth variant="outlined" sx={{ ...formControlStyle, mb: 2 }}>
-                    <InputLabel id="item-label" sx={inputLabelStyle}>
-                        {t('items.itemSelector')}
-                    </InputLabel>
+                <CyberpunkFormControl
+                    readerMode={readerMode}
+                    label={t('items.itemSelector')}
+                    labelId="item-label"
+                    sx={{ mb: 2 }}
+                >
                     <Select
                         labelId="item-label"
                         value={selectedItem?.ID}
@@ -151,7 +143,7 @@ const CardItem = (props: CardItemProps) => {
                             </MenuItem>
                         ))}
                     </Select>
-                </FormControl>
+                </CyberpunkFormControl>
 
                 <Grid container size={{ xs: 12 }} spacing={2}>
                     <Grid container size={{ xs: 8 }}>
@@ -189,25 +181,23 @@ const CardItem = (props: CardItemProps) => {
 
                     {/* Item Image */}
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel
-                                id="item-image-label"
-                                sx={{
-                                    ...inputLabelStyle,
-                                    top: -25,
-                                    lineHeight: '1 !important',
-                                    py: '0 !important',
-                                }}
-                            >
-                                <Typography variant="caption">{t('fixerJobs.labels.item.image')}</Typography>
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('fixerJobs.labels.item.image')}
+                            labelId="item-image-label"
+                            labelSx={{
+                                top: -25,
+                                lineHeight: '1 !important',
+                                py: '0 !important',
+                            }}
+                        >
                             <ImageField
                                 image={selectedItem.image}
                                 downloadName={selectedItem.name}
                                 toggleFullscreenImage={toggleFullscreenImage}
                                 disabled
                             />
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Grid>
                 </Grid>
             </AccordionDetails>

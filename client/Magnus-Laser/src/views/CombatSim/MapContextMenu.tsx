@@ -13,9 +13,12 @@ interface MapContextMenuProps {
     anchorEl: HTMLElement | null
     onDeleteAllTokens: () => void
     onDeleteAllWalls: () => void
+    onDeleteAllBlasts: () => void
     onCutAllTokens: () => void
     onPasteToken: () => void
-    canPaste: boolean
+    onPasteBlast: () => void
+    canPasteToken: boolean
+    canPasteBlast: boolean
     onClose: () => void
 }
 
@@ -23,9 +26,12 @@ export const MapContextMenu: React.FC<MapContextMenuProps> = ({
     anchorEl,
     onDeleteAllTokens,
     onDeleteAllWalls,
+    onDeleteAllBlasts,
     onCutAllTokens,
     onPasteToken,
-    canPaste,
+    onPasteBlast,
+    canPasteToken,
+    canPasteBlast,
     onClose,
 }) => {
     const { t } = useTranslation()
@@ -46,6 +52,16 @@ export const MapContextMenu: React.FC<MapContextMenuProps> = ({
 
     const handlePasteToken = () => {
         onPasteToken()
+        onClose()
+    }
+
+    const handlePasteBlast = () => {
+        onPasteBlast()
+        onClose()
+    }
+
+    const handleDeleteAllBlasts = () => {
+        onDeleteAllBlasts()
         onClose()
     }
 
@@ -77,12 +93,20 @@ export const MapContextMenu: React.FC<MapContextMenuProps> = ({
                 },
             }}
         >
-            <MenuItem onClick={handlePasteToken} disabled={!canPaste}>
-                <ListItemIcon sx={{ color: canPaste ? '#fff' : '#666' }}>
+            <MenuItem onClick={handlePasteToken} disabled={!canPasteToken}>
+                <ListItemIcon sx={{ color: canPasteToken ? '#fff' : '#666' }}>
                     <ContentPaste fontSize="small" />
                 </ListItemIcon>
-                <ListItemText sx={{ color: canPaste ? '#fff' : '#666' }}>
+                <ListItemText sx={{ color: canPasteToken ? '#fff' : '#666' }}>
                     {t('combatSim.mapContextMenu.pasteToken')}
+                </ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handlePasteBlast} disabled={!canPasteBlast}>
+                <ListItemIcon sx={{ color: canPasteBlast ? '#fff' : '#666' }}>
+                    <ContentPaste fontSize="small" />
+                </ListItemIcon>
+                <ListItemText sx={{ color: canPasteBlast ? '#fff' : '#666' }}>
+                    {t('combatSim.mapContextMenu.pasteBlast')}
                 </ListItemText>
             </MenuItem>
             <MenuItem onClick={handleCutAllTokens}>
@@ -102,6 +126,12 @@ export const MapContextMenu: React.FC<MapContextMenuProps> = ({
                     <Clear fontSize="small" />
                 </ListItemIcon>
                 <ListItemText sx={{ color: '#ff6b6b' }}>{t('combatSim.mapContextMenu.deleteAllWalls')}</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleDeleteAllBlasts}>
+                <ListItemIcon sx={{ color: '#ff6b6b' }}>
+                    <DeleteSweep fontSize="small" />
+                </ListItemIcon>
+                <ListItemText sx={{ color: '#ff6b6b' }}>{t('combatSim.mapContextMenu.deleteAllBlasts')}</ListItemText>
             </MenuItem>
         </Menu>
     )

@@ -4,12 +4,13 @@ import colors from '../utils/colors'
 // Define interface for the custom props
 interface CyberpunkProps {
     readerMode?: boolean
+    noGap?: boolean
 }
 
 // Cyberpunk styled checkbox label
 const CyberpunkFormControlLabel = styled(FormControlLabel, {
-    shouldForwardProp: (prop) => prop !== 'readerMode',
-})<CyberpunkProps>(({ readerMode }) => ({
+    shouldForwardProp: (prop) => prop !== 'readerMode' && prop !== 'noGap',
+})<CyberpunkProps>(({ readerMode, noGap }) => ({
     '.MuiFormControlLabel-label': {
         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
         textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
@@ -25,7 +26,7 @@ const CyberpunkFormControlLabel = styled(FormControlLabel, {
         },
         textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}`,
     },
-    gap: '0.5rem',
+    gap: noGap ? '0' : '0.5rem',
 }))
 
 export default CyberpunkFormControlLabel

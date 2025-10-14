@@ -102,26 +102,6 @@ export const EditDialog = (props: EditDialogProps) => {
         },
     }
 
-    // Reusable FormControl style with hover animations for InputLabels
-    const formControlStyle = {
-        '&:hover .MuiInputLabel-root': {
-            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
-        },
-        '& .MuiInputBase-root.Mui-focused + .MuiInputLabel-root': {
-            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
-        },
-    }
-
-    // InputLabel style
-    const inputLabelStyle = {
-        color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
-        borderRadius: '4px',
-        bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
-        p: 0.5,
-        py: 0.25,
-        border: readerMode ? '1px solid rgba(0, 0, 0, 0.23)' : `1px solid ${colors.neons.cyan.default}`,
-    }
-
     // Reusable TextField styles
     const textFieldOutlinedStyle = {
         '& .MuiOutlinedInput-root': {
@@ -348,8 +328,6 @@ export const EditDialog = (props: EditDialogProps) => {
                                     setIsGeneratingImage={setIsGeneratingImage}
                                     setGangs={setGangs}
                                     setGangToEdit={setGangToEdit}
-                                    formControlStyle={formControlStyle}
-                                    inputLabelStyle={inputLabelStyle}
                                     selectStyle={selectStyle}
                                     hiddenFileInput={hiddenFileInput}
                                     handleChange={handleChange}
@@ -367,8 +345,6 @@ export const EditDialog = (props: EditDialogProps) => {
                                     setIsGeneratingImage={setIsGeneratingImage}
                                     setBuildings={setBuildings}
                                     setBuildingToEdit={setBuildingToEdit}
-                                    formControlStyle={formControlStyle}
-                                    inputLabelStyle={inputLabelStyle}
                                     selectStyle={selectStyle}
                                     hiddenFileInput={hiddenFileInput}
                                     handleChange={handleChange}
@@ -386,8 +362,6 @@ export const EditDialog = (props: EditDialogProps) => {
                                     setIsGeneratingImage={setIsGeneratingImage}
                                     setFixerJobs={setFixerJobs}
                                     setFixerJobToEdit={setFixerJobToEdit}
-                                    formControlStyle={formControlStyle}
-                                    inputLabelStyle={inputLabelStyle}
                                     selectStyle={selectStyle}
                                     hiddenFileInput={hiddenFileInput}
                                     handleChange={handleChange}
@@ -405,8 +379,6 @@ export const EditDialog = (props: EditDialogProps) => {
                                     setIsGeneratingImage={setIsGeneratingImage}
                                     setCharacters={setCharacters}
                                     setCharacterToEdit={setCharacterToEdit}
-                                    formControlStyle={formControlStyle}
-                                    inputLabelStyle={inputLabelStyle}
                                     selectStyle={selectStyle}
                                     hiddenFileInput={hiddenFileInput}
                                     textFieldOutlinedStyle={textFieldOutlinedStyle}
@@ -424,8 +396,6 @@ export const EditDialog = (props: EditDialogProps) => {
                                     setIsGeneratingImage={setIsGeneratingImage}
                                     setItems={setItems}
                                     setItemToEdit={setItemToEdit}
-                                    formControlStyle={formControlStyle}
-                                    inputLabelStyle={inputLabelStyle}
                                     selectStyle={selectStyle}
                                     hiddenFileInput={hiddenFileInput}
                                     textFieldOutlinedStyle={textFieldOutlinedStyle}
@@ -437,8 +407,6 @@ export const EditDialog = (props: EditDialogProps) => {
                             ) : moduleType === ModuleTypes.BOUNTY ? (
                                 <FormBounty
                                     editedTarget={editedTarget as Bounty}
-                                    formControlStyle={formControlStyle}
-                                    inputLabelStyle={inputLabelStyle}
                                     selectStyle={selectStyle}
                                     textFieldOutlinedStyle={textFieldOutlinedStyle}
                                     handleChange={handleChange}

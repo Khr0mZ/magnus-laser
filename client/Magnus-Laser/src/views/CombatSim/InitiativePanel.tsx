@@ -10,8 +10,9 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import Scrollbar from 'smooth-scrollbar'
 import CustomScrollbar from '../../components/CustomScrollbar'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
@@ -66,11 +67,36 @@ const InitiativePanel = ({
 }: InitiativePanelProps) => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
+    const containerRef = useRef<HTMLDivElement>(null)
 
     // Sort tokens by initiative (highest to lowest)
     const sortedTokens = useMemo(() => {
         return [...tokens].sort((a, b) => (initiativeRolls.get(b.id) ?? 0) - (initiativeRolls.get(a.id) ?? 0))
     }, [tokens, initiativeRolls])
+
+    // Scroll to top when round changes
+    useEffect(() => {
+        if (currentRound > 1 && containerRef.current) {
+            // Delay to ensure content is fully rendered
+            const scrollToTop = () => {
+                const scrollbarContainer = containerRef.current?.querySelector(
+                    '.smooth-scrollbar-container'
+                ) as HTMLElement
+                if (scrollbarContainer) {
+                    const scrollbarInstance = Scrollbar.get(scrollbarContainer)
+                    if (scrollbarInstance) {
+                        scrollbarInstance.scrollTo(0, 0, 300) // x, y, duration in ms
+                    }
+                }
+            }
+
+            // Try immediately
+            scrollToTop()
+
+            // And again after a delay to ensure all content is rendered
+            setTimeout(scrollToTop, 50)
+        }
+    }, [currentRound])
 
     const currentIndex = sortedTokens.findIndex((t) => t.id === activeTokenId)
 
@@ -90,6 +116,7 @@ const InitiativePanel = ({
 
     return (
         <Box
+            ref={containerRef}
             sx={{
                 width: isSidePanelOpen ? 260 : 0,
                 flex: '0 0 auto',

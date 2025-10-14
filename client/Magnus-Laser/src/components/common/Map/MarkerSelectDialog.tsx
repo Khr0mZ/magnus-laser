@@ -5,8 +5,6 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    FormControl,
-    InputLabel,
     MenuItem,
     Select,
     Typography,
@@ -18,6 +16,7 @@ import { useState } from 'react'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import { Building, Character, Gang } from '../../../graphql/types'
 import colors from '../../../utils/colors'
+import CyberpunkFormControl from '../../CyberpunkFormControl'
 import { MarkerData } from './CustomMarker'
 
 type MaerkerSelectDialogProps = {
@@ -152,21 +151,7 @@ const MarkerSelectDialog = (props: MaerkerSelectDialogProps) => {
             </DialogTitle>
             <DialogContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                    <FormControl fullWidth>
-                        <InputLabel
-                            sx={{
-                                color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
-                                borderRadius: '4px',
-                                bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
-                                p: 0.5,
-                                py: 0.25,
-                                border: readerMode
-                                    ? '1px solid rgba(0, 0, 0, 0.23)'
-                                    : `1px solid ${colors.neons.cyan.default}`,
-                            }}
-                        >
-                            Marker Type
-                        </InputLabel>
+                    <CyberpunkFormControl readerMode={readerMode} label="Marker Type">
                         <Select
                             value={selectedMarkerType}
                             onChange={(e) => handleMarkerTypeChange(e.target.value as 'building' | 'gang' | 'contact')}
@@ -176,22 +161,8 @@ const MarkerSelectDialog = (props: MaerkerSelectDialogProps) => {
                             <MenuItem value="gang">Gang</MenuItem>
                             <MenuItem value="contact">Contact</MenuItem>
                         </Select>
-                    </FormControl>
-                    <FormControl fullWidth>
-                        <InputLabel
-                            sx={{
-                                color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
-                                borderRadius: '4px',
-                                bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
-                                p: 0.5,
-                                py: 0.25,
-                                border: readerMode
-                                    ? '1px solid rgba(0, 0, 0, 0.23)'
-                                    : `1px solid ${colors.neons.cyan.default}`,
-                            }}
-                        >
-                            {getEntityLabel()}
-                        </InputLabel>
+                    </CyberpunkFormControl>
+                    <CyberpunkFormControl readerMode={readerMode} label={getEntityLabel()}>
                         <Select
                             value={selectedEntity?.ID || ''}
                             onChange={(e) => {
@@ -207,7 +178,7 @@ const MarkerSelectDialog = (props: MaerkerSelectDialogProps) => {
                                 </MenuItem>
                             ))}
                         </Select>
-                    </FormControl>
+                    </CyberpunkFormControl>
                 </Box>
             </DialogContent>
             <DialogActions>

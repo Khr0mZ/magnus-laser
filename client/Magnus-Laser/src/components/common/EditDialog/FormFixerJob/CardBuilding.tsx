@@ -3,9 +3,7 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
-    FormControl,
     Grid,
-    InputLabel,
     MenuItem,
     Select,
     SelectChangeEvent,
@@ -17,6 +15,7 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import {
     Building,
     Character,
@@ -27,6 +26,7 @@ import {
     PlotBuildingComplicationType,
 } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
+import CyberpunkFormControl from '../../../CyberpunkFormControl'
 import ImageField from '../ImageField'
 import CardCharacter from './CardCharacter'
 import CardItem from './CardItem'
@@ -36,8 +36,6 @@ export type CardBuildingProps = {
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
     toggleFullscreenImage: (targetField: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     building: {
         handleBuildingChangeTarget: string
@@ -60,17 +58,9 @@ export type CardBuildingProps = {
 }
 
 export const CardBuilding = (props: CardBuildingProps) => {
-    const {
-        editedTarget,
-        textFieldOutlinedStyle,
-        handleChange,
-        formControlStyle,
-        inputLabelStyle,
-        selectStyle,
-        toggleFullscreenImage,
-        building,
-    } = props
+    const { editedTarget, textFieldOutlinedStyle, handleChange, selectStyle, toggleFullscreenImage, building } = props
     const { t } = useTranslation()
+    const { readerMode } = useUserPreferences()
     const { buildings } = useData()
     const [selectedBuilding, setSelectedBuilding] = useState<Building>(() => {
         // Get the building from chainStarter based on ID or direct reference
@@ -174,10 +164,12 @@ export const CardBuilding = (props: CardBuildingProps) => {
             </AccordionSummary>
             <AccordionDetails>
                 {/* Building selection */}
-                <FormControl fullWidth variant="outlined" sx={{ ...formControlStyle, mb: 2 }}>
-                    <InputLabel id="building-label" sx={inputLabelStyle}>
-                        {t('buildings.buildingSelector')}
-                    </InputLabel>
+                <CyberpunkFormControl
+                    readerMode={readerMode}
+                    label={t('buildings.buildingSelector')}
+                    labelId="building-label"
+                    sx={{ mb: 2 }}
+                >
                     <Select
                         labelId="building-label"
                         value={selectedBuilding?.ID || ''}
@@ -190,7 +182,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                             </MenuItem>
                         ))}
                     </Select>
-                </FormControl>
+                </CyberpunkFormControl>
                 {/* Building Basic Info */}
                 <Grid container spacing={2} size={{ xs: 12 }}>
                     {/* Name */}
@@ -339,20 +331,16 @@ export const CardBuilding = (props: CardBuildingProps) => {
                     </Grid>
                     {/* Building Image */}
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel
-                                id="building-image-label"
-                                sx={{
-                                    ...inputLabelStyle,
-                                    top: -25,
-                                    lineHeight: '1 !important',
-                                    py: '0 !important',
-                                }}
-                            >
-                                <Typography variant="caption" sx={{ mt: -20 }}>
-                                    {t('buildings.labels.image')}
-                                </Typography>
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('buildings.labels.image')}
+                            labelId="building-image-label"
+                            labelSx={{
+                                top: -25,
+                                lineHeight: '1 !important',
+                                py: '0 !important',
+                            }}
+                        >
                             <ImageField
                                 image={selectedBuilding?.image}
                                 downloadName={selectedBuilding?.name}
@@ -364,7 +352,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                                 isGeneratingImage={false}
                                 disabled
                             />
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Grid>
                     {/* Description */}
                     <Grid size={{ xs: 12 }}>
@@ -386,10 +374,11 @@ export const CardBuilding = (props: CardBuildingProps) => {
                     </Typography>
                 </Grid>
                 <Grid size={{ xs: 12 }}>
-                    <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                        <InputLabel id="gang-complication-label" sx={inputLabelStyle}>
-                            {t('fixerJobs.labels.complicationType')}
-                        </InputLabel>
+                    <CyberpunkFormControl
+                        readerMode={readerMode}
+                        label={t('fixerJobs.labels.complicationType')}
+                        labelId="gang-complication-label"
+                    >
                         <Select
                             labelId="gang-complication-label"
                             value={building.chainStarter?.complication?.type || ''}
@@ -403,7 +392,7 @@ export const CardBuilding = (props: CardBuildingProps) => {
                                 </MenuItem>
                             ))}
                         </Select>
-                    </FormControl>
+                    </CyberpunkFormControl>
                 </Grid>
 
                 {/* --- CHARACTER SECTION --- */}
@@ -412,8 +401,6 @@ export const CardBuilding = (props: CardBuildingProps) => {
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
                         handleChange={handleChange}
                         toggleFullscreenImage={toggleFullscreenImage}
-                        formControlStyle={formControlStyle}
-                        inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}
                         character={{
                             ...building.character,
@@ -429,8 +416,6 @@ export const CardBuilding = (props: CardBuildingProps) => {
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
                         handleChange={handleChange}
                         toggleFullscreenImage={toggleFullscreenImage}
-                        formControlStyle={formControlStyle}
-                        inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}
                         item={{
                             ...building.item,

@@ -51,3 +51,18 @@ export function snapToNinePoints(x: number, y: number, gridSize: number, snapToG
     }
     return best
 }
+
+// Compute endpoint from apex, angle (radians) and length; optionally snap to nine points
+export function endpointFromAngleLength(
+    apexX: number,
+    apexY: number,
+    angleRad: number,
+    lengthPx: number,
+    gridSize: number,
+    snapToGrid: boolean
+) {
+    const x = apexX + Math.cos(angleRad) * lengthPx
+    const y = apexY + Math.sin(angleRad) * lengthPx
+    const snapped = snapToNinePoints(x, y, gridSize, snapToGrid)
+    return { x: snapped.x, y: snapped.y }
+}

@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie'
-import { BoardMap, Image, Map, Token, Wall } from './types'
+import { Blast, BoardMap, Image, Map, Token, Wall } from './types'
 
 export class CombatSimDB extends Dexie {
     boardMaps!: Table<BoardMap, string>
@@ -7,6 +7,7 @@ export class CombatSimDB extends Dexie {
     maps!: Table<Map, string>
     walls!: Table<Wall, string>
     images!: Table<Image, string>
+    blasts!: Table<Blast, string>
 
     constructor() {
         super('combat-sim')
@@ -16,6 +17,14 @@ export class CombatSimDB extends Dexie {
             maps: 'id, &name',
             walls: 'id, mapId',
             images: 'id, &name',
+        })
+        this.version(2).stores({
+            boardMaps: 'id, &name',
+            tokens: 'id, mapId',
+            maps: 'id, &name',
+            walls: 'id, mapId',
+            images: 'id, &name',
+            blasts: 'id, mapId',
         })
     }
 }

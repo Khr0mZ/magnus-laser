@@ -14,36 +14,37 @@ const NavigationDrawer = () => {
                 open
                 variant={'permanent'}
                 anchor={'top'}
-                PaperProps={{
-                    sx: {
-                        // Cyberpunk drawer styles
-                        backgroundImage: `linear-gradient(to right, ${colors.cyberpunk.darkBg}, ${colors.cyberpunk.matrixBg})`,
-                        boxShadow: `0 0 15px ${colors.neons.cyan.dark}`,
-                        borderBottom: `1px solid ${colors.neons.cyan.default}`,
-                        position: 'fixed',
-                        zIndex: 10,
-                        overflow: 'hidden',
-                        '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            bottom: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '1px',
-                            backgroundColor: colors.neons.cyan.default,
-                            boxShadow: `0 0 10px ${colors.neons.cyan.default}, 0 0 20px ${colors.neons.cyan.default}`,
-                        },
-                        // Scanlines effect
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 11,
-                            pointerEvents: 'none',
-                            backgroundImage: `linear-gradient(0deg, 
+                slotProps={{
+                    paper: {
+                        sx: {
+                            // Cyberpunk drawer styles
+                            backgroundImage: `linear-gradient(to right, ${colors.cyberpunk.darkBg}, ${colors.cyberpunk.matrixBg})`,
+                            boxShadow: `0 0 15px ${colors.neons.cyan.dark}`,
+                            borderBottom: `1px solid ${colors.neons.cyan.default}`,
+                            position: 'fixed',
+                            zIndex: 10,
+                            overflow: 'hidden',
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '1px',
+                                backgroundColor: colors.neons.cyan.default,
+                                boxShadow: `0 0 10px ${colors.neons.cyan.default}, 0 0 20px ${colors.neons.cyan.default}`,
+                            },
+                            // Scanlines effect
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                zIndex: 11,
+                                pointerEvents: 'none',
+                                backgroundImage: `linear-gradient(0deg, 
                                 ${colors.cyberpunk.scanline} 25%, 
                                 transparent 25%, 
                                 transparent 50%, 
@@ -51,8 +52,9 @@ const NavigationDrawer = () => {
                                 ${colors.cyberpunk.scanline} 75%, 
                                 transparent 75%, 
                                 transparent)`,
-                            backgroundSize: '100% 4px',
-                            opacity: 0.3,
+                                backgroundSize: '100% 4px',
+                                opacity: 0.3,
+                            },
                         },
                     },
                 }}

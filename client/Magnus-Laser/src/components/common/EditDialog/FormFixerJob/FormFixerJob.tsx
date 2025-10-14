@@ -1,15 +1,4 @@
-import {
-    FormControl,
-    Grid,
-    InputLabel,
-    MenuItem,
-    Select,
-    SelectChangeEvent,
-    Stack,
-    SxProps,
-    TextField,
-    Typography,
-} from '@mui/material'
+import { Grid, MenuItem, Select, SelectChangeEvent, Stack, SxProps, TextField, Typography } from '@mui/material'
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../../contexts/dataHooks'
@@ -30,6 +19,7 @@ import {
 import { handleRegenerateImage } from '../../../../utils/apiUtils'
 import { ImageFields, ModuleTypes } from '../../../../utils/constants'
 import { getJobDifficultyModifier } from '../../../../utils/functions'
+import CyberpunkFormControl from '../../../CyberpunkFormControl'
 import ImageField from '../ImageField'
 import CardBuilding from './CardBuilding'
 import CardCharacter from './CardCharacter'
@@ -51,8 +41,6 @@ export type FormFixerJobProps = {
     handleImageUploadClick: (targetField: string) => void
     openDeleteImageDialog: (targetField: string) => void
     toggleFullscreenImage: (targetField: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     hiddenFileInput: React.JSX.Element // This might need duplication if upload needs separate inputs
 }
@@ -71,8 +59,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
         handleImageUploadClick,
         openDeleteImageDialog,
         toggleFullscreenImage,
-        formControlStyle,
-        inputLabelStyle,
         selectStyle,
         hiddenFileInput,
     } = props
@@ -227,10 +213,11 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                             {t('fixerJobs.labels.plotDetails')}
                         </Typography>
                         {/* Job Difficulty */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel id="difficulty-label" sx={inputLabelStyle}>
-                                {t('common.jobDifficultySelector.title')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('common.jobDifficultySelector.title')}
+                            labelId="difficulty-label"
+                        >
                             <Select
                                 labelId="difficulty-label"
                                 value={editedTarget.difficulty || JobDifficulty.TYPICAL}
@@ -244,12 +231,13 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Plot Verb */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel id="plot-verb-label" sx={inputLabelStyle}>
-                                {t('fixerJobs.labels.verb')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('fixerJobs.labels.verb')}
+                            labelId="plot-verb-label"
+                        >
                             <Select
                                 labelId="plot-verb-label"
                                 value={editedTarget.plot.verb.value}
@@ -264,12 +252,13 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                                     </MenuItem>
                                 ))}
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                         {/* Subject Category Selector */}
-                        <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                            <InputLabel id="subject-category-label" sx={inputLabelStyle}>
-                                {t('fixerJobs.labels.subjectCategory')}
-                            </InputLabel>
+                        <CyberpunkFormControl
+                            readerMode={readerMode}
+                            label={t('fixerJobs.labels.subjectCategory')}
+                            labelId="subject-category-label"
+                        >
                             <Select
                                 labelId="subject-category-label"
                                 value={editedTarget.plot.verb.__typename}
@@ -287,7 +276,7 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                                     {t('fixerJobs.labels.plotCategory.building')}
                                 </MenuItem>
                             </Select>
-                        </FormControl>
+                        </CyberpunkFormControl>
                     </Stack>
                 </Grid>
                 {/* Image (Main) */}
@@ -310,8 +299,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     editedTarget={editedTarget}
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
                     toggleFullscreenImage={toggleFullscreenImage}
-                    formControlStyle={formControlStyle}
-                    inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}
                     handleChange={handleChange}
                     character={{
@@ -329,8 +316,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     editedTarget={editedTarget}
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
                     toggleFullscreenImage={toggleFullscreenImage}
-                    formControlStyle={formControlStyle}
-                    inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}
                     handleChange={handleChange}
                     item={{
@@ -349,8 +334,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     textFieldOutlinedStyle={textFieldOutlinedStyle}
                     handleChange={handleChange}
                     toggleFullscreenImage={toggleFullscreenImage}
-                    formControlStyle={formControlStyle}
-                    inputLabelStyle={inputLabelStyle}
                     selectStyle={selectStyle}
                     gang={{
                         main: true,
@@ -384,8 +367,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 textFieldOutlinedStyle={textFieldOutlinedStyle}
                 handleChange={handleChange}
                 toggleFullscreenImage={toggleFullscreenImage}
-                formControlStyle={formControlStyle}
-                inputLabelStyle={inputLabelStyle}
                 selectStyle={selectStyle}
                 building={{
                     handleBuildingChangeTarget: 'plot.plotBuilding.building',
@@ -415,8 +396,6 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                 textFieldOutlinedStyle={textFieldOutlinedStyle}
                 handleChange={handleChange}
                 toggleFullscreenImage={toggleFullscreenImage}
-                formControlStyle={formControlStyle}
-                inputLabelStyle={inputLabelStyle}
                 selectStyle={selectStyle}
                 complication={{
                     character: {

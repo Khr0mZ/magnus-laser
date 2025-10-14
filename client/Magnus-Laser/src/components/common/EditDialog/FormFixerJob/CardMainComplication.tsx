@@ -3,17 +3,17 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
-    FormControl,
     Grid,
-    InputLabel,
     MenuItem,
     Select,
     SxProps,
     Typography,
 } from '@mui/material'
 import { useTranslation } from 'react-i18next'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import { Character, FixerJob, Item, Maybe, PlotComplicationType } from '../../../../graphql/types'
 import colors from '../../../../utils/colors'
+import CyberpunkFormControl from '../../../CyberpunkFormControl'
 import CardCharacter from './CardCharacter'
 import CardItem from './CardItem'
 
@@ -22,8 +22,6 @@ export type CardMainComplicationProps = {
     textFieldOutlinedStyle: SxProps
     handleChange: (field: string, value: unknown) => void
     toggleFullscreenImage: (targetField: string) => void
-    formControlStyle: SxProps
-    inputLabelStyle: SxProps
     selectStyle: SxProps
     complication: {
         character: Character & {
@@ -40,17 +38,10 @@ export type CardMainComplicationProps = {
 }
 
 export const CardMainComplication = (props: CardMainComplicationProps) => {
-    const {
-        editedTarget,
-        textFieldOutlinedStyle,
-        handleChange,
-        formControlStyle,
-        inputLabelStyle,
-        selectStyle,
-        toggleFullscreenImage,
-        complication,
-    } = props
+    const { editedTarget, textFieldOutlinedStyle, handleChange, selectStyle, toggleFullscreenImage, complication } =
+        props
     const { t } = useTranslation()
+    const { readerMode } = useUserPreferences()
 
     return (
         <Accordion
@@ -70,10 +61,11 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
             <AccordionDetails>
                 {/* Main Complication Type */}
                 <Grid size={{ xs: 12 }}>
-                    <FormControl fullWidth variant="outlined" sx={formControlStyle}>
-                        <InputLabel id="complication-label" sx={inputLabelStyle}>
-                            {t('fixerJobs.labels.complicationType')}
-                        </InputLabel>
+                    <CyberpunkFormControl
+                        readerMode={readerMode}
+                        label={t('fixerJobs.labels.complicationType')}
+                        labelId="complication-label"
+                    >
                         <Select
                             labelId="complication-label"
                             value={editedTarget.plot?.plotComplication?.type || ''}
@@ -87,7 +79,7 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
                                 </MenuItem>
                             ))}
                         </Select>
-                    </FormControl>
+                    </CyberpunkFormControl>
                 </Grid>
 
                 {/* Character Complication */}
@@ -95,8 +87,6 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
                     <CardCharacter
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
                         toggleFullscreenImage={toggleFullscreenImage}
-                        formControlStyle={formControlStyle}
-                        inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}
                         character={{
                             ...complication.character,
@@ -112,8 +102,6 @@ export const CardMainComplication = (props: CardMainComplicationProps) => {
                     <CardItem
                         textFieldOutlinedStyle={textFieldOutlinedStyle}
                         toggleFullscreenImage={toggleFullscreenImage}
-                        formControlStyle={formControlStyle}
-                        inputLabelStyle={inputLabelStyle}
                         selectStyle={selectStyle}
                         item={{
                             ...complication.item,
