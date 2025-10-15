@@ -1431,64 +1431,36 @@ const PixiBoard = ({
                     }
                 }
 
-                // Check for blast hit (before other modes)
-                if (
-                    (btn === 0 || btn === 2) &&
-                    !blastDrawModeRef.current &&
-                    !wallModeRef.current &&
-                    !measuringRef.current
-                ) {
-                    // Check if clicking on a blast
-                    const clickedBlast = blastsRef.current.find((blast) => {
-                        const dx = x - blast.x
-                        const dy = y - blast.y
-
-                        if (blast.type === 'grenade') {
-                            const radius = (gridSizeRef.current * 5) / 2
-                            return Math.sqrt(dx * dx + dy * dy) <= radius
-                        } else if (blast.type === 'circle') {
-                            const radius = gridSizeRef.current * (blast.size || 0)
-                            return Math.sqrt(dx * dx + dy * dy) <= radius
-                        } else if (blast.type === 'square') {
-                            const width = gridSizeRef.current * (blast.size || 0)
-                            const height = gridSizeRef.current * (blast.sizeY || blast.size || 0)
-                            return Math.abs(dx) <= width / 2 && Math.abs(dy) <= height / 2
-                        } else if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                            // Point-in-triangle for cone using barycentric technique
-                            const ax = blast.x
-                            const ay = blast.y
-                            const bx = blast.x2
-                            const by = blast.y2
-                            // Derive third point by rotating vector AB by +/- 30° (matching calculateConePoints)
-                            const angle = Math.atan2(by - ay, bx - ax)
-                            const length = Math.hypot(bx - ax, by - ay)
-                            const half = (60 / 2) * (Math.PI / 180)
-                            const lx = ax + Math.cos(angle - half) * length
-                            const ly = ay + Math.sin(angle - half) * length
-                            const rx = ax + Math.cos(angle + half) * length
-                            const ry = ay + Math.sin(angle + half) * length
-                            const v0x = rx - ax
-                            const v0y = ry - ay
-                            const v1x = lx - ax
-                            const v1y = ly - ay
-                            const v2x = x - ax
-                            const v2y = y - ay
-                            const dot00 = v0x * v0x + v0y * v0y
-                            const dot01 = v0x * v1x + v0y * v1y
-                            const dot02 = v0x * v2x + v0y * v2y
-                            const dot11 = v1x * v1x + v1y * v1y
-                            const dot12 = v1x * v2x + v1y * v2y
-                            const invDen = 1 / (dot00 * dot11 - dot01 * dot01)
-                            const u = (dot11 * dot02 - dot01 * dot12) * invDen
-                            const v = (dot00 * dot12 - dot01 * dot02) * invDen
-                            return u >= 0 && v >= 0 && u + v <= 1
+                // Token interaction: handle left click (drag) and right click (context menu)
+                // Check tokens FIRST before blasts to give tokens precedence
+                if (btn === 0 || btn === 2) {
+                    // Check if the event target is a waypoint button or other interactive element
+                    let target: PixiDisplayObject | undefined = e.target as PixiDisplayObject
+                    while (target && target !== viewport) {
+                        // Check if this is a waypoint button container (zIndex 6, eventMode static, cursor pointer)
+                        if (target.eventMode === 'static' && target.cursor === 'pointer' && target.zIndex === 6) {
+                            return // Skip token processing for waypoint button clicks
                         }
-                        return false
-                    })
+                        target = target.parent
+                    }
 
-                    if (clickedBlast) {
+                    // Hit test using displayed positions (respect pending endpoints)
+                    let hit: Token | null = null
+                    let minDist = Number.POSITIVE_INFINITY
+                    for (const t of tokensRef.current) {
+                        const pending = pendingMovesRef.current.get(t.id)
+                        const tx = pending ? pending.endX : t.x
+                        const ty = pending ? pending.endY : t.y
+                        const d = Math.hypot(tx - x, ty - y)
+                        if (d <= t.radius && d < minDist) {
+                            hit = { ...t, x: tx, y: ty }
+                            minDist = d
+                        }
+                    }
+
+                    if (hit) {
                         if (btn === 2) {
-                            // Right click on blast: open blast context menu
+                            // Right click on token: open token context menu
                             const anchorEl = document.createElement('div')
                             anchorEl.style.position = 'fixed'
                             const screenPos = viewport.toScreen(x, y)
@@ -1504,17 +1476,104 @@ const PixiBoard = ({
                             anchorEl.style.height = '1px'
                             anchorEl.style.pointerEvents = 'auto'
                             document.body.appendChild(anchorEl)
-                            setBlastContextMenuAnchor(anchorEl)
-                            setSelectedBlastId(clickedBlast.id)
+                            setTokenContextMenuAnchor(anchorEl)
+                            setSelectedTokenId(hit.id)
                             return
                         } else {
-                            // Left click: allow drag only if not locked
-                            if (!clickedBlast.locked) {
-                                draggedBlastRef.current = clickedBlast
-                                // Snapshot original for correct translation of x2,y2 during drag
-                                draggedBlastStartRef.current = { ...clickedBlast }
+                            // Left click on token: start drag
+                            draggingRef.current = { id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y }
+                            // if token already has pending waypoints, start from last end
+                            const existing = pendingMovesRef.current.get(hit.id)
+                            if (existing) {
+                                dragStartRef.current = { id: hit.id, x: existing.endX, y: existing.endY }
+                            } else {
+                                dragStartRef.current = { id: hit.id, x: hit.x, y: hit.y }
                             }
+                            clickCandidateRef.current = { id: hit.id, x, y }
                             return
+                        }
+                    }
+
+                    // Only check for blast hits if no token was hit
+                    if (!blastDrawModeRef.current && !wallModeRef.current && !measuringRef.current) {
+                        // Check if clicking on a blast
+                        const clickedBlast = blastsRef.current.find((blast) => {
+                            const dx = x - blast.x
+                            const dy = y - blast.y
+
+                            if (blast.type === 'grenade') {
+                                const radius = (gridSizeRef.current * 5) / 2
+                                return Math.sqrt(dx * dx + dy * dy) <= radius
+                            } else if (blast.type === 'circle') {
+                                const radius = gridSizeRef.current * (blast.size || 0)
+                                return Math.sqrt(dx * dx + dy * dy) <= radius
+                            } else if (blast.type === 'square') {
+                                const width = gridSizeRef.current * (blast.size || 0)
+                                const height = gridSizeRef.current * (blast.sizeY || blast.size || 0)
+                                return Math.abs(dx) <= width / 2 && Math.abs(dy) <= height / 2
+                            } else if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
+                                // Point-in-triangle for cone using barycentric technique
+                                const ax = blast.x
+                                const ay = blast.y
+                                const bx = blast.x2
+                                const by = blast.y2
+                                // Derive third point by rotating vector AB by +/- 30° (matching calculateConePoints)
+                                const angle = Math.atan2(by - ay, bx - ax)
+                                const length = Math.hypot(bx - ax, by - ay)
+                                const half = (60 / 2) * (Math.PI / 180)
+                                const lx = ax + Math.cos(angle - half) * length
+                                const ly = ay + Math.sin(angle - half) * length
+                                const rx = ax + Math.cos(angle + half) * length
+                                const ry = ay + Math.sin(angle + half) * length
+                                const v0x = rx - ax
+                                const v0y = ry - ay
+                                const v1x = lx - ax
+                                const v1y = ly - ay
+                                const v2x = x - ax
+                                const v2y = y - ay
+                                const dot00 = v0x * v0x + v0y * v0y
+                                const dot01 = v0x * v1x + v0y * v1y
+                                const dot02 = v0x * v2x + v0y * v2y
+                                const dot11 = v1x * v1x + v1y * v1y
+                                const dot12 = v1x * v2x + v1y * v2y
+                                const invDen = 1 / (dot00 * dot11 - dot01 * dot01)
+                                const u = (dot11 * dot02 - dot01 * dot12) * invDen
+                                const v = (dot00 * dot12 - dot01 * dot02) * invDen
+                                return u >= 0 && v >= 0 && u + v <= 1
+                            }
+                            return false
+                        })
+
+                        if (clickedBlast) {
+                            if (btn === 2) {
+                                // Right click on blast: open blast context menu
+                                const anchorEl = document.createElement('div')
+                                anchorEl.style.position = 'fixed'
+                                const screenPos = viewport.toScreen(x, y)
+                                const rect = hostRef.current?.getBoundingClientRect()
+                                if (rect) {
+                                    anchorEl.style.left = `${rect.left + screenPos.x}px`
+                                    anchorEl.style.top = `${rect.top + screenPos.y}px`
+                                } else {
+                                    anchorEl.style.left = `${screenPos.x}px`
+                                    anchorEl.style.top = `${screenPos.y}px`
+                                }
+                                anchorEl.style.width = '1px'
+                                anchorEl.style.height = '1px'
+                                anchorEl.style.pointerEvents = 'auto'
+                                document.body.appendChild(anchorEl)
+                                setBlastContextMenuAnchor(anchorEl)
+                                setSelectedBlastId(clickedBlast.id)
+                                return
+                            } else {
+                                // Left click: allow drag only if not locked
+                                if (!clickedBlast.locked) {
+                                    draggedBlastRef.current = clickedBlast
+                                    // Snapshot original for correct translation of x2,y2 during drag
+                                    draggedBlastStartRef.current = { ...clickedBlast }
+                                }
+                                return
+                            }
                         }
                     }
                 }
@@ -1562,101 +1621,6 @@ const PixiBoard = ({
                     const startSnapped = snapToNinePoints(x, y, step, snapRef.current)
                     measureStartRef.current = { x: startSnapped.x, y: startSnapped.y }
                     return
-                }
-                // Token interaction: handle left click (drag) and right click (context menu)
-                if (btn === 0 || btn === 2) {
-                    // Check if the event target is a waypoint button or other interactive element
-                    let target: PixiDisplayObject | undefined = e.target as PixiDisplayObject
-                    while (target && target !== viewport) {
-                        // Check if this is a waypoint button container (zIndex 6, eventMode static, cursor pointer)
-                        if (target.eventMode === 'static' && target.cursor === 'pointer' && target.zIndex === 6) {
-                            return // Skip token processing for waypoint button clicks
-                        }
-                        target = target.parent
-                    }
-
-                    // Hit test using displayed positions (respect pending endpoints)
-                    let hit: Token | null = null
-                    let minDist = Number.POSITIVE_INFINITY
-                    for (const t of tokensRef.current) {
-                        const pending = pendingMovesRef.current.get(t.id)
-                        const tx = pending ? pending.endX : t.x
-                        const ty = pending ? pending.endY : t.y
-                        const d = Math.hypot(tx - x, ty - y)
-                        if (d <= t.radius && d < minDist) {
-                            hit = { ...t, x: tx, y: ty }
-                            minDist = d
-                        }
-                    }
-
-                    if (hit) {
-                        if (btn === 2) {
-                            // Right click - show token context menu
-                            // Create a temporary anchor element at the click position
-                            const anchorEl = document.createElement('div')
-                            anchorEl.style.position = 'fixed'
-
-                            // Get the screen position accounting for viewport transforms
-                            const screenPos = viewport.toScreen(x, y)
-                            const rect = hostRef.current?.getBoundingClientRect()
-                            if (rect) {
-                                anchorEl.style.left = `${rect.left + screenPos.x}px`
-                                anchorEl.style.top = `${rect.top + screenPos.y}px`
-                            } else {
-                                anchorEl.style.left = `${screenPos.x}px`
-                                anchorEl.style.top = `${screenPos.y}px`
-                            }
-
-                            anchorEl.style.width = '1px'
-                            anchorEl.style.height = '1px'
-                            anchorEl.style.pointerEvents = 'auto'
-                            document.body.appendChild(anchorEl)
-
-                            setTokenContextMenuAnchor(anchorEl)
-                            setSelectedTokenId(hit.id)
-
-                            return
-                        } else {
-                            // Left click - start drag
-                            draggingRef.current = { id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y }
-                            // if token already has pending waypoints, start from last end
-                            const existing = pendingMovesRef.current.get(hit.id)
-                            if (existing) {
-                                dragStartRef.current = { id: hit.id, x: existing.endX, y: existing.endY }
-                            } else {
-                                dragStartRef.current = { id: hit.id, x: hit.x, y: hit.y }
-                            }
-                            clickCandidateRef.current = { id: hit.id, x, y }
-                        }
-                    } else if (btn === 2) {
-                        // Right click on empty space - show map context menu
-                        const anchorEl = document.createElement('div')
-                        anchorEl.style.position = 'fixed'
-
-                        // Get the screen position accounting for viewport transforms
-                        const screenPos = viewport.toScreen(x, y)
-                        const rect = hostRef.current?.getBoundingClientRect()
-                        if (rect) {
-                            anchorEl.style.left = `${rect.left + screenPos.x}px`
-                            anchorEl.style.top = `${rect.top + screenPos.y}px`
-                        } else {
-                            anchorEl.style.left = `${screenPos.x}px`
-                            anchorEl.style.top = `${screenPos.y}px`
-                        }
-
-                        anchorEl.style.width = '1px'
-                        anchorEl.style.height = '1px'
-                        anchorEl.style.pointerEvents = 'auto'
-                        document.body.appendChild(anchorEl)
-
-                        // Store the paste coordinates
-                        anchorEl.dataset.pasteX = x.toString()
-                        anchorEl.dataset.pasteY = y.toString()
-
-                        setMapContextMenuAnchor(anchorEl)
-
-                        return
-                    }
                 }
             })
 
@@ -2357,8 +2321,8 @@ const PixiBoard = ({
                     return
                 }
 
-                // Hover cursor over blasts: grab if unlocked, default if locked
-                if (!wallModeRef.current && !measuringRef.current) {
+                // Only check blast hover if no token is hovered (tokens take precedence)
+                if (!wallModeRef.current && !measuringRef.current && viewport.cursor === 'default') {
                     const hoveredBlast = blastsRef.current.find((blast) => {
                         const dx = global.x - blast.x
                         const dy = global.y - blast.y
@@ -2403,7 +2367,9 @@ const PixiBoard = ({
                         }
                         return false
                     })
-                    viewport.cursor = hoveredBlast ? (hoveredBlast.locked ? 'default' : 'grab') : 'default'
+                    if (hoveredBlast) {
+                        viewport.cursor = hoveredBlast.locked ? 'default' : 'grab'
+                    }
                 }
 
                 if (

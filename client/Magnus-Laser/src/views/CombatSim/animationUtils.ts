@@ -39,6 +39,15 @@ export function schedulePathAnimation(
     }
     if (segments.length === 0) return
     const cells = totalLen / step
-    const totalMs = cells * 90 // 0.06s per grid cell across whole path
+    let msPerCell = 0
+    if (cells > 20) {
+        msPerCell = 15
+    } else if (cells > 10) {
+        msPerCell = 30
+    } else {
+        msPerCell = 60
+    }
+
+    const totalMs = cells * msPerCell
     animationsMap.set(id, { segments, startTime: globalThis.performance.now(), totalMs, totalLen })
 }
