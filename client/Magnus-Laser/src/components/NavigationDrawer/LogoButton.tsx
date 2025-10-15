@@ -16,6 +16,7 @@ const LogoButton = () => {
             disableFocusRipple
             onClick={() => navigate(NavigationPaths.DASHBOARD)}
             sx={{
+                minHeight: '78px',
                 padding: '12px 16px',
                 minWidth: '70px',
                 borderRadius: 0,

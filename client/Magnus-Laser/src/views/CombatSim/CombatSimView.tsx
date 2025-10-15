@@ -1,3 +1,4 @@
+import { FindReplace, Upload } from '@mui/icons-material'
 import Close from '@mui/icons-material/Close'
 import Done from '@mui/icons-material/Done'
 import {
@@ -36,7 +37,17 @@ import TokenPanel from './TokenPanel'
 import { db } from './db'
 import { rollD10WithSpecial, rollDamage, rollToHit, type RollResult, type RollType } from './diceUtils'
 import { snapToNinePoints } from './gridUtils'
-import type { Blast, BlastType, BoardMap, Image, Map as MapType, RollHistoryEntry, Token, Wall } from './types'
+import type {
+    Blast,
+    BlastType,
+    BoardMap,
+    Image,
+    Map as MapType,
+    RollHistoryEntry,
+    Token,
+    Wall,
+    WallShape,
+} from './types'
 
 async function fileToImage(file: globalThis.File): Promise<globalThis.HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -103,6 +114,7 @@ const CombatSimView = () => {
     const [isSaving, setIsSaving] = useState(false)
     const [isMeasuring, setIsMeasuring] = useState(false)
     const [isWallMode, setIsWallMode] = useState(false)
+    const [wallDrawingShape, setWallDrawingShape] = useState<WallShape>()
     const [pendingCount, setPendingCount] = useState(0)
     const [isErasingWalls, setIsErasingWalls] = useState(false)
     const [walls, setWalls] = useState<Wall[]>([])
@@ -120,7 +132,7 @@ const CombatSimView = () => {
     const [tokenClipboard, setTokenClipboard] = useState<Token[] | null>(null)
 
     // Initiative and combat state
-    const [isTokenPanelOpen, setIsTokenPanelOpen] = useState(false)
+    const [isTokenPanelOpen, setIsTokenPanelOpen] = useState(true)
     const [isInitiativePanelOpen, setIsInitiativePanelOpen] = useState(false)
     const [activeTokenId, setActiveTokenId] = useState<string | null>(null)
     const [initiativeRolls, setInitiativeRolls] = useState<Map<string, number>>(new Map())
@@ -135,7 +147,7 @@ const CombatSimView = () => {
     // Blast state
     const [blasts, setBlasts] = useState<Blast[]>([])
     const [blastsNotInMap, setBlastsNotInMap] = useState<Blast[]>([])
-    const [isBlastPanelOpen, setIsBlastPanelOpen] = useState(true)
+    const [isBlastPanelOpen, setIsBlastPanelOpen] = useState(false)
     const [blastDrawMode, setBlastDrawMode] = useState<BlastType | null>(null)
     const [blastClipboard, setBlastClipboard] = useState<Blast[] | null>(null)
 
@@ -1121,6 +1133,8 @@ const CombatSimView = () => {
                     sx={{
                         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         textShadow: `0 0 10px ${colors.neons.cyan.default}`,
+                        flexGrow: { xs: 1, xxl: 0 },
+                        display: { xs: 'none', xl: 'flex' },
                     }}
                 >
                     {t('combatSim.title')}
@@ -1131,6 +1145,7 @@ const CombatSimView = () => {
                         color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
                         textShadow: `0 0 8px ${colors.neons.green.default}`,
                         flexGrow: 1,
+                        display: { xs: 'none', xxl: 'flex' },
                     }}
                 >
                     {t(`modules.${ModuleTypes.COMBAT_SIM}_DESCRIPTION`)}
@@ -1147,12 +1162,14 @@ const CombatSimView = () => {
                     <ClearAllButton
                         disabled={maps.length === 0}
                         handleClearAllClick={() => document.getElementById('combatsim-replace-map')?.click()}
-                        label={t('combatSim.replaceMap')}
+                        label={<FindReplace />}
+                        title={t('combatSim.replaceMap')}
                     />
                     <GenerateButton
                         isGenerating={false}
                         handleGenerate={() => document.getElementById('combatsim-upload-map')?.click()}
-                        label={t('combatSim.addMap')}
+                        label={<Upload />}
+                        title={t('combatSim.addMap')}
                     />
                     <input
                         id="combatsim-replace-map"
@@ -1189,7 +1206,7 @@ const CombatSimView = () => {
                                     displayEmpty
                                     value={currentMap?.mapId ?? sortedMaps[0]?.id ?? ''}
                                     onChange={(e) => onSelectMap(String(e.target.value))}
-                                    sx={{ ml: 1, width: 200, height: 36.5, ...fieldSx }}
+                                    sx={{ ml: 1, width: 150, height: 36.5, ...fieldSx }}
                                     slotProps={{
                                         input: {
                                             sx: {
@@ -1220,7 +1237,7 @@ const CombatSimView = () => {
                                         slotProps={{
                                             input: {
                                                 sx: {
-                                                    width: 100,
+                                                    width: 70,
                                                     '& input[type=number]': {
                                                         MozAppearance: 'textfield',
                                                     },
@@ -1527,6 +1544,7 @@ const CombatSimView = () => {
                         snapToGrid={snapToGrid}
                         isMeasuring={isMeasuring}
                         isWallMode={isWallMode}
+                        wallDrawingShape={wallDrawingShape}
                         isErasingWalls={isErasingWalls}
                         isCombatActive={isCombatActive}
                         mapKey={getActiveMapKey()}
@@ -1837,6 +1855,7 @@ const CombatSimView = () => {
                                 if (nv) {
                                     setIsMeasuring(false)
                                     setBlastDrawMode(null)
+                                    setWallDrawingShape('line') // Reset to line mode when entering wall mode
                                 }
                                 if (!nv) {
                                     setIsErasingWalls(false)
@@ -2068,18 +2087,16 @@ const CombatSimView = () => {
                     {/* Eraser & Wall color (visible in wall mode) */}
                     {isWallMode && (
                         <>
+                            {/* Line wall drawing mode */}
                             <Box
-                                onClick={() =>
-                                    setIsErasingWalls((v) => {
-                                        const nv = !v
-                                        if (nv) {
-                                            setIsWallMode(true)
-                                            setIsMeasuring(false)
-                                            setBlastDrawMode(null)
-                                        }
-                                        return nv
-                                    })
-                                }
+                                onClick={() => {
+                                    if (wallDrawingShape === 'line') {
+                                        setWallDrawingShape(undefined)
+                                        return
+                                    }
+                                    setWallDrawingShape('line')
+                                    setIsErasingWalls(false)
+                                }}
                                 sx={{
                                     position: 'absolute',
                                     top: 94,
@@ -2089,7 +2106,185 @@ const CombatSimView = () => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    backgroundColor: readerMode ? 'rgba(0, 0, 40, 0.7)' : 'rgba(0, 0, 40, 0.6)',
+                                    backgroundColor:
+                                        wallDrawingShape === 'line'
+                                            ? 'rgba(255, 0, 255, 0.3)'
+                                            : readerMode
+                                            ? 'rgba(0, 0, 40, 0.7)'
+                                            : 'rgba(0, 0, 40, 0.6)',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: `1px solid ${
+                                        wallDrawingShape === 'line'
+                                            ? colors.neons.blue.default
+                                            : colors.neons.blue.default
+                                    }60`,
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                        border: `1px solid ${colors.neons.blue.default}60`,
+                                        boxShadow: `0 0 8px ${colors.neons.blue.default}80`,
+                                    },
+                                }}
+                                title={t('combatSim.lineMode')}
+                            >
+                                <Box
+                                    sx={{
+                                        fontSize: wallDrawingShape === 'line' ? '30px' : '20px',
+                                        color:
+                                            wallDrawingShape === 'line'
+                                                ? colors.neons.blue.default
+                                                : colors.neons.blue.default,
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            fontSize: '30px',
+                                        },
+                                    }}
+                                >
+                                    ➖
+                                </Box>
+                            </Box>
+                            {/* Rectangle wall drawing mode */}
+                            <Box
+                                onClick={() => {
+                                    if (wallDrawingShape === 'rectangle') {
+                                        setWallDrawingShape(undefined)
+                                        return
+                                    }
+                                    setWallDrawingShape('rectangle')
+                                    setIsErasingWalls(false)
+                                }}
+                                sx={{
+                                    position: 'absolute',
+                                    top: 94,
+                                    left: 98,
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor:
+                                        wallDrawingShape === 'rectangle'
+                                            ? 'rgba(255, 0, 255, 0.3)'
+                                            : readerMode
+                                            ? 'rgba(0, 0, 40, 0.7)'
+                                            : 'rgba(0, 0, 40, 0.6)',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: `1px solid ${
+                                        wallDrawingShape === 'rectangle'
+                                            ? colors.neons.green.default
+                                            : colors.neons.blue.default
+                                    }60`,
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                        border: `1px solid ${colors.neons.green.default}60`,
+                                        boxShadow: `0 0 8px ${colors.neons.green.default}80`,
+                                    },
+                                }}
+                                title={t('combatSim.rectangleMode')}
+                            >
+                                <Box
+                                    sx={{
+                                        fontSize: wallDrawingShape === 'rectangle' ? '24px' : '16px',
+                                        color:
+                                            wallDrawingShape === 'rectangle'
+                                                ? colors.neons.green.default
+                                                : colors.neons.blue.default,
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            fontSize: '24px',
+                                        },
+                                    }}
+                                >
+                                    🔳
+                                </Box>
+                            </Box>
+                            {/* Circle wall drawing mode */}
+                            <Box
+                                onClick={() => {
+                                    if (wallDrawingShape === 'circle') {
+                                        setWallDrawingShape(undefined)
+                                        return
+                                    }
+                                    setWallDrawingShape('circle')
+                                    setIsErasingWalls(false)
+                                }}
+                                sx={{
+                                    position: 'absolute',
+                                    top: 94,
+                                    left: 142,
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor:
+                                        wallDrawingShape === 'circle'
+                                            ? 'rgba(255, 0, 255, 0.3)'
+                                            : readerMode
+                                            ? 'rgba(0, 0, 40, 0.7)'
+                                            : 'rgba(0, 0, 40, 0.6)',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: `1px solid ${
+                                        wallDrawingShape === 'circle'
+                                            ? colors.neons.pink.default
+                                            : colors.neons.blue.default
+                                    }60`,
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                                        border: `1px solid ${colors.neons.pink.default}60`,
+                                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                                    },
+                                }}
+                                title={t('combatSim.circleMode')}
+                            >
+                                <Box
+                                    sx={{
+                                        fontSize: wallDrawingShape === 'circle' ? '30px' : '20px',
+                                        color:
+                                            wallDrawingShape === 'circle'
+                                                ? colors.neons.pink.default
+                                                : colors.neons.blue.default,
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            fontSize: '30px',
+                                        },
+                                    }}
+                                >
+                                    ⭕
+                                </Box>
+                            </Box>
+                            <Box
+                                onClick={() =>
+                                    setIsErasingWalls((v) => {
+                                        const nv = !v
+                                        if (nv) {
+                                            setIsWallMode(true)
+                                            setIsMeasuring(false)
+                                            setBlastDrawMode(null)
+                                            setWallDrawingShape(undefined)
+                                        }
+                                        return nv
+                                    })
+                                }
+                                sx={{
+                                    position: 'absolute',
+                                    top: 94,
+                                    left: 186,
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: isErasingWalls
+                                        ? 'rgba(255, 0, 0, 0.3)'
+                                        : readerMode
+                                        ? 'rgba(0, 0, 40, 0.7)'
+                                        : 'rgba(0, 0, 40, 0.6)',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
                                     border: `1px solid ${
@@ -2126,7 +2321,7 @@ const CombatSimView = () => {
                                 sx={{
                                     position: 'absolute',
                                     top: 94,
-                                    left: 98,
+                                    left: 230,
                                     width: '36px',
                                     height: '36px',
                                     display: 'block',

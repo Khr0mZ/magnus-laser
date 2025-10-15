@@ -54,11 +54,11 @@ const BlastsPanel = ({
             case 'grenade':
                 return '💣 Grenade (5x5)'
             case 'circle':
-                return '⭕ Adaptable Circle'
+                return '🟠 Adaptable Circle'
             case 'square':
-                return '⬜ Adaptable Rectangle'
+                return '🟧 Adaptable Rectangle'
             case 'cone':
-                return '📐 Adaptable Cone'
+                return '🔻 Adaptable Cone'
         }
     }
 
@@ -67,14 +67,14 @@ const BlastsPanel = ({
             case 'grenade':
                 return `💣 ${blast.name || 'Grenade'}`
             case 'circle':
-                return `⭕ Circle (r=${blast.size?.toFixed(1) || '?'})`
+                return `🟠 Circle (r=${blast.size?.toFixed(1) || '?'})`
             case 'square': {
                 const w = blast.size?.toFixed(1) || '?'
                 const h = blast.sizeY?.toFixed(1) || blast.size?.toFixed(1) || '?'
-                return `⬜ Rectangle (${w}x${h})`
+                return `🟧 Rectangle (${w}x${h})`
             }
             case 'cone':
-                return `📐 Cone (L=${blast.size?.toFixed(1) || '?'})`
+                return `🔻 Cone (L=${blast.size?.toFixed(1) || '?'})`
         }
     }
 

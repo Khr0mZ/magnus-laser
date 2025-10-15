@@ -7,11 +7,12 @@ import { buttonGlitch, pulseGlowRed, scanlineFlow } from './common/Animations'
 type ClearAllButtonProps = {
     handleClearAllClick: () => void
     disabled: boolean
-    label?: string
+    label?: string | React.ReactNode
+    title?: string
 }
 
 const ClearAllButton = (props: ClearAllButtonProps) => {
-    const { handleClearAllClick, disabled, label } = props
+    const { handleClearAllClick, disabled, label, title } = props
     const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
 
@@ -22,6 +23,7 @@ const ClearAllButton = (props: ClearAllButtonProps) => {
             onClick={handleClearAllClick}
             disabled={disabled}
             className="button"
+            title={title}
             sx={{
                 position: 'relative',
                 bgcolor: readerMode ? '#ffebee' : 'rgba(40, 0, 0, 0.8)',

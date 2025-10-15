@@ -45,75 +45,31 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
         opacity: 0.7,
     }
 
+    // Style for navigation icons
+    const navigationSx = {
+        fontSize: { xs: '24px', lg: '30px', xl: '38px' },
+        transition: 'all 0.2s',
+    }
+
     if (module === ModuleTypes.GANG)
-        return (
-            <Groups3
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : backgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <Groups3 sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : backgroundSx} />
     if (module === ModuleTypes.BUILDING)
-        return (
-            <Apartment
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <Apartment sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.FIXER_JOB)
-        return (
-            <Hub
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <Hub sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.BOUNTY)
-        return (
-            <GpsFixed
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <GpsFixed sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.CLUB)
-        return (
-            <Nightlife
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <Nightlife sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.ITEM)
-        return (
-            <Warehouse
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <Warehouse sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.SETTINGS)
-        return (
-            <Settings
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <Settings sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.MAP)
-        return (
-            <SatelliteAlt
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
+        return <SatelliteAlt sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.COMBAT_SIM)
-        return (
-            <SportsMma
-                sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-                fontSize={isNavigation ? 'large' : 'inherit'}
-            />
-        )
-    return (
-        <Badge
-            sx={isNavigation ? undefined : isDashboard ? dashboardSx : smallerBackgroundSx}
-            fontSize={isNavigation ? 'large' : 'inherit'}
-        />
-    )
+        return <SportsMma sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
+    return <Badge sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
 }
 
 /**

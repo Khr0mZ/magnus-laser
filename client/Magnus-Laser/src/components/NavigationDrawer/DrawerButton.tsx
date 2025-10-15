@@ -42,9 +42,12 @@ const DrawerButton = ({ module }: DrawerButtonProps) => {
             onClick={active ? undefined : () => navigate(navigationPath)}
             sx={{
                 width: '50px',
+                height: { xs: '23px', xl: '62px' },
                 boxSizing: 'content-box',
                 color: pickColor(navigationPath),
                 position: 'relative',
+                justifyContent: 'center',
+                alignItems: 'center',
                 ...(readerMode
                     ? {
                           // Reader mode button styles
@@ -141,53 +144,33 @@ const DrawerButton = ({ module }: DrawerButtonProps) => {
                       }),
             }}
         >
-            <CyberpunkFormControlLabel
-                readerMode={readerMode}
-                noGap={true}
-                control={
-                    <Box
-                        className="icon-glitch"
-                        sx={{
-                            position: 'relative',
-                            ...(readerMode
-                                ? {}
-                                : {
-                                      '&::before': active
-                                          ? {
-                                                content: '""',
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                height: '100%',
-                                                backgroundColor: 'transparent',
-                                                boxShadow: `0 0 5px ${colors.neons.pink.default}`,
-                                                opacity: 0.5,
-                                                zIndex: -1,
-                                            }
-                                          : {},
-                                      ...(active && {
-                                          '&::after': {
-                                              content: '""',
-                                              position: 'absolute',
-                                              top: -2,
-                                              left: -2,
-                                              right: -2,
-                                              bottom: -2,
-                                              background: `radial-gradient(circle, ${colors.neons.cyan.default}30 0%, transparent 70%)`,
-                                              zIndex: -1,
-                                              opacity: 0.6,
-                                          },
-                                      }),
-                                  }),
-                        }}
-                    >
-                        {getModuleIcon(module, true)}
-                    </Box>
-                }
-                label={t(`modules.${module}`)}
-                labelPlacement={'bottom'}
-            />
+            <Box sx={{ display: { xs: 'none', xl: 'flex' } }}>
+                <CyberpunkFormControlLabel
+                    readerMode={readerMode}
+                    noGap={true}
+                    control={
+                        <Box
+                            className="icon-glitch"
+                            sx={{
+                                position: 'relative',
+                            }}
+                        >
+                            {getModuleIcon(module, true)}
+                        </Box>
+                    }
+                    label={t(`modules.${module}`)}
+                    labelPlacement={'bottom'}
+                />
+            </Box>
+            <Box
+                className="icon-glitch"
+                sx={{
+                    display: { xs: 'flex', xl: 'none' },
+                    position: 'relative',
+                }}
+            >
+                {getModuleIcon(module, true)}
+            </Box>
         </Button>
     )
 }

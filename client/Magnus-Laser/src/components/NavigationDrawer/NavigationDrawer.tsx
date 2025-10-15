@@ -17,6 +17,7 @@ const NavigationDrawer = () => {
                 slotProps={{
                     paper: {
                         sx: {
+                            height: '80px',
                             // Cyberpunk drawer styles
                             backgroundImage: `linear-gradient(to right, ${colors.cyberpunk.darkBg}, ${colors.cyberpunk.matrixBg})`,
                             boxShadow: `0 0 15px ${colors.neons.cyan.dark}`,
@@ -80,14 +81,13 @@ const NavigationDrawer = () => {
 
                 <Stack
                     data-tauri-drag-region
-                    direction={{ xs: 'column', md: 'row' }}
+                    direction={'row'}
                     sx={{
                         bgcolor: 'transparent',
                         position: 'relative',
                         zIndex: 15,
                         flexWrap: 'wrap',
                         gap: 1,
-                        mt: { xs: 2, md: 0 },
                     }}
                 >
                     <LogoButton />
@@ -98,6 +98,7 @@ const NavigationDrawer = () => {
                             bgcolor: 'transparent',
                             flex: 1,
                             justifyContent: 'center',
+                            alignItems: 'center',
                             position: 'relative',
                             flexWrap: 'wrap',
                         }}

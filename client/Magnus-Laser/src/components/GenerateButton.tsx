@@ -7,13 +7,14 @@ import { buttonGlitch, pulseGlowGreen, scanlineFlow } from './common/Animations'
 type GenerateButtonProps = {
     isGenerating: boolean
     handleGenerate: () => void
-    label?: string
+    label?: string | React.ReactNode
     disabled?: boolean
     children?: React.ReactNode
+    title?: string
 }
 
 const GenerateButton = (props: GenerateButtonProps) => {
-    const { isGenerating, handleGenerate, label, disabled, children } = props
+    const { isGenerating, handleGenerate, label, disabled, children, title } = props
     const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
 
@@ -23,6 +24,7 @@ const GenerateButton = (props: GenerateButtonProps) => {
             color="primary"
             onClick={handleGenerate}
             disabled={isGenerating || disabled}
+            title={title}
             sx={{
                 position: 'relative',
                 bgcolor: readerMode ? '#e8f5e8' : 'rgba(20, 40, 30, 0.8)',

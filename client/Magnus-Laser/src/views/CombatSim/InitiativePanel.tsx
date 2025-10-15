@@ -98,6 +98,39 @@ const InitiativePanel = ({
         }
     }, [currentRound])
 
+    // Scroll to active token when it changes
+    useEffect(() => {
+        if (activeTokenId && containerRef.current) {
+            const scrollToActiveToken = () => {
+                const scrollbarContainer = containerRef.current?.querySelector(
+                    '.smooth-scrollbar-container'
+                ) as HTMLElement
+                if (scrollbarContainer) {
+                    const scrollbarInstance = Scrollbar.get(scrollbarContainer)
+                    if (scrollbarInstance) {
+                        // Find the active token element
+                        const activeTokenElement = scrollbarContainer.querySelector(
+                            `[data-token-id="${activeTokenId}"]`
+                        ) as HTMLElement
+
+                        if (activeTokenElement) {
+                            // Calculate the position to scroll to (center the active token in view)
+                            const containerHeight = scrollbarContainer.clientHeight
+                            const tokenTop = activeTokenElement.offsetTop
+                            const tokenHeight = activeTokenElement.offsetHeight
+                            const scrollTop = tokenTop - containerHeight / 2 + tokenHeight / 2
+
+                            scrollbarInstance.scrollTo(0, Math.max(0, scrollTop), 300)
+                        }
+                    }
+                }
+            }
+
+            // Delay to ensure content is fully rendered
+            setTimeout(scrollToActiveToken, 50)
+        }
+    }, [activeTokenId])
+
     const currentIndex = sortedTokens.findIndex((t) => t.id === activeTokenId)
 
     const handlePrevious = () => {
@@ -236,6 +269,7 @@ const InitiativePanel = ({
                             return (
                                 <Box
                                     key={token.id}
+                                    data-token-id={token.id}
                                     onClick={() => onTokenClick(token.id)}
                                     sx={{
                                         background: isActive

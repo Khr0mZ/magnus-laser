@@ -10,11 +10,16 @@ import { TokenContextMenu } from './TokenContextMenu'
 import { TokenTooltip } from './TokenTooltip'
 import { schedulePathAnimation } from './animationUtils'
 import { drawBlastPreview, preloadBlastTextures, renderBlasts } from './blastRenderer'
-import { getTargetSize, segmentsIntersect } from './geometryUtils'
+import {
+    getTargetSize,
+    segmentHitsCircleBoundary,
+    segmentIntersectsRectangle,
+    segmentsIntersect,
+} from './geometryUtils'
 import { drawGrid, endpointFromAngleLength, snapToNinePoints } from './gridUtils'
 import { applyBackgroundTexture } from './pixiUtils'
 import { preloadTextures, renderTokens, renderTokensWithPending } from './tokenRenderer'
-import type { Blast, BlastType, Image as ImageData, Token, Wall } from './types'
+import type { Blast, BlastType, Image as ImageData, Token, Wall, WallShape } from './types'
 
 // PIXI DisplayObject minimal interface for event targets
 interface PixiDisplayObject {
@@ -34,6 +39,7 @@ type PixiBoardProps = {
     snapToGrid: boolean
     isMeasuring: boolean
     isWallMode: boolean
+    wallDrawingShape: WallShape | undefined
     mapKey: string
     mapTexture: Texture | null
     onBindFit: (fn: () => void) => void
@@ -85,6 +91,7 @@ const PixiBoard = ({
     snapToGrid = true,
     isMeasuring = false,
     isWallMode = false,
+    wallDrawingShape = undefined,
     mapTexture: backgroundTexture,
     onBindFit,
     tokens = [],
@@ -135,10 +142,20 @@ const PixiBoard = ({
     const gridRef = useRef<Graphics | null>(null)
     const wallLayerRef = useRef<Graphics | null>(null)
     const wallsRef = useRef<
-        { id: string; x1: number; y1: number; x2: number; y2: number; color?: number; alpha?: number }[]
+        {
+            id: string
+            x1: number
+            y1: number
+            x2: number
+            y2: number
+            shape?: WallShape
+            color?: number
+            alpha?: number
+        }[]
     >([])
     const wallStartRef = useRef<{ x: number; y: number } | null>(null)
     const wallPreviewRef = useRef<{ x: number; y: number } | null>(null)
+    const wallDrawingShapeRef = useRef<WallShape>(undefined)
     const eraseStartRef = useRef<{ x: number; y: number } | null>(null)
     const erasePreviewRef = useRef<{ x: number; y: number } | null>(null)
     const blastLayerRef = useRef<Graphics | null>(null)
@@ -406,6 +423,7 @@ const PixiBoard = ({
             y1: w.y1,
             x2: w.x2,
             y2: w.y2,
+            ...(w.shape != null ? { shape: w.shape } : {}),
             ...(w.color != null ? { color: w.color } : {}),
             ...(w.alpha != null ? { alpha: w.alpha } : {}),
         }))
@@ -417,9 +435,30 @@ const PixiBoard = ({
                 const c = w.color ?? DEFAULT_WALL_COLOR
                 const a = w.alpha ?? DEFAULT_WALL_ALPHA
                 g.setStrokeStyle({ width: 3, color: c, alpha: a })
-                g.moveTo(w.x1, w.y1)
-                g.lineTo(w.x2, w.y2)
-                g.stroke()
+
+                const shape = w.shape
+                if (shape === 'line') {
+                    g.moveTo(w.x1, w.y1)
+                    g.lineTo(w.x2, w.y2)
+                    g.stroke()
+                } else if (shape === 'rectangle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const width = Math.abs(dx)
+                    const height = Math.abs(dy)
+                    const x = Math.min(w.x1, w.x2)
+                    const y = Math.min(w.y1, w.y2)
+                    g.rect(x, y, width, height)
+                    g.stroke()
+                } else if (shape === 'circle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const centerX = w.x1 + dx / 2
+                    const centerY = w.y1 + dy / 2
+                    const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                    g.circle(centerX, centerY, radius)
+                    g.stroke()
+                }
             }
         }
     }, [wallsProp])
@@ -449,6 +488,9 @@ const PixiBoard = ({
         wallModeRef.current = isWallMode
     }, [isWallMode])
     useEffect(() => {
+        wallDrawingShapeRef.current = wallDrawingShape
+    }, [wallDrawingShape])
+    useEffect(() => {
         erasingRef.current = isErasingWalls
         // clear any in-progress draw when toggling eraser
         wallStartRef.current = null
@@ -464,9 +506,30 @@ const PixiBoard = ({
                 const c = w.color ?? DEFAULT_WALL_COLOR
                 const a = w.alpha ?? DEFAULT_WALL_ALPHA
                 g.setStrokeStyle({ width: 3, color: c, alpha: a })
-                g.moveTo(w.x1, w.y1)
-                g.lineTo(w.x2, w.y2)
-                g.stroke()
+
+                const wallShape = w.shape || 'line' // Default to 'line' if undefined
+                if (wallShape === 'line') {
+                    g.moveTo(w.x1, w.y1)
+                    g.lineTo(w.x2, w.y2)
+                    g.stroke()
+                } else if (wallShape === 'rectangle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const width = Math.abs(dx)
+                    const height = Math.abs(dy)
+                    const x = Math.min(w.x1, w.x2)
+                    const y = Math.min(w.y1, w.y2)
+                    g.rect(x, y, width, height)
+                    g.stroke()
+                } else if (wallShape === 'circle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const centerX = w.x1 + dx / 2
+                    const centerY = w.y1 + dy / 2
+                    const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                    g.circle(centerX, centerY, radius)
+                    g.stroke()
+                }
             }
         }
     }, [isErasingWalls])
@@ -1478,7 +1541,7 @@ const PixiBoard = ({
                     return
                 }
                 // Wall draw mode: only start with left button
-                if (wallModeRef.current) {
+                if (wallModeRef.current && wallDrawingShapeRef.current) {
                     if (btn !== 0) return
                     const snapped = snapToNinePoints(x, y, gridSizeRef.current, snapRef.current)
                     wallStartRef.current = { x: snapped.x, y: snapped.y }
@@ -1855,7 +1918,21 @@ const PixiBoard = ({
                         const s2 = { x: end.x, y: end.y }
                         const keep: typeof wallsRef.current = []
                         for (const w of wallsRef.current) {
-                            const intersects = segmentsIntersect(s1, s2, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })
+                            const wallShape = w.shape || 'line' // Default to 'line' if undefined
+                            let intersects = false
+                            if (wallShape === 'line') {
+                                intersects = segmentsIntersect(s1, s2, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })
+                            } else if (wallShape === 'rectangle') {
+                                intersects = segmentIntersectsRectangle(s1, s2, w.x1, w.y1, w.x2, w.y2)
+                            } else if (wallShape === 'circle') {
+                                // Calculate circle center and radius from the bounding box
+                                const dx = w.x2 - w.x1
+                                const dy = w.y2 - w.y1
+                                const centerX = w.x1 + dx / 2
+                                const centerY = w.y1 + dy / 2
+                                const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                                intersects = segmentHitsCircleBoundary(s1, s2, centerX, centerY, radius)
+                            }
                             if (intersects) {
                                 continue
                             }
@@ -1870,6 +1947,7 @@ const PixiBoard = ({
                                 y1: w.y1,
                                 x2: w.x2,
                                 y2: w.y2,
+                                ...(w.shape != null ? { shape: w.shape } : {}),
                                 color: w.color ?? DEFAULT_WALL_COLOR,
                                 alpha: w.alpha ?? DEFAULT_WALL_ALPHA,
                             })),
@@ -1878,18 +1956,45 @@ const PixiBoard = ({
                     }
                     eraseStartRef.current = null
                     erasePreviewRef.current = null
+                    // redraw solid walls without preview
                     const g = wallLayerRef.current
                     g.clear()
                     for (const w of wallsRef.current) {
                         const c = w.color ?? DEFAULT_WALL_COLOR
                         const a = w.alpha ?? DEFAULT_WALL_ALPHA
                         g.setStrokeStyle({ width: 3, color: c, alpha: a })
-                        g.moveTo(w.x1, w.y1)
-                        g.lineTo(w.x2, w.y2)
-                        g.stroke()
+
+                        const wallShape = w.shape || 'line' // Default to 'line' if undefined
+                        if (wallShape === 'line') {
+                            g.moveTo(w.x1, w.y1)
+                            g.lineTo(w.x2, w.y2)
+                            g.stroke()
+                        } else if (wallShape === 'rectangle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const width = Math.abs(dx)
+                            const height = Math.abs(dy)
+                            const x = Math.min(w.x1, w.x2)
+                            const y = Math.min(w.y1, w.y2)
+                            g.rect(x, y, width, height)
+                            g.stroke()
+                        } else if (wallShape === 'circle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const centerX = w.x1 + dx / 2
+                            const centerY = w.y1 + dy / 2
+                            const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                            g.circle(centerX, centerY, radius)
+                            g.stroke()
+                        }
                     }
                 }
-                if (wallModeRef.current && wallStartRef.current && wallLayerRef.current) {
+                if (
+                    wallModeRef.current &&
+                    wallStartRef.current &&
+                    wallLayerRef.current &&
+                    wallDrawingShapeRef.current
+                ) {
                     // commit current preview as wall segment (if exists and non-zero length)
                     const preview = wallPreviewRef.current
                     if (preview) {
@@ -1904,6 +2009,7 @@ const PixiBoard = ({
                                 y1: sy,
                                 x2: ex,
                                 y2: ey,
+                                shape: wallDrawingShapeRef.current,
                                 color: wallColorRef.current,
                                 alpha: wallAlphaRef.current,
                             }
@@ -1917,6 +2023,7 @@ const PixiBoard = ({
                                     y1: w.y1,
                                     x2: w.x2,
                                     y2: w.y2,
+                                    shape: w.shape,
                                     color: w.color ?? DEFAULT_WALL_COLOR,
                                     alpha: w.alpha ?? DEFAULT_WALL_ALPHA,
                                 })),
@@ -1935,9 +2042,30 @@ const PixiBoard = ({
                         const c = w.color ?? DEFAULT_WALL_COLOR
                         const a = w.alpha ?? DEFAULT_WALL_ALPHA
                         g.setStrokeStyle({ width: 3, color: c, alpha: a })
-                        g.moveTo(w.x1, w.y1)
-                        g.lineTo(w.x2, w.y2)
-                        g.stroke()
+
+                        const wallShape = w.shape || 'line' // Default to 'line' if undefined
+                        if (wallShape === 'line') {
+                            g.moveTo(w.x1, w.y1)
+                            g.lineTo(w.x2, w.y2)
+                            g.stroke()
+                        } else if (wallShape === 'rectangle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const width = Math.abs(dx)
+                            const height = Math.abs(dy)
+                            const x = Math.min(w.x1, w.x2)
+                            const y = Math.min(w.y1, w.y2)
+                            g.rect(x, y, width, height)
+                            g.stroke()
+                        } else if (wallShape === 'circle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const centerX = w.x1 + dx / 2
+                            const centerY = w.y1 + dy / 2
+                            const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                            g.circle(centerX, centerY, radius)
+                            g.stroke()
+                        }
                     }
                 }
                 if (draggingRef.current && draggingRef.current.id) {
@@ -2143,18 +2271,58 @@ const PixiBoard = ({
                     g.clear()
                     // draw existing walls, highlighting only the ones intersected by the eraser segment
                     for (const w of wallsRef.current) {
-                        const hit = segmentsIntersect(
-                            { x: sx, y: sy },
-                            { x: ex, y: ey },
-                            { x: w.x1, y: w.y1 },
-                            { x: w.x2, y: w.y2 }
-                        )
+                        const wallShape = w.shape || 'line' // Default to 'line' if undefined
+                        let hit = false
+                        if (wallShape === 'line') {
+                            hit = segmentsIntersect(
+                                { x: sx, y: sy },
+                                { x: ex, y: ey },
+                                { x: w.x1, y: w.y1 },
+                                { x: w.x2, y: w.y2 }
+                            )
+                        } else if (wallShape === 'rectangle') {
+                            hit = segmentIntersectsRectangle({ x: sx, y: sy }, { x: ex, y: ey }, w.x1, w.y1, w.x2, w.y2)
+                        } else if (wallShape === 'circle') {
+                            // Calculate circle center and radius from the bounding box
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const centerX = w.x1 + dx / 2
+                            const centerY = w.y1 + dy / 2
+                            const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                            hit = segmentHitsCircleBoundary(
+                                { x: sx, y: sy },
+                                { x: ex, y: ey },
+                                centerX,
+                                centerY,
+                                radius
+                            )
+                        }
                         const c = w.color ?? DEFAULT_WALL_COLOR
                         const a = w.alpha ?? DEFAULT_WALL_ALPHA
                         g.setStrokeStyle({ width: 3, color: hit ? 0xff0000 : c, alpha: hit ? 0.95 : a })
-                        g.moveTo(w.x1, w.y1)
-                        g.lineTo(w.x2, w.y2)
-                        g.stroke()
+
+                        if (wallShape === 'line') {
+                            g.moveTo(w.x1, w.y1)
+                            g.lineTo(w.x2, w.y2)
+                            g.stroke()
+                        } else if (wallShape === 'rectangle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const width = Math.abs(dx)
+                            const height = Math.abs(dy)
+                            const x = Math.min(w.x1, w.x2)
+                            const y = Math.min(w.y1, w.y2)
+                            g.rect(x, y, width, height)
+                            g.stroke()
+                        } else if (wallShape === 'circle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const centerX = w.x1 + dx / 2
+                            const centerY = w.y1 + dy / 2
+                            const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                            g.circle(centerX, centerY, radius)
+                            g.stroke()
+                        }
                     }
                     // draw eraser preview line in bright red
                     g.setStrokeStyle({ width: 2, color: 0xff0000, alpha: 0.9 })
@@ -2238,7 +2406,12 @@ const PixiBoard = ({
                     viewport.cursor = hoveredBlast ? (hoveredBlast.locked ? 'default' : 'grab') : 'default'
                 }
 
-                if (wallModeRef.current && wallStartRef.current && wallLayerRef.current) {
+                if (
+                    wallModeRef.current &&
+                    wallStartRef.current &&
+                    wallLayerRef.current &&
+                    wallDrawingShapeRef.current
+                ) {
                     const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapRef.current)
                     const ex = snapped.x
                     const ey = snapped.y
@@ -2250,31 +2423,95 @@ const PixiBoard = ({
                         const c = w.color ?? DEFAULT_WALL_COLOR
                         const a = w.alpha ?? DEFAULT_WALL_ALPHA
                         g.setStrokeStyle({ width: 3, color: c, alpha: a })
-                        g.moveTo(w.x1, w.y1)
-                        g.lineTo(w.x2, w.y2)
-                        g.stroke()
+
+                        const wallShape = w.shape || 'line' // Default to 'line' if undefined
+                        if (wallShape === 'line') {
+                            g.moveTo(w.x1, w.y1)
+                            g.lineTo(w.x2, w.y2)
+                            g.stroke()
+                        } else if (wallShape === 'rectangle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const width = Math.abs(dx)
+                            const height = Math.abs(dy)
+                            const x = Math.min(w.x1, w.x2)
+                            const y = Math.min(w.y1, w.y2)
+                            g.rect(x, y, width, height)
+                            g.stroke()
+                        } else if (wallShape === 'circle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const centerX = w.x1 + dx / 2
+                            const centerY = w.y1 + dy / 2
+                            const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                            g.circle(centerX, centerY, radius)
+                            g.stroke()
+                        }
                     }
                     // preview new wall in current picker color
                     g.setStrokeStyle({ width: 3, color: wallColorRef.current, alpha: wallAlphaRef.current })
-                    g.moveTo(wallStartRef.current.x, wallStartRef.current.y)
-                    g.lineTo(ex, ey)
-                    g.stroke()
 
-                    // Show wall length label
+                    const shape = wallDrawingShapeRef.current
+                    if (shape === 'line') {
+                        g.moveTo(wallStartRef.current.x, wallStartRef.current.y)
+                        g.lineTo(ex, ey)
+                        g.stroke()
+                    } else if (shape === 'rectangle') {
+                        const dx = ex - wallStartRef.current.x
+                        const dy = ey - wallStartRef.current.y
+                        const width = Math.abs(dx)
+                        const height = Math.abs(dy)
+                        const x = Math.min(wallStartRef.current.x, ex)
+                        const y = Math.min(wallStartRef.current.y, ey)
+                        g.rect(x, y, width, height)
+                        g.stroke()
+                    } else if (shape === 'circle') {
+                        const dx = ex - wallStartRef.current.x
+                        const dy = ey - wallStartRef.current.y
+                        const centerX = wallStartRef.current.x + dx / 2
+                        const centerY = wallStartRef.current.y + dy / 2
+                        const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                        g.circle(centerX, centerY, radius)
+                        g.stroke()
+                    }
+
+                    // Show wall dimensions label
                     const wallLabel = wallLabelRef.current
                     if (wallLabel) {
                         const dx = ex - wallStartRef.current.x
                         const dy = ey - wallStartRef.current.y
-                        const length = Math.sqrt(dx * dx + dy * dy)
-                        const gridLength = snapRef.current
-                            ? Math.round(length / gridSizeRef.current)
-                            : (length / gridSizeRef.current).toFixed(2)
 
-                        wallLabel.text = snapRef.current ? `${gridLength}` : `${gridLength}`
+                        let labelText = ''
+                        let labelX = ex + 8
+                        let labelY = ey - 8
+
+                        if (shape === 'line') {
+                            const length = Math.sqrt(dx * dx + dy * dy)
+                            const gridLength = snapRef.current
+                                ? Math.round(length / gridSizeRef.current)
+                                : (length / gridSizeRef.current).toFixed(2)
+                            labelText = snapRef.current ? `${gridLength}` : `${gridLength}`
+                        } else if (shape === 'rectangle') {
+                            const width = Math.abs(dx) / gridSizeRef.current
+                            const height = Math.abs(dy) / gridSizeRef.current
+                            const widthText = snapRef.current ? Math.round(width) : width.toFixed(1)
+                            const heightText = snapRef.current ? Math.round(height) : height.toFixed(1)
+                            labelText = `${widthText}x${heightText}`
+                            labelX = wallStartRef.current.x + dx / 2
+                            labelY = wallStartRef.current.y + dy / 2 - 20
+                        } else if (shape === 'circle') {
+                            const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2 / gridSizeRef.current
+                            const radiusText = snapRef.current ? Math.round(radius) : radius.toFixed(1)
+                            labelText = `r=${radiusText}`
+                            labelX = wallStartRef.current.x + dx / 2
+                            labelY = wallStartRef.current.y + dy / 2 - radius - 20
+                        }
+
+                        wallLabel.text = labelText
                         wallLabel.style.fontSize = Math.max(24, 24 / Math.max(0.1, viewport.scale.x))
                         wallLabel.visible = true
-                        wallLabel.x = ex + 8
-                        wallLabel.y = ey - 8
+                        wallLabel.x = labelX
+                        wallLabel.y = labelY
                     }
                     return
                 }

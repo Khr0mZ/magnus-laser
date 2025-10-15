@@ -64,6 +64,8 @@ export type Image = {
     blob: Blob
 }
 
+export type WallShape = 'line' | 'rectangle' | 'circle'
+
 export type Wall = {
     id: string
     mapId: string
@@ -71,6 +73,7 @@ export type Wall = {
     y1: number
     x2: number
     y2: number
+    shape?: WallShape // defaults to 'line' for backward compatibility
     color?: number
     alpha?: number
 }
