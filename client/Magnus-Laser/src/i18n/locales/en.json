@@ -1,5 +1,8 @@
 {
     "common": {
+        "minimize": "Minimize",
+        "maximize": "Maximize",
+        "close": "Close",
         "generate": "SPIN UP",
         "clear": "WIPE SLATE",
         "noItems": "No assets spooled yet. Jack in above to generate a random {{type}}.",
@@ -1018,7 +1021,8 @@
         "criticalDamage": "Critical Damage!",
         "clearHistory": "Clear",
         "hp": "HP",
-        "maxHealth": "Max HP"
+        "maxHealth": "Max HP",
+        "restoreTokenDialog": "Restore Token Dialog"
     },
     "settings": {
         "title": "System Kernel Prefs",

@@ -10,7 +10,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useData } from '../../../contexts/dataHooks.ts'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks.ts'
@@ -151,16 +151,8 @@ const FormBounty = (props: FormBountyProps) => {
     const { characters } = useData()
     const { readerMode } = useUserPreferences()
 
-    const updatedTarget = useMemo(() => {
-        return {
-            ...editedTarget,
-            character: characters.find(
-                (c) =>
-                    c.ID ===
-                    (typeof editedTarget.character === 'string' ? editedTarget.character : editedTarget.character.ID)
-            ) as Character,
-        }
-    }, [editedTarget, characters])
+    // Character is always a full object now from normalized database
+    const selectedCharacter = editedTarget.character as Character
 
     const getTargetRank = useCallback((target: string, crimeType: CrimeType) => {
         let rank = 0
@@ -187,7 +179,7 @@ const FormBounty = (props: FormBountyProps) => {
 
     const Row = useCallback(
         ({ index, style }: { index: number; style: React.CSSProperties }) => {
-            const crime = updatedTarget.crimes[index]
+            const crime = editedTarget.crimes[index]
             return (
                 <div style={style}>
                     <CrimeRow
@@ -202,7 +194,7 @@ const FormBounty = (props: FormBountyProps) => {
                 </div>
             )
         },
-        [updatedTarget.crimes, handleChange, selectStyle, textFieldOutlinedStyle, getTargetRank]
+        [editedTarget.crimes, handleChange, selectStyle, textFieldOutlinedStyle, getTargetRank]
     )
 
     return (
@@ -211,7 +203,7 @@ const FormBounty = (props: FormBountyProps) => {
             <Grid size={{ xs: 12 }}>
                 <CyberpunkFormControl readerMode={readerMode} label={t('characters.labels.name')}>
                     <Select
-                        value={updatedTarget.character.ID}
+                        value={selectedCharacter.ID}
                         onChange={(e) =>
                             handleChange('character', characters.find((c) => c.ID === e.target.value) as Character)
                         }
@@ -231,7 +223,7 @@ const FormBounty = (props: FormBountyProps) => {
                 <TextField
                     fullWidth
                     label={t('characters.labels.name')}
-                    value={updatedTarget.character.name}
+                    value={selectedCharacter.name}
                     variant="outlined"
                     sx={textFieldOutlinedStyle}
                     disabled
@@ -245,7 +237,7 @@ const FormBounty = (props: FormBountyProps) => {
                         <TextField
                             fullWidth
                             label={t('characters.labels.type')}
-                            value={t(`characters.type.${updatedTarget.character.type}`)}
+                            value={t(`characters.type.${selectedCharacter.type}`)}
                             variant="outlined"
                             sx={textFieldOutlinedStyle}
                             disabled
@@ -254,7 +246,7 @@ const FormBounty = (props: FormBountyProps) => {
                         <TextField
                             fullWidth
                             label={t('characters.labels.attitude')}
-                            value={t(`characters.attitude.${updatedTarget.character.attitude}`)}
+                            value={t(`characters.attitude.${selectedCharacter.attitude}`)}
                             variant="outlined"
                             sx={textFieldOutlinedStyle}
                             disabled
@@ -264,7 +256,7 @@ const FormBounty = (props: FormBountyProps) => {
                         {/* Speciality */}
                         <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.speciality')}>
                             <Select
-                                value={updatedTarget.speciality || ''}
+                                value={editedTarget.speciality || ''}
                                 onChange={(e) => handleChange('speciality', e.target.value)}
                                 label={t('bounties.labels.speciality')}
                                 sx={selectStyle}
@@ -280,7 +272,7 @@ const FormBounty = (props: FormBountyProps) => {
                         <TextField
                             fullWidth
                             label={t('bounties.labels.baseBounty')}
-                            value={baseBountyRewardPerSpeciality[updatedTarget.speciality]}
+                            value={baseBountyRewardPerSpeciality[editedTarget.speciality]}
                             variant="outlined"
                             sx={textFieldOutlinedStyle}
                             disabled
@@ -293,7 +285,7 @@ const FormBounty = (props: FormBountyProps) => {
                         {/* Rep */}
                         <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.rep')}>
                             <Select
-                                value={updatedTarget.rep || ''}
+                                value={editedTarget.rep || ''}
                                 onChange={(e) => handleChange('rep', e.target.value)}
                                 label={t('bounties.labels.rep')}
                                 sx={selectStyle}
@@ -308,7 +300,7 @@ const FormBounty = (props: FormBountyProps) => {
                         {/* Status */}
                         <CyberpunkFormControl readerMode={readerMode} label={t('bounties.labels.status.title')}>
                             <Select
-                                value={updatedTarget.status || ''}
+                                value={editedTarget.status || ''}
                                 onChange={(e) => handleChange('status', e.target.value)}
                                 label={t('bounties.labels.status.title')}
                                 sx={selectStyle}
@@ -326,8 +318,8 @@ const FormBounty = (props: FormBountyProps) => {
             {/* Image */}
             <Grid size={{ xs: 12, md: 4 }}>
                 <ImageField
-                    image={updatedTarget.character.image}
-                    downloadName={updatedTarget.character.name}
+                    image={selectedCharacter.image}
+                    downloadName={selectedCharacter.name}
                     toggleFullscreenImage={toggleFullscreenImage}
                     disabled
                 />
@@ -355,8 +347,8 @@ const FormBounty = (props: FormBountyProps) => {
                             onClick={() => {
                                 const crimeType = getRandomElement(Object.values(CrimeType))
                                 const multiplier =
-                                    crimeType === updatedTarget.speciality
-                                        ? updatedTarget.rep === BountyRep.BRAGGER
+                                    crimeType === editedTarget.speciality
+                                        ? editedTarget.rep === BountyRep.BRAGGER
                                             ? 2
                                             : 0.5
                                         : 1
@@ -367,7 +359,7 @@ const FormBounty = (props: FormBountyProps) => {
                                     multiplier,
                                     reward: target.reward * multiplier,
                                 }
-                                handleChange('crimes', [...updatedTarget.crimes, crime])
+                                handleChange('crimes', [...editedTarget.crimes, crime])
                             }}
                             sx={{
                                 minWidth: '30px',
@@ -446,8 +438,8 @@ const FormBounty = (props: FormBountyProps) => {
                         </IconButton>
                     </Stack>
                     <VirtualizedList
-                        height={Math.min(updatedTarget.crimes.length * 74, 400)}
-                        itemCount={updatedTarget.crimes.length}
+                        height={Math.min(editedTarget.crimes.length * 74, 400)}
+                        itemCount={editedTarget.crimes.length}
                         itemSize={74}
                         width="100%"
                         renderItem={Row}

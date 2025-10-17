@@ -16,20 +16,19 @@ import { v4 as uuidv4 } from 'uuid'
 import CustomScrollbar from '../../components/CustomScrollbar'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
-import { db } from './db'
+import { db } from '../../utils/db'
 import { TokenContextMenu } from './TokenContextMenu'
 import { TokenTooltip } from './TokenTooltip'
-import { Image, Token } from './types'
+import { Token } from './types'
 
 interface TokenPanelProps {
     isSidePanelOpen: boolean
-    images: Image[]
     setTokenDialogOpen: (tokenId: string | undefined) => void
     getActiveMapKey: () => string
     setTokens: React.Dispatch<React.SetStateAction<Token[]>>
     setIsSaving: React.Dispatch<React.SetStateAction<boolean>>
     pixiToCss: (color: number) => string
-    resolveImageUrl: (imageId: string | undefined, images: Image[]) => string | undefined
+    resolveImageUrl: (imageId: string | undefined) => string | undefined
     gridSize: number
     tokens: Token[]
     tokensNotInMap: Token[]
@@ -42,7 +41,6 @@ interface TokenPanelProps {
 
 const TokenPanel = ({
     isSidePanelOpen,
-    images,
     setTokenDialogOpen,
     getActiveMapKey,
     setTokens,
@@ -185,7 +183,7 @@ const TokenPanel = ({
                     <Avatar
                         key={token.id}
                         sx={{ width: 28, height: 28, color: pixiToCss(token.color) }}
-                        src={resolveImageUrl(token.imageId, images)}
+                        src={resolveImageUrl(token.imageId)}
                     />
                     <Typography
                         variant="body1"

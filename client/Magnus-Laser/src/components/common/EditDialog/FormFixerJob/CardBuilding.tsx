@@ -63,44 +63,18 @@ export const CardBuilding = (props: CardBuildingProps) => {
     const { readerMode } = useUserPreferences()
     const { buildings } = useData()
     const [selectedBuilding, setSelectedBuilding] = useState<Building>(() => {
-        // Get the building from chainStarter based on ID or direct reference
-        const buildingRef = building.chainStarter?.building
-        if (typeof buildingRef === 'string') {
-            // If building is stored as ID, find the building object
-            return buildings.find((b) => b.ID === buildingRef) || buildings[0] || null
-        }
-        // Otherwise it's already a building object
-        return buildingRef || buildings[0] || null
+        // Building is always a full object now from normalized database
+        return building.chainStarter?.building || buildings[0] || null
     })
 
     const handleChangeBuilding = (e: SelectChangeEvent<string>) => {
         const buildingId = e.target.value
-        const sb = buildings.find((b) => b.ID === buildingId)
-        if (sb) {
-            setSelectedBuilding(sb)
-
-            // Store both the ID for storage compatibility and the building object for immediate display
-            if (building.chainStarter && 'building' in building.chainStarter) {
-                // First update the ID reference for storage
-                handleChange(building.handleBuildingChangeTarget, buildingId)
-
-                // Now update the actual display object
-                // This is a separate update to ensure the UI shows the full building object
-                // We need to use a timeout to ensure the first change is processed
-                setTimeout(() => {
-                    // For plotBuilding.building, we need to update the building property directly
-                    if (building.handleBuildingChangeTarget === 'plot.plotBuilding.building') {
-                        const plotBuilding = editedTarget.plot?.plotBuilding
-                        if (plotBuilding) {
-                            // Replace the ID with the full building object for display
-                            handleChange('plot.plotBuilding', {
-                                ...plotBuilding,
-                                building: sb,
-                            })
-                        }
-                    }
-                }, 0)
-            }
+        const selectedBuilding = buildings.find((b) => b.ID === buildingId)
+        if (selectedBuilding) {
+            setSelectedBuilding(selectedBuilding)
+            // Update the form data with the full building object
+            // The save functions will handle normalization to the database format
+            handleChange(building.handleBuildingChangeTarget, selectedBuilding)
         }
     }
 

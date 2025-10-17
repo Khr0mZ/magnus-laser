@@ -56,65 +56,18 @@ const CardGang = (props: CardGangProps) => {
     const { readerMode } = useUserPreferences()
     const { gangs } = useData()
     const [selectedGang, setSelectedGang] = useState<Gang>(() => {
-        // Get the gang from chainStarter based on ID or direct reference
-        const gangRef = gang.chainStarter?.gang
-        if (typeof gangRef === 'string') {
-            // If gang is stored as ID, find the gang object
-            return gangs.find((g) => g.ID === gangRef) || gangs[0] || null
-        }
-        // Otherwise it's already a gang object
-        return gangRef || gangs[0] || null
+        // Gang is always a full object now from normalized database
+        return gang.chainStarter?.gang || gangs[0] || null
     })
 
     const handleChangeGang = (e: SelectChangeEvent<string>) => {
         const gangId = e.target.value
-        const sg = gangs.find((g) => g.ID === gangId)
-        if (sg) {
-            setSelectedGang(sg)
-
-            // Store both the ID for storage compatibility and the gang object for immediate display
-            if (gang.chainStarter && 'gang' in gang.chainStarter) {
-                // First update the ID reference for storage
-                handleChange(gang.handleGangChangeTarget, gangId)
-
-                // Now update the actual display object
-                // This is a separate update to ensure the UI shows the full gang object
-                // We need to use a timeout to ensure the first change is processed
-                setTimeout(() => {
-                    // For plotSubject.gang, we need to update the gang property directly
-                    // Look at the original object path and update appropriately
-                    if (gang.handleGangChangeTarget === 'plot.plotSubject.gang') {
-                        const plotSubject = editedTarget.plot?.plotSubject
-                        if (plotSubject && 'gang' in plotSubject) {
-                            // Replace the string ID with the full gang object for display
-                            handleChange('plot.plotSubject', {
-                                ...plotSubject,
-                                gang: sg,
-                            })
-                        }
-                    } else if (gang.handleGangChangeTarget.includes('complication')) {
-                        // For complications with gang references, similar approach
-                        const parts = gang.handleGangChangeTarget.split('.')
-                        const complicationPath = parts.slice(0, -1).join('.')
-                        if (
-                            complicationPath &&
-                            editedTarget.plot?.plotSubject &&
-                            'complication' in editedTarget.plot.plotSubject
-                        ) {
-                            const plotGang = editedTarget.plot.plotSubject as unknown as {
-                                complication: { gang?: unknown }
-                            }
-                            const complication = plotGang.complication
-                            if (complication && 'gang' in complication) {
-                                handleChange('plot.plotSubject.complication', {
-                                    ...complication,
-                                    gang: sg,
-                                })
-                            }
-                        }
-                    }
-                }, 0)
-            }
+        const selectedGang = gangs.find((g) => g.ID === gangId)
+        if (selectedGang) {
+            setSelectedGang(selectedGang)
+            // Update the form data with the full gang object
+            // The save functions will handle normalization to the database format
+            handleChange(gang.handleGangChangeTarget, selectedGang)
         }
     }
 

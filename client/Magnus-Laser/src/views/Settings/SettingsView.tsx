@@ -36,11 +36,18 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { db } from '../../utils/db'
 import {
-    clearCombatSimData,
+    loadBounties,
+    loadBuildings,
+    loadCharacters,
     loadCombatSimData,
+    loadFixerJobs,
+    loadGangs,
     loadGeminiApiKey,
     loadHuggingFaceApiKey,
+    loadItems,
+    loadMapMarkers,
     loadOpenAIApiKey,
+    loadPreferences,
     notifyDataImported,
     notifyPreferencesChanged,
     saveBounties,
@@ -142,17 +149,17 @@ const SettingsView = () => {
         try {
             const data: Record<string, unknown> = {}
 
-            // Export all application data from Dexie
+            // Export all application data using load functions to get full nested objects
             const [gangs, buildings, fixerJobs, characters, items, bounties, preferences, mapMarkers] =
                 await Promise.all([
-                    db.gangs.toArray(),
-                    db.buildings.toArray(),
-                    db.fixerJobs.toArray(),
-                    db.characters.toArray(),
-                    db.items.toArray(),
-                    db.bounties.toArray(),
-                    db.preferences.toArray(),
-                    db.mapMarkers.toArray(),
+                    loadGangs(),
+                    loadBuildings(),
+                    loadFixerJobs(),
+                    loadCharacters(),
+                    loadItems(),
+                    loadBounties(),
+                    loadPreferences().then((prefs) => [prefs]), // Convert to array format
+                    loadMapMarkers(),
                 ])
 
             if (gangs.length > 0) data.gangs = gangs
@@ -171,6 +178,7 @@ const SettingsView = () => {
             if (combatSimData.maps.length > 0) data.combatSimMaps = combatSimData.maps
             if (combatSimData.walls.length > 0) data.combatSimWalls = combatSimData.walls
             if (combatSimData.images.length > 0) data.combatSimImages = combatSimData.images
+            if (combatSimData.blasts.length > 0) data.combatSimBlasts = combatSimData.blasts
 
             // Create a JSON file to download
             const fileName = `magnus-laser-data-${new Date().toISOString().split('T')[0]}.json`
@@ -293,11 +301,6 @@ const SettingsView = () => {
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break
-                                case 'fixerJobs':
-                                    await saveFixerJobs(value)
-                                    importedCollections += 1
-                                    if (Array.isArray(value)) importedRegistries += value.length
-                                    break
                                 case 'characters':
                                     await saveCharacters(value)
                                     importedCollections += 1
@@ -308,17 +311,22 @@ const SettingsView = () => {
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break
-                                case 'bounties':
-                                    await saveBounties(value)
-                                    importedCollections += 1
-                                    if (Array.isArray(value)) importedRegistries += value.length
-                                    break
                                 case 'preferences':
                                     await savePreferences(value)
                                     importedCollections += 1
                                     break
-                                case 'mapMarkers':
-                                    await saveMapMarkers(value)
+                                case 'combatSimMaps':
+                                    await saveCombatSimData({ maps: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'fixerJobs':
+                                    await saveFixerJobs(value)
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'bounties':
+                                    await saveBounties(value)
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break
@@ -332,13 +340,18 @@ const SettingsView = () => {
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break
-                                case 'combatSimMaps':
-                                    await saveCombatSimData({ maps: value })
+                                case 'combatSimWalls':
+                                    await saveCombatSimData({ walls: value })
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break
-                                case 'combatSimWalls':
-                                    await saveCombatSimData({ walls: value })
+                                case 'combatSimBlasts':
+                                    await saveCombatSimData({ blasts: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'mapMarkers':
+                                    await saveMapMarkers(value)
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break
@@ -489,16 +502,26 @@ const SettingsView = () => {
             await Promise.all([
                 db.gangs.clear(),
                 db.buildings.clear(),
-                db.fixerJobs.clear(),
                 db.characters.clear(),
                 db.items.clear(),
+
                 db.bounties.clear(),
+                db.fixerJobs.clear(),
+                db.plots.clear(),
+                db.plotBuildings.clear(),
+                db.plotComplications.clear(),
+                db.buildingComplications.clear(),
+
                 db.preferences.clear(),
                 db.mapMarkers.clear(),
-            ])
 
-            // Clear combat simulator data from its separate database
-            await clearCombatSimData()
+                db.boardMaps.clear(),
+                db.tokens.clear(),
+                db.maps.clear(),
+                db.walls.clear(),
+                db.images.clear(),
+                db.blasts.clear(),
+            ])
 
             // Notify that data has been cleared for immediate UI updates
             notifyDataImported()

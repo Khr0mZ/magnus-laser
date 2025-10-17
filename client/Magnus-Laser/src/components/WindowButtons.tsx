@@ -5,6 +5,7 @@ import colors from '../utils/colors'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank' // Maximize
 import CloseIcon from '@mui/icons-material/Close'
 import RemoveIcon from '@mui/icons-material/Remove' // Minimize
+import { useTranslation } from 'react-i18next'
 import { flicker, glitch } from './common/Animations'
 
 // Add type declaration for window.__TAURI__
@@ -24,6 +25,7 @@ declare global {
 
 const WindowButtons: React.FC = () => {
     // Handle window controls directly through onClick handlers
+    const { t } = useTranslation()
     const handleMinimize = async () => {
         try {
             type TauriWindowApi = {
@@ -163,7 +165,7 @@ const WindowButtons: React.FC = () => {
         <Box sx={{ display: 'flex', flexDirection: 'row', height: 'min-content' }}>
             <IconButton
                 size="small"
-                title="Minimize"
+                title={t('common.minimize')}
                 onClick={handleMinimize}
                 sx={{
                     ...buttonBaseStyle,
@@ -181,7 +183,7 @@ const WindowButtons: React.FC = () => {
 
             <IconButton
                 size="small"
-                title="Maximize"
+                title={t('common.maximize')}
                 onClick={handleMaximize}
                 sx={{
                     ...buttonBaseStyle,
@@ -198,7 +200,7 @@ const WindowButtons: React.FC = () => {
             </IconButton>
             <IconButton
                 size="small"
-                title="Close"
+                title={t('common.close')}
                 onClick={handleClose}
                 sx={{
                     ...buttonBaseStyle,

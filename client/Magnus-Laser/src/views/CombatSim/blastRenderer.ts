@@ -353,6 +353,7 @@ export function drawBlastPreview(
             const height = Math.abs(dy)
             const radius = Math.min(width, height) / 2
             layer.circle(centerX, centerY, radius)
+            layer.fill({ color, alpha })
             layer.stroke({ color, width: 2, alpha })
 
             const radiusInGrids = (radius / gridSize).toFixed(1)
@@ -370,6 +371,7 @@ export function drawBlastPreview(
             const width = Math.abs(dx)
             const height = Math.abs(dy)
             layer.rect(centerX - width / 2, centerY - height / 2, width, height)
+            layer.fill({ color, alpha })
             layer.stroke({ color, width: 2, alpha })
 
             const widthInGrids = (width / gridSize).toFixed(1)
@@ -400,6 +402,7 @@ export function drawBlastPreview(
             layer.lineTo(points[1].x, points[1].y)
             layer.lineTo(points[2].x, points[2].y)
             layer.lineTo(points[0].x, points[0].y)
+            layer.fill({ color, alpha })
             layer.stroke({ color, width: 2, alpha })
 
             // Calculate actual preview length after snapping

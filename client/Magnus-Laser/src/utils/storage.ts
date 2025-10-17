@@ -1,7 +1,30 @@
-import { Bounty, Building, Character, FixerJob, Gang, Item } from '../graphql/types'
-import { db as combatDb } from '../views/CombatSim/db'
+import {
+    Bounty,
+    BountyRep,
+    BountyStatus,
+    Building,
+    Character,
+    CrimeType,
+    FixerJob,
+    Gang,
+    Item,
+    JobDifficulty,
+    PlotBuildingComplicationType,
+    PlotComplicationType,
+    PlotVerb,
+} from '../graphql/types'
 import { ModuleTypes } from './constants'
-import { AppPreferences, CustomMarker, db } from './db'
+import {
+    AppPreferences,
+    CustomMarker,
+    DbBounty,
+    DbBuildingComplication,
+    DbFixerJob,
+    DbPlot,
+    DbPlotBuilding,
+    DbPlotComplication,
+    db,
+} from './db'
 
 // Events
 export const DATA_IMPORT_EVENT = 'data-imported'
@@ -125,7 +148,22 @@ export const clearCharacters = async (): Promise<void> => {
  */
 export const loadBounties = async (): Promise<Bounty[]> => {
     try {
-        return await db.bounties.toArray()
+        // Load normalized bounties and join with characters
+        const normalizedBounties = await db.bounties.toArray()
+        const characterIds = normalizedBounties.map((b) => b.characterId).filter(Boolean)
+        const characters = await db.characters.where('ID').anyOf(characterIds).toArray()
+        const characterMap = new Map(characters.map((c) => [c.ID, c]))
+
+        // Reconstruct full Bounty objects
+        return normalizedBounties.map((bounty) => ({
+            __typename: 'Bounty' as const,
+            ID: bounty.ID,
+            character: characterMap.get(bounty.characterId)!,
+            crimes: bounty.crimes,
+            rep: bounty.rep as BountyRep,
+            speciality: bounty.speciality as CrimeType,
+            status: bounty.status as BountyStatus,
+        }))
     } catch (error) {
         console.warn('Error loading bounties:', error)
         return []
@@ -134,28 +172,30 @@ export const loadBounties = async (): Promise<Bounty[]> => {
 
 export const saveBounties = async (bounties: Bounty[]): Promise<void> => {
     try {
-        // Use transaction for atomic operation
-        await db.transaction('rw', [db.bounties, db.characters], async () => {
-            const characters = await db.characters.toArray()
-            const newCharacters: Character[] = []
+        // Convert GraphQL bounties to normalized database format
+        const normalizedBounties: DbBounty[] = bounties.map((bounty) => ({
+            ID: bounty.ID,
+            characterId: typeof bounty.character === 'object' ? bounty.character.ID : bounty.character,
+            crimes: bounty.crimes,
+            rep: bounty.rep,
+            speciality: bounty.speciality,
+            status: bounty.status,
+        }))
 
-            // Extract and collect new characters
-            bounties.forEach((bounty) => {
-                if (typeof bounty.character === 'object' && bounty.character) {
-                    const character = characters.find((c) => c.ID === bounty.character.ID)
-                    if (!character) {
-                        newCharacters.push(bounty.character)
-                    }
-                }
-            })
-
-            // Save new characters
-            if (newCharacters.length > 0) {
-                await db.characters.bulkPut(newCharacters)
+        // Extract characters from nested structure if they exist
+        const charactersToSave: Character[] = []
+        bounties.forEach((bounty) => {
+            if (typeof bounty.character === 'object' && bounty.character) {
+                charactersToSave.push(bounty.character)
             }
+        })
 
-            // Save bounties
-            await db.bounties.bulkPut(bounties)
+        // Save in transaction
+        await db.transaction('rw', [db.bounties, db.characters], async () => {
+            if (charactersToSave.length > 0) {
+                await db.characters.bulkPut(charactersToSave)
+            }
+            await db.bounties.bulkPut(normalizedBounties)
         })
     } catch (error) {
         console.warn('Error saving bounties:', error)
@@ -171,7 +211,140 @@ export const clearBounties = async (): Promise<void> => {
  */
 export const loadFixerJobs = async (): Promise<FixerJob[]> => {
     try {
-        return await db.fixerJobs.toArray()
+        // Ensure database is open
+        await db.open()
+
+        // Check if we have the new normalized schema by checking for required tables
+        const tableNames = db.tables.map((t) => t.name)
+        const hasNormalizedSchema = tableNames.includes('plots') && tableNames.includes('plotBuildings')
+
+        if (!hasNormalizedSchema) {
+            console.log('Database does not have normalized schema yet, returning empty array')
+            return []
+        }
+
+        // Load all normalized data
+        const normalizedJobs = await db.fixerJobs.toArray()
+        const plotIds = normalizedJobs.map((j) => j.plotId).filter(Boolean)
+
+        // If no jobs or no plot IDs, return empty array
+        if (plotIds.length === 0) {
+            return []
+        }
+
+        // Load all related data in parallel with error handling
+        const [
+            plots,
+            plotBuildings,
+            plotComplications,
+            buildingComplications,
+            allBuildings,
+            allCharacters,
+            allItems,
+            allGangs,
+        ] = await Promise.all([
+            plotIds.length > 0
+                ? db.plots
+                      .where('ID')
+                      .anyOf(plotIds)
+                      .toArray()
+                      .catch(() => [])
+                : Promise.resolve([]),
+            db.plotBuildings.toArray().catch(() => []),
+            db.plotComplications.toArray().catch(() => []),
+            db.buildingComplications.toArray().catch(() => []),
+            db.buildings.toArray().catch(() => []),
+            db.characters.toArray().catch(() => []),
+            db.items.toArray().catch(() => []),
+            db.gangs.toArray().catch(() => []),
+        ])
+
+        // Create lookup maps
+        const plotMap = new Map(plots.map((p) => [p.ID, p]))
+        const plotBuildingMap = new Map(plotBuildings.map((pb) => [pb.ID, pb]))
+        const plotComplicationMap = new Map(plotComplications.map((pc) => [pc.ID, pc]))
+        const buildingComplicationMap = new Map(buildingComplications.map((bc) => [bc.ID, bc]))
+        const buildingMap = new Map(allBuildings.map((b) => [b.ID, b]))
+        const characterMap = new Map(allCharacters.map((c) => [c.ID, c]))
+        const itemMap = new Map(allItems.map((i) => [i.ID, i]))
+        const gangMap = new Map(allGangs.map((g) => [g.ID, g]))
+
+        // Reconstruct full FixerJob objects
+        return normalizedJobs
+            .map((job) => {
+                const plot = plotMap.get(job.plotId)
+                if (!plot) return null
+
+                // Reconstruct plot building
+                let plotBuilding = undefined
+                if (plot.plotBuildingId) {
+                    const pb = plotBuildingMap.get(plot.plotBuildingId)
+                    if (pb) {
+                        // Reconstruct building complication
+                        let complication = undefined
+                        if (pb.complicationId) {
+                            const bc = buildingComplicationMap.get(pb.complicationId)
+                            if (bc) {
+                                complication = {
+                                    __typename: 'BuildingComplication' as const,
+                                    character: bc.characterId ? characterMap.get(bc.characterId) : undefined,
+                                    item: bc.itemId ? itemMap.get(bc.itemId) : undefined,
+                                    type: bc.type as PlotBuildingComplicationType,
+                                }
+                            }
+                        }
+
+                        plotBuilding = {
+                            __typename: 'PlotBuilding' as const,
+                            building: buildingMap.get(pb.buildingId)!,
+                            complication,
+                        }
+                    }
+                }
+
+                // Reconstruct plot subject
+                let plotSubject = undefined
+                if (plot.plotSubjectId) {
+                    // Could be Character, Item, or Gang - check which table has it
+                    plotSubject =
+                        characterMap.get(plot.plotSubjectId) ||
+                        itemMap.get(plot.plotSubjectId) ||
+                        gangMap.get(plot.plotSubjectId)
+                }
+
+                // Reconstruct plot complication
+                let plotComplication = undefined
+                if (plot.plotComplicationId) {
+                    const pc = plotComplicationMap.get(plot.plotComplicationId)
+                    if (pc) {
+                        plotComplication = {
+                            __typename: 'PlotComplication' as const,
+                            character: pc.characterId ? characterMap.get(pc.characterId) : undefined,
+                            item: pc.itemId ? itemMap.get(pc.itemId) : undefined,
+                            type: pc.type as PlotComplicationType,
+                        }
+                    }
+                }
+
+                const reconstructedPlot = {
+                    __typename: 'Plot' as const,
+                    plotBuilding,
+                    plotSubject,
+                    plotComplication,
+                    verb: plot.verb as unknown as PlotVerb,
+                }
+
+                return {
+                    __typename: 'FixerJob' as const,
+                    ID: job.ID,
+                    description: job.description,
+                    difficulty: job.difficulty as JobDifficulty,
+                    image: job.image,
+                    name: job.name,
+                    plot: reconstructedPlot,
+                }
+            })
+            .filter(Boolean) as FixerJob[]
     } catch (error) {
         console.warn('Error loading fixer jobs:', error)
         return []
@@ -180,125 +353,180 @@ export const loadFixerJobs = async (): Promise<FixerJob[]> => {
 
 export const saveFixerJobs = async (fixerJobs: FixerJob[]): Promise<void> => {
     try {
-        // Use transaction for atomic operation
-        await db.transaction('rw', [db.fixerJobs, db.gangs, db.buildings, db.characters, db.items], async () => {
-            const [gangs, buildings, characters, items] = await Promise.all([
-                db.gangs.toArray(),
-                db.buildings.toArray(),
-                db.characters.toArray(),
-                db.items.toArray(),
-            ])
+        const normalizedJobs: DbFixerJob[] = []
+        const plots: DbPlot[] = []
+        const plotBuildings: DbPlotBuilding[] = []
+        const plotComplications: DbPlotComplication[] = []
+        const buildingComplications: DbBuildingComplication[] = []
 
-            const newGangs: Gang[] = []
-            const newBuildings: Building[] = []
-            const newCharacters: Character[] = []
-            const newItems: Item[] = []
+        // Extract all entities that need to be saved
+        const entitiesToSave = {
+            buildings: [] as Building[],
+            characters: [] as Character[],
+            items: [] as Item[],
+            gangs: [] as Gang[],
+        }
 
-            // Extract nested entities from fixer jobs
-            fixerJobs.forEach((job) => {
-                const p = job.plot
-                if (!p) return
+        fixerJobs.forEach((job) => {
+            const plotId = `plot_${job.ID}`
+            const plot = job.plot
+            if (!plot) return
+
+            // Extract plot building
+            let plotBuildingId: string | undefined
+            if (plot.plotBuilding) {
+                plotBuildingId = `pb_${job.ID}`
 
                 // Extract building
-                if (p.plotBuilding?.building && typeof p.plotBuilding.building === 'object') {
-                    const building = p.plotBuilding.building as Building
-                    if (!buildings.find((b) => b.ID === building.ID)) {
-                        newBuildings.push(building)
-                    }
+                if (typeof plot.plotBuilding.building === 'object') {
+                    entitiesToSave.buildings.push(plot.plotBuilding.building)
                 }
 
-                // Extract gang from plotSubject
-                const subject = p.plotSubject
-                if (subject && typeof subject === 'object' && 'gang' in subject) {
-                    const gang = subject.gang
-                    if (gang && typeof gang === 'object' && 'ID' in gang) {
-                        if (!gangs.find((g) => g.ID === (gang as Gang).ID)) {
-                            newGangs.push(gang as Gang)
-                        }
-                    }
-                }
+                // Extract building complication
+                if (plot.plotBuilding.complication) {
+                    const compId = `bc_${job.ID}`
+                    plotBuildings.push({
+                        ID: plotBuildingId,
+                        buildingId:
+                            typeof plot.plotBuilding.building === 'object'
+                                ? plot.plotBuilding.building.ID
+                                : plot.plotBuilding.building,
+                        complicationId: compId,
+                    })
 
-                // Extract character/item from plotSubject
-                if (subject && typeof subject === 'object' && 'ID' in subject && !('gang' in subject)) {
-                    if ('attitude' in subject) {
-                        const character = subject as Character
-                        if (!characters.find((c) => c.ID === character.ID)) {
-                            newCharacters.push(character)
-                        }
-                    } else if ('condition' in subject) {
-                        const item = subject as Item
-                        if (!items.find((i) => i.ID === item.ID)) {
-                            newItems.push(item)
-                        }
-                    }
-                }
+                    buildingComplications.push({
+                        ID: compId,
+                        characterId:
+                            typeof plot.plotBuilding.complication.character === 'object'
+                                ? plot.plotBuilding.complication.character?.ID
+                                : plot.plotBuilding.complication.character,
+                        itemId:
+                            typeof plot.plotBuilding.complication.item === 'object'
+                                ? plot.plotBuilding.complication.item?.ID
+                                : plot.plotBuilding.complication.item,
+                        type: plot.plotBuilding.complication.type,
+                    })
 
-                // Extract from subject complication
-                if (
-                    subject &&
-                    'complication' in subject &&
-                    subject.complication &&
-                    typeof subject.complication === 'object'
-                ) {
-                    const sComp = subject.complication
-                    if (sComp.character && typeof sComp.character === 'object') {
-                        const char = sComp.character as Character
-                        if (!characters.find((c) => c.ID === char.ID)) {
-                            newCharacters.push(char)
-                        }
+                    // Extract entities from complication
+                    if (
+                        typeof plot.plotBuilding.complication.character === 'object' &&
+                        plot.plotBuilding.complication.character
+                    ) {
+                        entitiesToSave.characters.push(plot.plotBuilding.complication.character)
                     }
-                    if (sComp.item && typeof sComp.item === 'object') {
-                        const item = sComp.item as Item
-                        if (!items.find((i) => i.ID === item.ID)) {
-                            newItems.push(item)
-                        }
+                    if (
+                        typeof plot.plotBuilding.complication.item === 'object' &&
+                        plot.plotBuilding.complication.item
+                    ) {
+                        entitiesToSave.items.push(plot.plotBuilding.complication.item)
                     }
+                } else {
+                    plotBuildings.push({
+                        ID: plotBuildingId,
+                        buildingId:
+                            typeof plot.plotBuilding.building === 'object'
+                                ? plot.plotBuilding.building.ID
+                                : plot.plotBuilding.building,
+                        complicationId: undefined,
+                    })
                 }
+            }
 
-                // Extract from plotComplication
-                if (p.plotComplication && typeof p.plotComplication === 'object') {
-                    const comp = p.plotComplication
-                    if (comp.character && typeof comp.character === 'object') {
-                        const char = comp.character as Character
-                        if (!characters.find((c) => c.ID === char.ID)) {
-                            newCharacters.push(char)
-                        }
-                    }
-                    if (comp.item && typeof comp.item === 'object') {
-                        const item = comp.item as Item
-                        if (!items.find((i) => i.ID === item.ID)) {
-                            newItems.push(item)
-                        }
-                    }
-                }
+            // Extract plot subject
+            let plotSubjectId: string | undefined
+            if (plot.plotSubject && typeof plot.plotSubject === 'object') {
+                plotSubjectId = (plot.plotSubject as Character | Item | Gang).ID
 
-                // Extract from building complication
-                if (p.plotBuilding?.complication && typeof p.plotBuilding.complication === 'object') {
-                    const bComp = p.plotBuilding.complication
-                    if (bComp.character && typeof bComp.character === 'object') {
-                        const char = bComp.character as Character
-                        if (!characters.find((c) => c.ID === char.ID)) {
-                            newCharacters.push(char)
-                        }
-                    }
-                    if (bComp.item && typeof bComp.item === 'object') {
-                        const item = bComp.item as Item
-                        if (!items.find((i) => i.ID === item.ID)) {
-                            newItems.push(item)
-                        }
-                    }
+                // Determine entity type and add to appropriate array
+                if ('attitude' in plot.plotSubject) {
+                    entitiesToSave.characters.push(plot.plotSubject as Character)
+                } else if ('condition' in plot.plotSubject) {
+                    entitiesToSave.items.push(plot.plotSubject as Item)
+                } else if ('gang' in plot.plotSubject) {
+                    // Handle gang case
+                } else {
+                    // Direct gang object
+                    entitiesToSave.gangs.push(plot.plotSubject as Gang)
                 }
+            }
+
+            // Extract plot complication
+            let plotComplicationId: string | undefined
+            if (plot.plotComplication) {
+                plotComplicationId = `pc_${job.ID}`
+
+                plotComplications.push({
+                    ID: plotComplicationId,
+                    characterId:
+                        typeof plot.plotComplication.character === 'object'
+                            ? plot.plotComplication.character?.ID
+                            : plot.plotComplication.character,
+                    itemId:
+                        typeof plot.plotComplication.item === 'object'
+                            ? plot.plotComplication.item?.ID
+                            : plot.plotComplication.item,
+                    type: plot.plotComplication.type,
+                })
+
+                // Extract entities from complication
+                if (typeof plot.plotComplication.character === 'object' && plot.plotComplication.character) {
+                    entitiesToSave.characters.push(plot.plotComplication.character)
+                }
+                if (typeof plot.plotComplication.item === 'object' && plot.plotComplication.item) {
+                    entitiesToSave.items.push(plot.plotComplication.item)
+                }
+            }
+
+            // Create normalized records
+            plots.push({
+                ID: plotId,
+                plotBuildingId,
+                plotComplicationId,
+                plotSubjectId,
+                verb:
+                    (plot.verb as { value?: string })?.value ||
+                    (typeof plot.verb === 'string' ? plot.verb : 'INVESTIGATE'),
             })
 
-            // Save all new entities
-            if (newGangs.length > 0) await db.gangs.bulkPut(newGangs)
-            if (newBuildings.length > 0) await db.buildings.bulkPut(newBuildings)
-            if (newCharacters.length > 0) await db.characters.bulkPut(newCharacters)
-            if (newItems.length > 0) await db.items.bulkPut(newItems)
-
-            // Save fixer jobs
-            await db.fixerJobs.bulkPut(fixerJobs)
+            normalizedJobs.push({
+                ID: job.ID,
+                description: job.description,
+                difficulty: job.difficulty,
+                image: job.image,
+                name: job.name,
+                plotId,
+            })
         })
+
+        // Save all data in transaction
+        await db.transaction(
+            'rw',
+            [
+                db.fixerJobs,
+                db.plots,
+                db.plotBuildings,
+                db.plotComplications,
+                db.buildingComplications,
+                db.buildings,
+                db.characters,
+                db.items,
+                db.gangs,
+            ],
+            async () => {
+                // Save entities
+                if (entitiesToSave.buildings.length > 0) await db.buildings.bulkPut(entitiesToSave.buildings)
+                if (entitiesToSave.characters.length > 0) await db.characters.bulkPut(entitiesToSave.characters)
+                if (entitiesToSave.items.length > 0) await db.items.bulkPut(entitiesToSave.items)
+                if (entitiesToSave.gangs.length > 0) await db.gangs.bulkPut(entitiesToSave.gangs)
+
+                // Save normalized relationship data
+                if (normalizedJobs.length > 0) await db.fixerJobs.bulkPut(normalizedJobs)
+                if (plots.length > 0) await db.plots.bulkPut(plots)
+                if (plotBuildings.length > 0) await db.plotBuildings.bulkPut(plotBuildings)
+                if (plotComplications.length > 0) await db.plotComplications.bulkPut(plotComplications)
+                if (buildingComplications.length > 0) await db.buildingComplications.bulkPut(buildingComplications)
+            }
+        )
     } catch (error) {
         console.warn('Error saving fixer jobs:', error)
     }
@@ -458,18 +686,16 @@ const base64ToBlob = async (base64: string): Promise<Blob> => {
 
 /**
  * Combat Simulator Data
- * Note: Combat sim uses a separate database
  */
 export const loadCombatSimData = async () => {
     try {
-        // Use static import for combat sim database
-
-        const [boardMaps, tokens, maps, walls, images] = await Promise.all([
-            combatDb.boardMaps.toArray(),
-            combatDb.tokens.toArray(),
-            combatDb.maps.toArray(),
-            combatDb.walls.toArray(),
-            combatDb.images.toArray(),
+        const [boardMaps, tokens, maps, walls, images, blasts] = await Promise.all([
+            db.boardMaps.toArray(),
+            db.tokens.toArray(),
+            db.maps.toArray(),
+            db.walls.toArray(),
+            db.images.toArray(),
+            db.blasts.toArray(),
         ])
 
         // Convert blobs to base64 for export
@@ -495,10 +721,11 @@ export const loadCombatSimData = async () => {
             maps: mapsWithBase64,
             walls,
             images: imagesWithBase64,
+            blasts,
         }
     } catch (error) {
         console.warn('Error loading combat sim data:', error)
-        return { boardMaps: [], tokens: [], maps: [], walls: [], images: [] }
+        return { boardMaps: [], tokens: [], maps: [], walls: [], images: [], blasts: [] }
     }
 }
 
@@ -508,15 +735,14 @@ export const saveCombatSimData = async (data: {
     maps?: Array<Record<string, unknown>>
     walls?: Array<Record<string, unknown>>
     images?: Array<Record<string, unknown>>
+    blasts?: Array<Record<string, unknown>>
 }): Promise<void> => {
     try {
-        // Use static import for combat sim database
-
         if (data.boardMaps && data.boardMaps.length > 0) {
-            await combatDb.boardMaps.bulkPut(data.boardMaps as never)
+            await db.boardMaps.bulkPut(data.boardMaps as never)
         }
         if (data.tokens && data.tokens.length > 0) {
-            await combatDb.tokens.bulkPut(data.tokens as never)
+            await db.tokens.bulkPut(data.tokens as never)
         }
         if (data.maps && data.maps.length > 0) {
             // Convert base64 back to blobs for maps
@@ -533,10 +759,10 @@ export const saveCombatSimData = async (data: {
                     return map
                 })
             )
-            await combatDb.maps.bulkPut(mapsWithBlobs as never)
+            await db.maps.bulkPut(mapsWithBlobs as never)
         }
         if (data.walls && data.walls.length > 0) {
-            await combatDb.walls.bulkPut(data.walls as never)
+            await db.walls.bulkPut(data.walls as never)
         }
         if (data.images && data.images.length > 0) {
             // Convert base64 back to blobs for images
@@ -553,26 +779,13 @@ export const saveCombatSimData = async (data: {
                     return image
                 })
             )
-            await combatDb.images.bulkPut(imagesWithBlobs as never)
+            await db.images.bulkPut(imagesWithBlobs as never)
+        }
+        if (data.blasts && data.blasts.length > 0) {
+            await db.blasts.bulkPut(data.blasts as never)
         }
     } catch (error) {
         console.warn('Error saving combat sim data:', error)
-    }
-}
-
-export const clearCombatSimData = async (): Promise<void> => {
-    try {
-        // Use static import for combat sim database
-        await Promise.all([
-            combatDb.boardMaps.clear(),
-            combatDb.tokens.clear(),
-            combatDb.maps.clear(),
-            combatDb.walls.clear(),
-            combatDb.images.clear(),
-            combatDb.blasts.clear(),
-        ])
-    } catch (error) {
-        console.warn('Error clearing combat sim data:', error)
     }
 }
 

@@ -46,6 +46,8 @@ body {
     color: var(--neon-cyan);
     text-shadow: 0 0 5px var(--neon-cyan), 0 0 10px rgba(0, 255, 255, 0.5);
     animation: text-flicker 3s linear infinite;
+    will-change: transform, opacity;
+    contain: layout style paint;
 }
 
 @keyframes text-flicker {
@@ -83,11 +85,13 @@ body {
 .glitch-text::before {
     left: 2px;
     animation: glitch-animation-1 4s infinite linear alternate-reverse;
+    animation-delay: 0.5s;
 }
 
 .glitch-text::after {
     left: -2px;
     animation: glitch-animation-2 5s infinite linear alternate-reverse;
+    animation-delay: 1s;
 }
 
 @keyframes glitch-animation-1 {

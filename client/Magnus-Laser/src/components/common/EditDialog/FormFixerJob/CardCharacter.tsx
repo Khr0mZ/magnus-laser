@@ -35,77 +35,23 @@ export type CardCharacterProps = {
 }
 
 const CardCharacter = (props: CardCharacterProps) => {
-    const { editedTarget, textFieldOutlinedStyle, handleChange, toggleFullscreenImage, selectStyle, character } = props
+    const { textFieldOutlinedStyle, handleChange, toggleFullscreenImage, selectStyle, character } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
     const { characters } = useData()
     const [selectedCharacter, setSelectedCharacter] = useState<Character>(() => {
-        // Get the character from chainStarter based on ID or direct reference
-        const characterRef = character.chain
-        if (typeof characterRef === 'string') {
-            // If character is stored as ID, find the character object
-            return characters.find((c) => c.ID === characterRef) || characters[0] || null
-        }
-        // Otherwise it's already a character object
-        return characterRef || characters[0] || null
+        // Character is always a full object now from normalized database
+        return character.chain || characters[0] || null
     })
 
     const handleChangeCharacter = (e: SelectChangeEvent<string>) => {
         const characterId = e.target.value
-        const sc = characters.find((c) => c.ID === characterId)
-        if (sc) {
-            setSelectedCharacter(sc)
-
-            // Store both the ID for storage compatibility and the character object for immediate display
-            if (character.chain && 'ID' in character.chain) {
-                // First update the ID reference for storage
-                handleChange(character.field, characterId)
-
-                // Now update the actual display object
-                // This is a separate update to ensure the UI shows the full gang object
-                // We need to use a timeout to ensure the first change is processed
-                setTimeout(() => {
-                    // For plotSubject.gang, we need to update the gang property directly
-                    // Look at the original object path and update appropriately
-                    if (character.field === 'plot.plotSubject') {
-                        const plotSubject = editedTarget.plot?.plotSubject
-                        if (plotSubject && 'gang' in plotSubject) {
-                            // Replace the string ID with the full gang object for display
-                            handleChange('plot.plotSubject', {
-                                ...plotSubject,
-                                character: sc,
-                            })
-                        }
-                    } else if (character.field === 'plot.plotSubject.complication.character') {
-                        const plotSubject = editedTarget.plot?.plotSubject
-                        if (
-                            plotSubject &&
-                            'complication' in plotSubject &&
-                            plotSubject.complication.type.includes('CHARACTER')
-                        ) {
-                            handleChange('plot.plotSubject.complication.character', sc)
-                        }
-                    } else if (character.field === 'plot.plotBuilding.complication.character') {
-                        const plotSubject = editedTarget.plot?.plotBuilding
-                        if (
-                            plotSubject &&
-                            'complication' in plotSubject &&
-                            plotSubject.complication.type.includes('CHARACTER')
-                        ) {
-                            handleChange('plot.plotBuilding.complication.character', sc)
-                        }
-                    } else if (character.field === 'plot.plotComplication.character') {
-                        const plotSubject = editedTarget.plot
-                        if (
-                            plotSubject &&
-                            'complication' in plotSubject &&
-                            editedTarget.plot.plotComplication.type.includes('CHARACTER')
-                        ) {
-                            handleChange('plot.plotComplication.character', sc)
-                        }
-                    }
-                }, 0)
-            }
+        const selectedChar = characters.find((c) => c.ID === characterId)
+        if (selectedChar) {
+            setSelectedCharacter(selectedChar)
+            // Update the form data with the full character object
+            // The save functions will handle normalization to the database format
+            handleChange(character.field, selectedChar)
         }
     }
 

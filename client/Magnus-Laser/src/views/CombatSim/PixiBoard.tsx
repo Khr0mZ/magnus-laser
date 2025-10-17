@@ -19,7 +19,7 @@ import {
 } from './geometryUtils'
 import { drawGrid, endpointFromAngleLength, snapToNinePoints } from './gridUtils'
 import { applyBackgroundTexture } from './pixiUtils'
-import { preloadTextures, renderTokens, renderTokensWithPending } from './tokenRenderer'
+import { clearTokenRendererCaches, preloadTextures, renderTokens, renderTokensWithPending } from './tokenRenderer'
 import type { Blast, BlastType, Image as ImageData, Token, Wall, WallShape } from './types'
 
 // PIXI DisplayObject minimal interface for event targets
@@ -642,13 +642,22 @@ const PixiBoard = ({
     useEffect(() => {
         if (!hostReady) return
         let destroyed = false
+
+        // Pause rendering when tab is hidden, resume when visible
+        const onVisibility = () => {
+            if (appRef.current && document.hidden) appRef.current.ticker.stop()
+            else if (appRef.current) appRef.current.ticker.start()
+        }
+
         const init = async () => {
             if (!hostRef.current) return
             const app = new Application()
+            const targetDPR = Math.min(window.devicePixelRatio || 1, 1.5)
             await app.init({
-                resolution: window.devicePixelRatio || 1,
+                resolution: targetDPR,
                 autoDensity: true,
-                antialias: true,
+                antialias: false,
+                powerPreference: 'high-performance',
                 backgroundAlpha: 1,
                 background: readerMode ? colors.grays.gray900 : colors.cyberpunk.darkBg,
                 width,
@@ -815,6 +824,8 @@ const PixiBoard = ({
                 const linearWeight = 0.85 // higher -> closer to linear at ends
                 return linearWeight * t + (1 - linearWeight) * cubic
             }
+            // Cap FPS to reduce CPU/GPU load
+            app.ticker.maxFPS = 60
             app.ticker.add(() => {
                 const layer = tokenLayerRef.current
                 if (!layer) return
@@ -901,6 +912,8 @@ const PixiBoard = ({
                     crosshair.clear()
                 }
             })
+
+            document.addEventListener('visibilitychange', onVisibility)
 
             // WASD keyboard navigation
             const pressedKeys = new Set<string>()
@@ -2586,6 +2599,10 @@ const PixiBoard = ({
                 appRef.current.destroy(true)
                 appRef.current = null
             }
+            // Remove visibility handler
+            document.removeEventListener('visibilitychange', onVisibility)
+            // Clear token renderer caches to release Sprite/Text references
+            clearTokenRendererCaches()
             viewportRef.current = null
             gridRef.current = null
             // No document-level handlers to remove

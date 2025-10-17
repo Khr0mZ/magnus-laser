@@ -34,77 +34,23 @@ export type CardItemProps = {
 }
 
 const CardItem = (props: CardItemProps) => {
-    const { editedTarget, textFieldOutlinedStyle, toggleFullscreenImage, selectStyle, item, handleChange } = props
+    const { textFieldOutlinedStyle, toggleFullscreenImage, selectStyle, item, handleChange } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
     const { items } = useData()
     const [selectedItem, setSelectedItem] = useState<Item>(() => {
-        // Get the character from chainStarter based on ID or direct reference
-        const itemRef = item.chain
-        if (typeof itemRef === 'string') {
-            // If character is stored as ID, find the character object
-            return items.find((i) => i.ID === itemRef) || items[0] || null
-        }
-        // Otherwise it's already a character object
-        return itemRef || items[0] || null
+        // Item is always a full object now from normalized database
+        return item.chain || items[0] || null
     })
 
     const handleChangeItem = (e: SelectChangeEvent<string>) => {
         const itemId = e.target.value
-        const si = items.find((i) => i.ID === itemId)
-        if (si) {
-            setSelectedItem(si)
-
-            // Store both the ID for storage compatibility and the character object for immediate display
-            if (item.chain && 'ID' in item.chain) {
-                // First update the ID reference for storage
-                handleChange(item.field, itemId)
-
-                // Now update the actual display object
-                // This is a separate update to ensure the UI shows the full gang object
-                // We need to use a timeout to ensure the first change is processed
-                setTimeout(() => {
-                    // For plotSubject.gang, we need to update the gang property directly
-                    // Look at the original object path and update appropriately
-                    if (item.field === 'plot.plotSubject') {
-                        const plotSubject = editedTarget.plot?.plotSubject
-                        if (plotSubject && 'gang' in plotSubject) {
-                            // Replace the string ID with the full gang object for display
-                            handleChange('plot.plotSubject', {
-                                ...plotSubject,
-                                item: si,
-                            })
-                        }
-                    } else if (item.field === 'plot.plotSubject.complication.item') {
-                        const plotSubject = editedTarget.plot?.plotSubject
-                        if (
-                            plotSubject &&
-                            'complication' in plotSubject &&
-                            plotSubject.complication.type.includes('ITEM')
-                        ) {
-                            handleChange('plot.plotSubject.complication.item', si)
-                        }
-                    } else if (item.field === 'plot.plotBuilding.complication.item') {
-                        const plotSubject = editedTarget.plot?.plotBuilding
-                        if (
-                            plotSubject &&
-                            'complication' in plotSubject &&
-                            plotSubject.complication.type.includes('ITEM')
-                        ) {
-                            handleChange('plot.plotBuilding.complication.item', si)
-                        }
-                    } else if (item.field === 'plot.plotComplication.item') {
-                        const plotSubject = editedTarget.plot
-                        if (
-                            plotSubject &&
-                            'complication' in plotSubject &&
-                            editedTarget.plot.plotComplication.type.includes('ITEM')
-                        ) {
-                            handleChange('plot.plotComplication.item', si)
-                        }
-                    }
-                }, 0)
-            }
+        const selectedItem = items.find((i) => i.ID === itemId)
+        if (selectedItem) {
+            setSelectedItem(selectedItem)
+            // Update the form data with the full item object
+            // The save functions will handle normalization to the database format
+            handleChange(item.field, selectedItem)
         }
     }
 

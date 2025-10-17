@@ -16,7 +16,7 @@ import Scrollbar from 'smooth-scrollbar'
 import CustomScrollbar from '../../components/CustomScrollbar'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
-import type { Image, Token } from './types'
+import type { Token } from './types'
 
 interface InitiativePanelProps {
     isSidePanelOpen: boolean
@@ -34,8 +34,7 @@ interface InitiativePanelProps {
     onRangedAttack: (token: Token) => void
     onSkillCheck: (token: Token) => void
     onGrenadeAttack: (token: Token) => void
-    images: Image[]
-    resolveImageUrl: (imageId: string | undefined, images: Image[]) => string | undefined
+    resolveImageUrl: (imageId: string | undefined) => string | undefined
     pixiToCss: (color: number) => string
     isCombatActive: boolean
     onToggleCombat: () => void
@@ -58,7 +57,6 @@ const InitiativePanel = ({
     onRangedAttack,
     onSkillCheck,
     onGrenadeAttack,
-    images,
     resolveImageUrl,
     pixiToCss,
     isCombatActive,
@@ -297,7 +295,7 @@ const InitiativePanel = ({
                                     <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                                         <Avatar
                                             sx={{ width: 32, height: 32, color: pixiToCss(token.color) }}
-                                            src={resolveImageUrl(token.imageId, images)}
+                                            src={resolveImageUrl(token.imageId)}
                                         />
                                         <Box flex={1}>
                                             <Typography

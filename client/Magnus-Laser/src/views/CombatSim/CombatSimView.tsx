@@ -16,7 +16,7 @@ import {
 } from '@mui/material'
 import { Colorful } from '@uiw/react-color'
 import { Texture } from 'pixi.js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ClearAllButton from '../../components/ClearAllButton'
 import CyberpunkCheckbox from '../../components/CyberpunkCheckbox'
@@ -27,6 +27,7 @@ import { WarningDialog } from '../../components/common/WarningDialog'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
+import { db } from '../../utils/db'
 import { randomNPCs } from '../../utils/generators/npc/npcs'
 import BlastsPanel from './BlastsPanel'
 import InitiativePanel from './InitiativePanel'
@@ -34,9 +35,14 @@ import PixiBoard from './PixiBoard'
 import RollHistoryPanel from './RollHistoryPanel'
 import TokenDetailsDialog from './TokenDetailsDialog'
 import TokenPanel from './TokenPanel'
-import { db } from './db'
 import { rollD10WithSpecial, rollDamage, rollToHit, type RollResult, type RollType } from './diceUtils'
 import { snapToNinePoints } from './gridUtils'
+type ImageUrlCacheEntry = {
+    url: string
+    size: number
+    type: string
+}
+
 import type {
     Blast,
     BlastType,
@@ -125,10 +131,23 @@ const CombatSimView = () => {
     const [deleteTokenDialogOpen, setDeleteTokenDialogOpen] = useState<string | null>(null)
     const [deleteAllWallsDialogOpen, setDeleteAllWallsDialogOpen] = useState(false)
     const [fullscreenImage, setFullscreenImage] = useState<string>('')
+    // Revoke blob URLs when fullscreen image changes or on unmount
+    useEffect(() => {
+        const url = fullscreenImage
+        return () => {
+            if (url && url.startsWith('blob:')) {
+                try {
+                    URL.revokeObjectURL(url)
+                } catch (e) {
+                    void e
+                }
+            }
+        }
+    }, [fullscreenImage])
     const paperRef = useRef<HTMLDivElement | null>(null)
     const [gridColorAnchor, setGridColorAnchor] = useState<HTMLElement | null>(null)
     const [wallColorAnchor, setWallColorAnchor] = useState<HTMLElement | null>(null)
-    const [tokenDialogOpen, setTokenDialogOpen] = useState<string>()
+    const [tokenDialogsOpen, setTokenDialogsOpen] = useState<string[]>([])
     const [tokenClipboard, setTokenClipboard] = useState<Token[] | null>(null)
     const [ready, setReady] = useState(false)
 
@@ -214,14 +233,82 @@ const CombatSimView = () => {
 
     const hexToPixi = (hex: string) => Number(`0x${hex.replace('#', '')}`)
     const pixiToCss = (color: number) => `#${color.toString(16).padStart(6, '0')}`
-    const resolveImageUrl = (imageId: string | undefined, images: Image[]): string | undefined => {
-        if (!imageId) return undefined
-        // If it starts with '/', it's a default image path
-        if (imageId.startsWith('/')) return imageId
-        // Otherwise, it's an image ID, find the corresponding blob URL
-        const image = images.find((img) => img.id === imageId)
-        return image ? URL.createObjectURL(image.blob) : undefined
-    }
+    const imageUrlCacheRef = useRef<Map<string, ImageUrlCacheEntry>>(new Map())
+    const upsertImageUrl = useCallback((image: Image): string => {
+        const cache = imageUrlCacheRef.current
+        const existing = cache.get(image.id)
+        const size = image.blob.size
+        const type = image.blob.type
+        if (existing && existing.size === size && existing.type === type) {
+            return existing.url
+        }
+        if (existing) {
+            try {
+                URL.revokeObjectURL(existing.url)
+            } catch (e) {
+                void e
+            }
+        }
+        const url = URL.createObjectURL(image.blob)
+        cache.set(image.id, { url, size, type })
+        return url
+    }, [])
+    const resolveImageUrl = useCallback(
+        (imageId: string | undefined): string | undefined => {
+            if (!imageId) return undefined
+            if (imageId.startsWith('/')) return imageId
+            const cacheEntry = imageUrlCacheRef.current.get(imageId)
+            if (cacheEntry) return cacheEntry.url
+            const image = images.find((img) => img.id === imageId)
+            if (!image) return undefined
+            return upsertImageUrl(image)
+        },
+        [images, upsertImageUrl]
+    )
+    useEffect(() => {
+        const cache = imageUrlCacheRef.current
+        const nextIds = new Set(images.map((img) => img.id))
+        for (const [id, entry] of Array.from(cache.entries())) {
+            if (!nextIds.has(id)) {
+                try {
+                    URL.revokeObjectURL(entry.url)
+                } catch (e) {
+                    void e
+                }
+                cache.delete(id)
+            }
+        }
+    }, [images])
+    useEffect(() => {
+        return () => {
+            const cache = imageUrlCacheRef.current
+            for (const { url } of cache.values()) {
+                try {
+                    URL.revokeObjectURL(url)
+                } catch (e) {
+                    void e
+                }
+            }
+            cache.clear()
+        }
+    }, [])
+    const replaceMapTexture = useCallback((next: Texture | null) => {
+        setMapTexture((prev) => {
+            if (prev && prev !== next) {
+                try {
+                    prev.destroy(true)
+                } catch (e) {
+                    void e
+                }
+            }
+            return next
+        })
+    }, [])
+    useEffect(() => {
+        return () => {
+            replaceMapTexture(null)
+        }
+    }, [replaceMapTexture])
     const toAlphaHex = (a: number) =>
         Math.max(0, Math.min(255, Math.round(a * 255)))
             .toString(16)
@@ -311,7 +398,7 @@ const CombatSimView = () => {
                 if (m) {
                     const img = await blobToImage(m.blob)
                     const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-                    setMapTexture(texture)
+                    replaceMapTexture(texture)
                     setGridSize(m.gridSize)
                     prevGridSizeRef.current = m.gridSize
                     setSnapToGrid(m.snapToGrid)
@@ -676,7 +763,7 @@ const CombatSimView = () => {
     const onUploadMap = async (file: globalThis.File) => {
         const img = await fileToImage(file)
         const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-        setMapTexture(texture)
+        replaceMapTexture(texture)
         if (!currentMap) return
         const map: MapType = {
             id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
@@ -712,7 +799,7 @@ const CombatSimView = () => {
 
         const img = await fileToImage(file)
         const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-        setMapTexture(texture)
+        replaceMapTexture(texture)
 
         // Update only the image-related fields, preserve everything else
         await db.maps.update(currentMap.mapId, {
@@ -772,7 +859,7 @@ const CombatSimView = () => {
         if (!map) return
         const img = await blobToImage(map.blob)
         const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-        setMapTexture(texture)
+        replaceMapTexture(texture)
         setGridSize(map.gridSize)
         prevGridSizeRef.current = map.gridSize
         setSnapToGrid(map.snapToGrid)
@@ -876,7 +963,7 @@ const CombatSimView = () => {
             // Load the Empty Map texture and settings
             const img = await blobToImage(emptyMap.blob)
             const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-            setMapTexture(texture)
+            replaceMapTexture(texture)
             setGridSize(emptyMap.gridSize)
             prevGridSizeRef.current = emptyMap.gridSize
             setSnapToGrid(emptyMap.snapToGrid)
@@ -898,7 +985,7 @@ const CombatSimView = () => {
             // Fallback to undefined if Empty Map doesn't exist
             await db.boardMaps.update(currentMap.id, { mapId: undefined })
             setCurrentMap({ ...currentMap, mapId: undefined })
-            setMapTexture(null)
+            replaceMapTexture(null)
             const tks = await db.tokens.where('mapId').equals(currentMap.id).toArray()
             setTokens(tks)
             const tksNotInMap = await db.tokens.toArray()
@@ -1446,8 +1533,11 @@ const CombatSimView = () => {
                 {isTokenPanelOpen && (
                     <TokenPanel
                         isSidePanelOpen={isTokenPanelOpen}
-                        images={images}
-                        setTokenDialogOpen={setTokenDialogOpen}
+                        setTokenDialogOpen={(id: string | undefined) => {
+                            if (id) {
+                                setTokenDialogsOpen((prev) => (prev.includes(id) ? prev : [...prev, id]))
+                            }
+                        }}
                         getActiveMapKey={getActiveMapKey}
                         setTokens={setTokens}
                         setIsSaving={setIsSaving}
@@ -1567,7 +1657,6 @@ const CombatSimView = () => {
                         onRangedAttack={handleRangedAttack}
                         onSkillCheck={handleSkillCheck}
                         onGrenadeAttack={handleGrenadeAttack}
-                        images={images}
                         resolveImageUrl={resolveImageUrl}
                         pixiToCss={pixiToCss}
                         isCombatActive={isCombatActive}
@@ -1685,7 +1774,7 @@ const CombatSimView = () => {
                         gridAlpha={gridAlpha}
                         wallColor={hexToPixi(wallColorHex)}
                         wallAlpha={wallAlpha}
-                        onTokenClick={(id) => setTokenDialogOpen(id)}
+                        onTokenClick={(id) => setTokenDialogsOpen((prev) => (prev.includes(id) ? prev : [...prev, id]))}
                         onTokenDelete={(id) => setDeleteTokenDialogOpen(id)}
                         onTokenDuplicate={async (id) => {
                             const token = tokens.find((t) => t.id === id)
@@ -2578,51 +2667,58 @@ const CombatSimView = () => {
                 isClearAll={true}
             />
 
-            {/* Token dialog */}
-            <TokenDetailsDialog
-                maps={sortedMaps}
-                tokenDialogOpen={tokenDialogOpen}
-                setTokenDialogOpen={setTokenDialogOpen}
-                tokens={[...defaultTokens, ...tokens, ...tokensNotInMap]}
-                images={images}
-                gridSize={gridSize}
-                onUpdateToken={async (tokenId, updates) => {
-                    // Check if it's a default token
-                    const isDefaultToken = defaultTokens.some((t) => t.id === tokenId)
-
-                    if (isDefaultToken) {
-                        // Update default token in state only (not persisted)
-                        setDefaultTokens((prev) => prev.map((t) => (t.id === tokenId ? { ...t, ...updates } : t)))
-                    } else {
-                        // Update regular token in state and database
-                        // Try to update in tokens first
-                        const isInCurrentMap = tokens.some((t) => t.id === tokenId)
-                        if (isInCurrentMap) {
-                            setTokens((prev) => prev.map((t) => (t.id === tokenId ? { ...t, ...updates } : t)))
-                            await db.tokens.update(tokenId, updates)
-                        } else {
-                            // Must be in tokensNotInMap
-                            const updatesTyped = updates as Partial<Token>
-
-                            setTokensNotInMap((prev) =>
-                                prev.map((t) => {
-                                    if (t.id === tokenId) {
-                                        // Apply all updates - if mapId is in updates, it will be used
-                                        return { ...t, ...updatesTyped }
-                                    }
-                                    return t
-                                })
-                            )
-                            // Update database with all changes
-                            await db.tokens.update(tokenId, updatesTyped)
-                        }
-                        setIsSaving(true)
+            {/* Token dialogs */}
+            {tokenDialogsOpen.map((tokenId, index) => (
+                <TokenDetailsDialog
+                    key={tokenId}
+                    maps={sortedMaps}
+                    tokenDialogOpen={tokenId}
+                    setTokenDialogOpen={(id) =>
+                        setTokenDialogsOpen((prev) => prev.filter((dialogId) => dialogId !== id))
                     }
-                }}
-                onDeleteToken={(id) => setDeleteTokenDialogOpen(id)}
-                onUploadImage={onUploadImage}
-                toggleFullscreenImage={toggleFullscreenImage}
-            />
+                    initialPosition={{ x: 100 + index * 50, y: 100 + index * 50 }}
+                    tokens={[...defaultTokens, ...tokens, ...tokensNotInMap]}
+                    images={images}
+                    gridSize={gridSize}
+                    onUpdateToken={async (tokenId, updates) => {
+                        // Check if it's a default token
+                        const isDefaultToken = defaultTokens.some((t) => t.id === tokenId)
+
+                        if (isDefaultToken) {
+                            // Update default token in state only (not persisted)
+                            setDefaultTokens((prev) => prev.map((t) => (t.id === tokenId ? { ...t, ...updates } : t)))
+                        } else {
+                            // Update regular token in state and database
+                            // Try to update in tokens first
+                            const isInCurrentMap = tokens.some((t) => t.id === tokenId)
+                            if (isInCurrentMap) {
+                                setTokens((prev) => prev.map((t) => (t.id === tokenId ? { ...t, ...updates } : t)))
+                                await db.tokens.update(tokenId, updates)
+                            } else {
+                                // Must be in tokensNotInMap
+                                const updatesTyped = updates as Partial<Token>
+
+                                setTokensNotInMap((prev) =>
+                                    prev.map((t) => {
+                                        if (t.id === tokenId) {
+                                            // Apply all updates - if mapId is in updates, it will be used
+                                            return { ...t, ...updatesTyped }
+                                        }
+                                        return t
+                                    })
+                                )
+                                // Update database with all changes
+                                await db.tokens.update(tokenId, updatesTyped)
+                            }
+                            setIsSaving(true)
+                        }
+                    }}
+                    onDeleteToken={(id) => setDeleteTokenDialogOpen(id)}
+                    onUploadImage={onUploadImage}
+                    toggleFullscreenImage={toggleFullscreenImage}
+                    resolveImageUrl={resolveImageUrl}
+                />
+            ))}
 
             {/* Grid color picker */}
             <Popper open={Boolean(gridColorAnchor)} anchorEl={gridColorAnchor} placement="bottom" sx={{ zIndex: 1300 }}>
