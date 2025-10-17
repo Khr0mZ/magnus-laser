@@ -1,4 +1,4 @@
-import { FolderOpen, Save, UploadFile } from '@mui/icons-material'
+import { DeleteForever, FolderOpen, Save, UploadFile } from '@mui/icons-material'
 import {
     Alert,
     Box,
@@ -36,6 +36,7 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import colors from '../../utils/colors'
 import { db } from '../../utils/db'
 import {
+    clearCombatSimData,
     loadCombatSimData,
     loadGeminiApiKey,
     loadHuggingFaceApiKey,
@@ -63,6 +64,7 @@ const SettingsView = () => {
         useUserPreferences()
     const { enqueueSnackbar, closeSnackbar } = useSnackbar()
     const [importDialogOpen, setImportDialogOpen] = useState(false)
+    const [nukeDialogOpen, setNukeDialogOpen] = useState(false)
 
     const [huggingFaceApiKey, setHuggingFaceApiKey] = useState('')
     const [openAIApiKey, setOpenAIApiKey] = useState('')
@@ -473,6 +475,87 @@ const SettingsView = () => {
         }
     }
 
+    // Function that opens the warning dialog before nuking data
+    const handleNukeClick = () => {
+        setNukeDialogOpen(true)
+    }
+
+    // Function to handle data nuking after confirmation
+    const handleNukeConfirmed = async () => {
+        setNukeDialogOpen(false)
+
+        try {
+            // Clear all Dexie database tables
+            await Promise.all([
+                db.gangs.clear(),
+                db.buildings.clear(),
+                db.fixerJobs.clear(),
+                db.characters.clear(),
+                db.items.clear(),
+                db.bounties.clear(),
+                db.preferences.clear(),
+                db.mapMarkers.clear(),
+            ])
+
+            // Clear combat simulator data from its separate database
+            await clearCombatSimData()
+
+            // Notify that data has been cleared for immediate UI updates
+            notifyDataImported()
+
+            // Show success notification
+            enqueueSnackbar('', {
+                variant: 'success',
+                autoHideDuration: 3000,
+                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                content: (key) => (
+                    <Alert
+                        severity="success"
+                        sx={{
+                            bgcolor: readerMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(10, 15, 30, 0.9)',
+                            color: readerMode ? '#333' : '#fff',
+                            borderLeft: '4px solid',
+                            borderColor: 'success.main',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                        }}
+                        onClose={() => closeSnackbar(key)}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <DeleteForever sx={{ mr: 1 }} />
+                            <Typography variant="body2">All data has been completely cleared</Typography>
+                        </Box>
+                    </Alert>
+                ),
+            })
+        } catch (error) {
+            console.warn('Failed to nuke data:', error)
+
+            // Show error notification
+            enqueueSnackbar('', {
+                variant: 'error',
+                autoHideDuration: 3000,
+                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                content: (key) => (
+                    <Alert
+                        severity="error"
+                        sx={{
+                            bgcolor: readerMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(10, 15, 30, 0.9)',
+                            color: readerMode ? '#333' : '#fff',
+                            borderLeft: '4px solid',
+                            borderColor: 'error.main',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                        }}
+                        onClose={() => closeSnackbar(key)}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Typography variant="body2">Failed to clear data</Typography>
+                        </Box>
+                    </Alert>
+                ),
+            })
+        }
+    }
+
     return (
         <Container maxWidth={false} sx={{ pt: 0.5, pb: 1 }}>
             {/* Import Warning Dialog */}
@@ -483,6 +566,15 @@ const SettingsView = () => {
                 title={t('dashboard.importData')}
                 message={t('dashboard.importDescriptionWarning')}
                 confirmText={t('dashboard.confirmImport', 'Import')}
+            />
+            {/* Nuke Data Warning Dialog */}
+            <WarningDialog
+                open={nukeDialogOpen}
+                onClose={() => setNukeDialogOpen(false)}
+                onConfirm={handleNukeConfirmed}
+                title="Nuke All Data"
+                message="This will permanently delete ALL your data including gangs, buildings, characters, items, bounties, fixer jobs, map markers, and combat simulator data. This action cannot be undone. Are you sure you want to proceed?"
+                confirmText="NUKE ALL DATA"
             />
             {/* Storage Banner */}
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
@@ -511,7 +603,7 @@ const SettingsView = () => {
 
             <Grid container spacing={3} sx={{ position: 'relative', zIndex: 3 }}>
                 {/* Export Data Card */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card
                         onClick={handleExport}
                         sx={{
@@ -676,7 +768,7 @@ const SettingsView = () => {
                     </Card>
                 </Grid>
                 {/* Import Data Card */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card
                         onClick={handleImportClick}
                         sx={{
@@ -840,8 +932,171 @@ const SettingsView = () => {
                         </CardContent>
                     </Card>
                 </Grid>
+                {/* Nuke Data Card */}
+                <Grid size={{ xs: 12, md: 4 }}>
+                    <Card
+                        onClick={handleNukeClick}
+                        sx={{
+                            position: 'relative',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            height: '100%',
+                            border: readerMode ? '1px solid rgba(180, 0, 0, 0.2)' : '1px solid rgba(255, 0, 0, 0.2)',
+                            backdropFilter: 'blur(5px)',
+                            boxShadow: `0 0 5px ${colors.neons.red.default}`,
+                            '&:hover': {
+                                transform: 'translateY(-8px) scale(1.02)',
+                                animation: `${neonPulse} 2s infinite`,
+                                cursor: 'pointer',
+                                '& .card-icon': {
+                                    opacity: 0.4,
+                                    filter: `drop-shadow(0 0 ${readerMode ? '10px' : '20px'} ${
+                                        colors.neons.red.default
+                                    })`,
+                                    animation: `${flicker} 4s infinite, ${neonColorCycle} 5s infinite`,
+                                },
+                                '& .card-title': {
+                                    animation: `${neonColorCycle} 3s linear infinite, ${glitch} 5s infinite`,
+                                    color: colors.neons.red.default,
+                                    textShadow: `0 0 10px ${colors.neons.red.default}, 0 0 15px rgba(0,0,0,0.5)`,
+                                    fontWeight: 700,
+                                },
+                                '& .card-description': {
+                                    color: readerMode ? colors.neons.red.dark : colors.neons.red.light,
+                                    textShadow: readerMode
+                                        ? `0 0 3px ${colors.neons.red.light}, 0 0 5px rgba(0,0,0,0.2)`
+                                        : `0 0 3px ${colors.neons.red.dark}, 0 0 5px rgba(0,0,0,0.9)`,
+                                    fontWeight: 600,
+                                    animation: `${neonColorCycle} 8s linear infinite`,
+                                },
+                                '& .card-subdescription': {
+                                    color: colors.grays.gray900,
+                                    textShadow: readerMode ? `0 0 2px rgba(0,0,0,0.2)` : `0 0 3px rgba(0,0,0,0.9)`,
+                                    fontWeight: 500,
+                                },
+                                '& .card-glitch-overlay': {
+                                    opacity: readerMode ? 0.1 : 0.15,
+                                },
+                                '& .card-scanlines': {
+                                    opacity: readerMode ? 0.1 : 0.3,
+                                },
+                                '& .data-corruption': {
+                                    opacity: readerMode ? 0.7 : 1,
+                                },
+                                '&::before': {
+                                    opacity: readerMode ? 0.3 : 0.5,
+                                    background: readerMode ? 'rgba(250, 200, 200, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                                },
+                            },
+                        }}
+                    >
+                        <Box
+                            className="card-icon"
+                            sx={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: colors.neons.red.default,
+                                transition: 'all 0.5s',
+                                opacity: 0.15,
+                                zIndex: 3,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: '100%',
+                                height: '100%',
+                            }}
+                        >
+                            <DeleteForever sx={{ fontSize: '180px', color: 'inherit', opacity: 0.7 }} />
+                        </Box>
+                        <CardContent
+                            sx={{
+                                minHeight: '180px',
+                                position: 'relative',
+                                zIndex: 4,
+                                padding: 3,
+                                backgroundColor: readerMode ? colors.neons.red.dark + '99' : 'rgba(24, 7, 7, 0.6)',
+                                backdropFilter: 'blur(5px)',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <Typography
+                                variant="h4"
+                                className="card-title"
+                                data-text="Nuke Data"
+                                sx={{
+                                    color: colors.neons.red.default,
+                                    transition: 'all 0.3s',
+                                    textShadow: `0 0 5px ${colors.neons.red.dark}, 0 0 10px rgba(0,0,0,0.8)`,
+                                    mb: 3,
+                                    textAlign: 'center',
+                                    fontSize: '1.7rem',
+                                    fontWeight: 600,
+                                    letterSpacing: '0.05em',
+                                    position: 'relative',
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        bottom: '-10px',
+                                        left: '25%',
+                                        width: '50%',
+                                        height: '1px',
+                                        background: `linear-gradient(to right, transparent, ${colors.neons.red.default}, transparent)`,
+                                        boxShadow: `0 0 5px ${colors.neons.red.default}`,
+                                    },
+                                    '&::before': {
+                                        content: 'attr(data-text)',
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        color: readerMode ? colors.grays.gray900 : colors.neons.blue.default,
+                                        opacity: readerMode ? 1 : 0.5,
+                                        filter: readerMode ? 'none' : 'blur(1px)',
+                                        animation: readerMode ? 'none' : `${severeGlitch} 5s infinite`,
+                                        display: 'block',
+                                    },
+                                    '&:hover::before': {
+                                        opacity: readerMode ? 1 : 0.7,
+                                    },
+                                }}
+                            >
+                                Nuke Data
+                            </Typography>
+                            <Typography
+                                variant="body1"
+                                className="card-description"
+                                sx={{
+                                    color: readerMode ? colors.grays.gray000 : colors.grays.gray900,
+                                    fontSize: '1.1rem',
+                                    textAlign: 'center',
+                                    px: 2,
+                                    fontWeight: 500,
+                                    textShadow: readerMode ? 'none' : '0 0 2px rgba(0,0,0,0.5)',
+                                    position: 'relative',
+                                    zIndex: 5,
+                                    background: 'rgba(10, 15, 30, 0.5)',
+                                    borderRadius: '4px',
+                                    py: 1,
+                                    mx: 'auto',
+                                    width: '90%',
+                                    border: `1px solid ${colors.neons.red.default}50`,
+                                }}
+                            >
+                                Permanently delete ALL application data
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
                 {/* Display Card */}
-                <Grid size={{ xs: 12, md: 3 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card
                         sx={{
                             position: 'relative',
@@ -1043,7 +1298,7 @@ const SettingsView = () => {
                 </Grid>
 
                 {/* API Keys Card */}
-                <Grid size={{ xs: 12, md: 9 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card
                         sx={{
                             position: 'relative',

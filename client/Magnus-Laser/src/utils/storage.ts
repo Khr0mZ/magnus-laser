@@ -569,6 +569,7 @@ export const clearCombatSimData = async (): Promise<void> => {
             combatDb.maps.clear(),
             combatDb.walls.clear(),
             combatDb.images.clear(),
+            combatDb.blasts.clear(),
         ])
     } catch (error) {
         console.warn('Error clearing combat sim data:', error)
