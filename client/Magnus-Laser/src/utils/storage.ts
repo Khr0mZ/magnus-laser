@@ -1,4 +1,5 @@
 import { Bounty, Building, Character, FixerJob, Gang, Item } from '../graphql/types'
+import { db as combatDb } from '../views/CombatSim/db'
 import { ModuleTypes } from './constants'
 import { AppPreferences, CustomMarker, db } from './db'
 
@@ -457,12 +458,11 @@ const base64ToBlob = async (base64: string): Promise<Blob> => {
 
 /**
  * Combat Simulator Data
- * Note: Combat sim uses a separate database, so we need to import it dynamically
+ * Note: Combat sim uses a separate database
  */
 export const loadCombatSimData = async () => {
     try {
-        // Dynamically import combat sim database
-        const { db: combatDb } = await import('../views/CombatSim/db')
+        // Use static import for combat sim database
 
         const [boardMaps, tokens, maps, walls, images] = await Promise.all([
             combatDb.boardMaps.toArray(),
@@ -510,8 +510,7 @@ export const saveCombatSimData = async (data: {
     images?: Array<Record<string, unknown>>
 }): Promise<void> => {
     try {
-        // Dynamically import combat sim database
-        const { db: combatDb } = await import('../views/CombatSim/db')
+        // Use static import for combat sim database
 
         if (data.boardMaps && data.boardMaps.length > 0) {
             await combatDb.boardMaps.bulkPut(data.boardMaps as never)
@@ -563,7 +562,7 @@ export const saveCombatSimData = async (data: {
 
 export const clearCombatSimData = async (): Promise<void> => {
     try {
-        const { db: combatDb } = await import('../views/CombatSim/db')
+        // Use static import for combat sim database
         await Promise.all([
             combatDb.boardMaps.clear(),
             combatDb.tokens.clear(),

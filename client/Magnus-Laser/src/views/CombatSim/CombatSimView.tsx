@@ -130,9 +130,10 @@ const CombatSimView = () => {
     const [wallColorAnchor, setWallColorAnchor] = useState<HTMLElement | null>(null)
     const [tokenDialogOpen, setTokenDialogOpen] = useState<string>()
     const [tokenClipboard, setTokenClipboard] = useState<Token[] | null>(null)
+    const [ready, setReady] = useState(false)
 
     // Initiative and combat state
-    const [isTokenPanelOpen, setIsTokenPanelOpen] = useState(true)
+    const [isTokenPanelOpen, setIsTokenPanelOpen] = useState(false)
     const [isInitiativePanelOpen, setIsInitiativePanelOpen] = useState(false)
     const [activeTokenId, setActiveTokenId] = useState<string | null>(null)
     const [initiativeRolls, setInitiativeRolls] = useState<Map<string, number>>(new Map())
@@ -1013,9 +1014,40 @@ const CombatSimView = () => {
             await db.blasts.add(newBlast)
             setBlasts((prev) => [...prev, newBlast])
             setIsSaving(true)
-        } else if (blastData.id) {
+        } else if (blastData.type === 'cone' && !blastData.id) {
+            // Create placeholder cone blast at drop position for 2-step placement process
+            // PixiBoard will update it with the final orientation on confirmation
+            const placeholderId = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now())
+            const newBlast: Blast = {
+                id: placeholderId,
+                mapId: currentMapId,
+                type: 'cone',
+                x: worldX,
+                y: worldY,
+                x2: worldX + 6 * gridSize, // Temporary default orientation
+                y2: worldY,
+                size: 6,
+                alpha: 0.7,
+                locked: false,
+            }
+            // Add numbered name
+            const existingFlamers = blasts.filter((b) => b.type === 'cone')
+            const flamerNumber = existingFlamers.length + 1
+            newBlast.name = `Flamer ${flamerNumber}`
+
+            await db.blasts.add(newBlast)
+            setBlasts((prev) => [...prev, newBlast])
+            setIsSaving(true)
+
+            // Modify blastData to include the ID so PixiBoard knows it's an existing blast now
+            blastData.id = placeholderId
+            // Fall through to existing blast handling
+        }
+        if (blastData.id) {
+            // Handle existing blasts - all go through normal move operation
+            // Rotation mode for cones will be initiated by PixiBoard after movement
+            const existing = [...blasts, ...blastsNotInMap].find((b) => b.id === blastData.id)
             // Move existing blast; translate cone endpoint if present
-            const existing = blasts.find((b) => b.id === blastData.id)
             const oldX = existing?.x ?? (blastData as unknown as Blast).x ?? worldX
             const oldY = existing?.y ?? (blastData as unknown as Blast).y ?? worldY
             const dx = worldX - oldX
@@ -1026,12 +1058,25 @@ const CombatSimView = () => {
                 x: worldX,
                 y: worldY,
             }
+
             const prevX2 = existing?.x2 ?? (blastData as unknown as Blast).x2
             const prevY2 = existing?.y2 ?? (blastData as unknown as Blast).y2
+            let adjustedX2 = prevX2
+            let adjustedY2 = prevY2
+
+            // First apply normal translation
             if (typeof prevX2 === 'number' && typeof prevY2 === 'number') {
-                updatePayload.x2 = prevX2 + dx
-                updatePayload.y2 = prevY2 + dy
+                adjustedX2 = prevX2 + dx
+                adjustedY2 = prevY2 + dy
             }
+
+            // Note: Cone blasts are handled by PixiBoard drop handler, so this code only runs for non-cone blasts
+
+            if (typeof adjustedX2 === 'number' && typeof adjustedY2 === 'number') {
+                updatePayload.x2 = adjustedX2
+                updatePayload.y2 = adjustedY2
+            }
+            updatePayload.size = existing?.size || 6
 
             await db.blasts.update(blastData.id, updatePayload)
 
@@ -1071,8 +1116,27 @@ const CombatSimView = () => {
     }
 
     const onBlastComplete = async (blast: Blast) => {
-        await db.blasts.add(blast)
-        setBlasts((prev) => [...prev, blast])
+        let blastToAdd = blast
+
+        // Auto-assign names for cone blasts like grenades
+        if (blast.type === 'cone' && !blast.name) {
+            // Find all cone blasts for this map and get the highest number used
+            const allFlamers = await db.blasts
+                .where('mapId')
+                .equals(blast.mapId)
+                .and((b) => b.type === 'cone')
+                .toArray()
+            const numbers = allFlamers
+                .map((b) => b.name?.match(/Flamer (\d+)/)?.[1])
+                .filter((n): n is string => n !== undefined)
+                .map((n) => parseInt(n, 10))
+            const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0
+            const flamerNumber = maxNumber + 1
+            blastToAdd = { ...blast, name: `Flamer ${flamerNumber}` }
+        }
+
+        await db.blasts.add(blastToAdd)
+        setBlasts((prev) => [...prev, blastToAdd])
         // Reset draw mode after completing a blast
         setBlastDrawMode(null)
         setIsSaving(true)
@@ -1116,6 +1180,12 @@ const CombatSimView = () => {
         })
         return arr
     }, [maps])
+
+    useEffect(() => {
+        if (ready) {
+            setIsTokenPanelOpen(true)
+        }
+    }, [ready])
 
     return (
         <Container maxWidth={false} sx={{ pt: 0.5 }}>
@@ -1537,6 +1607,8 @@ const CombatSimView = () => {
                 {/* Pixi board */}
                 <Box sx={{ position: 'relative', flex: 1, minWidth: 0 }}>
                     <PixiBoard
+                        ready={ready}
+                        setReady={setReady}
                         tokenClipboard={tokenClipboard}
                         width={dimensions.width}
                         height={dimensions.height}
@@ -1559,13 +1631,13 @@ const CombatSimView = () => {
                                 }
                             })
                         }}
-                        onBindFit={(fn) => {
-                            fitRef.current = fn
-                        }}
                         onPendingCountChange={(c) => setPendingCount(c)}
                         onBindPendingControls={(acceptAll, cancelAll) => {
                             acceptAllRef.current = acceptAll
                             cancelAllRef.current = cancelAll
+                        }}
+                        onBindFit={(fn: () => void) => {
+                            fitRef.current = fn
                         }}
                         mapTexture={mapTexture}
                         tokens={tokens}
@@ -1704,14 +1776,17 @@ const CombatSimView = () => {
                         blastClipboard={blastClipboard}
                         onTokenDrop={handleTokenDrop}
                         blasts={blasts}
+                        blastsNotInMap={blastsNotInMap}
                         blastDrawMode={blastDrawMode}
                         onBlastDrop={handleBlastDrop}
                         onBlastMove={onBlastMove}
                         onBlastComplete={onBlastComplete}
-                        onBlastUpdateCone={async (blastId, x2, y2) => {
-                            await db.blasts.update(blastId, { x2, y2 })
-                            setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, x2, y2 } : b)))
-                            setBlastsNotInMap((prev) => prev.map((b) => (b.id === blastId ? { ...b, x2, y2 } : b)))
+                        onBlastUpdateCone={async (blastId, x2, y2, x, y) => {
+                            await db.blasts.update(blastId, { x, y, x2, y2 })
+                            setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, x, y, x2, y2 } : b)))
+                            setBlastsNotInMap((prev) =>
+                                prev.map((b) => (b.id === blastId ? { ...b, x, y, x2, y2 } : b))
+                            )
                             setIsSaving(true)
                         }}
                         onBlastDelete={onBlastDelete}
@@ -1733,7 +1808,7 @@ const CombatSimView = () => {
                                 bottom: 10,
                                 right: 10,
                                 fontSize: 10,
-                                opacity: readerMode ? 0.9 : 0.6,
+                                opacity: 0.9,
                                 color: readerMode ? colors.grays.gray900 : colors.neons.cyan.default,
                                 userSelect: 'none',
                             }}
@@ -2081,7 +2156,7 @@ const CombatSimView = () => {
                                 },
                             }}
                         >
-                            🔥
+                            ✨
                         </Box>
                     </Box>
                     {/* Eraser & Wall color (visible in wall mode) */}

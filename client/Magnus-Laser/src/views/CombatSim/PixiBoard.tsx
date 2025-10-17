@@ -1,15 +1,16 @@
 import { Viewport } from 'pixi-viewport'
 import type { FederatedPointerEvent } from 'pixi.js'
 import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
+import colors from '../../utils/colors'
 import { BlastContextMenu } from './BlastContextMenu'
 import { MapContextMenu } from './MapContextMenu'
 import { TokenContextMenu } from './TokenContextMenu'
 import { TokenTooltip } from './TokenTooltip'
 import { schedulePathAnimation } from './animationUtils'
-import { drawBlastPreview, preloadBlastTextures, renderBlasts } from './blastRenderer'
+import { calculateConePoints, drawBlastPreview, preloadBlastTextures, renderBlasts } from './blastRenderer'
 import {
     getTargetSize,
     segmentHitsCircleBoundary,
@@ -73,15 +74,18 @@ type PixiBoardProps = {
     onTokenDrop?: (tokenId: string, worldX: number, worldY: number) => void
     sidePanelWidth: number
     blasts: Blast[]
+    blastsNotInMap: Blast[]
     blastDrawMode: BlastType | null
     onBlastDrop?: (blastData: { type: BlastType; id?: string }, worldX: number, worldY: number) => void
     onBlastMove?: (blastId: string, worldX: number, worldY: number) => void
     onBlastComplete?: (blast: Blast) => void
-    onBlastUpdateCone?: (blastId: string, x2: number, y2: number) => void
+    onBlastUpdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
     onBlastDelete?: (id: string) => void
     onBlastCopy?: (id: string) => void
     onBlastCut?: (id: string) => void
     onBlastLock?: (id: string, locked: boolean) => void
+    ready: boolean
+    setReady: (ready: boolean) => void
 }
 
 const PixiBoard = ({
@@ -125,6 +129,7 @@ const PixiBoard = ({
     activeTokenId,
     onTokenDrop,
     blasts = [],
+    blastsNotInMap = [],
     blastDrawMode,
     onBlastDrop,
     onBlastMove,
@@ -134,6 +139,8 @@ const PixiBoard = ({
     onBlastCopy,
     onBlastCut,
     onBlastLock,
+    ready,
+    setReady,
 }: PixiBoardProps) => {
     const { readerMode } = useUserPreferences()
     const hostRef = useRef<HTMLDivElement | null>(null)
@@ -182,6 +189,7 @@ const PixiBoard = ({
         angleRad: number
     } | null>(null)
     const blastsRef = useRef<Blast[]>([])
+    const blastsNotInMapRef = useRef<Blast[]>([])
     const lastPointerPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
     const tokenLayerRef = useRef<Graphics | null>(null)
     // Removed temporary DOM-level listeners (cleanup below ensures none remain)
@@ -226,7 +234,16 @@ const PixiBoard = ({
     const wallAlphaRef = useRef<number>(wallAlpha)
     const bgTextureRef = useRef<Texture | null>(backgroundTexture ?? null)
     const mapKeyRef = useRef<string | undefined>(mapKey)
-    const [ready, setReady] = useState(false)
+
+    const [hostReady, setHostReady] = useState(false)
+
+    // Track when host ref becomes available (runs after DOM updates)
+    useLayoutEffect(() => {
+        if (hostRef.current && !hostReady) {
+            setHostReady(true)
+        }
+    })
+
     const measuringRef = useRef<boolean>(isMeasuring)
     const wallModeRef = useRef<boolean>(isWallMode)
     const erasingRef = useRef<boolean>(isErasingWalls)
@@ -623,15 +640,17 @@ const PixiBoard = ({
 
     // Initialize PIXI Application + Viewport once
     useEffect(() => {
+        if (!hostReady) return
         let destroyed = false
         const init = async () => {
             if (!hostRef.current) return
             const app = new Application()
             await app.init({
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true,
                 antialias: true,
-                resolution: Math.min(window.devicePixelRatio || 1, 2),
                 backgroundAlpha: 1,
-                background: readerMode ? 0x00b3ff : 0x06181f,
+                background: readerMode ? colors.grays.gray900 : colors.cyberpunk.darkBg,
                 width,
                 height,
             })
@@ -702,7 +721,17 @@ const PixiBoard = ({
             app.stage.addChild(viewport)
             viewportRef.current = viewport
 
-            const bg = new Sprite(Texture.WHITE)
+            // Create a white texture for the background
+            const canvas = document.createElement('canvas')
+            canvas.width = 1
+            canvas.height = 1
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+                ctx.fillStyle = 'white'
+                ctx.fillRect(0, 0, 1, 1)
+            }
+            const bgTexture = Texture.from(canvas)
+            const bg = new Sprite(bgTexture)
             bg.tint = 0x000000
             bg.width = worldDims.worldWidth
             bg.height = worldDims.worldHeight
@@ -720,7 +749,6 @@ const PixiBoard = ({
                     gridColorRef.current,
                     gridAlphaRef.current
                 )
-            setReady(true)
 
             const grid = new Graphics()
             gridRef.current = grid
@@ -891,8 +919,7 @@ const PixiBoard = ({
                     if (key === 'enter') {
                         const apex = rotatingConeRef.current
                         const end = lastPointerPosRef.current
-                        // no-op log removed
-                        if (onBlastUpdateCone) onBlastUpdateCone(apex.id, end.x, end.y)
+                        if (onBlastUpdateCone) onBlastUpdateCone(apex.id, end.x, end.y, apex.apexX, apex.apexY)
                         const updated = blastsRef.current.map((b) =>
                             b.id === apex.id ? { ...b, x: apex.apexX, y: apex.apexY, x2: end.x, y2: end.y } : b
                         )
@@ -906,7 +933,6 @@ const PixiBoard = ({
                         return
                     }
                     if (key === 'escape') {
-                        // no-op log removed
                         rotatingConeRef.current = null
                         rotationReadyAtRef.current = 0
                         if (blastPreviewLayerRef.current) blastPreviewLayerRef.current.clear()
@@ -1396,17 +1422,44 @@ const PixiBoard = ({
                         gridSizeRef.current,
                         false
                     )
-                    // Debug: rotation confirmation (click)
-                    // no-op log removed
-                    // Persist via DB update callback; ensure async completion is not blocked
-                    void (async () => {
-                        if (onBlastUpdateConeRef.current) onBlastUpdateConeRef.current(apex.id, end.x, end.y)
-                    })()
-                    // Update local state mirror
-                    const updated = blastsRef.current.map((b) =>
-                        b.id === apex.id ? { ...b, x: apex.apexX, y: apex.apexY, x2: end.x, y2: end.y } : b
-                    )
-                    blastsRef.current = updated
+
+                    // Check if this is a new cone (template) or existing cone
+                    const existingBlast = blastsRef.current.find((b) => b.id === apex.id)
+                    if (!existingBlast) {
+                        // This is a new cone from template - create it
+                        const newBlast: Blast = {
+                            id: apex.id,
+                            mapId: mapKeyRef.current || '',
+                            type: 'cone',
+                            x: apex.apexX,
+                            y: apex.apexY,
+                            x2: end.x,
+                            y2: end.y,
+                            size: apex.lengthInGrids,
+                            alpha: 0.7,
+                            locked: false,
+                        }
+                        // Add numbered name
+                        const existingFlamers = blastsRef.current.filter((b) => b.type === 'cone')
+                        const flamerNumber = existingFlamers.length + 1
+                        newBlast.name = `Flamer ${flamerNumber}`
+
+                        if (onBlastComplete) {
+                            onBlastComplete(newBlast)
+                        }
+                    } else {
+                        // This is an existing cone - update it
+                        void (async () => {
+                            if (onBlastUpdateConeRef.current)
+                                onBlastUpdateConeRef.current(apex.id, end.x, end.y, apex.apexX, apex.apexY)
+                        })()
+                        // Update local state mirror
+                        const updated = blastsRef.current.map((b) =>
+                            b.id === apex.id ? { ...b, x: apex.apexX, y: apex.apexY, x2: end.x, y2: end.y } : b
+                        )
+                        blastsRef.current = updated
+                    }
+
                     renderBlasts(blastLayerRef.current, blastsRef.current, gridSizeRef.current)
                     // Clear rotation preview visuals
                     rotatingConeRef.current = null
@@ -1433,6 +1486,8 @@ const PixiBoard = ({
 
                 // Token interaction: handle left click (drag) and right click (context menu)
                 // Check tokens FIRST before blasts to give tokens precedence
+                let hit: Token | null = null
+                let clickedBlast: Blast | null = null
                 if (btn === 0 || btn === 2) {
                     // Check if the event target is a waypoint button or other interactive element
                     let target: PixiDisplayObject | undefined = e.target as PixiDisplayObject
@@ -1445,7 +1500,7 @@ const PixiBoard = ({
                     }
 
                     // Hit test using displayed positions (respect pending endpoints)
-                    let hit: Token | null = null
+                    hit = null
                     let minDist = Number.POSITIVE_INFINITY
                     for (const t of tokensRef.current) {
                         const pending = pendingMovesRef.current.get(t.id)
@@ -1497,52 +1552,53 @@ const PixiBoard = ({
                     // Only check for blast hits if no token was hit
                     if (!blastDrawModeRef.current && !wallModeRef.current && !measuringRef.current) {
                         // Check if clicking on a blast
-                        const clickedBlast = blastsRef.current.find((blast) => {
-                            const dx = x - blast.x
-                            const dy = y - blast.y
+                        clickedBlast =
+                            blastsRef.current.find((blast) => {
+                                const dx = x - blast.x
+                                const dy = y - blast.y
 
-                            if (blast.type === 'grenade') {
-                                const radius = (gridSizeRef.current * 5) / 2
-                                return Math.sqrt(dx * dx + dy * dy) <= radius
-                            } else if (blast.type === 'circle') {
-                                const radius = gridSizeRef.current * (blast.size || 0)
-                                return Math.sqrt(dx * dx + dy * dy) <= radius
-                            } else if (blast.type === 'square') {
-                                const width = gridSizeRef.current * (blast.size || 0)
-                                const height = gridSizeRef.current * (blast.sizeY || blast.size || 0)
-                                return Math.abs(dx) <= width / 2 && Math.abs(dy) <= height / 2
-                            } else if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                                // Point-in-triangle for cone using barycentric technique
-                                const ax = blast.x
-                                const ay = blast.y
-                                const bx = blast.x2
-                                const by = blast.y2
-                                // Derive third point by rotating vector AB by +/- 30° (matching calculateConePoints)
-                                const angle = Math.atan2(by - ay, bx - ax)
-                                const length = Math.hypot(bx - ax, by - ay)
-                                const half = (60 / 2) * (Math.PI / 180)
-                                const lx = ax + Math.cos(angle - half) * length
-                                const ly = ay + Math.sin(angle - half) * length
-                                const rx = ax + Math.cos(angle + half) * length
-                                const ry = ay + Math.sin(angle + half) * length
-                                const v0x = rx - ax
-                                const v0y = ry - ay
-                                const v1x = lx - ax
-                                const v1y = ly - ay
-                                const v2x = x - ax
-                                const v2y = y - ay
-                                const dot00 = v0x * v0x + v0y * v0y
-                                const dot01 = v0x * v1x + v0y * v1y
-                                const dot02 = v0x * v2x + v0y * v2y
-                                const dot11 = v1x * v1x + v1y * v1y
-                                const dot12 = v1x * v2x + v1y * v2y
-                                const invDen = 1 / (dot00 * dot11 - dot01 * dot01)
-                                const u = (dot11 * dot02 - dot01 * dot12) * invDen
-                                const v = (dot00 * dot12 - dot01 * dot02) * invDen
-                                return u >= 0 && v >= 0 && u + v <= 1
-                            }
-                            return false
-                        })
+                                if (blast.type === 'grenade') {
+                                    const radius = (gridSizeRef.current * 5) / 2
+                                    return Math.sqrt(dx * dx + dy * dy) <= radius
+                                } else if (blast.type === 'circle') {
+                                    const radius = gridSizeRef.current * (blast.size || 0)
+                                    return Math.sqrt(dx * dx + dy * dy) <= radius
+                                } else if (blast.type === 'square') {
+                                    const width = gridSizeRef.current * (blast.size || 0)
+                                    const height = gridSizeRef.current * (blast.sizeY || blast.size || 0)
+                                    return Math.abs(dx) <= width / 2 && Math.abs(dy) <= height / 2
+                                } else if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
+                                    // Point-in-triangle for cone using barycentric technique
+                                    const points = calculateConePoints(blast.x, blast.y, blast.x2, blast.y2, 28)
+                                    const ax = points[0].x
+                                    const ay = points[0].y
+                                    const bx = points[1].x // left base point
+                                    const by = points[1].y
+                                    const cx = points[2].x // right base point
+                                    const cy = points[2].y
+
+                                    // Barycentric coordinate check
+                                    const v0x = cx - ax
+                                    const v0y = cy - ay
+                                    const v1x = bx - ax
+                                    const v1y = by - ay
+                                    const v2x = x - ax
+                                    const v2y = y - ay
+
+                                    const dot00 = v0x * v0x + v0y * v0y
+                                    const dot01 = v0x * v1x + v0y * v1y
+                                    const dot02 = v0x * v2x + v0y * v2y
+                                    const dot11 = v1x * v1x + v1y * v1y
+                                    const dot12 = v1x * v2x + v1y * v2y
+
+                                    const invDen = 1 / (dot00 * dot11 - dot01 * dot01)
+                                    const u = (dot11 * dot02 - dot01 * dot12) * invDen
+                                    const v = (dot00 * dot12 - dot01 * dot02) * invDen
+
+                                    return u >= 0 && v >= 0 && u + v <= 1
+                                }
+                                return false
+                            }) || null
 
                         if (clickedBlast) {
                             if (btn === 2) {
@@ -1575,6 +1631,27 @@ const PixiBoard = ({
                                 return
                             }
                         }
+                    }
+                }
+
+                // Handle right-click on empty space to open map context menu
+                if (btn === 2 && !hit && !clickedBlast) {
+                    // Right click on empty map: open map context menu
+                    const anchorEl = document.createElement('div')
+                    anchorEl.style.position = 'fixed'
+                    const screenPos = viewport.toScreen(x, y)
+                    const rect = hostRef.current?.getBoundingClientRect()
+                    if (rect) {
+                        anchorEl.style.left = `${rect.left + screenPos.x}px`
+                        anchorEl.style.top = `${rect.top + screenPos.y}px`
+                        anchorEl.dataset.pasteX = x.toString()
+                        anchorEl.dataset.pasteY = y.toString()
+                        anchorEl.style.width = '1px'
+                        anchorEl.style.height = '1px'
+                        anchorEl.style.pointerEvents = 'auto'
+                        document.body.appendChild(anchorEl)
+                        setMapContextMenuAnchor(anchorEl)
+                        return
                     }
                 }
 
@@ -1624,108 +1701,6 @@ const PixiBoard = ({
                 }
             })
 
-            // Viewport tap handler removed (confirmation via pointerdown click or document handlers)
-
-            // Document-level click capture removed
-            /* const onDomClick = (ev: MouseEvent) => {
-                if (!rotatingConeRef.current) return
-                if (Date.now() < rotationReadyAtRef.current) return
-                const vp = viewportRef.current
-                const host = hostRef.current
-                if (!vp || !host) return
-                const rect = host.getBoundingClientRect()
-                // Restrict to clicks inside the board rect
-                if (
-                    ev.clientX < rect.left ||
-                    ev.clientX > rect.right ||
-                    ev.clientY < rect.top ||
-                    ev.clientY > rect.bottom
-                ) {
-                    // no-op log removed
-                    return
-                }
-                const clientX = ev.clientX - rect.left
-                const clientY = ev.clientY - rect.top
-                const world = vp.toWorld({ x: clientX, y: clientY })
-                const apex = rotatingConeRef.current
-                const angle = Math.atan2(world.y - apex.apexY, world.x - apex.apexX)
-                const lenPx = apex.lengthInGrids * gridSizeRef.current
-                const end = endpointFromAngleLength(
-                    apex.apexX,
-                    apex.apexY,
-                    angle,
-                    lenPx,
-                    gridSizeRef.current,
-                    snapRef.current
-                )
-                // no-op log removed
-                void (async () => {
-                    if (onBlastUpdateConeRef.current) onBlastUpdateConeRef.current(apex.id, end.x, end.y)
-                })()
-                const updated = blastsRef.current.map((b) =>
-                    b.id === apex.id ? { ...b, x: apex.apexX, y: apex.apexY, x2: end.x, y2: end.y } : b
-                )
-                blastsRef.current = updated
-                renderBlasts(blastLayerRef.current, blastsRef.current, gridSizeRef.current)
-                rotatingConeRef.current = null
-                rotationReadyAtRef.current = 0
-                if (blastPreviewLayerRef.current) blastPreviewLayerRef.current.clear()
-                if (blastLabelRef.current) blastLabelRef.current.visible = false
-                ev.preventDefault()
-                ev.stopPropagation()
-            } */
-            // Document-level handlers were temporary and are now removed
-
-            // Document-level pointer/mouse listeners removed
-            /* const onDocPointerDown = (ev: PointerEvent) => {}
-            const onDocPointerUp = (ev: PointerEvent) => {
-                if (!rotatingConeRef.current) return
-                if (Date.now() < rotationReadyAtRef.current) return
-                const vp = viewportRef.current
-                const host = hostRef.current
-                if (!vp || !host) return
-                const rect = host.getBoundingClientRect()
-                if (
-                    ev.clientX < rect.left ||
-                    ev.clientX > rect.right ||
-                    ev.clientY < rect.top ||
-                    ev.clientY > rect.bottom
-                )
-                    return
-                const clientX = ev.clientX - rect.left
-                const clientY = ev.clientY - rect.top
-                const world = vp.toWorld({ x: clientX, y: clientY })
-                const apex = rotatingConeRef.current
-                const angle = Math.atan2(world.y - apex.apexY, world.x - apex.apexX)
-                const lenPx = apex.lengthInGrids * gridSizeRef.current
-                const end = endpointFromAngleLength(
-                    apex.apexX,
-                    apex.apexY,
-                    angle,
-                    lenPx,
-                    gridSizeRef.current,
-                    snapRef.current
-                )
-                // no-op log removed
-                void (async () => {
-                    if (onBlastUpdateConeRef.current) onBlastUpdateConeRef.current(apex.id, end.x, end.y)
-                })()
-                const updated = blastsRef.current.map((b) =>
-                    b.id === apex.id ? { ...b, x: apex.apexX, y: apex.apexY, x2: end.x, y2: end.y } : b
-                )
-                blastsRef.current = updated
-                renderBlasts(blastLayerRef.current, blastsRef.current, gridSizeRef.current)
-                rotatingConeRef.current = null
-                rotationReadyAtRef.current = 0
-                if (blastPreviewLayerRef.current) blastPreviewLayerRef.current.clear()
-                if (blastLabelRef.current) blastLabelRef.current.visible = false
-            }
-            const onDocMouseDown = (ev: MouseEvent) => {}
-            const onDocMouseUp = (ev: MouseEvent) => {}
-            // (No document-level pointer/mouse listeners)
-            docMouseDownRef.current = onDocMouseDown
-            docMouseUpRef.current = onDocMouseUp */
-
             const endDrag = () => {
                 // Complete blast dragging
                 if (draggedBlastRef.current && onBlastMoveRef.current) {
@@ -1770,7 +1745,6 @@ const PixiBoard = ({
                             lengthInGrids,
                             angleRad: Math.atan2(baseY2 - original.y, baseX2 - original.x),
                         }
-                        // no-op log removed
                         // Set guard to avoid immediate tap confirm from the same click sequence
                         rotationReadyAtRef.current = Date.now() + 180
                     } else {
@@ -1784,10 +1758,8 @@ const PixiBoard = ({
                 if (rotatingConeRef.current) {
                     const apex = rotatingConeRef.current
                     const end = lastPointerPosRef.current
-                    // no-op log removed
-                    // Persist x2,y2 immediately via provided updater and redraw
                     if (onBlastUpdateConeRef.current) {
-                        onBlastUpdateConeRef.current(apex.id, end.x, end.y)
+                        onBlastUpdateConeRef.current(apex.id, end.x, end.y, apex.apexX, apex.apexY)
                     }
                     // Update local state mirror so preview is removed and texture is correct
                     const updated = blastsRef.current.map((b) =>
@@ -1850,15 +1822,32 @@ const PixiBoard = ({
                             newBlast.size = widthInGrids
                             newBlast.sizeY = heightInGrids
                         } else if (blastDrawModeRef.current === 'cone') {
-                            // Create cone fully: apex is start, endpoint is snapped; size derives from endpoint
-                            const coneLength = Math.sqrt(dx * dx + dy * dy)
-                            const lengthInGrids = coneLength / gridSizeRef.current
+                            // Create cone with fixed length of 6 grid sizes
+                            const distance = Math.sqrt(dx * dx + dy * dy)
+                            const directionX = dx / distance
+                            const directionY = dy / distance
+
+                            // Constrain length to exactly 6 grid sizes (minimum and maximum)
+                            const fixedLength = 6 * gridSizeRef.current
 
                             newBlast.x = start.x
                             newBlast.y = start.y
-                            newBlast.x2 = snapped.x
-                            newBlast.y2 = snapped.y
-                            newBlast.size = lengthInGrids
+
+                            // Calculate endpoint and snap it to 9 points if snapping is enabled
+                            let endX = start.x + directionX * fixedLength
+                            let endY = start.y + directionY * fixedLength
+
+                            if (snapRef.current) {
+                                const snappedEndpoint = snapToNinePoints(endX, endY, gridSizeRef.current, true)
+                                endX = snappedEndpoint.x
+                                endY = snappedEndpoint.y
+                            }
+
+                            newBlast.x2 = endX
+                            newBlast.y2 = endY
+                            // Calculate actual length after snapping and convert to grid sizes
+                            const actualLength = Math.sqrt((endX - start.x) ** 2 + (endY - start.y) ** 2)
+                            newBlast.size = actualLength / gridSizeRef.current
                         }
 
                         if (onBlastComplete) {
@@ -2337,32 +2326,33 @@ const PixiBoard = ({
                             const height = gridSizeRef.current * (blast.sizeY || blast.size || 0)
                             return Math.abs(dx) <= width / 2 && Math.abs(dy) <= height / 2
                         } else if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                            // Precise point-in-cone using triangle from calculateConePoints (60°)
-                            const ax = blast.x
-                            const ay = blast.y
-                            const bx = blast.x2
-                            const by = blast.y2
-                            const angle = Math.atan2(by - ay, bx - ax)
-                            const length = Math.hypot(bx - ax, by - ay)
-                            const half = (60 / 2) * (Math.PI / 180)
-                            const lx = ax + Math.cos(angle - half) * length
-                            const ly = ay + Math.sin(angle - half) * length
-                            const rx = ax + Math.cos(angle + half) * length
-                            const ry = ay + Math.sin(angle + half) * length
-                            const v0x = rx - ax
-                            const v0y = ry - ay
-                            const v1x = lx - ax
-                            const v1y = ly - ay
+                            // Precise point-in-cone using triangle from calculateConePoints (28°)
+                            const points = calculateConePoints(blast.x, blast.y, blast.x2, blast.y2, 28)
+                            const ax = points[0].x
+                            const ay = points[0].y
+                            const bx = points[1].x // left base point
+                            const by = points[1].y
+                            const cx = points[2].x // right base point
+                            const cy = points[2].y
+
+                            // Barycentric coordinate check
+                            const v0x = cx - ax
+                            const v0y = cy - ay
+                            const v1x = bx - ax
+                            const v1y = by - ay
                             const v2x = global.x - ax
                             const v2y = global.y - ay
+
                             const dot00 = v0x * v0x + v0y * v0y
                             const dot01 = v0x * v1x + v0y * v1y
                             const dot02 = v0x * v2x + v0y * v2y
                             const dot11 = v1x * v1x + v1y * v1y
                             const dot12 = v1x * v2x + v1y * v2y
+
                             const invDen = 1 / (dot00 * dot11 - dot01 * dot01)
                             const u = (dot11 * dot02 - dot01 * dot12) * invDen
                             const v = (dot00 * dot12 - dot01 * dot02) * invDen
+
                             return u >= 0 && v >= 0 && u + v <= 1
                         }
                         return false
@@ -2600,7 +2590,7 @@ const PixiBoard = ({
             gridRef.current = null
             // No document-level handlers to remove
         }
-    }, [])
+    }, [hostReady])
 
     // Resize handler
     useEffect(() => {
@@ -2696,10 +2686,10 @@ const PixiBoard = ({
     // Sync bg texture ref and apply when either texture prop or viewport becomes available
     useEffect(() => {
         bgTextureRef.current = backgroundTexture ?? null
-        if (!ready) {
+        if (!viewportRef.current || !backgroundRef.current) {
             return
         }
-        if (backgroundTexture && viewportRef.current && backgroundRef.current) {
+        if (backgroundTexture) {
             applyBackgroundTexture(
                 backgroundTexture,
                 viewportRef.current,
@@ -2709,8 +2699,18 @@ const PixiBoard = ({
                 gridColorRef.current,
                 gridAlphaRef.current
             )
-        } else if (!backgroundTexture && backgroundRef.current) {
-            backgroundRef.current.texture = Texture.WHITE
+        } else {
+            // Create a white texture for the background
+            const canvas = document.createElement('canvas')
+            canvas.width = 1
+            canvas.height = 1
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+                ctx.fillStyle = 'white'
+                ctx.fillRect(0, 0, 1, 1)
+            }
+            const whiteTexture = Texture.from(canvas)
+            backgroundRef.current.texture = whiteTexture
             backgroundRef.current.tint = 0x000000
             // Redraw grid to world size when no background
             if (gridRef.current) {
@@ -2725,14 +2725,18 @@ const PixiBoard = ({
                 )
             }
         }
-    }, [backgroundTexture, ready])
+        // Set ready after background is applied
+        if (!ready) {
+            setReady(true)
+        }
+    }, [backgroundTexture, ready, worldDims])
 
-    // Bind fit function
+    // Create and bind fit function with current dimensions
     useEffect(() => {
         if (!viewportRef.current) return
         if (!onBindFit) return
         const viewport = viewportRef.current
-        onBindFit(() => {
+        const fitFn = () => {
             const { w, h } = getTargetSize(backgroundRef.current, worldDims)
             const sw = viewport.screenWidth - sidePanelWidth
             const sh = viewport.screenHeight
@@ -2743,8 +2747,9 @@ const PixiBoard = ({
             // The center of available space in screen coords is at: sw/2
             // We want world center (w/2, h/2) to appear at that screen position
             viewport.moveCorner(w / 2 - sw / scale / 2, h / 2 - sh / scale / 2)
-        })
-    }, [onBindFit, sidePanelWidth])
+        }
+        onBindFit(fitFn)
+    }, [onBindFit, worldDims, sidePanelWidth])
 
     // Redraw tokens on token prop change, start movement animations (single segment) for non-pending external moves
     useEffect(() => {
@@ -2807,8 +2812,9 @@ const PixiBoard = ({
     useEffect(() => {
         if (!ready) return
         blastsRef.current = blasts
+        blastsNotInMapRef.current = blastsNotInMap
         renderBlasts(blastLayerRef.current, blasts, gridSize)
-    }, [blasts, gridSize, ready])
+    }, [blasts, blastsNotInMap, gridSize, ready])
 
     // Keep refs in sync for grid and snap
     useEffect(() => {
@@ -2890,20 +2896,141 @@ const PixiBoard = ({
                         // Check if it's a blast or token (check type first since blasts can have both id and type)
                         if (droppedData?.type && ['grenade', 'circle', 'square', 'cone'].includes(droppedData.type)) {
                             // It's a blast
-                            if (onBlastDrop) {
+                            if (droppedData.type === 'cone') {
+                                // For cone templates, initiate 2-step placement process
+                                const coneLength = 6 // Always 6 grid cells
+                                rotatingConeRef.current = {
+                                    id: droppedData.id || globalThis.crypto?.randomUUID?.() || String(Date.now()),
+                                    apexX: finalX,
+                                    apexY: finalY,
+                                    lengthInGrids: coneLength,
+                                    angleRad: 0, // Default angle
+                                }
+                                rotationReadyAtRef.current = Date.now() + 180
+                                // Trigger preview update
+                                if (blastPreviewLayerRef.current) {
+                                    drawBlastPreview(
+                                        blastPreviewLayerRef.current,
+                                        'cone',
+                                        finalX,
+                                        finalY,
+                                        finalX + coneLength * gridSizeRef.current,
+                                        finalY,
+                                        gridSizeRef.current
+                                    )
+                                }
+                            } else if (onBlastDrop) {
                                 onBlastDrop(droppedData, finalX, finalY)
                             }
                         } else if (droppedData?.id) {
-                            // It's a token
-                            if (onTokenDrop) {
-                                onTokenDrop(droppedData.id, finalX, finalY)
+                            // Check if it's an existing cone blast being moved
+                            const existingBlast = [...blastsRef.current, ...blastsNotInMapRef.current].find(
+                                (b) => b.id === droppedData.id
+                            )
+                            if (existingBlast?.type === 'cone') {
+                                // For existing cones, update local state immediately, set up rotation mode, then update database
+                                const dx = finalX - existingBlast.x
+                                const dy = finalY - existingBlast.y
+                                const movedBlast = {
+                                    ...existingBlast,
+                                    x: finalX,
+                                    y: finalY,
+                                    x2: existingBlast.x2 ? existingBlast.x2 + dx : finalX,
+                                    y2: existingBlast.y2 ? existingBlast.y2 + dy : finalY,
+                                }
+
+                                // Update local state immediately
+                                const wasInBlastsNotInMap = blastsNotInMapRef.current.some(
+                                    (b) => b.id === droppedData.id
+                                )
+                                if (wasInBlastsNotInMap) {
+                                    blastsNotInMapRef.current = blastsNotInMapRef.current.filter(
+                                        (b) => b.id !== droppedData.id
+                                    )
+                                    blastsRef.current = [...blastsRef.current, movedBlast]
+                                } else {
+                                    blastsRef.current = blastsRef.current.map((b) =>
+                                        b.id === droppedData.id ? movedBlast : b
+                                    )
+                                }
+
+                                // Set up rotation mode
+                                const coneLength = Math.max(
+                                    0.1,
+                                    Math.hypot(
+                                        (movedBlast.x2 ?? movedBlast.x) - movedBlast.x,
+                                        (movedBlast.y2 ?? movedBlast.y) - movedBlast.y
+                                    ) / gridSizeRef.current
+                                )
+                                rotatingConeRef.current = {
+                                    id: droppedData.id,
+                                    apexX: finalX,
+                                    apexY: finalY,
+                                    lengthInGrids: coneLength,
+                                    angleRad: Math.atan2(
+                                        (movedBlast.y2 ?? movedBlast.y) - movedBlast.y,
+                                        (movedBlast.x2 ?? movedBlast.x) - movedBlast.x
+                                    ),
+                                }
+                                rotationReadyAtRef.current = Date.now() + 180
+                                // Database update happens on confirmation
+                            } else {
+                                // It's a token
+                                if (onTokenDrop) {
+                                    onTokenDrop(droppedData.id, finalX, finalY)
+                                }
                             }
                         }
                     } catch (error) {
                         console.error('Error handling drop:', error)
                     }
                 }}
-            />
+            >
+                {/* Show loading spinner overlay while PIXI initializes */}
+                {!ready && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: readerMode ? colors.grays.gray900 : colors.cyberpunk.darkBg,
+                            color: readerMode ? colors.neons.blue.default : colors.neons.cyan.default,
+                            fontFamily: '"Orbitron", monospace',
+                            fontSize: '18px',
+                            flexDirection: 'column',
+                            gap: '20px',
+                            zIndex: 9999,
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                border: `3px solid ${
+                                    readerMode ? colors.neons.blue.default : colors.neons.cyan.default
+                                }`,
+                                borderTop: `3px solid ${colors.neons.pink.default}`,
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite',
+                            }}
+                        />
+                        <div>INITIALIZING COMBAT SIMULATOR...</div>
+                        <style>
+                            {`
+                                @keyframes spin {
+                                    0% { transform: rotate(0deg); }
+                                    100% { transform: rotate(360deg); }
+                                }
+                            `}
+                        </style>
+                    </div>
+                )}
+            </div>
 
             {/* Token tooltip overlay - use Portal to render at document root to avoid z-index stacking issues */}
             {hoveredToken &&

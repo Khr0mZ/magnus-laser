@@ -1,4 +1,5 @@
 import { Graphics, Sprite, Texture } from 'pixi.js'
+import { snapToNinePoints } from './gridUtils'
 import { Blast } from './types'
 
 // Cache for blast textures
@@ -15,7 +16,7 @@ export async function preloadBlastTextures(): Promise<void> {
     const texturePaths = {
         circle: '/blasts/circle_blast.webp',
         square: '/blasts/square_blast.webp',
-        cone: '/blasts/cone_blast.webp',
+        cone: '/blasts/flame_blast.webp',
     }
 
     for (const [key, path] of Object.entries(texturePaths)) {
@@ -53,7 +54,7 @@ function getBlastTexture(type: 'circle' | 'square' | 'cone'): Texture | null {
  * @param y1 Apex Y
  * @param x2 Endpoint X
  * @param y2 Endpoint Y
- * @param angle Cone angle in degrees (default 60)
+ * @param angle Cone angle in degrees (default 28)
  * @returns Array of three points [apex, left, right]
  */
 export function calculateConePoints(
@@ -61,7 +62,7 @@ export function calculateConePoints(
     y1: number,
     x2: number,
     y2: number,
-    angle: number = 60
+    angle: number = 28
 ): { x: number; y: number }[] {
     // Calculate distance and direction
     const dx = x2 - x1
@@ -287,16 +288,17 @@ function renderConeBlast(layer: Graphics, blast: Blast, _gridSize: number, alpha
     sprite.alpha = alpha
     sprite.zIndex = 0.5 // Below tokens
 
-    // Compute length from apex to endpoint; for a 60° cone, base width equals length
+    // Compute length from apex to endpoint; for a 28° cone, base width is approximately 0.499 * length
     const len = Math.max(1, Math.hypot(baseDx, baseDy))
+    const baseWidth = len * 0.499 // 2 * tan(14°) ≈ 0.499
     // Position sprite so that its apex (left-middle) sits at blast apex
     sprite.anchor.set(0, 0.5)
     sprite.position.set(blast.x, blast.y)
     // Orient sprite along cone direction
     sprite.rotation = baseAngle + TEXTURE_FORWARD_OFFSET
-    // Scale sprite to cover the cone: width along length, height equals base width (same as length for 60°)
+    // Scale sprite to cover the cone: width along length, height equals base width
     sprite.width = len
-    sprite.height = len
+    sprite.height = baseWidth
 
     // Create triangle mask
     const mask = new Graphics()
@@ -378,20 +380,34 @@ export function drawBlastPreview(
             break
         }
         case 'cone': {
-            const points = calculateConePoints(x1, y1, x2, y2)
+            // For preview, calculate the fixed endpoint 6 grid sizes away
+            const dx = x2 - x1
+            const dy = y2 - y1
+            const distance = Math.sqrt(dx * dx + dy * dy)
+            const directionX = dx / distance
+            const directionY = dy / distance
+            const fixedLength = 6 * gridSize
+            let previewX2 = x1 + directionX * fixedLength
+            let previewY2 = y1 + directionY * fixedLength
+
+            // Snap endpoint to 9 points for preview
+            const snappedEndpoint = snapToNinePoints(previewX2, previewY2, gridSize, true)
+            previewX2 = snappedEndpoint.x
+            previewY2 = snappedEndpoint.y
+
+            const points = calculateConePoints(x1, y1, previewX2, previewY2, 28)
             layer.moveTo(points[0].x, points[0].y)
             layer.lineTo(points[1].x, points[1].y)
             layer.lineTo(points[2].x, points[2].y)
             layer.lineTo(points[0].x, points[0].y)
             layer.stroke({ color, width: 2, alpha })
 
-            const dx = x2 - x1
-            const dy = y2 - y1
-            const length = Math.sqrt(dx * dx + dy * dy)
-            const lengthInGrids = (length / gridSize).toFixed(1)
-            sizeText = `L=${lengthInGrids}`
-            labelX = (x1 + x2) / 2
-            labelY = (y1 + y2) / 2 - 20
+            // Calculate actual preview length after snapping
+            const actualLength = Math.sqrt((previewX2 - x1) ** 2 + (previewY2 - y1) ** 2)
+            const lengthInGrids = (actualLength / gridSize).toFixed(1)
+            sizeText = `L=${lengthInGrids} (28°)`
+            labelX = (x1 + previewX2) / 2
+            labelY = (y1 + previewY2) / 2 - 20
             break
         }
     }

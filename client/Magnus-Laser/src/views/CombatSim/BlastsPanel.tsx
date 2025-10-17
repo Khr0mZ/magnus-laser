@@ -58,14 +58,14 @@ const BlastsPanel = ({
             case 'square':
                 return '🟧 Adaptable Rectangle'
             case 'cone':
-                return '🔻 Adaptable Cone'
+                return '🔥 Flamer (6x3)'
         }
     }
 
     const getBlastDisplayName = (blast: Blast): string => {
         switch (blast.type) {
             case 'grenade':
-                return `💣 ${blast.name || 'Grenade'}`
+                return `💣 ${blast.name}`
             case 'circle':
                 return `🟠 Circle (r=${blast.size?.toFixed(1) || '?'})`
             case 'square': {
@@ -74,13 +74,15 @@ const BlastsPanel = ({
                 return `🟧 Rectangle (${w}x${h})`
             }
             case 'cone':
-                return `🔻 Cone (L=${blast.size?.toFixed(1) || '?'})`
+                return `🔥 ${blast.name}`
         }
     }
 
     const renderBlastTemplate = (type: BlastType) => {
         const isGrenade = type === 'grenade'
-        const isActive = !isGrenade && blastDrawMode === type
+        const isCone = type === 'cone'
+        const isDraggable = isGrenade || isCone
+        const isActive = !isGrenade && !isCone && blastDrawMode === type
 
         return (
             <Stack
@@ -88,7 +90,7 @@ const BlastsPanel = ({
                 direction="row"
                 spacing={1}
                 alignItems="center"
-                draggable={isGrenade}
+                draggable={isDraggable}
                 onDragStart={(e) => {
                     if (isGrenade) {
                         e.dataTransfer.effectAllowed = 'copyMove'
@@ -114,10 +116,33 @@ const BlastsPanel = ({
                         setTimeout(() => {
                             document.body.removeChild(dragPreview)
                         }, 0)
+                    } else if (isCone) {
+                        e.dataTransfer.effectAllowed = 'copyMove'
+                        e.dataTransfer.setData('application/json', JSON.stringify({ type: 'cone' }))
+
+                        // Use flame_blast image for cone drag preview
+                        const dragPreview = document.createElement('div')
+                        dragPreview.style.position = 'absolute'
+                        dragPreview.style.top = '-1000px'
+                        dragPreview.style.left = '-1000px'
+                        dragPreview.style.width = '50px'
+                        dragPreview.style.height = '50px'
+                        dragPreview.style.overflow = 'hidden'
+                        const img = document.createElement('img')
+                        img.src = '/blasts/flame_blast.webp'
+                        img.style.width = '100%'
+                        img.style.height = '100%'
+                        img.style.objectFit = 'cover'
+                        dragPreview.appendChild(img)
+                        document.body.appendChild(dragPreview)
+                        e.dataTransfer.setDragImage(dragPreview, 25, 25)
+                        setTimeout(() => {
+                            document.body.removeChild(dragPreview)
+                        }, 0)
                     }
                 }}
                 onClick={() => {
-                    if (!isGrenade) {
+                    if (!isDraggable) {
                         onActivateDrawMode(type)
                     }
                 }}
@@ -218,7 +243,7 @@ const BlastsPanel = ({
                                 blast.type === 'square'
                                     ? '/blasts/square_blast.webp'
                                     : blast.type === 'cone'
-                                    ? '/blasts/cone_blast.webp'
+                                    ? '/blasts/flame_blast.webp'
                                     : '/blasts/circle_blast.webp'
                             img.style.width = '100%'
                             img.style.height = '100%'
@@ -354,9 +379,9 @@ const BlastsPanel = ({
                     {isTemplate ? (
                         <>
                             {renderBlastTemplate('grenade')}
+                            {renderBlastTemplate('cone')}
                             {renderBlastTemplate('circle')}
                             {renderBlastTemplate('square')}
-                            {renderBlastTemplate('cone')}
                         </>
                     ) : sortedBlasts.length === 0 ? (
                         <Typography
