@@ -54,6 +54,19 @@ A cyberpunk-themed desktop application for managing tabletop RPG game elements. 
 - **Notifications**: Real-time in-app notifications with Notistack.
 - **Cross-Platform Desktop App**: Packaged with Tauri v2 for macOS, Linux, and Windows.
 
+## Session Hosting (Magnus Laser)
+
+Magnus Laser ships with a free click-to-host relay for your tabletop sessions. Everything runs on your machine—no logins, no paid infrastructure.
+
+1. **Install `cloudflared`:** Download the standalone binary from [Cloudflare](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation) and place it somewhere on your PATH (or keep the path handy—the app lets you pick it).
+   - Optional fallback: install the `localtunnel` CLI (`npm install -g localtunnel`) if you prefer a quick random subdomain.
+2. **Launch the Session view:** Inside the desktop app open **Session** in the navigation bar. Pick a display name, choose the **Game Master** role, and click **Create Session**. The app spins up a local WebSocket relay and exposes it through a Cloudflare Quick Tunnel.
+3. **Share the invite:** Copy the public URL + session code and send them to your players. They only need those values to join—no accounts or extra software.
+4. **Join as a player:** Players select the **Player** role, paste the host’s URL/code, and connect. The app attempts WebRTC data channels first; if NAT punches fail after ~9 seconds it automatically falls back to the relay tunnel.
+5. **End the session:** When you click **End Session** the tunnel and local WebSocket server are shut down cleanly.
+
+All persistent state lives in Dexie/IndexedDB on each client. The relay layer handles presence, signaling, and (if needed) message forwarding without storing game data on any third-party servers.
+
 ## Technologies Used
 
 - **Frontend:**

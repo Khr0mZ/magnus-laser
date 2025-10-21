@@ -10,7 +10,13 @@ import { MapContextMenu } from './MapContextMenu'
 import { TokenContextMenu } from './TokenContextMenu'
 import { TokenTooltip } from './TokenTooltip'
 import { schedulePathAnimation } from './animationUtils'
-import { calculateConePoints, drawBlastPreview, preloadBlastTextures, renderBlasts } from './blastRenderer'
+import {
+    calculateConePoints,
+    clearBlastRendererCaches,
+    drawBlastPreview,
+    preloadBlastTextures,
+    renderBlasts,
+} from './blastRenderer'
 import {
     getTargetSize,
     segmentHitsCircleBoundary,
@@ -656,7 +662,7 @@ const PixiBoard = ({
             await app.init({
                 resolution: targetDPR,
                 autoDensity: true,
-                antialias: false,
+                antialias: true,
                 powerPreference: 'high-performance',
                 backgroundAlpha: 1,
                 background: readerMode ? colors.grays.gray900 : colors.cyberpunk.darkBg,
@@ -2603,11 +2609,27 @@ const PixiBoard = ({
             document.removeEventListener('visibilitychange', onVisibility)
             // Clear token renderer caches to release Sprite/Text references
             clearTokenRendererCaches()
+            // Clear blast renderer caches to release Sprite/Mask references
+            clearBlastRendererCaches()
             viewportRef.current = null
             gridRef.current = null
             // No document-level handlers to remove
         }
     }, [hostReady])
+
+    // Cleanup on unmount to ensure Pixi resources are properly disposed
+    useEffect(() => {
+        return () => {
+            if (appRef.current) {
+                appRef.current.destroy(true)
+                appRef.current = null
+            }
+            clearTokenRendererCaches()
+            clearBlastRendererCaches()
+            viewportRef.current = null
+            gridRef.current = null
+        }
+    }, [])
 
     // Resize handler
     useEffect(() => {

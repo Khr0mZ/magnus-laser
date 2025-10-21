@@ -56,6 +56,12 @@ const neons = {
         dark: '#CC0044',
         glow: '0 0 10px #FF0055, 0 0 20px #FF005550',
     },
+    orange: {
+        default: '#FF5E00', // Neon orange
+        light: '#FF8F4D',
+        dark: '#CC4B00',
+        glow: '0 0 10px #FF5E00, 0 0 20px #FF5E0050',
+    },
 }
 
 // Keep original colors but with cyberpunk shades

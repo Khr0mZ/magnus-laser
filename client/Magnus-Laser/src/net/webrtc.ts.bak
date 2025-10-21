@@ -1,0 +1,180 @@
+/* eslint-env browser */
+import type { PeerInfo, WireMsg } from '@/types/session'
+
+const ICE_SERVERS: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+]
+
+export type PeerEvent =
+    | { type: 'connected'; peerId: string }
+    | { type: 'disconnected'; peerId: string }
+    | { type: 'message'; peerId: string; payload: WireMsg }
+
+export interface WebRTCManagerOptions {
+    selfId: string
+    sendSignal: (msg: WireMsg) => void
+    onPeerEvent: (event: PeerEvent) => void
+    polite?: boolean
+}
+
+interface PeerContext {
+    pc: RTCPeerConnection
+    channel: RTCDataChannel | null
+    isMakingOffer: boolean
+    polite: boolean
+}
+
+export class WebRTCManager {
+    private readonly peers = new Map<string, PeerContext>()
+    private readonly opts: WebRTCManagerOptions
+
+    constructor(opts: WebRTCManagerOptions) {
+        this.opts = opts
+    }
+
+    ensurePeer(peer: PeerInfo) {
+        if (this.peers.has(peer.id)) return this.peers.get(peer.id)!
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+
+        const context: PeerContext = {
+            pc,
+            channel: null,
+            isMakingOffer: false,
+            polite: peer.role === 'dm' ? true : !!this.opts.polite,
+        }
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                this.opts.sendSignal({
+                    t: 'RTC_ICE',
+                    from: this.opts.selfId,
+                    to: peer.id,
+                    candidate: event.candidate,
+                })
+            }
+        }
+
+        pc.onconnectionstatechange = () => {
+            const { connectionState } = pc
+            if (connectionState === 'failed' || connectionState === 'closed' || connectionState === 'disconnected') {
+                this.opts.onPeerEvent({ type: 'disconnected', peerId: peer.id })
+            }
+        }
+
+        pc.ondatachannel = (event) => {
+            this.setupChannel(peer.id, context, event.channel)
+        }
+
+        this.peers.set(peer.id, context)
+        return context
+    }
+
+    async createOffer(peer: PeerInfo) {
+        const ctx = this.ensurePeer(peer)
+        if (!ctx.channel) {
+            const channel = ctx.pc.createDataChannel('magnus-game', {
+                negotiated: false,
+                ordered: true,
+            })
+            this.setupChannel(peer.id, ctx, channel)
+        }
+
+        ctx.isMakingOffer = true
+        const offer = await ctx.pc.createOffer()
+        await ctx.pc.setLocalDescription(offer)
+        ctx.isMakingOffer = false
+        this.opts.sendSignal({
+            t: 'RTC_OFFER',
+            from: this.opts.selfId,
+            to: peer.id,
+            sdp: ctx.pc.localDescription ?? offer,
+        })
+    }
+
+    async handleOffer(from: string, description: RTCSessionDescriptionInit) {
+        const ctx = this.ensurePeer({ id: from, name: '', role: 'dm', connected: true })
+        const readyForOffer = !ctx.isMakingOffer && (ctx.pc.signalingState === 'stable' || ctx.polite)
+        if (!readyForOffer) {
+            return
+        }
+        await ctx.pc.setRemoteDescription(description)
+        const answer = await ctx.pc.createAnswer()
+        await ctx.pc.setLocalDescription(answer)
+        const resolvedDescription = ctx.pc.localDescription ?? answer
+        this.opts.sendSignal({ t: 'RTC_ANSWER', from: this.opts.selfId, to: from, sdp: resolvedDescription })
+    }
+
+    async handleAnswer(from: string, description: RTCSessionDescriptionInit) {
+        const ctx = this.ensurePeer({ id: from, name: '', role: 'player', connected: true })
+        if (!ctx.pc.currentRemoteDescription) {
+            await ctx.pc.setRemoteDescription(description)
+        }
+    }
+
+    async handleIce(from: string, candidate: RTCIceCandidateInit) {
+        const ctx = this.ensurePeer({ id: from, name: '', role: 'player', connected: true })
+        try {
+            await ctx.pc.addIceCandidate(candidate)
+        } catch (err) {
+            console.warn('Failed to add ICE candidate', err)
+        }
+    }
+
+    sendToPeer(peerId: string, msg: WireMsg) {
+        const ctx = this.peers.get(peerId)
+        if (!ctx?.channel || ctx.channel.readyState !== 'open') return false
+        ctx.channel.send(JSON.stringify(msg))
+        return true
+    }
+
+    broadcast(msg: WireMsg) {
+        let delivered = 0
+        for (const ctx of this.peers.values()) {
+            if (ctx.channel && ctx.channel.readyState === 'open') {
+                ctx.channel.send(JSON.stringify(msg))
+                delivered += 1
+            }
+        }
+        return delivered
+    }
+
+    closePeer(peerId: string) {
+        const ctx = this.peers.get(peerId)
+        if (!ctx) return
+        ctx.channel?.close()
+        ctx.pc.close()
+        this.peers.delete(peerId)
+        this.opts.onPeerEvent({ type: 'disconnected', peerId })
+    }
+
+    shutdown() {
+        for (const [peerId] of this.peers) {
+            this.closePeer(peerId)
+        }
+        this.peers.clear()
+    }
+
+    private setupChannel(peerId: string, ctx: PeerContext, channel: RTCDataChannel) {
+        ctx.channel = channel
+        channel.binaryType = 'arraybuffer'
+
+        channel.onopen = () => {
+            this.opts.onPeerEvent({ type: 'connected', peerId })
+        }
+
+        channel.onclose = () => {
+            this.opts.onPeerEvent({ type: 'disconnected', peerId })
+        }
+
+        channel.onmessage = (event) => {
+            try {
+                const payload = JSON.parse(event.data) as WireMsg
+                this.opts.onPeerEvent({ type: 'message', peerId, payload })
+            } catch (err) {
+                console.warn('Failed to parse data channel message', err)
+            }
+        }
+    }
+}

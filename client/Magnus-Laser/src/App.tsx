@@ -14,6 +14,8 @@ import { useUserPreferences } from './contexts/userPreferencesHooks.ts'
 import './i18n'
 import './index.css'
 import NavigationPaths from './navigation'
+import { useSession } from './state/sessionStore'
+import { initCombatSimSync } from './sync/combatSimSync'
 import { getDesignTokens } from './utils/theme'
 import BountyView from './views/Bounty/BountyView.tsx'
 import BuildingView from './views/Building/BuildingView'
@@ -29,6 +31,7 @@ import SettingsView from './views/Settings/SettingsView'
 
 const AppContent = () => {
     const { readerMode, loaderEnabled, isLoadingPreferences } = useUserPreferences()
+    const { initAutoReconnect, role, session, clearSession } = useSession()
 
     // Additional state for loader
     const [isInitialized, setIsInitialized] = useState(false)
@@ -45,6 +48,9 @@ const AppContent = () => {
 
     // Update loading status based on data context
     useEffect(() => {
+        // Initialize Combat Sim sync wiring once
+        initCombatSimSync()
+
         if (!isLoading) {
             setLoadingStatus((prev) => ({
                 ...prev,
@@ -64,13 +70,33 @@ const AppContent = () => {
 
     // Set system init and preferences loaded in loading status
     useEffect(() => {
-        setLoadingStatus((prev) => ({
-            ...prev,
-            systemInit: true,
-            readerMode: true,
-            viewPreferences: true,
-        }))
-    }, [])
+        const initializeApp = async () => {
+            // Auto-reconnect players to sessions on app startup
+            await initAutoReconnect()
+
+            // Clear DM session data on app refresh/reload (since Tauri process restarts)
+            // In Tauri, app refresh/reload means the session hosting process is gone
+            // So DM session data must be cleared to reflect the lost backend state
+            // Only clear if the session is old (created more than 30 seconds ago)
+            if (role === 'dm' && session && session.createdAt < Date.now() - 30000) {
+                try {
+                    console.log('Clearing stale DM session data from previous app instance')
+                    await clearSession()
+                } catch (err) {
+                    console.warn('Failed to clear stale DM session:', err)
+                }
+            }
+
+            setLoadingStatus((prev) => ({
+                ...prev,
+                systemInit: true,
+                readerMode: true,
+                viewPreferences: true,
+            }))
+        }
+
+        initializeApp()
+    }, [initAutoReconnect, role, session, clearSession])
 
     const handleLoaderComplete = () => {
         setIsInitialized(true)

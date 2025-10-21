@@ -12,7 +12,7 @@ import {
     PlotBuildingComplicationType,
     PlotComplicationType,
 } from '../graphql/types'
-import { Blast, BoardMap, Image, Map, Token, Wall } from '../views/CombatSim/types'
+import { Blast, BoardMap, Image, Initiative, Map, RollHistoryEntry, Token, Wall } from '../views/CombatSim/types'
 
 // Normalized database types (for storage only)
 export type DbBounty = {
@@ -78,6 +78,11 @@ export type AppPreferences = {
     geminiApiKey: string
 }
 
+export interface KV {
+    key: string
+    value: unknown
+}
+
 export class MagnusLaserDB extends Dexie {
     // Core entity tables (normalized)
     gangs!: Table<Gang, string>
@@ -104,6 +109,21 @@ export class MagnusLaserDB extends Dexie {
     walls!: Table<Wall, string>
     images!: Table<Image, string>
     blasts!: Table<Blast, string>
+    initiative!: Table<Initiative, string>
+    rollHistory!: Table<RollHistoryEntry, string>
+
+    // Session Combat Simulator tables (player-mirrored)
+    sessionBoardMaps!: Table<BoardMap, string>
+    sessionTokens!: Table<Token, string>
+    sessionMaps!: Table<Map, string>
+    sessionWalls!: Table<Wall, string>
+    sessionImages!: Table<Image, string>
+    sessionBlasts!: Table<Blast, string>
+    sessionInitiative!: Table<Initiative, string>
+    sessionRollHistory!: Table<RollHistoryEntry, string>
+
+    // Key-value storage
+    kv!: Table<KV, string>
 
     constructor() {
         super('magnus-laser')
@@ -166,9 +186,154 @@ export class MagnusLaserDB extends Dexie {
             .upgrade(async () => {
                 // Version 4: Clean schema - combat sim data is self-migrating
                 // Main app data (bounties, fixerJobs) can be regenerated from generators
-                console.log('Upgraded to version 4: Clean normalized schema')
+                console.warn('Upgraded to version 4: Clean normalized schema')
+            })
+
+        // Version 5: Added key-value storage
+        this.version(5)
+            .stores({
+                // Core entity tables (normalized)
+                gangs: 'ID, &name',
+                buildings: 'ID, &name',
+                characters: 'ID, &name',
+                items: 'ID, &name',
+
+                // Normalized relationship tables
+                bounties: 'ID, characterId',
+                fixerJobs: 'ID, plotId',
+                plots: 'ID, plotBuildingId, plotSubjectId',
+                plotBuildings: 'ID, buildingId',
+                plotComplications: 'ID, characterId, itemId',
+                buildingComplications: 'ID, characterId, itemId',
+
+                // App state
+                preferences: 'id',
+                mapMarkers: 'id, buildingId',
+
+                // Combat Simulator tables
+                boardMaps: 'id, &name',
+                tokens: 'id, mapId',
+                maps: 'id, &name',
+                walls: 'id, mapId',
+                images: 'id, &name',
+                blasts: 'id, mapId',
+
+                // Key-value storage
+                kv: 'key',
+            })
+            .upgrade(async () => {
+                console.warn('Upgraded to version 5: Added key-value storage')
+            })
+
+        // Version 6: Added Session Combat Simulator data
+        this.version(6)
+            .stores({
+                // Core entity tables (normalized)
+                gangs: 'ID, &name',
+                buildings: 'ID, &name',
+                characters: 'ID, &name',
+                items: 'ID, &name',
+
+                // Normalized relationship tables
+                bounties: 'ID, characterId',
+                fixerJobs: 'ID, plotId',
+                plots: 'ID, plotBuildingId, plotSubjectId',
+                plotBuildings: 'ID, buildingId',
+                plotComplications: 'ID, characterId, itemId',
+                buildingComplications: 'ID, characterId, itemId',
+
+                // App state
+                preferences: 'id',
+                mapMarkers: 'id, buildingId',
+
+                // Combat Simulator tables
+                boardMaps: 'id, &name',
+                tokens: 'id, mapId',
+                maps: 'id, &name',
+                walls: 'id, mapId',
+                images: 'id, &name',
+                blasts: 'id, mapId',
+
+                // Session Combat Simulator tables
+                sessionBoardMaps: 'id, &name',
+                sessionTokens: 'id, mapId',
+                sessionMaps: 'id, &name',
+                sessionWalls: 'id, mapId',
+                sessionImages: 'id, &name',
+                sessionBlasts: 'id, mapId',
+
+                // Key-value storage
+                kv: 'key',
+            })
+            .upgrade(async () => {
+                console.warn('Upgraded to version 6: Added Session Combat Simulator data')
+            })
+
+        // Version 7: Initiative and roll history tables
+        this.version(7)
+            .stores({
+                // Core entity tables (normalized)
+                gangs: 'ID, &name',
+                buildings: 'ID, &name',
+                characters: 'ID, &name',
+                items: 'ID, &name',
+
+                // Normalized relationship tables
+                bounties: 'ID, characterId',
+                fixerJobs: 'ID, plotId',
+                plots: 'ID, plotBuildingId, plotSubjectId',
+                plotBuildings: 'ID, buildingId',
+                plotComplications: 'ID, characterId, itemId',
+                buildingComplications: 'ID, characterId, itemId',
+
+                // App state
+                preferences: 'id',
+                mapMarkers: 'id, buildingId',
+
+                // Combat Simulator tables
+                boardMaps: 'id, &name',
+                tokens: 'id, mapId',
+                maps: 'id, &name',
+                walls: 'id, mapId',
+                images: 'id, &name',
+                blasts: 'id, mapId',
+                initiative: 'mapId',
+                rollHistory: 'id, tokenId, timestamp, mapId',
+
+                // Session Combat Simulator tables
+                sessionBoardMaps: 'id, &name',
+                sessionTokens: 'id, mapId',
+                sessionMaps: 'id, &name',
+                sessionWalls: 'id, mapId',
+                sessionImages: 'id, &name',
+                sessionBlasts: 'id, mapId',
+                sessionInitiative: 'mapId',
+                sessionRollHistory: 'id, tokenId, timestamp, mapId',
+
+                // Key-value storage
+                kv: 'key',
+            })
+            .upgrade(async () => {
+                console.warn('Upgraded to version 7: Added initiative and roll history tables')
             })
     }
 }
 
 export const db = new MagnusLaserDB()
+
+export async function setKV<T>(key: string, value: T) {
+    await db.kv.put({ key, value })
+}
+
+export async function getKV<T>(key: string): Promise<T | undefined> {
+    const row = await db.kv.get(key)
+    return row?.value as T | undefined
+}
+
+export const KV_KEYS = {
+    displayName: 'displayName',
+    lastRole: 'lastRole',
+    lastSessionCode: 'lastSessionCode',
+    lastSnapshot: 'lastSnapshot',
+    publicUrl: 'publicUrl',
+} as const

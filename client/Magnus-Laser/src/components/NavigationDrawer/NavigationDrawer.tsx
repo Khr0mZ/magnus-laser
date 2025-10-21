@@ -1,12 +1,23 @@
 import { Box, Drawer, Stack } from '@mui/material'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
+import { useSession } from '../../state/sessionStore'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import WindowButtons from '../WindowButtons.tsx'
 import DrawerButton from './DrawerButton'
 import LogoButton from './LogoButton'
+
+// Check if we're in a Tauri/desktop environment
+const isTauri = () =>
+    typeof window !== 'undefined' &&
+    typeof (window as typeof window & { __TAURI__?: { core?: { invoke?: (...args: unknown[]) => unknown } } }).__TAURI__
+        ?.core?.invoke === 'function'
 const NavigationDrawer = () => {
     const { readerMode } = useUserPreferences()
+    const { session, connected, role } = useSession()
+    // For players, show as connected if they have a session (they're in the session)
+    // For DMs, show as connected only when WebRTC is connected
+    const isConnected = Boolean(session && (role === 'player' || connected))
 
     return (
         <Box sx={{ mb: 11 }}>
@@ -90,7 +101,7 @@ const NavigationDrawer = () => {
                         gap: 1,
                     }}
                 >
-                    <LogoButton />
+                    <LogoButton isConnected={isConnected} />
                     <Stack
                         data-tauri-drag-region
                         direction={'row'}
@@ -107,7 +118,7 @@ const NavigationDrawer = () => {
                             <DrawerButton key={module} module={module} />
                         ))}
                     </Stack>
-                    <WindowButtons />
+                    {isTauri() && <WindowButtons />}
                 </Stack>
             </Drawer>
         </Box>

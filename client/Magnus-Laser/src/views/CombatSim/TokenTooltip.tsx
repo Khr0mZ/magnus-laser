@@ -43,23 +43,6 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                     <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
                         <Typography
                             sx={{
-                                color: readerMode ? colors.blues.default : colors.neons.pink.default,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {t('combatSim.initiative')}:
-                        </Typography>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
-                            }}
-                        >
-                            {stats.initiative}
-                        </Typography>
-                    </Grid>
-                    <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
-                        <Typography
-                            sx={{
                                 color: readerMode ? colors.blues.default : colors.neons.red.default,
                                 fontWeight: 700,
                             }}
@@ -213,6 +196,7 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                                     color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
                                 }}
                             >
+                                {stats.weapons.currentGrenadesOrSpecialAmmo} /{' '}
                                 {stats.weapons.grenadesOrSpecialAmmo?.d4 &&
                                     `${stats.weapons.grenadesOrSpecialAmmo?.d4}D4`}
                                 {stats.weapons.grenadesOrSpecialAmmo?.d6 &&

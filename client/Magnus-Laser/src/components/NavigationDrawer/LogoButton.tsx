@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks.ts'
 import NavigationPaths from '../../navigation'
 import colors from '../../utils/colors'
-import { severeGlitch } from '../common/Animations.tsx'
+import { pulseGlowGreen, pulseGlowRed, severeGlitch } from '../common/Animations.tsx'
 
-const LogoButton = () => {
+export interface LogoButtonProps {
+    isConnected?: boolean
+}
+
+const LogoButton = ({ isConnected = false }: LogoButtonProps) => {
     const navigate = useNavigate()
     const { readerMode } = useUserPreferences()
 
@@ -79,11 +83,46 @@ const LogoButton = () => {
                     alt="Logo"
                     className="logo-glow"
                     sx={{
-                        width: '40px',
-                        height: '40px',
+                        width: '50px',
+                        height: '50px',
                         filter: `drop-shadow(0 0 0.5px ${colors.neons.cyan.default})`,
                         transition: 'all 0.3s',
                         transform: 'scale(1.5)',
+                    }}
+                />
+                {/* Connected indicator */}
+                <Box
+                    className="logo-glow"
+                    sx={{
+                        position: 'absolute',
+                        top: 'calc(50% - 5px)',
+                        right: 'calc(50% - 5px)',
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        backgroundColor: isConnected ? colors.neons.green.default : colors.neons.orange.default,
+                        border: `1px solid ${isConnected ? colors.neons.green.light : colors.neons.orange.light}`,
+                        boxShadow: isConnected
+                            ? `0 0 8px ${colors.neons.green.default}, 0 0 16px ${colors.neons.green.light}60`
+                            : `0 0 4px ${colors.neons.orange.default}80`,
+                        animation: readerMode
+                            ? 'none'
+                            : isConnected
+                            ? `${pulseGlowGreen} 2s infinite`
+                            : `${pulseGlowRed} 3s infinite`,
+                        transition: 'all 0.3s ease-in-out',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            backgroundColor: isConnected ? colors.neons.green.light : colors.neons.orange.light,
+                            transform: 'translate(-50%, -50%)',
+                            opacity: 0.8,
+                        },
                     }}
                 />
             </Box>

@@ -25,13 +25,7 @@ function ensureParent(child: Sprite | Text, parent: Graphics['parent']): void {
     }
 }
 
-function upsertLabel(
-    id: string,
-    parent: Graphics['parent'],
-    text: string,
-    x: number,
-    y: number
-): Text {
+function upsertLabel(id: string, parent: Graphics['parent'], text: string, x: number, y: number): Text {
     let label = labelCache.get(id)
     if (!label) {
         label = new Text({
@@ -56,13 +50,7 @@ function upsertLabel(
     return label
 }
 
-function upsertGhostLabel(
-    id: string,
-    parent: Graphics['parent'],
-    text: string,
-    x: number,
-    y: number
-): Text {
+function upsertGhostLabel(id: string, parent: Graphics['parent'], text: string, x: number, y: number): Text {
     let label = ghostLabelCache.get(id)
     if (!label) {
         label = new Text({
@@ -341,6 +329,16 @@ export function renderTokensWithPending(
 
 // Allow external callers to fully clear caches (e.g., on unmount)
 export function clearTokenRendererCaches(): void {
+    // Clear all textures
+    for (const texture of textureCache.values()) {
+        try {
+            texture.destroy()
+        } catch (error) {
+            console.warn('Error destroying token texture during cache clear:', error)
+        }
+    }
+    textureCache.clear()
+
     for (const id of Array.from(spriteCache.keys())) destroySprite(spriteCache, id)
     for (const id of Array.from(labelCache.keys())) destroyLabel(labelCache, id)
     for (const id of Array.from(ghostSpriteCache.keys())) destroySprite(ghostSpriteCache, id)

@@ -1,3 +1,7 @@
+import SessionHUD from '@/components/session/SessionHUD.tsx'
+import SessionLobby from '@/components/session/SessionLobby.tsx'
+import { useSession } from '@/state/sessionStore.ts'
+import { Role } from '@/types/session.ts'
 import { DeleteForever, FolderOpen, Save, UploadFile } from '@mui/icons-material'
 import {
     Alert,
@@ -16,7 +20,7 @@ import {
 } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useSnackbar } from 'notistack'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     buttonGlitch,
@@ -64,6 +68,11 @@ import {
     savePreferences,
 } from '../../utils/storage'
 
+interface JoinArgs {
+    code: string
+    url: string
+}
+
 const SettingsView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('common.settings')}`)
@@ -77,6 +86,220 @@ const SettingsView = () => {
     const [openAIApiKey, setOpenAIApiKey] = useState('')
     const [geminiApiKey, setGeminiApiKey] = useState('')
     const [isSaving, setIsSaving] = useState(false)
+    const {
+        displayName,
+        role,
+        session,
+        peers,
+        transport,
+        connected,
+        selfId,
+        kicked,
+        initFromDexie,
+        setName,
+        setRole,
+        createSession,
+        joinSession,
+        leaveSession,
+        clearSession,
+        kickPlayer,
+    } = useSession()
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState<string>()
+    const [lastJoin, setLastJoin] = useState<JoinArgs>()
+    const [sessionCreated, setSessionCreated] = useState(false)
+    const [sessionJoined, setSessionJoined] = useState(false)
+    const [sessionLeft, setSessionLeft] = useState(false)
+    const [reconnected, setReconnected] = useState(false)
+    const [kickDialogOpen, setKickDialogOpen] = useState(false)
+    const [endSessionDialogOpen, setEndSessionDialogOpen] = useState(false)
+    const [playerToKick, setPlayerToKick] = useState<{ id: string; name: string } | null>(null)
+    const [forceLobbyView, setForceLobbyView] = useState(false)
+
+    useEffect(() => {
+        void initFromDexie()
+    }, [initFromDexie])
+
+    useEffect(() => {
+        if (session?.code && !lastJoin) {
+            // For players, construct the URL from the session code
+            const url = role === 'player' ? `https://${session.code}.trycloudflare.com` : ''
+            setLastJoin((prev) => prev ?? { code: session.code, url })
+        } else if (!session?.code && lastJoin) {
+            // Clear join details when session ends (either DM left or player left)
+            setLastJoin(undefined)
+        }
+    }, [session?.code, lastJoin, role])
+
+    // Show session notifications
+    useEffect(() => {
+        if (sessionCreated) {
+            enqueueSnackbar(t('session.sessionCreatedSuccessfully'), {
+                variant: 'success',
+                persist: false,
+                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                autoHideDuration: 2000,
+            })
+            setSessionCreated(false)
+        }
+    }, [sessionCreated, enqueueSnackbar])
+
+    useEffect(() => {
+        if (sessionJoined) {
+            enqueueSnackbar(t('session.sessionJoinedSuccessfully'), {
+                variant: 'success',
+                persist: false,
+                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                autoHideDuration: 2000,
+            })
+            setSessionJoined(false)
+        }
+    }, [sessionJoined, enqueueSnackbar])
+
+    useEffect(() => {
+        if (sessionLeft) {
+            enqueueSnackbar(t('session.leftSession'), {
+                variant: 'info',
+                persist: false,
+                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                autoHideDuration: 2000,
+            })
+            setSessionLeft(false)
+        }
+    }, [sessionLeft, enqueueSnackbar])
+
+    useEffect(() => {
+        if (reconnected) {
+            enqueueSnackbar(t('session.reconnectedSuccessfully'), {
+                variant: 'success',
+                persist: false,
+                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                autoHideDuration: 2000,
+            })
+            setReconnected(false)
+        }
+    }, [reconnected, enqueueSnackbar])
+
+    useEffect(() => {
+        if (kicked) {
+            enqueueSnackbar(t('session.kickedFromSession'), {
+                variant: 'error',
+                persist: false,
+                anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                autoHideDuration: 4000,
+            })
+            // Clear the kicked state and session after showing the message
+            setTimeout(async () => {
+                await clearSession()
+            }, 100)
+        }
+    }, [kicked, enqueueSnackbar, clearSession])
+
+    const defaults = useMemo(
+        () => ({
+            code: session?.code,
+        }),
+        [session?.code]
+    )
+
+    const handleRoleChange = (next: Role) => {
+        void setRole(next)
+    }
+
+    const handleCreate = async () => {
+        if (busy) return
+        setBusy(true)
+        setError(undefined)
+        try {
+            await createSession()
+            setForceLobbyView(false) // Reset lobby force when creating new session
+            setSessionCreated(true)
+        } catch (err) {
+            setError((err as Error).message)
+            throw err
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const handleJoin = async (input: JoinArgs) => {
+        if (busy) return
+        setBusy(true)
+        setError(undefined)
+        try {
+            await joinSession(input.code, input.url)
+            setForceLobbyView(false) // Reset lobby force when joining session
+            setLastJoin(input)
+            setSessionJoined(true)
+        } catch (err) {
+            setError((err as Error).message)
+            throw err
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const handleLeave = async () => {
+        setBusy(true)
+        setError(undefined)
+        try {
+            await leaveSession()
+            setSessionLeft(true)
+            setLastJoin(undefined) // Clear join details when leaving
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const handleReconnect = async () => {
+        if (busy) return
+        setBusy(true)
+        setError(undefined)
+        try {
+            if (role === 'dm') {
+                await leaveSession()
+                await createSession()
+                setReconnected(true)
+            } else if (lastJoin) {
+                await leaveSession()
+                await joinSession(lastJoin.code, lastJoin.url)
+                setReconnected(true)
+            } else {
+                setError('No previous join details available.')
+            }
+        } catch (err) {
+            setError((err as Error).message)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const handleKickPlayer = (peerId: string, peerName: string) => {
+        setPlayerToKick({ id: peerId, name: peerName })
+        setKickDialogOpen(true)
+    }
+
+    const handleKickConfirm = async () => {
+        if (!playerToKick) return
+        try {
+            await kickPlayer(playerToKick.id)
+            const playerName = playerToKick.name || 'Player'
+            enqueueSnackbar(t('session.kickedFromSession', { name: playerName }), { variant: 'success' })
+        } catch {
+            const playerName = playerToKick.name || 'Player'
+            enqueueSnackbar(t('session.kickedFromSessionFailed', { name: playerName }), { variant: 'error' })
+        } finally {
+            setKickDialogOpen(false)
+            setPlayerToKick(null)
+        }
+    }
+
+    const handleKickCancel = () => {
+        setKickDialogOpen(false)
+        setPlayerToKick(null)
+    }
+
+    const showHud = Boolean(session?.code && role && role !== null && !forceLobbyView)
 
     // Load API keys on component mount
     useEffect(() => {
@@ -179,6 +402,8 @@ const SettingsView = () => {
             if (combatSimData.walls.length > 0) data.combatSimWalls = combatSimData.walls
             if (combatSimData.images.length > 0) data.combatSimImages = combatSimData.images
             if (combatSimData.blasts.length > 0) data.combatSimBlasts = combatSimData.blasts
+            if (combatSimData.initiative.length > 0) data.combatSimInitiative = combatSimData.initiative
+            if (combatSimData.rollHistory.length > 0) data.combatSimRollHistory = combatSimData.rollHistory
 
             // Create a JSON file to download
             const fileName = `magnus-laser-data-${new Date().toISOString().split('T')[0]}.json`
@@ -360,6 +585,16 @@ const SettingsView = () => {
                                     importedCollections += 1
                                     if (Array.isArray(value)) importedRegistries += value.length
                                     break
+                                case 'combatSimInitiative':
+                                    await saveCombatSimData({ initiative: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
+                                case 'combatSimRollHistory':
+                                    await saveCombatSimData({ rollHistory: value })
+                                    importedCollections += 1
+                                    if (Array.isArray(value)) importedRegistries += value.length
+                                    break
                                 default:
                                     // Skip unknown keys
                                     break
@@ -521,6 +756,10 @@ const SettingsView = () => {
                 db.walls.clear(),
                 db.images.clear(),
                 db.blasts.clear(),
+                db.initiative.clear(),
+                db.rollHistory.clear(),
+
+                db.kv.clear(),
             ])
 
             // Notify that data has been cleared for immediate UI updates
@@ -599,13 +838,38 @@ const SettingsView = () => {
                 message="This will permanently delete ALL your data including gangs, buildings, characters, items, bounties, fixer jobs, map markers, and combat simulator data. This action cannot be undone. Are you sure you want to proceed?"
                 confirmText="NUKE ALL DATA"
             />
+            {/* Session Warning Dialogs */}
+            {showHud && (
+                <>
+                    <WarningDialog
+                        open={kickDialogOpen}
+                        onClose={handleKickCancel}
+                        onConfirm={handleKickConfirm}
+                        title={t('session.kickPlayer')}
+                        message={t('session.kickPlayerConfirm', { name: playerToKick?.name || 'Player' })}
+                        confirmText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
+                        confirmColor="red"
+                    />
+                    <WarningDialog
+                        open={endSessionDialogOpen}
+                        onClose={() => setEndSessionDialogOpen(false)}
+                        onConfirm={handleLeave}
+                        title={t('session.endSession')}
+                        message={t('session.endSessionConfirm')}
+                        confirmText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
+                        confirmColor="red"
+                    />
+                </>
+            )}
             {/* Storage Banner */}
             <StorageBanner isSaving={isSaving} onSavingDone={() => setIsSaving(false)} />
 
             <Typography
                 variant="h3"
                 className="glitch-text"
-                data-text={t('modules.SETTINGS')}
+                data-text={t('settings.title')}
                 sx={{
                     color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                     textShadow: `0 0 10px ${colors.neons.cyan.default}`,
@@ -625,6 +889,36 @@ const SettingsView = () => {
             </Typography>
 
             <Grid container spacing={3} sx={{ position: 'relative', zIndex: 3 }}>
+                {/* Session Card */}
+                <Grid size={12}>
+                    {showHud ? (
+                        <SessionHUD
+                            session={session!}
+                            peers={peers}
+                            transport={transport}
+                            connected={connected}
+                            onLeave={handleLeave}
+                            onReconnect={handleReconnect}
+                            onKickPlayer={handleKickPlayer}
+                            onEndSessionDialogOpen={() => setEndSessionDialogOpen(true)}
+                            externalError={error}
+                            isDM={role === 'dm'}
+                            selfId={selfId}
+                        />
+                    ) : (
+                        <SessionLobby
+                            displayName={displayName}
+                            role={role}
+                            onDisplayNameChange={(value) => void setName(value)}
+                            onRoleChange={handleRoleChange}
+                            onCreateHost={handleCreate}
+                            onJoinSession={handleJoin}
+                            defaults={defaults}
+                            busy={busy}
+                            error={error}
+                        />
+                    )}
+                </Grid>
                 {/* Export Data Card */}
                 <Grid size={{ xs: 12, md: 4 }}>
                     <Card
@@ -1132,6 +1426,50 @@ const SettingsView = () => {
                                 : '1px solid rgba(0, 255, 255, 0.2)',
                             backdropFilter: 'blur(5px)',
                             boxShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                            '&:hover': {
+                                transform: 'translateY(-8px) scale(1.02)',
+                                animation: `${neonPulse} 2s infinite`,
+                                cursor: 'pointer',
+                                '& .card-icon': {
+                                    opacity: 0.4,
+                                    filter: `drop-shadow(0 0 ${readerMode ? '10px' : '20px'} ${
+                                        colors.neons.cyan.default
+                                    })`,
+                                    animation: `${flicker} 4s infinite, ${neonColorCycle} 5s infinite`,
+                                },
+                                '& .card-title': {
+                                    animation: `${neonColorCycle} 3s linear infinite, ${glitch} 5s infinite`,
+                                    color: colors.neons.cyan.default,
+                                    textShadow: `0 0 10px ${colors.neons.cyan.default}, 0 0 15px rgba(0,0,0,0.5)`,
+                                    fontWeight: 700,
+                                },
+                                '& .card-description': {
+                                    color: readerMode ? colors.neons.green.dark : colors.neons.green.light,
+                                    textShadow: readerMode
+                                        ? `0 0 3px ${colors.neons.green.light}, 0 0 5px rgba(0,0,0,0.2)`
+                                        : `0 0 3px ${colors.neons.green.dark}, 0 0 5px rgba(0,0,0,0.9)`,
+                                    fontWeight: 600,
+                                    animation: `${neonColorCycle} 8s linear infinite`,
+                                },
+                                '& .card-subdescription': {
+                                    color: colors.grays.gray900,
+                                    textShadow: readerMode ? `0 0 2px rgba(0,0,0,0.2)` : `0 0 3px rgba(0,0,0,0.9)`,
+                                    fontWeight: 500,
+                                },
+                                '& .card-glitch-overlay': {
+                                    opacity: readerMode ? 0.1 : 0.15,
+                                },
+                                '& .card-scanlines': {
+                                    opacity: readerMode ? 0.1 : 0.3,
+                                },
+                                '& .data-corruption': {
+                                    opacity: readerMode ? 0.7 : 1,
+                                },
+                                '&::before': {
+                                    opacity: readerMode ? 0.3 : 0.5,
+                                    background: readerMode ? 'rgba(200, 250, 250, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                                },
+                            },
                         }}
                     >
                         <CardContent
@@ -1319,7 +1657,6 @@ const SettingsView = () => {
                         </CardContent>
                     </Card>
                 </Grid>
-
                 {/* API Keys Card */}
                 <Grid size={{ xs: 12, md: 6 }}>
                     <Card
@@ -1334,6 +1671,50 @@ const SettingsView = () => {
                                 : '1px solid rgba(0, 255, 255, 0.2)',
                             backdropFilter: 'blur(5px)',
                             boxShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                            '&:hover': {
+                                transform: 'translateY(-8px) scale(1.02)',
+                                animation: `${neonPulse} 2s infinite`,
+                                cursor: 'pointer',
+                                '& .card-icon': {
+                                    opacity: 0.4,
+                                    filter: `drop-shadow(0 0 ${readerMode ? '10px' : '20px'} ${
+                                        colors.neons.cyan.default
+                                    })`,
+                                    animation: `${flicker} 4s infinite, ${neonColorCycle} 5s infinite`,
+                                },
+                                '& .card-title': {
+                                    animation: `${neonColorCycle} 3s linear infinite, ${glitch} 5s infinite`,
+                                    color: colors.neons.cyan.default,
+                                    textShadow: `0 0 10px ${colors.neons.cyan.default}, 0 0 15px rgba(0,0,0,0.5)`,
+                                    fontWeight: 700,
+                                },
+                                '& .card-description': {
+                                    color: readerMode ? colors.neons.green.dark : colors.neons.green.light,
+                                    textShadow: readerMode
+                                        ? `0 0 3px ${colors.neons.green.light}, 0 0 5px rgba(0,0,0,0.2)`
+                                        : `0 0 3px ${colors.neons.green.dark}, 0 0 5px rgba(0,0,0,0.9)`,
+                                    fontWeight: 600,
+                                    animation: `${neonColorCycle} 8s linear infinite`,
+                                },
+                                '& .card-subdescription': {
+                                    color: colors.grays.gray900,
+                                    textShadow: readerMode ? `0 0 2px rgba(0,0,0,0.2)` : `0 0 3px rgba(0,0,0,0.9)`,
+                                    fontWeight: 500,
+                                },
+                                '& .card-glitch-overlay': {
+                                    opacity: readerMode ? 0.1 : 0.15,
+                                },
+                                '& .card-scanlines': {
+                                    opacity: readerMode ? 0.1 : 0.3,
+                                },
+                                '& .data-corruption': {
+                                    opacity: readerMode ? 0.7 : 1,
+                                },
+                                '&::before': {
+                                    opacity: readerMode ? 0.3 : 0.5,
+                                    background: readerMode ? 'rgba(200, 250, 250, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                                },
+                            },
                         }}
                     >
                         <CardContent

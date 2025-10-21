@@ -219,7 +219,7 @@ export const loadFixerJobs = async (): Promise<FixerJob[]> => {
         const hasNormalizedSchema = tableNames.includes('plots') && tableNames.includes('plotBuildings')
 
         if (!hasNormalizedSchema) {
-            console.log('Database does not have normalized schema yet, returning empty array')
+            console.warn('Database does not have normalized schema yet, returning empty array')
             return []
         }
 
@@ -689,13 +689,15 @@ const base64ToBlob = async (base64: string): Promise<Blob> => {
  */
 export const loadCombatSimData = async () => {
     try {
-        const [boardMaps, tokens, maps, walls, images, blasts] = await Promise.all([
+        const [boardMaps, tokens, maps, walls, images, blasts, initiative, rollHistory] = await Promise.all([
             db.boardMaps.toArray(),
             db.tokens.toArray(),
             db.maps.toArray(),
             db.walls.toArray(),
             db.images.toArray(),
             db.blasts.toArray(),
+            db.initiative.toArray(),
+            db.rollHistory.toArray(),
         ])
 
         // Convert blobs to base64 for export
@@ -722,10 +724,21 @@ export const loadCombatSimData = async () => {
             walls,
             images: imagesWithBase64,
             blasts,
+            initiative,
+            rollHistory,
         }
     } catch (error) {
         console.warn('Error loading combat sim data:', error)
-        return { boardMaps: [], tokens: [], maps: [], walls: [], images: [], blasts: [] }
+        return {
+            boardMaps: [],
+            tokens: [],
+            maps: [],
+            walls: [],
+            images: [],
+            blasts: [],
+            initiative: [],
+            rollHistory: [],
+        }
     }
 }
 
@@ -736,8 +749,36 @@ export const saveCombatSimData = async (data: {
     walls?: Array<Record<string, unknown>>
     images?: Array<Record<string, unknown>>
     blasts?: Array<Record<string, unknown>>
+    initiative?: Array<Record<string, unknown>>
+    rollHistory?: Array<Record<string, unknown>>
 }): Promise<void> => {
     try {
+        // For import operations, clear existing data first to avoid constraint violations
+        if (data.boardMaps && data.boardMaps.length > 0) {
+            await db.boardMaps.clear()
+        }
+        if (data.tokens && data.tokens.length > 0) {
+            await db.tokens.clear()
+        }
+        if (data.maps && data.maps.length > 0) {
+            await db.maps.clear()
+        }
+        if (data.walls && data.walls.length > 0) {
+            await db.walls.clear()
+        }
+        if (data.images && data.images.length > 0) {
+            await db.images.clear()
+        }
+        if (data.blasts && data.blasts.length > 0) {
+            await db.blasts.clear()
+        }
+        if (data.initiative && data.initiative.length > 0) {
+            await db.initiative.clear()
+        }
+        if (data.rollHistory && data.rollHistory.length > 0) {
+            await db.rollHistory.clear()
+        }
+
         if (data.boardMaps && data.boardMaps.length > 0) {
             await db.boardMaps.bulkPut(data.boardMaps as never)
         }
@@ -783,6 +824,12 @@ export const saveCombatSimData = async (data: {
         }
         if (data.blasts && data.blasts.length > 0) {
             await db.blasts.bulkPut(data.blasts as never)
+        }
+        if (data.initiative && data.initiative.length > 0) {
+            await db.initiative.bulkPut(data.initiative as never)
+        }
+        if (data.rollHistory && data.rollHistory.length > 0) {
+            await db.rollHistory.bulkPut(data.rollHistory as never)
         }
     } catch (error) {
         console.warn('Error saving combat sim data:', error)

@@ -9,6 +9,40 @@ const textureCache: Record<string, Texture> = {}
 const spriteCache = new Map<string, Sprite>()
 const maskCache = new Map<string, Graphics>()
 
+// Allow external callers to fully clear caches (e.g., on unmount)
+export function clearBlastRendererCaches(): void {
+    // Clear blast textures
+    for (const texture of Object.values(textureCache)) {
+        try {
+            texture.destroy()
+        } catch (error) {
+            console.warn('Error destroying blast texture during cache clear:', error)
+        }
+    }
+    // Clear the texture cache object
+    Object.keys(textureCache).forEach((key) => delete textureCache[key])
+
+    for (const sprite of spriteCache.values()) {
+        try {
+            if (sprite.parent) sprite.parent.removeChild(sprite)
+            sprite.destroy()
+        } catch (error) {
+            console.warn('Error destroying blast sprite during cache clear:', error)
+        }
+    }
+    spriteCache.clear()
+
+    for (const mask of maskCache.values()) {
+        try {
+            if (mask.parent) mask.parent.removeChild(mask)
+            mask.destroy()
+        } catch (error) {
+            console.warn('Error destroying blast mask during cache clear:', error)
+        }
+    }
+    maskCache.clear()
+}
+
 /**
  * Preload all blast textures
  */
@@ -99,31 +133,37 @@ export function renderBlasts(layer: Graphics | null, blasts: Blast[], gridSize: 
     // Clear the graphics layer (for fallback solid shapes)
     layer.clear()
 
-    // Clear sprite cache from previous render
-    for (const sprite of spriteCache.values()) {
-        try {
-            if (sprite.parent) {
-                sprite.parent.removeChild(sprite)
-            }
-            sprite.destroy()
-        } catch (error) {
-            console.warn('Error destroying blast sprite:', error)
-        }
-    }
-    spriteCache.clear()
+    // Build set of desired blast IDs for cleanup
+    const desiredIds = new Set(blasts.map((blast) => blast.id))
 
-    // Clear mask cache from previous render
-    for (const mask of maskCache.values()) {
-        try {
-            if (mask.parent) {
-                mask.parent.removeChild(mask)
+    // Remove sprites/masks for blasts that no longer exist
+    for (const [id, sprite] of spriteCache.entries()) {
+        if (!desiredIds.has(id)) {
+            try {
+                if (sprite.parent) {
+                    sprite.parent.removeChild(sprite)
+                }
+                sprite.destroy()
+                spriteCache.delete(id)
+            } catch (error) {
+                console.warn('Error destroying blast sprite:', error)
             }
-            mask.destroy()
-        } catch (error) {
-            console.warn('Error destroying blast mask:', error)
         }
     }
-    maskCache.clear()
+
+    for (const [id, mask] of maskCache.entries()) {
+        if (!desiredIds.has(id)) {
+            try {
+                if (mask.parent) {
+                    mask.parent.removeChild(mask)
+                }
+                mask.destroy()
+                maskCache.delete(id)
+            } catch (error) {
+                console.warn('Error destroying blast mask:', error)
+            }
+        }
+    }
 
     for (const blast of blasts) {
         renderBlast(layer, blast, gridSize)
@@ -162,17 +202,31 @@ function renderGrenadeBlast(layer: Graphics, blast: Blast, gridSize: number, alp
         const radius = (gridSize * 5) / 2 // 2.5 grid cells radius
         layer.circle(blast.x, blast.y, radius)
         layer.fill({ color: 0xff4400, alpha })
+        // Remove any existing sprite for this blast
+        if (spriteCache.has(blast.id)) {
+            const existingSprite = spriteCache.get(blast.id)!
+            if (existingSprite.parent) {
+                existingSprite.parent.removeChild(existingSprite)
+            }
+            existingSprite.destroy()
+            spriteCache.delete(blast.id)
+        }
         return
     }
 
-    const sprite = new Sprite(texture)
-    sprite.anchor.set(0.5) // Center the sprite (same as tokens)
-    sprite.zIndex = 0.5 // Below tokens
-    spriteCache.set(blast.id, sprite)
+    let sprite = spriteCache.get(blast.id)
+    if (!sprite) {
+        sprite = new Sprite(texture)
+        sprite.anchor.set(0.5) // Center the sprite (same as tokens)
+        sprite.zIndex = 0.5 // Below tokens
+        spriteCache.set(blast.id, sprite)
 
-    // Add to viewport (same as tokens)
-    if (layer.parent) {
-        layer.parent.addChild(sprite)
+        // Add to viewport (same as tokens)
+        if (layer.parent) {
+            layer.parent.addChild(sprite)
+        }
+    } else if (sprite.texture !== texture) {
+        sprite.texture = texture
     }
 
     // Position the sprite (same as tokens)
@@ -183,6 +237,7 @@ function renderGrenadeBlast(layer: Graphics, blast: Blast, gridSize: number, alp
     const scale = targetSize / Math.max(texture.width, texture.height)
     sprite.scale.set(scale)
     sprite.alpha = alpha
+    sprite.visible = true
 }
 
 /**
@@ -197,17 +252,31 @@ function renderCircleBlast(layer: Graphics, blast: Blast, gridSize: number, alph
         const radius = gridSize * blast.size
         layer.circle(blast.x, blast.y, radius)
         layer.fill({ color: 0xff4400, alpha })
+        // Remove any existing sprite for this blast
+        if (spriteCache.has(blast.id)) {
+            const existingSprite = spriteCache.get(blast.id)!
+            if (existingSprite.parent) {
+                existingSprite.parent.removeChild(existingSprite)
+            }
+            existingSprite.destroy()
+            spriteCache.delete(blast.id)
+        }
         return
     }
 
-    const sprite = new Sprite(texture)
-    sprite.anchor.set(0.5) // Center the sprite (same as tokens)
-    sprite.zIndex = 0.5 // Below tokens
-    spriteCache.set(blast.id, sprite)
+    let sprite = spriteCache.get(blast.id)
+    if (!sprite) {
+        sprite = new Sprite(texture)
+        sprite.anchor.set(0.5) // Center the sprite (same as tokens)
+        sprite.zIndex = 0.5 // Below tokens
+        spriteCache.set(blast.id, sprite)
 
-    // Add to viewport (same as tokens)
-    if (layer.parent) {
-        layer.parent.addChild(sprite)
+        // Add to viewport (same as tokens)
+        if (layer.parent) {
+            layer.parent.addChild(sprite)
+        }
+    } else if (sprite.texture !== texture) {
+        sprite.texture = texture
     }
 
     // Position the sprite (same as tokens)
@@ -218,6 +287,7 @@ function renderCircleBlast(layer: Graphics, blast: Blast, gridSize: number, alph
     const scale = targetSize / Math.max(texture.width, texture.height)
     sprite.scale.set(scale)
     sprite.alpha = alpha
+    sprite.visible = true
 }
 
 /**
@@ -234,17 +304,31 @@ function renderSquareBlast(layer: Graphics, blast: Blast, gridSize: number, alph
         // Fallback to solid rectangle
         layer.rect(blast.x - width / 2, blast.y - height / 2, width, height)
         layer.fill({ color: 0xff4400, alpha })
+        // Remove any existing sprite for this blast
+        if (spriteCache.has(blast.id)) {
+            const existingSprite = spriteCache.get(blast.id)!
+            if (existingSprite.parent) {
+                existingSprite.parent.removeChild(existingSprite)
+            }
+            existingSprite.destroy()
+            spriteCache.delete(blast.id)
+        }
         return
     }
 
-    const sprite = new Sprite(texture)
-    sprite.anchor.set(0.5) // Center the sprite (same as tokens)
-    sprite.zIndex = 0.5 // Below tokens
-    spriteCache.set(blast.id, sprite)
+    let sprite = spriteCache.get(blast.id)
+    if (!sprite) {
+        sprite = new Sprite(texture)
+        sprite.anchor.set(0.5) // Center the sprite (same as tokens)
+        sprite.zIndex = 0.5 // Below tokens
+        spriteCache.set(blast.id, sprite)
 
-    // Add to viewport (same as tokens)
-    if (layer.parent) {
-        layer.parent.addChild(sprite)
+        // Add to viewport (same as tokens)
+        if (layer.parent) {
+            layer.parent.addChild(sprite)
+        }
+    } else if (sprite.texture !== texture) {
+        sprite.texture = texture
     }
 
     // Position the sprite (same as tokens)
@@ -255,6 +339,7 @@ function renderSquareBlast(layer: Graphics, blast: Blast, gridSize: number, alph
     const scaleY = height / texture.height
     sprite.scale.set(scaleX, scaleY)
     sprite.alpha = alpha
+    sprite.visible = true
 }
 
 /**
@@ -273,6 +358,23 @@ function renderConeBlast(layer: Graphics, blast: Blast, _gridSize: number, alpha
         layer.lineTo(points[2].x, points[2].y)
         layer.lineTo(points[0].x, points[0].y)
         layer.fill({ color: 0xff4400, alpha })
+        // Remove any existing sprite/mask for this blast
+        if (spriteCache.has(blast.id)) {
+            const existingSprite = spriteCache.get(blast.id)!
+            if (existingSprite.parent) {
+                existingSprite.parent.removeChild(existingSprite)
+            }
+            existingSprite.destroy()
+            spriteCache.delete(blast.id)
+        }
+        if (maskCache.has(`${blast.id}-mask`)) {
+            const existingMask = maskCache.get(`${blast.id}-mask`)!
+            if (existingMask.parent) {
+                existingMask.parent.removeChild(existingMask)
+            }
+            existingMask.destroy()
+            maskCache.delete(`${blast.id}-mask`)
+        }
         return
     }
 
@@ -284,9 +386,23 @@ function renderConeBlast(layer: Graphics, blast: Blast, _gridSize: number, alpha
     // Texture is authored with apex at left, pointing to +X; no offset needed
     const TEXTURE_FORWARD_OFFSET = 0
 
-    const sprite = new Sprite(texture)
-    sprite.alpha = alpha
-    sprite.zIndex = 0.5 // Below tokens
+    let sprite = spriteCache.get(blast.id)
+    let mask = maskCache.get(`${blast.id}-mask`)
+
+    if (!sprite) {
+        sprite = new Sprite(texture)
+        sprite.alpha = alpha
+        sprite.zIndex = 0.5 // Below tokens
+        spriteCache.set(blast.id, sprite)
+
+        // Add to viewport (layer.parent)
+        if (layer.parent) {
+            layer.parent.addChild(sprite)
+        }
+    } else {
+        sprite.alpha = alpha
+        sprite.visible = true
+    }
 
     // Compute length from apex to endpoint; for a 28° cone, base width is approximately 0.499 * length
     const len = Math.max(1, Math.hypot(baseDx, baseDy))
@@ -300,8 +416,19 @@ function renderConeBlast(layer: Graphics, blast: Blast, _gridSize: number, alpha
     sprite.width = len
     sprite.height = baseWidth
 
-    // Create triangle mask
-    const mask = new Graphics()
+    if (!mask) {
+        mask = new Graphics()
+        maskCache.set(`${blast.id}-mask`, mask)
+
+        // Add to viewport (layer.parent)
+        if (layer.parent) {
+            layer.parent.addChild(mask)
+        }
+    } else {
+        mask.clear()
+    }
+
+    // Update triangle mask
     mask.moveTo(points[0].x, points[0].y)
     mask.lineTo(points[1].x, points[1].y)
     mask.lineTo(points[2].x, points[2].y)
@@ -309,15 +436,6 @@ function renderConeBlast(layer: Graphics, blast: Blast, _gridSize: number, alpha
     mask.fill({ color: 0xffffff })
 
     sprite.mask = mask
-
-    spriteCache.set(blast.id, sprite)
-    maskCache.set(`${blast.id}-mask`, mask)
-
-    // Add to viewport (layer.parent)
-    if (layer.parent) {
-        layer.parent.addChild(mask)
-        layer.parent.addChild(sprite)
-    }
 }
 
 /**

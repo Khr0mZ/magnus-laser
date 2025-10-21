@@ -25,6 +25,7 @@ import GenerateButton from '../../components/GenerateButton'
 import StorageBanner from '../../components/StorageBanner'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
+import { useSession } from '../../state/sessionStore'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { db } from '../../utils/db'
@@ -69,19 +70,28 @@ async function fileToImage(file: globalThis.File): Promise<globalThis.HTMLImageE
     })
 }
 
-async function blobToImage(blob: Blob): Promise<globalThis.HTMLImageElement> {
+async function blobToImage(blob: Blob | undefined): Promise<globalThis.HTMLImageElement | null> {
+    if (!blob) {
+        console.warn('blobToImage called with null/undefined blob')
+        return null
+    }
     return new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(blob)
-        const img = new (globalThis.Image as typeof globalThis.Image)()
-        img.onload = () => {
-            URL.revokeObjectURL(url)
-            resolve(img)
+        try {
+            const url = URL.createObjectURL(blob)
+            const img = new (globalThis.Image as typeof globalThis.Image)()
+            img.onload = () => {
+                URL.revokeObjectURL(url)
+                resolve(img)
+            }
+            img.onerror = (e) => {
+                URL.revokeObjectURL(url)
+                reject(e)
+            }
+            img.src = url
+        } catch (error) {
+            console.error('Error creating object URL from blob:', error)
+            reject(error)
         }
-        img.onerror = (e) => {
-            URL.revokeObjectURL(url)
-            reject(e)
-        }
-        img.src = url
     })
 }
 
@@ -172,6 +182,54 @@ const CombatSimView = () => {
     const [blastClipboard, setBlastClipboard] = useState<Blast[] | null>(null)
 
     const half = gridSize / 2
+
+    // Session state
+    const session = useSession()
+
+    // Debug session state (only major changes)
+    useEffect(() => {
+        console.log('[CombatSimView] Session state:', {
+            role: session.role,
+            hasSession: !!session.session,
+            connected: session.connected,
+        })
+    }, [session.role, session.session?.code, session.connected])
+
+    // Helper function to determine if we should use session tables
+    const useSessionTables = () => {
+        const result = session.role === 'player' && session.session
+        if (result) {
+            console.log('[CombatSimView] Player in session:', session.session?.code, 'role:', session.role)
+        }
+        return result
+    }
+
+    // Helper functions to get the appropriate table based on session state
+    const getBoardMapsTable = () => (useSessionTables() ? db.sessionBoardMaps : db.boardMaps)
+    const getTokensTable = () => (useSessionTables() ? db.sessionTokens : db.tokens)
+    const getMapsTable = () => (useSessionTables() ? db.sessionMaps : db.maps)
+    const getWallsTable = () => (useSessionTables() ? db.sessionWalls : db.walls)
+    const getImagesTable = () => (useSessionTables() ? db.sessionImages : db.images)
+    const getBlastsTable = () => (useSessionTables() ? db.sessionBlasts : db.blasts)
+    const getInitiativeTable = () => (useSessionTables() ? db.sessionInitiative : db.initiative)
+    const getRollHistoryTable = () => (useSessionTables() ? db.sessionRollHistory : db.rollHistory)
+
+    // Helper function to send mutations for real-time sync
+    const sendMutation = (table: string, op: 'insert' | 'update' | 'delete', record: Record<string, unknown>) => {
+        console.log('[CombatSimView] sendMutation called for', table, op)
+        if (!useSessionTables() || !session.connected) {
+            console.log('[CombatSimView] Not sending mutation - not WebRTC connected yet')
+            return // Only players in sessions with WebRTC connection can send mutations
+        }
+
+        console.log('[CombatSimView] Sending mutation:', table, op, record)
+        session.sendAction({
+            kind: 'COMBAT_SIM_MUTATION',
+            ops: [{ table, op, record }],
+            ts: Date.now(),
+        })
+    }
+
     // Default tokens (not persisted, reset on reload)
     const [defaultTokens, setDefaultTokens] = useState<Token[]>(() => {
         return [
@@ -295,20 +353,34 @@ const CombatSimView = () => {
     const replaceMapTexture = useCallback((next: Texture | null) => {
         setMapTexture((prev) => {
             if (prev && prev !== next) {
-                try {
-                    prev.destroy(true)
-                } catch (e) {
-                    void e
-                }
+                // Defer texture destruction to avoid destroying it while PixiJS is still using it
+                requestAnimationFrame(() => {
+                    try {
+                        if (prev && !prev.destroyed) {
+                            prev.destroy(true)
+                        }
+                    } catch (e) {
+                        void e
+                    }
+                })
             }
             return next
         })
     }, [])
     useEffect(() => {
         return () => {
-            replaceMapTexture(null)
+            // Cleanup texture on unmount
+            requestAnimationFrame(() => {
+                try {
+                    if (mapTexture && !mapTexture.destroyed) {
+                        mapTexture.destroy(true)
+                    }
+                } catch (e) {
+                    void e
+                }
+            })
         }
-    }, [replaceMapTexture])
+    }, [mapTexture])
     const toAlphaHex = (a: number) =>
         Math.max(0, Math.min(255, Math.round(a * 255)))
             .toString(16)
@@ -338,10 +410,17 @@ const CombatSimView = () => {
     // init/load
     useEffect(() => {
         const run = async () => {
-            let map = await db.boardMaps.where('name').equals('Default').first()
+            const boardMapsTable = getBoardMapsTable()
+            const mapsTable = getMapsTable()
+            const tokensTable = getTokensTable()
+            const wallsTable = getWallsTable()
+            const blastsTable = getBlastsTable()
+            const imagesTable = getImagesTable()
+
+            let map = await boardMapsTable.where('name').equals('Default').first()
             if (!map) {
                 // create default map
-                let defaultMap = await db.maps.where('name').equals('Empty Map').first()
+                let defaultMap = await mapsTable.where('name').equals('Empty Map').first()
                 if (!defaultMap) {
                     const blankBlob = await createBlankPngBlob()
                     const candidate: MapType = {
@@ -357,10 +436,10 @@ const CombatSimView = () => {
                         blob: blankBlob,
                     }
                     try {
-                        await db.maps.add(candidate)
+                        await mapsTable.add(candidate)
                         defaultMap = candidate
                     } catch {
-                        defaultMap = await db.maps.where('name').equals('Empty Map').first()
+                        defaultMap = await mapsTable.where('name').equals('Empty Map').first()
                     }
                 }
                 const newBoardMap: BoardMap = {
@@ -369,56 +448,125 @@ const CombatSimView = () => {
                     mapId: defaultMap?.id,
                 }
                 try {
-                    await db.boardMaps.add(newBoardMap)
+                    await boardMapsTable.add(newBoardMap)
                     map = newBoardMap
                 } catch {
-                    map = await db.boardMaps.where('name').equals('Default').first()
+                    map = await boardMapsTable.where('name').equals('Default').first()
                 }
             }
             if (!map) return
             setCurrentMap(map)
             // maps dropdown
-            const allMaps = await db.maps.toArray()
+            const allMaps = await mapsTable.toArray()
             setMaps(allMaps)
+
+            // Ensure all maps have initiative entries
+            await ensureInitiativeEntriesForAllMaps()
+
             // tokens, walls, and blasts
             const activeKey = map.mapId ?? map.id
-            const tks = await db.tokens.where('mapId').equals(activeKey).toArray()
+            const tks = await tokensTable.where('mapId').equals(activeKey).toArray()
             setTokens(tks)
-            const tksNotInMap = await db.tokens.where('mapId').notEqual(activeKey).toArray()
+            const tksNotInMap = await tokensTable.where('mapId').notEqual(activeKey).toArray()
             setTokensNotInMap(tksNotInMap)
-            const ws = await db.walls.where('mapId').equals(activeKey).toArray()
+            const ws = await wallsTable.where('mapId').equals(activeKey).toArray()
             setWalls(ws)
-            const bls = await db.blasts.where('mapId').equals(activeKey).toArray()
+            const bls = await blastsTable.where('mapId').equals(activeKey).toArray()
             setBlasts(bls)
-            const blsNotInMap = await db.blasts.where('mapId').notEqual(activeKey).toArray()
+            const blsNotInMap = await blastsTable.where('mapId').notEqual(activeKey).toArray()
             setBlastsNotInMap(blsNotInMap)
             // map
             if (map.mapId) {
-                const m = await db.maps.get(map.mapId)
+                const m = await mapsTable.get(map.mapId)
                 if (m) {
                     const img = await blobToImage(m.blob)
-                    const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-                    replaceMapTexture(texture)
-                    setGridSize(m.gridSize)
-                    prevGridSizeRef.current = m.gridSize
-                    setSnapToGrid(m.snapToGrid)
-                    setGridColorHex(m.gridColorHex)
-                    setGridAlpha(m.gridAlpha)
+                    if (img) {
+                        const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
+                        replaceMapTexture(texture)
+                        setGridSize(m.gridSize)
+                        prevGridSizeRef.current = m.gridSize
+                        setSnapToGrid(m.snapToGrid)
+                        setGridColorHex(m.gridColorHex)
+                        setGridAlpha(m.gridAlpha)
+                    } else {
+                        console.warn('Failed to load map image, map may not display correctly')
+                    }
                 }
             }
             // images
-            const allImages = await db.images.toArray()
+            const allImages = await imagesTable.toArray()
             setImages(allImages)
         }
         run()
-    }, [])
+    }, [session.role, session.session, session.snapshot, session.connected])
+
+    // Load initiative data when current map changes
+    useEffect(() => {
+        const loadInitiativeForMap = async () => {
+            if (!currentMap?.mapId) {
+                // Clear initiative data if no map is selected
+                setActiveTokenId(null)
+                setCurrentRound(1)
+                setIsCombatActive(false)
+                setAutoRerollInitiative(false)
+                setInitiativeRolls(new Map())
+                setRollHistory([])
+                return
+            }
+
+            // Load initiative data for this map
+            const initiativeTable = getInitiativeTable()
+            const initData = await initiativeTable.get(currentMap.mapId)
+            console.log('Loaded initiative data for map', currentMap.mapId, ':', initData)
+            if (initData) {
+                setActiveTokenId(initData.activeTokenId)
+                setCurrentRound(initData.currentRound)
+                setIsCombatActive(initData.isCombatActive)
+                setAutoRerollInitiative(initData.autoRerollInitiative)
+                setAutoRollDamage(initData.autoRollDamage ?? false)
+                setInitiativeRolls(new Map(Object.entries(initData.initiativeRolls)))
+            } else {
+                // No initiative data for this map, create default entry
+                const defaultInitiative = {
+                    mapId: currentMap.mapId,
+                    activeTokenId: null,
+                    currentRound: 1,
+                    isCombatActive: false,
+                    autoRerollInitiative: false,
+                    autoRollDamage: false,
+                    initiativeRolls: {},
+                }
+                await initiativeTable.put(defaultInitiative)
+                console.log('Created default initiative data:', defaultInitiative)
+                setActiveTokenId(null)
+                setCurrentRound(1)
+                setIsCombatActive(false)
+                setAutoRerollInitiative(false)
+                setAutoRollDamage(false)
+                setInitiativeRolls(new Map())
+            }
+
+            // Load roll history for this map
+            const rollHistoryTable = getRollHistoryTable()
+            const historyData = await rollHistoryTable.where('mapId').equals(currentMap.mapId).toArray()
+            // Sort by timestamp (most recent first)
+            const sortedHistory = historyData.sort((a, b) => b.timestamp - a.timestamp)
+            setRollHistory(sortedHistory)
+        }
+
+        // Close all token details dialogs when map changes
+        setTokenDialogsOpen([])
+
+        loadInitiativeForMap()
+    }, [currentMap?.mapId, session.role, session.session, session.snapshot, session.connected])
 
     // Persist grid color/alpha
     useEffect(() => {
         const persistGridStyle = async () => {
             if (!currentMap) return
             if (currentMap.mapId) {
-                await db.maps.update(currentMap.mapId, {
+                const mapsTable = getMapsTable()
+                await mapsTable.update(currentMap.mapId, {
                     gridColorHex,
                     gridAlpha,
                 })
@@ -433,7 +581,12 @@ const CombatSimView = () => {
     }
 
     // Dice rolling and combat helpers
-    const addToRollHistory = (token: Token, rollType: RollType, result: RollResult, damageResult?: RollResult) => {
+    const addToRollHistory = async (
+        token: Token,
+        rollType: RollType,
+        result: RollResult,
+        damageResult?: RollResult
+    ) => {
         const entry: RollHistoryEntry = {
             id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
             timestamp: Date.now(),
@@ -443,26 +596,91 @@ const CombatSimView = () => {
             result,
             damageResult,
             damageRevealed: damageResult ? autoRollDamage : undefined, // Auto-reveal if setting is enabled
+            mapId: currentMap?.mapId || '',
         }
         setRollHistory((prev) => {
             const newHistory = [entry, ...prev]
             // Keep only last 100 entries
             return newHistory.slice(0, 100)
         })
+        // Save to database
+        const rollHistoryTable = getRollHistoryTable()
+        await rollHistoryTable.put(entry)
     }
 
-    const handleRevealDamage = (entryId: string) => {
+    const handleRevealDamage = async (entryId: string) => {
         setRollHistory((prev) =>
             prev.map((entry) => (entry.id === entryId ? { ...entry, damageRevealed: true } : entry))
         )
+        // Save to database
+        const rollHistoryTable = getRollHistoryTable()
+        await rollHistoryTable.update(entryId, { damageRevealed: true })
     }
 
-    const handleUpdateInitiative = (tokenId: string, value: number) => {
-        setInitiativeRolls((prev) => {
-            const newRolls = new Map(prev)
-            newRolls.set(tokenId, value)
-            return newRolls
-        })
+    const ensureInitiativeEntriesForAllMaps = async () => {
+        const mapsTable = getMapsTable()
+        const initiativeTable = getInitiativeTable()
+        const allMaps = await mapsTable.toArray()
+        for (const map of allMaps) {
+            const existingInitiative = await initiativeTable.get(map.id)
+            if (!existingInitiative) {
+                const defaultInitiative = {
+                    mapId: map.id,
+                    activeTokenId: null,
+                    currentRound: 1,
+                    isCombatActive: false,
+                    autoRerollInitiative: false,
+                    autoRollDamage: false,
+                    initiativeRolls: {},
+                }
+                await initiativeTable.put(defaultInitiative)
+            }
+        }
+    }
+
+    const saveInitiativeData = async (
+        activeTokenIdParam = activeTokenId,
+        currentRoundParam = currentRound,
+        isCombatActiveParam = isCombatActive,
+        autoRerollInitiativeParam = autoRerollInitiative,
+        autoRollDamageParam = autoRollDamage,
+        initiativeRollsParam = initiativeRolls
+    ) => {
+        if (!currentMap?.mapId) return
+        const initiativeData = {
+            mapId: currentMap.mapId,
+            activeTokenId: activeTokenIdParam,
+            currentRound: currentRoundParam,
+            isCombatActive: isCombatActiveParam,
+            autoRerollInitiative: autoRerollInitiativeParam,
+            autoRollDamage: autoRollDamageParam,
+            initiativeRolls: Object.fromEntries(initiativeRollsParam),
+        }
+        try {
+            const initiativeTable = getInitiativeTable()
+            await initiativeTable.put(initiativeData)
+            console.log('Saved initiative data:', initiativeData)
+
+            // Send mutation for sync
+            sendMutation('initiative', 'update', initiativeData)
+        } catch (error) {
+            console.error('Failed to save initiative data:', error)
+        }
+    }
+
+    const handleUpdateInitiative = async (tokenId: string, value: number) => {
+        const newRolls = new Map(initiativeRolls)
+        newRolls.set(tokenId, value)
+        setInitiativeRolls(newRolls)
+        // Save to database
+        await saveInitiativeData(
+            activeTokenId,
+            currentRound,
+            isCombatActive,
+            autoRerollInitiative,
+            autoRollDamage,
+            newRolls
+        )
     }
 
     // Track active token changes and add turn-start entries
@@ -476,7 +694,7 @@ const CombatSimView = () => {
                     fumble: false,
                     critical: false,
                     breakdown: '',
-                })
+                }).catch(console.error)
             }
         }
     }, [activeTokenId, isCombatActive])
@@ -495,28 +713,30 @@ const CombatSimView = () => {
         return value + (token.stats?.initiative ?? 0)
     }
 
-    const rollAllInitiatives = () => {
+    const rollAllInitiatives = async () => {
         const newRolls = new Map<string, number>()
-        tokens.forEach((token) => {
-            const initiative = rollInitiative(token)
-            newRolls.set(token.id, initiative)
+        await Promise.all(
+            tokens.map(async (token) => {
+                const initiative = rollInitiative(token)
+                newRolls.set(token.id, initiative)
 
-            // Add to roll history
-            const initiativeMod = token.stats?.initiative ?? 0
-            const { value, fumble, critical, rolls } = rollD10WithSpecial()
-            addToRollHistory(token, 'initiative', {
-                total: value + initiativeMod,
-                rolls,
-                fumble,
-                critical,
-                breakdown: `${value}${fumble ? ' (fumble)' : critical ? ' (critical)' : ''} + ${initiativeMod}`,
+                // Add to roll history
+                const initiativeMod = token.stats?.initiative ?? 0
+                const { value, fumble, critical, rolls } = rollD10WithSpecial()
+                await addToRollHistory(token, 'initiative', {
+                    total: value + initiativeMod,
+                    rolls,
+                    fumble,
+                    critical,
+                    breakdown: `${value}${fumble ? ' (fumble)' : critical ? ' (critical)' : ''} + ${initiativeMod}`,
+                })
             })
-        })
+        )
         setInitiativeRolls(newRolls)
         return newRolls
     }
 
-    const handleMeleeAttack = (token: Token) => {
+    const handleMeleeAttack = async (token: Token) => {
         const combat = token.stats?.combat ?? 0
         const woundedPenalty = isSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
         const hitResult = rollToHit(combat, woundedPenalty)
@@ -524,10 +744,10 @@ const CombatSimView = () => {
         const diceCount = token.stats?.weapons?.melee?.d6 ?? 1
         const damageResult = rollDamage(diceCount)
 
-        addToRollHistory(token, 'melee-hit', hitResult, damageResult)
+        await addToRollHistory(token, 'melee-hit', hitResult, damageResult)
     }
 
-    const handleRangedAttack = (token: Token) => {
+    const handleRangedAttack = async (token: Token) => {
         const combat = token.stats?.combat ?? 0
         const woundedPenalty = isSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
         const hitResult = rollToHit(combat, woundedPenalty)
@@ -535,15 +755,15 @@ const CombatSimView = () => {
         const diceCount = token.stats?.weapons?.ranged?.d6 ?? 1
         const damageResult = rollDamage(diceCount)
 
-        addToRollHistory(token, 'ranged-hit', hitResult, damageResult)
+        await addToRollHistory(token, 'ranged-hit', hitResult, damageResult)
     }
 
-    const handleSkillCheck = (token: Token) => {
+    const handleSkillCheck = async (token: Token) => {
         const skills = token.stats?.skills ?? 0
         const woundedPenalty = isSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
         const result = rollToHit(skills, woundedPenalty)
 
-        addToRollHistory(token, 'skill', result)
+        await addToRollHistory(token, 'skill', result)
     }
 
     const handleGrenadeAttack = async (token: Token) => {
@@ -552,7 +772,7 @@ const CombatSimView = () => {
         const hitResult = rollToHit(combat, woundedPenalty)
         const damageResult = rollDamage(6) // 6d6
 
-        addToRollHistory(token, 'grenade-hit', hitResult, damageResult)
+        await addToRollHistory(token, 'grenade-hit', hitResult, damageResult)
 
         // Decrease currentGrenadesOrSpecialAmmo by 1
         const newCount = Math.max(0, (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) - 1)
@@ -592,6 +812,12 @@ const CombatSimView = () => {
         field: 'health' | 'sph' | 'spb' | 'movement',
         value: number
     ) => {
+        console.log('[CombatSimView] handleUpdateTokenCurrent called:', tokenId, field, value, 'session state:', {
+            role: session.role,
+            hasSession: !!session.session,
+            connected: session.connected,
+            useSessionTables: useSessionTables(),
+        })
         setTokens((prev) =>
             prev.map((t) => {
                 if (t.id !== tokenId || !t.stats) return t
@@ -614,53 +840,83 @@ const CombatSimView = () => {
         )
 
         // Update in database
+        const tokensTable = getTokensTable()
         const token = tokens.find((t) => t.id === tokenId)
         if (token && token.stats) {
             if (field === 'health') {
-                await db.tokens.update(tokenId, { stats: { ...token.stats, currentHealth: value } })
+                const updateData = { stats: { ...token.stats, currentHealth: value } }
+                await tokensTable.update(tokenId, updateData)
+                // Send mutation for sync
+                sendMutation('tokens', 'update', { id: tokenId, ...updateData })
             } else if (field === 'sph') {
-                await db.tokens.update(tokenId, {
+                const updateData = {
                     stats: { ...token.stats, armor: { ...token.stats.armor, currentSph: value } },
-                })
+                }
+                await tokensTable.update(tokenId, updateData)
+                // Send mutation for sync
+                sendMutation('tokens', 'update', { id: tokenId, ...updateData })
             } else if (field === 'spb') {
-                await db.tokens.update(tokenId, {
+                const updateData = {
                     stats: { ...token.stats, armor: { ...token.stats.armor, currentSpb: value } },
-                })
+                }
+                await tokensTable.update(tokenId, updateData)
+                // Send mutation for sync
+                sendMutation('tokens', 'update', { id: tokenId, ...updateData })
             } else {
-                await db.tokens.update(tokenId, { stats: { ...token.stats, currentMovement: value } })
+                const updateData = { stats: { ...token.stats, currentMovement: value } }
+                await tokensTable.update(tokenId, updateData)
+                // Send mutation for sync
+                sendMutation('tokens', 'update', { id: tokenId, ...updateData })
             }
         }
 
         setIsSaving(true)
     }
 
-    const handleNextTurn = () => {
+    const handleNextTurn = async () => {
         // Trigger StorageBanner snackbar for round complete
         setRoundBannerRound(currentRound)
 
         // Increment round
-        setCurrentRound((prev) => prev + 1)
+        const newRound = currentRound + 1
+        setCurrentRound(newRound)
 
         // Reroll if enabled and use the new rolls for sorting
-        const rollsToUse = autoRerollInitiative ? rollAllInitiatives() : initiativeRolls
+        const rollsToUse = autoRerollInitiative ? await rollAllInitiatives() : initiativeRolls
 
         // Set to first token and reset its movement
         const sorted = [...tokens].sort((a, b) => (rollsToUse.get(b.id) ?? 0) - (rollsToUse.get(a.id) ?? 0))
+        let newActiveTokenId = activeTokenId
         if (sorted.length > 0) {
             const firstToken = sorted[0]
-            setActiveTokenId(firstToken.id)
+            newActiveTokenId = firstToken.id
+            setActiveTokenId(newActiveTokenId)
             // Reset movement for the new active token
             if (firstToken.stats) {
                 handleUpdateTokenCurrent(firstToken.id, 'movement', firstToken.stats.movement)
             }
         }
+        // Save initiative state with the new values
+        await saveInitiativeData(
+            newActiveTokenId,
+            newRound,
+            isCombatActive,
+            autoRerollInitiative,
+            autoRollDamage,
+            rollsToUse
+        )
     }
 
-    const handleToggleCombat = () => {
+    const handleToggleCombat = async () => {
+        const newIsCombatActive = !isCombatActive
+        let newActiveTokenId = activeTokenId
+        let newInitiativeRolls = initiativeRolls
+        let newCurrentRound = currentRound
+
         if (!isCombatActive) {
             // Starting combat - roll initiatives
             if (tokens.length > 0) {
-                rollAllInitiatives()
+                newInitiativeRolls = await rollAllInitiatives()
 
                 // Initialize grenades/special ammo and movement if not already set
                 setTokens((prev) =>
@@ -726,26 +982,35 @@ const CombatSimView = () => {
                     })
                 )
 
-                // Set first token as active after a brief delay to ensure rolls are set
-                setTimeout(() => {
-                    setInitiativeRolls((currentRolls) => {
-                        const sorted = [...tokens].sort(
-                            (a, b) => (currentRolls.get(b.id) ?? 0) - (currentRolls.get(a.id) ?? 0)
-                        )
-                        if (sorted.length > 0) {
-                            setActiveTokenId(sorted[0].id)
-                        }
-                        return currentRolls
-                    })
-                }, 50)
+                // Set first token as active
+                const sorted = [...tokens].sort(
+                    (a, b) => (newInitiativeRolls.get(b.id) ?? 0) - (newInitiativeRolls.get(a.id) ?? 0)
+                )
+                if (sorted.length > 0) {
+                    newActiveTokenId = sorted[0].id
+                    setActiveTokenId(newActiveTokenId)
+                }
+                setInitiativeRolls(newInitiativeRolls)
             }
         } else {
             // Stopping combat - clear active token and initiatives
+            newActiveTokenId = null
+            newInitiativeRolls = new Map()
+            newCurrentRound = 1
             setActiveTokenId(null)
             setInitiativeRolls(new Map())
             setCurrentRound(1)
         }
-        setIsCombatActive(!isCombatActive)
+        setIsCombatActive(newIsCombatActive)
+        // Save initiative state with the new values
+        await saveInitiativeData(
+            newActiveTokenId,
+            newCurrentRound,
+            newIsCombatActive,
+            autoRerollInitiative,
+            autoRollDamage,
+            newInitiativeRolls
+        )
     }
 
     const onResetView = async () => {
@@ -753,9 +1018,10 @@ const CombatSimView = () => {
             fitRef.current?.()
             return
         }
-        await db.tokens.where('mapId').equals(getActiveMapKey()).delete()
+        const tokensTable = getTokensTable()
+        await tokensTable.where('mapId').equals(getActiveMapKey()).delete()
         setTokens([])
-        const tksNotInMap = await db.tokens.toArray()
+        const tksNotInMap = await tokensTable.toArray()
         setTokensNotInMap(tksNotInMap)
         setIsSaving(true)
     }
@@ -842,24 +1108,34 @@ const CombatSimView = () => {
 
     const onSelectMap = async (id: string) => {
         if (!currentMap) return
-        await db.boardMaps.update(currentMap.id, { mapId: id })
+        const boardMapsTable = getBoardMapsTable()
+        const tokensTable = getTokensTable()
+        const wallsTable = getWallsTable()
+        const blastsTable = getBlastsTable()
+        const mapsTable = getMapsTable()
+
+        await boardMapsTable.update(currentMap.id, { mapId: id })
         setCurrentMap({ ...currentMap, mapId: id })
         const key = id || currentMap.id
-        const tks = await db.tokens.where('mapId').equals(key).toArray()
+        const tks = await tokensTable.where('mapId').equals(key).toArray()
         setTokens(tks)
-        const tksNotInMap = await db.tokens.where('mapId').notEqual(key).toArray()
+        const tksNotInMap = await tokensTable.where('mapId').notEqual(key).toArray()
         setTokensNotInMap(tksNotInMap)
-        const ws = await db.walls.where('mapId').equals(key).toArray()
+        const ws = await wallsTable.where('mapId').equals(key).toArray()
         setWalls(ws)
-        const bls = await db.blasts.where('mapId').equals(key).toArray()
+        const bls = await blastsTable.where('mapId').equals(key).toArray()
         setBlasts(bls)
-        const blsNotInMap = await db.blasts.where('mapId').notEqual(key).toArray()
+        const blsNotInMap = await blastsTable.where('mapId').notEqual(key).toArray()
         setBlastsNotInMap(blsNotInMap)
-        const map = await db.maps.get(id)
+        const map = await mapsTable.get(id)
         if (!map) return
         const img = await blobToImage(map.blob)
-        const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-        replaceMapTexture(texture)
+        if (img) {
+            const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
+            replaceMapTexture(texture)
+        } else {
+            console.warn('Failed to load selected map image')
+        }
         setGridSize(map.gridSize)
         prevGridSizeRef.current = map.gridSize
         setSnapToGrid(map.snapToGrid)
@@ -962,8 +1238,12 @@ const CombatSimView = () => {
 
             // Load the Empty Map texture and settings
             const img = await blobToImage(emptyMap.blob)
-            const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-            replaceMapTexture(texture)
+            if (img) {
+                const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
+                replaceMapTexture(texture)
+            } else {
+                console.warn('Failed to load empty map image')
+            }
             setGridSize(emptyMap.gridSize)
             prevGridSizeRef.current = emptyMap.gridSize
             setSnapToGrid(emptyMap.snapToGrid)
@@ -1007,9 +1287,13 @@ const CombatSimView = () => {
         setTokens((prev) => prev.filter((t) => t.id !== deleteTokenDialogOpen))
         setTokensNotInMap((prev) => prev.filter((t) => t.id !== deleteTokenDialogOpen))
 
-        await db.tokens.delete(deleteTokenDialogOpen)
+        const tokensTable = getTokensTable()
+        await tokensTable.delete(deleteTokenDialogOpen)
         setDeleteTokenDialogOpen(null)
         setIsSaving(true)
+
+        // Send mutation for sync
+        sendMutation('tokens', 'delete', { id: deleteTokenDialogOpen })
     }
 
     const onDeleteAllWalls = async () => {
@@ -1043,12 +1327,17 @@ const CombatSimView = () => {
         // Update in database (only for non-default tokens)
         if (token.mapId !== '') {
             try {
-                await db.tokens.update(tokenId, {
+                const tokensTable = getTokensTable()
+                const updateData = {
                     mapId: currentMapId,
                     x: worldX,
                     y: worldY,
                     radius: Math.max(1, Math.floor(gridSize / 2)),
-                })
+                }
+                await tokensTable.update(tokenId, updateData)
+
+                // Send mutation for sync
+                sendMutation('tokens', 'update', { id: tokenId, ...updateData })
             } catch (error) {
                 console.error('Error updating token:', error)
             }
@@ -1098,9 +1387,13 @@ const CombatSimView = () => {
                 alpha: 0.7,
                 locked: false,
             }
-            await db.blasts.add(newBlast)
+            const blastsTable = getBlastsTable()
+            await blastsTable.add(newBlast)
             setBlasts((prev) => [...prev, newBlast])
             setIsSaving(true)
+
+            // Send mutation for sync
+            sendMutation('blasts', 'insert', newBlast)
         } else if (blastData.type === 'cone' && !blastData.id) {
             // Create placeholder cone blast at drop position for 2-step placement process
             // PixiBoard will update it with the final orientation on confirmation
@@ -1122,9 +1415,13 @@ const CombatSimView = () => {
             const flamerNumber = existingFlamers.length + 1
             newBlast.name = `Flamer ${flamerNumber}`
 
-            await db.blasts.add(newBlast)
+            const blastsTable = getBlastsTable()
+            await blastsTable.add(newBlast)
             setBlasts((prev) => [...prev, newBlast])
             setIsSaving(true)
+
+            // Send mutation for sync
+            sendMutation('blasts', 'insert', newBlast)
 
             // Modify blastData to include the ID so PixiBoard knows it's an existing blast now
             blastData.id = placeholderId
@@ -1165,7 +1462,11 @@ const CombatSimView = () => {
             }
             updatePayload.size = existing?.size || 6
 
-            await db.blasts.update(blastData.id, updatePayload)
+            const blastsTable = getBlastsTable()
+            await blastsTable.update(blastData.id, updatePayload)
+
+            // Send mutation for sync
+            sendMutation('blasts', 'update', { id: blastData.id, ...updatePayload })
 
             // Update state
             const updatedBlast: Blast = {
@@ -1197,9 +1498,13 @@ const CombatSimView = () => {
             updatePayload.y2 = blast.y2 + dy
         }
 
-        await db.blasts.update(blastId, updatePayload)
+        const blastsTable = getBlastsTable()
+        await blastsTable.update(blastId, updatePayload)
         setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, ...updatePayload } : b)))
         setIsSaving(true)
+
+        // Send mutation for sync
+        sendMutation('blasts', 'update', { id: blastId, ...updatePayload })
     }
 
     const onBlastComplete = async (blast: Blast) => {
@@ -1208,7 +1513,8 @@ const CombatSimView = () => {
         // Auto-assign names for cone blasts like grenades
         if (blast.type === 'cone' && !blast.name) {
             // Find all cone blasts for this map and get the highest number used
-            const allFlamers = await db.blasts
+            const blastsTable = getBlastsTable()
+            const allFlamers = await blastsTable
                 .where('mapId')
                 .equals(blast.mapId)
                 .and((b) => b.type === 'cone')
@@ -1222,16 +1528,24 @@ const CombatSimView = () => {
             blastToAdd = { ...blast, name: `Flamer ${flamerNumber}` }
         }
 
-        await db.blasts.add(blastToAdd)
+        const blastsTable = getBlastsTable()
+        await blastsTable.add(blastToAdd)
         setBlasts((prev) => [...prev, blastToAdd])
         // Reset draw mode after completing a blast
         setBlastDrawMode(null)
         setIsSaving(true)
+
+        // Send mutation for sync
+        sendMutation('blasts', 'insert', blastToAdd)
     }
 
     const onBlastDelete = async (blastId: string) => {
-        await db.blasts.delete(blastId)
+        const blastsTable = getBlastsTable()
+        await blastsTable.delete(blastId)
         setBlasts((prev) => prev.filter((b) => b.id !== blastId))
+
+        // Send mutation for sync
+        sendMutation('blasts', 'delete', { id: blastId })
         setBlastsNotInMap((prev) => prev.filter((b) => b.id !== blastId))
         setIsSaving(true)
     }
@@ -1361,7 +1675,11 @@ const CombatSimView = () => {
                             control={
                                 <Select
                                     displayEmpty
-                                    value={currentMap?.mapId ?? sortedMaps[0]?.id ?? ''}
+                                    value={
+                                        sortedMaps.find((m) => m.id === currentMap?.mapId)?.id ??
+                                        sortedMaps[0]?.id ??
+                                        ''
+                                    }
                                     onChange={(e) => onSelectMap(String(e.target.value))}
                                     sx={{ ml: 1, width: 150, height: 36.5, ...fieldSx }}
                                     slotProps={{
@@ -1641,14 +1959,33 @@ const CombatSimView = () => {
                         activeTokenId={activeTokenId}
                         currentRound={currentRound}
                         autoRerollInitiative={autoRerollInitiative}
-                        onSetAutoReroll={setAutoRerollInitiative}
-                        onTokenClick={(tokenId) => {
+                        onSetAutoReroll={async (value: boolean) => {
+                            setAutoRerollInitiative(value)
+                            await saveInitiativeData(
+                                activeTokenId,
+                                currentRound,
+                                isCombatActive,
+                                value,
+                                autoRollDamage,
+                                initiativeRolls
+                            )
+                        }}
+                        onTokenClick={async (tokenId: string) => {
                             setActiveTokenId(tokenId)
                             // Reset movement when token becomes active
                             const token = tokens.find((t) => t.id === tokenId)
                             if (token?.stats) {
                                 handleUpdateTokenCurrent(tokenId, 'movement', token.stats.movement)
                             }
+                            // Save with the new activeTokenId
+                            await saveInitiativeData(
+                                tokenId,
+                                currentRound,
+                                isCombatActive,
+                                autoRerollInitiative,
+                                autoRollDamage,
+                                initiativeRolls
+                            )
                         }}
                         onNextTurn={handleNextTurn}
                         onUpdateTokenCurrent={handleUpdateTokenCurrent}
@@ -1670,9 +2007,27 @@ const CombatSimView = () => {
                         isOpen={isRollHistoryOpen}
                         rollHistory={rollHistory}
                         autoRollDamage={autoRollDamage}
-                        onSetAutoRollDamage={setAutoRollDamage}
-                        onClear={() => setRollHistory([])}
-                        onDelete={(id) => setRollHistory((prev) => prev.filter((entry) => entry.id !== id))}
+                        onSetAutoRollDamage={async (value: boolean) => {
+                            setAutoRollDamage(value)
+                            await saveInitiativeData(
+                                activeTokenId,
+                                currentRound,
+                                isCombatActive,
+                                autoRerollInitiative,
+                                value,
+                                initiativeRolls
+                            )
+                        }}
+                        onClear={async () => {
+                            setRollHistory([])
+                            if (currentMap?.mapId) {
+                                await db.rollHistory.where('mapId').equals(currentMap.mapId).delete()
+                            }
+                        }}
+                        onDelete={async (id) => {
+                            setRollHistory((prev) => prev.filter((entry) => entry.id !== id))
+                            await db.rollHistory.delete(id)
+                        }}
                         onRevealDamage={handleRevealDamage}
                     />
                 )}
@@ -1713,10 +2068,15 @@ const CombatSimView = () => {
                         onWallsChange={async (updated: Wall[], mapKey: string) => {
                             setWalls(updated)
                             if (!mapKey) return
-                            await db.transaction('rw', db.walls, async () => {
-                                await db.walls.where('mapId').equals(mapKey).delete()
+                            const wallsTable = getWallsTable()
+                            await db.transaction('rw', wallsTable, async () => {
+                                await wallsTable.where('mapId').equals(mapKey).delete()
                                 if (updated.length > 0) {
-                                    await db.walls.bulkAdd(updated)
+                                    await wallsTable.bulkAdd(updated)
+                                    // Send mutations for new walls
+                                    for (const wall of updated) {
+                                        sendMutation('walls', 'insert', wall)
+                                    }
                                 }
                             })
                         }}
@@ -1755,19 +2115,28 @@ const CombatSimView = () => {
                                 })
                             )
                             // Update database
+                            const tokensTable = getTokensTable()
                             const token = tokens.find((t) => t.id === id)
                             if (distanceTraveled !== undefined && token?.stats) {
                                 const newCurrentMovement = Math.max(0, token.stats.currentMovement - distanceTraveled)
-                                await db.tokens.update(id, {
+                                const updateData = {
                                     x,
                                     y,
                                     stats: {
                                         ...token.stats,
                                         currentMovement: newCurrentMovement,
                                     },
-                                })
+                                }
+                                await tokensTable.update(id, updateData)
+
+                                // Send mutation for sync
+                                sendMutation('tokens', 'update', { id, ...updateData })
                             } else {
-                                await db.tokens.update(id, { x, y })
+                                const updateData = { x, y }
+                                await tokensTable.update(id, updateData)
+
+                                // Send mutation for sync
+                                sendMutation('tokens', 'update', { id, ...updateData })
                             }
                         }}
                         gridColor={hexToPixi(gridColorHex)}

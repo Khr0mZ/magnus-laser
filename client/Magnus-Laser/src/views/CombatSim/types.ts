@@ -17,6 +17,7 @@ export type Token = {
     color: number
     stats?: Stats
     imageId?: string
+    owner?: string
 }
 
 export type Stats = {
@@ -48,6 +49,8 @@ export type Map = {
     mimeType: string
     width?: number
     height?: number
+    size?: number
+    hash?: string
     gridSize: number
     snapToGrid: boolean
     gridColorHex: string
@@ -61,6 +64,8 @@ export type Image = {
     mimeType: string
     width?: number
     height?: number
+    size?: number
+    hash?: string
     blob: Blob
 }
 
@@ -108,4 +113,15 @@ export interface RollHistoryEntry {
     result: RollResult
     damageResult?: RollResult // for attacks that include damage
     damageRevealed?: boolean // whether damage has been revealed (starts hidden)
+    mapId: string
+}
+
+export type Initiative = {
+    mapId: string
+    activeTokenId: string | null
+    currentRound: number
+    isCombatActive: boolean
+    autoRerollInitiative: boolean
+    autoRollDamage: boolean
+    initiativeRolls: Record<string, number>
 }

@@ -30,10 +30,10 @@ interface InitiativePanelProps {
     onNextTurn: () => void
     onUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => void
     onUpdateInitiative: (tokenId: string, value: number) => void
-    onMeleeAttack: (token: Token) => void
-    onRangedAttack: (token: Token) => void
-    onSkillCheck: (token: Token) => void
-    onGrenadeAttack: (token: Token) => void
+    onMeleeAttack: (token: Token) => Promise<void>
+    onRangedAttack: (token: Token) => Promise<void>
+    onSkillCheck: (token: Token) => Promise<void>
+    onGrenadeAttack: (token: Token) => Promise<void>
     resolveImageUrl: (imageId: string | undefined) => string | undefined
     pixiToCss: (color: number) => string
     isCombatActive: boolean

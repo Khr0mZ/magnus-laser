@@ -26,13 +26,14 @@
             }
         ],
         "security": {
-            "csp": "default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-eval' 'unsafe-inline'; connect-src 'self' https:;"
+            "csp": "default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-eval' 'unsafe-inline'; connect-src 'self' http: https: ws: wss:;"
         }
     },
     "bundle": {
         "active": true,
         "targets": "all",
-        "icon": ["../public/magnusLaserLogoFav.png", "../public/magnusLaserLogoFav.ico"]
+        "icon": ["../public/magnusLaserLogoFav.png", "../public/magnusLaserLogoFav.ico"],
+        "externalBin": []
     },
     "plugins": {
         "fs": {
