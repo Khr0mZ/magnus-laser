@@ -227,7 +227,6 @@ function scheduleFallback(set: (partial: Partial<SessionState>) => void) {
 
 function handlePresence(peers: PeerInfo[], set: (partial: Partial<SessionState>) => void, get: () => SessionState) {
     const { role } = get()
-    console.log('[SessionStore] handlePresence called, role:', role, 'peers:', peers)
     const previousPeers = get().peers
     const previousById = new Map(previousPeers.map((peer) => [peer.id, peer]))
     const mergedPeers = peers.map((peer) => {
@@ -248,11 +247,9 @@ function handlePresence(peers: PeerInfo[], set: (partial: Partial<SessionState>)
     })
     if (!runtime.selfId) return
     if (role !== 'dm' || !runtime.webrtc) {
-        console.log('[SessionStore] Not creating offers - role:', role, 'has webrtc:', !!runtime.webrtc)
         return
     }
     const pending = peers.filter((peer) => peer.id !== runtime.selfId && !runtime.offeredPeers.has(peer.id))
-    console.log('[SessionStore] DM creating offers to pending peers:', pending)
     pending.forEach((peer) => {
         runtime.offeredPeers.add(peer.id)
         runtime.webrtc?.createOffer(peer).catch((err) => console.warn('Failed to create WebRTC offer', err))
@@ -264,14 +261,12 @@ async function handlePeerEvent(
     set: (partial: Partial<SessionState>) => void,
     get: () => SessionState
 ) {
-    console.log('[SessionStore] WebRTC peer event:', event.type, 'peer:', event.peerId, 'role:', get().role)
     if (event.type === 'connected') {
         if (runtime.fallbackTimer) {
             clearTimeout(runtime.fallbackTimer)
             runtime.fallbackTimer = undefined
         }
         runtime.rtcConnectedPeers.add(event.peerId)
-        console.log('[SessionStore] Setting connected: true (WebRTC)')
         set({ transport: 'webrtc', connected: true })
         // Update peer connected status
         const { peers } = get()
@@ -282,19 +277,14 @@ async function handlePeerEvent(
         // This works around the signaling server not broadcasting ACTION messages
         const connectedPeer = peers.find((p) => p.id === event.peerId)
         if (connectedPeer && connectedPeer.role === 'player' && get().role === 'dm') {
-            console.log('[SessionStore] Player connected via WebRTC, sending assets proactively')
             setTimeout(async () => {
                 try {
-                    console.log('[SessionStore] Sending assets to player:', event.peerId)
                     if (!runtime.webrtc || !runtime.rtcConnectedPeers.has(event.peerId)) {
-                        console.log('[SessionStore] WebRTC not connected to player, skipping asset send')
                         return
                     }
 
                     // Get all maps and images from DM's database
                     const [maps, images] = await Promise.all([db.maps.toArray(), db.images.toArray()])
-
-                    console.log('[SessionStore] Sending', maps.length, 'maps and', images.length, 'images to player')
 
                     // Helper function to send a single asset
                     const sendAsset = async (asset: AssetRef, blob: Blob) => {
@@ -303,8 +293,6 @@ async function handlePeerEvent(
                             const bytes = new Uint8Array(arrayBuf)
                             const chunkSize = 64 * 1024
                             const total = Math.ceil(bytes.byteLength / chunkSize)
-
-                            console.log('[SessionStore] Sending asset', asset.type, asset.id, 'in', total, 'chunks')
 
                             for (let seq = 0; seq < total; seq++) {
                                 const start = seq * chunkSize
@@ -356,8 +344,6 @@ async function handlePeerEvent(
                             await sendAsset({ type: 'image', id: image.id, hash: image.hash || '' }, image.blob)
                         }
                     }
-
-                    console.log('[SessionStore] Finished sending assets to player:', event.peerId)
                 } catch (error) {
                     console.warn('[SessionStore] Failed to send assets to player:', error)
                 }
@@ -366,7 +352,6 @@ async function handlePeerEvent(
     } else if (event.type === 'disconnected') {
         runtime.rtcConnectedPeers.delete(event.peerId)
         if ([...runtime.offeredPeers].length === 0) {
-            console.log('[SessionStore] Setting connected: false (no more peers)')
             set({ connected: false })
         }
         // Update peer connected status
@@ -384,7 +369,6 @@ async function handleInboundMessage(
     set: (partial: Partial<SessionState>) => void,
     get: () => SessionState
 ) {
-    console.log('[SessionStore] Received message via', _origin, '- type:', msg.t, 'role:', get().role)
     switch (msg.t) {
         case 'SESSION_CREATED': {
             const current = get().session
@@ -398,7 +382,6 @@ async function handleInboundMessage(
             break
         }
         case 'JOIN_OK': {
-            console.log('[SessionStore] Processing JOIN_OK, youAre:', msg.youAre)
             // Fallback: if youAre is missing, try to get info from peers
             let youAre = msg.youAre
             if (!youAre && msg.peers) {
@@ -421,7 +404,6 @@ async function handleInboundMessage(
             }
             runtime.selfId = youAre.id
             const hostPeer = msg.peers.find((peer) => peer.role === 'dm')
-            console.log('[SessionStore] JOIN_OK - peers:', msg.peers, 'hostPeer:', hostPeer, 'my role:', youAre.role)
             set({
                 selfId: youAre.id,
                 role: youAre.role, // Set role from server
@@ -435,9 +417,7 @@ async function handleInboundMessage(
                     publicUrl: get().session?.publicUrl,
                 },
             })
-            console.log('[SessionStore] Session setup complete, hostId:', hostPeer?.id ?? '')
             runtime.webrtc?.shutdown()
-            console.log('[SessionStore] Creating WebRTC manager for', youAre.role, 'polite:', youAre.role === 'player')
             try {
                 runtime.webrtc = new WebRTCManager({
                     selfId: youAre.id,
@@ -445,10 +425,8 @@ async function handleInboundMessage(
                     onPeerEvent: async (event) => await handlePeerEvent(event, set, get),
                     polite: youAre.role === 'player',
                 })
-                console.log('[SessionStore] WebRTC manager created successfully:', !!runtime.webrtc)
             } catch (error) {
                 console.error('[SessionStore] Failed to create WebRTC manager:', error)
-                console.log('[SessionStore] Falling back to relay-only mode')
                 runtime.webrtc = undefined
             }
             runtime.relay = new RelayTransport(youAre.id, (payload) => runtime.signaling?.send(payload))
@@ -464,17 +442,6 @@ async function handleInboundMessage(
             break
         }
         case 'STATE_SNAPSHOT': {
-            const currentState = get()
-            console.log(
-                '[SessionStore] Received STATE_SNAPSHOT, role:',
-                currentState.role,
-                'connected:',
-                currentState.connected,
-                'version:',
-                msg.snapshot.version,
-                'has combatSim:',
-                !!msg.snapshot.custom?.combatSim
-            )
             void get().applySnapshot(msg.snapshot)
             break
         }
@@ -483,7 +450,6 @@ async function handleInboundMessage(
             break
         }
         case 'ACTION': {
-            console.log('[SessionStore] Received ACTION message from', msg.actor, 'payload:', msg.action)
             const state = get()
             try {
                 const actorId = msg.actor
@@ -552,54 +518,19 @@ async function handleInboundMessage(
                     }
                     break
                 }
-                console.log(
-                    '[SessionStore] Processing ACTION from',
-                    actorId,
-                    '- payload:',
-                    JSON.stringify(payload).slice(0, 100),
-                    'role:',
-                    get().role
-                )
-                const payloadStr = JSON.stringify(payload).slice(0, 50)
-                console.log(
-                    '[SessionStore] Checking action payload:',
-                    payloadStr,
-                    'isAssetRequest:',
-                    isAssetRequest(payload),
-                    'isCombatSimMutation:',
-                    isCombatSimMutation(payload)
-                )
                 if (!isCombatSimMutation(payload) && !isAssetRequest(payload)) break
                 if (isAssetRequest(payload)) {
-                    console.log(
-                        '[SessionStore] DM received ASSET_REQUEST from',
-                        actorId,
-                        'for',
-                        payload.assets.length,
-                        'assets - sending via existing WebRTC connection'
-                    )
-
                     // Send assets via the existing WebRTC connection used for session communication
                     // This reuses the already established WebRTC connection
                     if (!runtime.webrtc || !runtime.rtcConnectedPeers.has(actorId)) {
-                        console.log('[SessionStore] No WebRTC connection to player', actorId, 'for asset transfer')
                         return
                     }
                     const peer = get().peers.find((p) => p.id === actorId)
                     if (peer && !runtime.webrtc) {
-                        console.log('[SessionStore] Creating WebRTC manager for asset transfer')
                         runtime.webrtc = new WebRTCManager({
                             selfId: runtime.selfId ?? '',
                             sendSignal: (msg: WireMsg) => runtime.signaling?.send(msg),
                             onPeerEvent: (event: PeerEvent) => {
-                                console.log(
-                                    '[SessionStore] WebRTC event during asset transfer:',
-                                    event.type,
-                                    'peer:',
-                                    event.peerId,
-                                    'current peers:',
-                                    Array.from(runtime.rtcConnectedPeers)
-                                )
                                 if (event.type === 'connected') {
                                     runtime.rtcConnectedPeers.add(event.peerId)
                                     set({ connected: true })
@@ -608,17 +539,10 @@ async function handleInboundMessage(
                                     // This works around the signaling server not broadcasting ACTION messages
                                     const connectedPeer = get().peers.find((p) => p.id === event.peerId)
                                     if (connectedPeer && connectedPeer.role === 'player') {
-                                        console.log(
-                                            '[SessionStore] Player connected via WebRTC, sending assets proactively'
-                                        )
                                         // Send assets proactively since ASSET_REQUEST via signaling doesn't work
                                         setTimeout(async () => {
                                             try {
-                                                console.log('[SessionStore] Sending assets to player:', event.peerId)
                                                 if (!runtime.webrtc || !runtime.rtcConnectedPeers.has(event.peerId)) {
-                                                    console.log(
-                                                        '[SessionStore] WebRTC not connected to player, skipping asset send'
-                                                    )
                                                     return
                                                 }
 
@@ -628,14 +552,6 @@ async function handleInboundMessage(
                                                     db.images.toArray(),
                                                 ])
 
-                                                console.log(
-                                                    '[SessionStore] Sending',
-                                                    maps.length,
-                                                    'maps and',
-                                                    images.length,
-                                                    'images to player'
-                                                )
-
                                                 // Helper function to send a single asset
                                                 const sendAsset = async (asset: AssetRef, blob: Blob) => {
                                                     try {
@@ -643,15 +559,6 @@ async function handleInboundMessage(
                                                         const bytes = new Uint8Array(arrayBuf)
                                                         const chunkSize = 64 * 1024
                                                         const total = Math.ceil(bytes.byteLength / chunkSize)
-
-                                                        console.log(
-                                                            '[SessionStore] Sending asset',
-                                                            asset.type,
-                                                            asset.id,
-                                                            'in',
-                                                            total,
-                                                            'chunks'
-                                                        )
 
                                                         for (let seq = 0; seq < total; seq++) {
                                                             const start = seq * chunkSize
@@ -719,11 +626,6 @@ async function handleInboundMessage(
                                                         )
                                                     }
                                                 }
-
-                                                console.log(
-                                                    '[SessionStore] Finished sending assets to player:',
-                                                    event.peerId
-                                                )
                                             } catch (error) {
                                                 console.warn('[SessionStore] Failed to send assets to player:', error)
                                             }
@@ -744,7 +646,6 @@ async function handleInboundMessage(
                     setTimeout(async () => {
                         for (const asset of payload.assets) {
                             try {
-                                console.log('[SessionStore] Sending asset', asset.type, asset.id)
                                 const row =
                                     asset.type === 'map' ? await db.maps.get(asset.id) : await db.images.get(asset.id)
                                 const blob = (row as unknown as { blob?: Blob })?.blob
@@ -756,7 +657,6 @@ async function handleInboundMessage(
                                 const bytes = new Uint8Array(arrayBuf)
                                 const chunkSize = 64 * 1024
                                 const total = Math.ceil(bytes.byteLength / chunkSize)
-                                console.log('[SessionStore] Sending asset in', total, 'chunks')
                                 for (let seq = 0; seq < total; seq++) {
                                     const start = seq * chunkSize
                                     const end = Math.min(start + chunkSize, bytes.byteLength)
@@ -781,7 +681,6 @@ async function handleInboundMessage(
                                     actor: runtime.selfId ?? 'dm',
                                     action: { kind: 'ASSET_DONE', asset },
                                 } as WireMsg)
-                                console.log('[SessionStore] Asset sent successfully:', asset.id)
                             } catch (err) {
                                 console.warn('[SessionStore] ASSET send failed:', err)
                             }
@@ -791,18 +690,14 @@ async function handleInboundMessage(
                 }
                 // DM: apply mutation ops
                 if (!isCombatSimMutation(payload)) {
-                    console.log('[SessionStore] Not a combat sim mutation, ignoring')
                     break
                 }
                 const currentState = get()
                 if (currentState.role !== 'dm') {
-                    console.log('[SessionStore] Ignoring mutations - not DM, role:', currentState.role)
                     break
                 }
-                console.log('[SessionStore] DM applying combat sim mutations from', actorId, payload.ops)
                 for (const op of payload.ops) {
                     if (!op || !op.table || !op.op) continue
-                    console.log('[SessionStore] DM applying mutation:', op.table, op.op, op.record)
                     if (op.table === 'blasts') {
                         const recAny = op.record as unknown
                         if (!recAny) continue
@@ -896,13 +791,11 @@ async function handleInboundMessage(
                 // Send snapshot after mutations are applied
                 const stateAfterMutations = get()
                 if (stateAfterMutations.role === 'dm') {
-                    console.log('[SessionStore] DM sending snapshot after mutations')
                     try {
                         const snapshot = await buildSimpleCombatSnapshot()
                         stateAfterMutations.sendSnapshot(snapshot)
                         // Update local snapshot version
                         set({ snapshot })
-                        console.log('[SessionStore] DM sent snapshot after mutations, version:', snapshot.version)
                     } catch (err) {
                         console.warn('[SessionStore] Failed to send snapshot after mutations:', err)
                     }
@@ -913,17 +806,14 @@ async function handleInboundMessage(
             break
         }
         case 'RTC_OFFER': {
-            console.log('[SessionStore] Handling RTC_OFFER from', msg.from, 'webrtc exists:', !!runtime.webrtc)
             runtime.webrtc?.handleOffer(msg.from, msg.sdp).catch((err) => console.warn('handle offer failed', err))
             break
         }
         case 'RTC_ANSWER': {
-            console.log('[SessionStore] Handling RTC_ANSWER from', msg.from)
             runtime.webrtc?.handleAnswer(msg.from, msg.sdp).catch((err) => console.warn('handle answer failed', err))
             break
         }
         case 'RTC_ICE': {
-            console.log('[SessionStore] Handling RTC_ICE from', msg.from)
             runtime.webrtc?.handleIce(msg.from, msg.candidate).catch((err) => console.warn('handle ice failed', err))
             break
         }
@@ -1225,28 +1115,16 @@ export const useSession = create<SessionStore>()(
                 const cryptoApi = globalThis.crypto
                 const messageId = cryptoApi?.randomUUID?.() ?? Math.random().toString(36).slice(2)
 
-                console.log(
-                    '[SessionStore] sendAction called, transport:',
-                    transport,
-                    'hostId:',
-                    session?.hostId,
-                    'action:',
-                    action
-                )
-
                 if (transport === 'webrtc' && session?.hostId) {
-                    console.log('[SessionStore] Trying WebRTC sendAction')
                     const delivered = runtime.webrtc?.sendToPeer(session.hostId, {
                         t: 'ACTION',
                         id: messageId,
                         actor: runtime.selfId,
                         action,
                     })
-                    console.log('[SessionStore] WebRTC sendAction delivered:', delivered)
                     if (delivered) return
                 }
 
-                console.log('[SessionStore] Falling back to relay sendAction')
                 runtime.relay?.sendAction(action)
             },
 

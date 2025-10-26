@@ -26,7 +26,6 @@ interface TokenPanelProps {
     setTokenDialogOpen: (tokenId: string | undefined) => void
     getActiveMapKey: () => string
     setTokens: React.Dispatch<React.SetStateAction<Token[]>>
-    setIsSaving: React.Dispatch<React.SetStateAction<boolean>>
     pixiToCss: (color: number) => string
     resolveImageUrl: (imageId: string | undefined) => string | undefined
     gridSize: number
@@ -44,7 +43,6 @@ const TokenPanel = ({
     setTokenDialogOpen,
     getActiveMapKey,
     setTokens,
-    setIsSaving,
     pixiToCss,
     resolveImageUrl,
     gridSize,
@@ -237,7 +235,6 @@ const TokenPanel = ({
                             }
                             await db.tokens.add(newToken)
                             setTokens((prev) => [...prev, newToken])
-                            setIsSaving(true)
                         }}
                         sx={{
                             width: 32,

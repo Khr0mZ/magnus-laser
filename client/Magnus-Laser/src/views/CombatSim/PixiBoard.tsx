@@ -1,14 +1,12 @@
 import { Viewport } from 'pixi-viewport'
 import type { FederatedPointerEvent } from 'pixi.js'
-import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js'
+import { Application, Graphics, Sprite, Text, Texture } from 'pixi.js'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
 import { BlastContextMenu } from './BlastContextMenu'
 import { MapContextMenu } from './MapContextMenu'
 import { TokenContextMenu } from './TokenContextMenu'
-import { TokenTooltip } from './TokenTooltip'
 import { schedulePathAnimation } from './animationUtils'
 import {
     calculateConePoints,
@@ -17,6 +15,8 @@ import {
     preloadBlastTextures,
     renderBlasts,
 } from './blastRenderer'
+import { PixiPendingIndicator } from './componentsPixi/PixiPendingIndicator'
+import { PixiTooltip, createPixiTooltip } from './componentsPixi/PixiTooltip'
 import {
     getTargetSize,
     segmentHitsCircleBoundary,
@@ -198,29 +198,6 @@ const PixiBoard = ({
     const blastsNotInMapRef = useRef<Blast[]>([])
     const lastPointerPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
     const tokenLayerRef = useRef<Graphics | null>(null)
-    // Removed temporary DOM-level listeners (cleanup below ensures none remain)
-    const pendingMovesRef = useRef(
-        new Map<
-            string,
-            {
-                line: Graphics
-                label: Text
-                acceptIcon: Text
-                cancelIcon: Text
-                acceptBg: Graphics
-                cancelBg: Graphics
-                acceptContainer: Container
-                cancelContainer: Container
-                startX: number
-                startY: number
-                endX: number
-                endY: number
-                cancelSize: number
-                acceptSize: number
-                points: { x: number; y: number }[]
-            }
-        >()
-    )
     const measureLayerRef = useRef<Graphics | null>(null)
     const measureLabelRef = useRef<Text | null>(null)
     const measureStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -240,6 +217,10 @@ const PixiBoard = ({
     const wallAlphaRef = useRef<number>(wallAlpha)
     const bgTextureRef = useRef<Texture | null>(backgroundTexture ?? null)
     const mapKeyRef = useRef<string | undefined>(mapKey)
+
+    // PixiJS tooltip and pending indicator refs
+    const pixiTooltipRef = useRef<PixiTooltip | null>(null)
+    const pixiPendingIndicatorsRef = useRef<Map<string, PixiPendingIndicator>>(new Map())
 
     const [hostReady, setHostReady] = useState(false)
 
@@ -271,7 +252,7 @@ const PixiBoard = ({
         if (crosshair && activeTokenId) {
             const token = tokensRef.current.find((t) => t.id === activeTokenId)
             if (token) {
-                const pending = pendingMovesRef.current.get(token.id)
+                const pending = pixiPendingIndicatorsRef.current.get(token.id)
                 const x = pending ? pending.endX : token.x
                 const y = pending ? pending.endY : token.y
 
@@ -316,9 +297,8 @@ const PixiBoard = ({
     const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null)
     // Token clipboard for cut/copy/paste
 
-    // Tooltip state for hovering tokens
-    const [hoveredToken, setHoveredToken] = useState<Token | null>(null)
-    const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
+    // PixiTooltip state for hovering tokens
+    const hoveredTokenRef = useRef<Token | null>(null)
 
     // Active token ref for crosshair
     const activeTokenIdRef = useRef<string | null>(activeTokenId)
@@ -343,7 +323,7 @@ const PixiBoard = ({
     >(new Map())
 
     const notifyPendingCount = () => {
-        onPendingCountChange(pendingMovesRef.current.size)
+        onPendingCountChange(pixiPendingIndicatorsRef.current.size)
     }
 
     const handleTokenDelete = (tokenId: string) => {
@@ -567,28 +547,21 @@ const PixiBoard = ({
 
     const cancelAllPending = () => {
         // Clear overlays and redraw tokens at original positions
-        for (const [, e] of pendingMovesRef.current) {
-            try {
-                e.line.destroy()
-                e.label.destroy()
-                e.acceptContainer.destroy({ children: true })
-                e.cancelContainer.destroy({ children: true })
-            } catch {
-                console.error('Failed to cancel all pending moves')
-            }
-        }
-        pendingMovesRef.current.clear()
+        pixiPendingIndicatorsRef.current.forEach((indicator) => {
+            indicator.destroy()
+        })
+        pixiPendingIndicatorsRef.current.clear()
         renderTokens(tokenLayerRef.current, tokensRef.current)
         notifyPendingCount()
     }
 
     const acceptAllPending = () => {
         // Commit all pending moves, schedule animations, then clear overlays
-        for (const [id, e] of pendingMovesRef.current) {
-            const pts = [...e.points]
+        pixiPendingIndicatorsRef.current.forEach((indicator, id) => {
+            const pts = [...indicator.points]
             const last = pts[pts.length - 1]
-            if (!last || last.x !== e.endX || last.y !== e.endY) {
-                pts.push({ x: e.endX, y: e.endY })
+            if (!last || last.x !== indicator.endX || last.y !== indicator.endY) {
+                pts.push({ x: indicator.endX, y: indicator.endY })
             }
 
             // Calculate total distance traveled
@@ -620,17 +593,10 @@ const PixiBoard = ({
             }
 
             schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
-            onTokenMove(id, e.endX, e.endY, isCombatActiveRef.current ? totalDistance : undefined)
-            try {
-                e.line.destroy()
-                e.label.destroy()
-                e.acceptContainer.destroy({ children: true })
-                e.cancelContainer.destroy({ children: true })
-            } catch {
-                console.error('Failed to accept all pending moves')
-            }
-        }
-        pendingMovesRef.current.clear()
+            onTokenMove(id, indicator.endX, indicator.endY, isCombatActiveRef.current ? totalDistance : undefined)
+            indicator.destroy()
+        })
+        pixiPendingIndicatorsRef.current.clear()
         // After committing, redraw tokens (parent will also update tokens prop shortly)
         renderTokens(tokenLayerRef.current, tokensRef.current)
         notifyPendingCount()
@@ -867,7 +833,10 @@ const PixiBoard = ({
                 }
                 // Begin with current pending endpoints so those keep priority
                 const merged = new Map(
-                    Array.from(pendingMovesRef.current.entries()).map(([id, e]) => [id, { endX: e.endX, endY: e.endY }])
+                    Array.from(pixiPendingIndicatorsRef.current.entries()).map(([id, ind]) => [
+                        id,
+                        { endX: ind.endX, endY: ind.endY },
+                    ])
                 )
                 // Apply animation overrides for any ids without active pendings
                 for (const [id, pos] of override) {
@@ -882,7 +851,7 @@ const PixiBoard = ({
                 if (crosshair && activeTokenIdRef.current) {
                     const token = tokensRef.current.find((t) => t.id === activeTokenIdRef.current)
                     if (token) {
-                        const pending = pendingMovesRef.current.get(token.id)
+                        const pending = pixiPendingIndicatorsRef.current.get(token.id)
                         const x = pending ? pending.endX : token.x
                         const y = pending ? pending.endY : token.y
 
@@ -1001,79 +970,39 @@ const PixiBoard = ({
                 vp.y += dy
             })
 
-            // Helper to create/update a pending move overlay for a token
+            // Helper to create/update a pending move overlay for a token using PixiPendingIndicator
             const upsertPendingOverlay = (id: string, sx: number, sy: number, ex: number, ey: number) => {
                 const viewport = viewportRef.current
                 if (!viewport) return
-                let entry = pendingMovesRef.current.get(id)
-                if (!entry) {
-                    const line = new Graphics()
-                    line.zIndex = 3
-                    viewport.addChild(line)
-                    const label = new Text({ text: '', style: { fill: 0xffffff, fontSize: 12 } })
-                    label.visible = false
-                    label.zIndex = 4
-                    label.eventMode = 'none'
-                    // anchor label at left-middle so y is the vertical center
-                    label.anchor?.set?.(0, 0.5)
-                    viewport.addChild(label)
-                    // Button backgrounds and containers
-                    const acceptBg = new Graphics()
-                    const cancelBg = new Graphics()
-                    const acceptIcon = new Text({ text: '✓', style: { fill: 0x00ff88, fontSize: 16 } })
-                    const cancelIcon = new Text({ text: '✕', style: { fill: 0xff3b81, fontSize: 16 } })
-                    acceptIcon.anchor?.set?.(0.5)
-                    cancelIcon.anchor?.set?.(0.5)
-                    const acceptContainer = new Container()
-                    const cancelContainer = new Container()
-                    acceptContainer.eventMode = 'static'
-                    cancelContainer.eventMode = 'static'
-                    acceptContainer.cursor = 'pointer'
-                    cancelContainer.cursor = 'pointer'
-                    acceptContainer.zIndex = 6
-                    cancelContainer.zIndex = 6
-                    acceptContainer.addChild(acceptBg)
-                    acceptContainer.addChild(acceptIcon)
-                    cancelContainer.addChild(cancelBg)
-                    cancelContainer.addChild(cancelIcon)
-                    acceptContainer.visible = false
-                    cancelContainer.visible = false
-                    viewport.addChild(acceptContainer)
-                    viewport.addChild(cancelContainer)
-                    entry = {
-                        line,
-                        label,
-                        acceptIcon,
-                        cancelIcon,
-                        acceptBg,
-                        cancelBg,
-                        acceptContainer,
-                        cancelContainer,
+
+                let indicator = pixiPendingIndicatorsRef.current.get(id)
+                if (!indicator) {
+                    const token = tokensRef.current.find((t) => t.id === id)
+                    indicator = new PixiPendingIndicator({
+                        id,
                         startX: sx,
                         startY: sy,
                         endX: ex,
                         endY: ey,
-                        cancelSize: 0,
-                        acceptSize: 0,
                         points: [
                             { x: sx, y: sy },
                             { x: ex, y: ey },
                         ],
-                    }
-                    pendingMovesRef.current.set(id, entry)
-                    notifyPendingCount()
-                    // Wire actions
-                    const finalize = (ok: boolean) => {
-                        const e = pendingMovesRef.current.get(id)
-                        if (!e) return
-                        if (ok) {
+                        gridSize: gridSizeRef.current,
+                        isCombatActive: isCombatActiveRef.current,
+                        token,
+                        viewport,
+                        onAccept: () => {
+                            const ind = pixiPendingIndicatorsRef.current.get(id)
+                            if (!ind) return
+
                             // Calculate total distance traveled
                             const step = gridSizeRef.current
                             let totalDistance = 0
-                            const pts = [...e.points]
+                            const pts = [...ind.points]
                             const last = pts[pts.length - 1]
-                            if (!last || last.x !== e.endX || last.y !== e.endY) {
-                                pts.push({ x: e.endX, y: e.endY })
+                            if (!last || last.x !== ind.endX || last.y !== ind.endY) {
+                                pts.push({ x: ind.endX, y: ind.endY })
                             }
                             for (let i = 1; i < pts.length; i++) {
                                 const dxs = Math.abs(pts[i].x - pts[i - 1].x)
@@ -1103,302 +1032,80 @@ const PixiBoard = ({
                             }
 
                             schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
-                            onTokenMove?.(id, e.endX, e.endY, isCombatActiveRef.current ? totalDistance : undefined)
-                        } else {
-                            // Redraw tokens with remaining pendings so others stay put
-                            const pendingMap = new Map(
-                                Array.from(pendingMovesRef.current.entries())
-                                    .filter(([pid]) => pid !== id)
-                                    .map(([pid, v]) => [pid, { endX: v.endX, endY: v.endY }])
-                            )
-                            renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMap)
-                        }
-                        // remove visuals
-                        try {
-                            e.line.destroy()
-                            e.label.destroy()
-                            e.acceptContainer.destroy({ children: true })
-                            e.cancelContainer.destroy({ children: true })
-                        } catch {
-                            console.error('Failed to cancel all pending moves')
-                        }
-                        pendingMovesRef.current.delete(id)
-                        notifyPendingCount()
-                        // Redraw with remaining pending overlays also after accept
-                        const pendingMapAfter = new Map(
-                            Array.from(pendingMovesRef.current.entries()).map(([pid, v]) => [
-                                pid,
-                                { endX: v.endX, endY: v.endY },
-                            ])
-                        )
-                        renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMapAfter)
-                    }
-                    entry.acceptContainer.on('pointertap', (event) => {
-                        event.stopPropagation()
-                        finalize(true)
-                    })
-                    entry.cancelContainer.on('pointertap', (event) => {
-                        event.stopPropagation()
-                        // Cancel last waypoint instead of entire movement
-                        const e = pendingMovesRef.current.get(id)
-                        if (!e) return
+                            onTokenMove?.(id, ind.endX, ind.endY, isCombatActiveRef.current ? totalDistance : undefined)
 
-                        if (e.points.length < 4) {
-                            // Only start point exists, cancel entire movement
-                            finalize(false)
-                        } else {
-                            // Remove last waypoint and update end position
-                            e.points.pop()
-                            const newLastPoint = e.points[e.points.length - 1]
-                            if (newLastPoint) {
-                                e.endX = newLastPoint.x
-                                e.endY = newLastPoint.y
-                                // Update the overlay with new end position
-                                upsertPendingOverlay(id, e.startX, e.startY, e.endX, e.endY)
-                                // Update token rendering to show token at new position
+                            // Remove indicator
+                            ind.destroy()
+                            pixiPendingIndicatorsRef.current.delete(id)
+                            notifyPendingCount()
+
+                            // Redraw with remaining pending overlays
+                            const pendingMapAfter = new Map(
+                                Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                                    pid,
+                                    { endX: ind.endX, endY: ind.endY },
+                                ])
+                            )
+                            renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMapAfter)
+                        },
+                        onCancel: () => {
+                            const ind = pixiPendingIndicatorsRef.current.get(id)
+                            if (!ind) return
+
+                            if (ind.points.length < 4) {
+                                // Only start point exists, cancel entire movement
+                                // Redraw tokens with remaining pendings so others stay put
                                 const pendingMap = new Map(
-                                    Array.from(pendingMovesRef.current.entries()).map(([pid, v]) => [
-                                        pid,
-                                        { endX: v.endX, endY: v.endY },
-                                    ])
+                                    Array.from(pixiPendingIndicatorsRef.current.entries())
+                                        .filter(([pid]) => pid !== id)
+                                        .map(([pid, ind]) => [pid, { endX: ind.endX, endY: ind.endY }])
                                 )
                                 renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMap)
+
+                                // Remove indicator
+                                ind.destroy()
+                                pixiPendingIndicatorsRef.current.delete(id)
+                                notifyPendingCount()
+                            } else {
+                                // Remove last waypoint and update end position
+                                ind.points.pop()
+                                const newLastPoint = ind.points[ind.points.length - 1]
+                                if (newLastPoint) {
+                                    ind.updatePosition(newLastPoint.x, newLastPoint.y)
+                                    // Update token rendering to show token at new position
+                                    const pendingMap = new Map(
+                                        Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                                            pid,
+                                            { endX: ind.endX, endY: ind.endY },
+                                        ])
+                                    )
+                                    renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMap)
+                                }
                             }
-                        }
+                        },
+                        isPreview: false,
                     })
-                    // Hover styles
-                    const drawBtn = (
-                        bg: Graphics,
-                        size: number,
-                        borderColor: number,
-                        baseFill: number,
-                        hoverFill: number,
-                        hovered: boolean
-                    ) => {
-                        bg.clear()
-                        const fill = hovered ? hoverFill : baseFill
-                        const alpha = hovered ? 0.6 : 0.4
-                        bg.setStrokeStyle({ width: 1, color: borderColor, alpha: 0.38 })
-                        // draw centered at 0,0 in local coords
-                        bg.rect(-size / 2, -size / 2, size, size)
-                            .fill({ color: fill, alpha })
-                            .stroke()
-                    }
-                    entry.cancelContainer.on('pointerover', () => {
-                        const e = pendingMovesRef.current.get(id)
-                        if (!e) return
-                        drawBtn(e.cancelBg, e.cancelSize || 24, 0xff3b81, 0x280000, 0x3c0000, true)
-                    })
-                    entry.cancelContainer.on('pointerout', () => {
-                        const e = pendingMovesRef.current.get(id)
-                        if (!e) return
-                        drawBtn(e.cancelBg, e.cancelSize || 24, 0xff3b81, 0x280000, 0x3c0000, false)
-                    })
-                    entry.acceptContainer.on('pointerover', () => {
-                        const e = pendingMovesRef.current.get(id)
-                        if (!e) return
-                        drawBtn(e.acceptBg, e.acceptSize || 24, 0x00ff88, 0x002800, 0x003c00, true)
-                    })
-                    entry.acceptContainer.on('pointerout', () => {
-                        const e = pendingMovesRef.current.get(id)
-                        if (!e) return
-                        drawBtn(e.acceptBg, e.acceptSize || 24, 0x00ff88, 0x002800, 0x003c00, false)
-                    })
-                }
-                // After potential creation, ensure entry is defined
-                entry = pendingMovesRef.current.get(id)
-                if (!entry) return
-                // Update visuals
-                // For live preview, if we're currently dragging this id, treat (ex, ey) as preview only
-                const isPreview = dragPreviewRef.current?.id === id
-                if (!isPreview) {
-                    entry.startX = sx
-                    entry.startY = sy
-                    entry.endX = ex
-                    entry.endY = ey
-                    if (entry.points.length === 0) entry.points.push({ x: sx, y: sy })
-                    if (entry.points.length === 1) entry.points.push({ x: ex, y: ey })
-                }
-                const step = gridSizeRef.current
-                // cumulative cells across committed points + optional preview segment
-                let cells = 0
-                const pts = entry.points
-                for (let i = 1; i < pts.length; i++) {
-                    const dxs = Math.abs(pts[i].x - pts[i - 1].x)
-                    const dys = Math.abs(pts[i].y - pts[i - 1].y)
-                    cells += Math.hypot(dxs, dys) / step
-                }
-                let labelX = entry.endX
-                let labelY = entry.endY
-                if (isPreview) {
-                    const last = pts[pts.length - 1]
-                    const dxp = Math.abs(ex - last.x)
-                    const dyp = Math.abs(ey - last.y)
-                    cells += Math.hypot(dxp, dyp) / step
-                    labelX = ex
-                    labelY = ey
-                }
-
-                // Get token's current movement
-                const token = tokensRef.current.find((t) => t.id === id)
-                const currentMovement = token?.stats?.currentMovement ?? 0
-
-                // Always round distance to integer
-                const distanceText = `${Math.round(cells)}`
-
-                // Show remaining movement or just distance if combat not active
-                let txt: string
-                if (isCombatActiveRef.current) {
-                    const remaining = Math.max(0, currentMovement - Math.round(cells))
-                    txt = `${distanceText} / ${remaining}`
-
-                    // Change label color if exceeding movement
-                    if (Math.round(cells) > currentMovement) {
-                        entry.label.style.fill = 0xff3b81 // Red when exceeding
-                    } else {
-                        entry.label.style.fill = 0xffffff // White normally
-                    }
+                    pixiPendingIndicatorsRef.current.set(id, indicator)
+                    notifyPendingCount()
                 } else {
-                    // When combat not active, just show distance
-                    txt = distanceText
-                    entry.label.style.fill = 0xffffff // White
-                }
-
-                entry.label.text = txt
-                const zoom = viewport.scale.x
-                entry.label.style.fontSize = Math.max(24, 24 / Math.max(0.1, zoom))
-                entry.label.visible = true
-                entry.label.x = labelX + 8
-                // y is vertical center because label anchor is (0, 0.5)
-                entry.label.y = labelY
-                // Buttons next to label (center boxes on glyphs, aligned with label vertically)
-                const invZoom = 1 / Math.max(0.1, zoom)
-                const baseSize = 24 * invZoom
-                const gap = 8 * invZoom
-                const padding = 4 * invZoom
-                const centerY = entry.label.y
-                const startRight = entry.label.x + entry.label.width + 8
-                // compute sizes based on current glyph dimensions
-                const cancelGlyphMax = Math.max(entry.cancelIcon.width, entry.cancelIcon.height)
-                const acceptGlyphMax = Math.max(entry.acceptIcon.width, entry.acceptIcon.height)
-                const cancelSize = Math.max(baseSize, cancelGlyphMax + padding * 2)
-                const acceptSize = Math.max(baseSize, acceptGlyphMax + padding * 2)
-                entry.cancelSize = cancelSize
-                entry.acceptSize = acceptSize
-                const cancelCenterX = startRight + cancelSize / 2
-                const cancelCenterY = centerY
-                const acceptCenterX = cancelCenterX + cancelSize + gap
-                const acceptCenterY = centerY
-                // Position and draw cancel (red)
-                entry.cancelContainer.visible = true
-                entry.cancelContainer.position.set(cancelCenterX, cancelCenterY)
-                entry.cancelBg.clear()
-                entry.cancelBg.setStrokeStyle({ width: 1, color: 0xff3b81, alpha: 0.38 })
-                entry.cancelBg
-                    .rect(-cancelSize / 2, -cancelSize / 2, cancelSize, cancelSize)
-                    .fill({ color: 0x280000, alpha: 0.4 })
-                    .stroke()
-                entry.cancelIcon.visible = true
-                entry.cancelIcon.style.fontSize = Math.max(16, 16 / Math.max(0.1, zoom))
-                entry.cancelIcon.position.set(0, 0)
-                // Position and draw accept (green)
-                entry.acceptContainer.visible = true
-                entry.acceptContainer.position.set(acceptCenterX, acceptCenterY)
-                entry.acceptBg.clear()
-                entry.acceptBg.setStrokeStyle({ width: 1, color: 0x00ff88, alpha: 0.38 })
-                entry.acceptBg
-                    .rect(-acceptSize / 2, -acceptSize / 2, acceptSize, acceptSize)
-                    .fill({ color: 0x002800, alpha: 0.4 })
-                    .stroke()
-                entry.acceptIcon.visible = true
-                entry.acceptIcon.style.fontSize = Math.max(16, 16 / Math.max(0.1, zoom))
-                entry.acceptIcon.position.set(0, 0)
-                // Draw polyline across points + optional preview
-                entry.line.clear()
-                entry.line.setStrokeStyle({ width: 2, color: 0xffd166, alpha: 0.9 })
-                if (pts.length > 0) {
-                    entry.line.moveTo(pts[0].x, pts[0].y)
-                    for (let i = 1; i < pts.length; i++) {
-                        entry.line.lineTo(pts[i].x, pts[i].y)
+                    // Update existing indicator
+                    const isPreview = dragPreviewRef.current?.id === id
+                    if (!isPreview) {
+                        indicator.updatePoints([
+                            { x: sx, y: sy },
+                            { x: ex, y: ey },
+                        ])
+                        indicator.updatePosition(ex, ey)
+                    } else {
+                        // During preview/drag, update the position so the line follows the mouse
+                        indicator.updatePosition(ex, ey)
+                        // Ensure the indicator knows it's in preview mode
+                        indicator.props.isPreview = true
                     }
-                    if (isPreview) {
-                        entry.line.lineTo(labelX, labelY)
-                    }
-                }
-                entry.line.stroke()
-                // Endpoints markers
-                if (pts.length > 0) entry.line.circle(pts[0].x, pts[0].y, 3).fill({ color: 0xffd166 })
-                const lastPt = isPreview ? { x: labelX, y: labelY } : pts[pts.length - 1]
-                if (lastPt) entry.line.circle(lastPt.x, lastPt.y, 3).fill({ color: 0xffd166 })
-            }
-
-            // Recalculate all pending overlays on zoom change
-            const refreshPendingForZoom = () => {
-                const viewport = viewportRef.current
-                if (!viewport) return
-                // Clean up any stray overlay keyed by an empty id from earlier logic
-                if (pendingMovesRef.current.has('')) {
-                    const stray = pendingMovesRef.current.get('')
-                    if (stray) {
-                        try {
-                            stray.line.destroy()
-                            stray.label.destroy()
-                            stray.acceptContainer.destroy({ children: true })
-                            stray.cancelContainer.destroy({ children: true })
-                        } catch {
-                            console.error('Failed to cancel all pending moves')
-                        }
-                    }
-                    pendingMovesRef.current.delete('')
-                }
-                // Update existing overlays in place based on current zoom/scale
-                for (const [, e] of pendingMovesRef.current) {
-                    const zoom = viewport.scale.x
-                    e.label.style.fontSize = Math.max(24, 24 / Math.max(0.1, zoom))
-                    e.label.x = e.endX + 8
-                    e.label.y = e.endY
-                    const invZoom = 1 / Math.max(0.1, zoom)
-                    const baseSize = 24 * invZoom
-                    const gap = 8 * invZoom
-                    const padding = 4 * invZoom
-                    const centerY = e.label.y
-                    const startRight = e.label.x + e.label.width + 8
-                    // compute sizes from glyph dimensions
-                    const cancelGlyphMax = Math.max(e.cancelIcon.width, e.cancelIcon.height)
-                    const acceptGlyphMax = Math.max(e.acceptIcon.width, e.acceptIcon.height)
-                    const cancelSize = Math.max(baseSize, cancelGlyphMax + padding * 2)
-                    const acceptSize = Math.max(baseSize, acceptGlyphMax + padding * 2)
-                    e.cancelSize = cancelSize
-                    e.acceptSize = acceptSize
-                    const cancelCx = startRight + cancelSize / 2
-                    const acceptCx = cancelCx + cancelSize + gap
-                    e.cancelContainer.position.set(cancelCx, centerY)
-                    e.acceptContainer.position.set(acceptCx, centerY)
-                    e.cancelBg.clear()
-                    e.cancelBg.setStrokeStyle({ width: 1, color: 0xff3b81, alpha: 0.38 })
-                    e.cancelBg
-                        .rect(-cancelSize / 2, -cancelSize / 2, cancelSize, cancelSize)
-                        .fill({ color: 0x280000, alpha: 0.4 })
-                        .stroke()
-                    e.acceptBg.clear()
-                    e.acceptBg.setStrokeStyle({ width: 1, color: 0x00ff88, alpha: 0.38 })
-                    e.acceptBg
-                        .rect(-acceptSize / 2, -acceptSize / 2, acceptSize, acceptSize)
-                        .fill({ color: 0x002800, alpha: 0.4 })
-                        .stroke()
-                    // rescale glyphs with zoom
-                    e.cancelIcon.style.fontSize = Math.max(16, 16 / Math.max(0.1, zoom))
-                    e.acceptIcon.style.fontSize = Math.max(16, 16 / Math.max(0.1, zoom))
-                }
-                // Update measurement label if visible
-                const ml = measureLabelRef.current
-                if (ml && ml.visible) {
-                    const zoom = viewport.scale.x
-                    ml.style.fontSize = Math.max(24, 24 / Math.max(0.1, zoom))
                 }
             }
 
-            viewport.on('zoomed', refreshPendingForZoom)
+            // PixiPendingIndicator handles zoom changes automatically
 
             // Measure layer (on top of tokens)
             const measureLayer = new Graphics()
@@ -1423,9 +1130,9 @@ const PixiBoard = ({
                 const y = global.y
                 const btn = e.button ?? 0 // 0: left, 1: middle, 2: right
 
-                // Hide tooltip on pointer down
-                setHoveredToken(null)
-                setTooltipPosition(null)
+                // Hide PixiTooltip on pointer down
+                pixiTooltipRef.current?.hide()
+                hoveredTokenRef.current = null
 
                 // If we are in cone rotation confirmation state, treat this click as confirm
                 if (rotatingConeRef.current && btn === 0) {
@@ -1522,7 +1229,7 @@ const PixiBoard = ({
                     hit = null
                     let minDist = Number.POSITIVE_INFINITY
                     for (const t of tokensRef.current) {
-                        const pending = pendingMovesRef.current.get(t.id)
+                        const pending = pixiPendingIndicatorsRef.current.get(t.id)
                         const tx = pending ? pending.endX : t.x
                         const ty = pending ? pending.endY : t.y
                         const d = Math.hypot(tx - x, ty - y)
@@ -1557,7 +1264,7 @@ const PixiBoard = ({
                             // Left click on token: start drag
                             draggingRef.current = { id: hit.id, offsetX: x - hit.x, offsetY: y - hit.y }
                             // if token already has pending waypoints, start from last end
-                            const existing = pendingMovesRef.current.get(hit.id)
+                            const existing = pixiPendingIndicatorsRef.current.get(hit.id)
                             if (existing) {
                                 dragStartRef.current = { id: hit.id, x: existing.endX, y: existing.endY }
                             } else {
@@ -2044,8 +1751,8 @@ const PixiBoard = ({
                     const endedId = draggingRef.current.id
                     draggingRef.current = { id: null, offsetX: 0, offsetY: 0 }
                     if (dragPreviewRef.current && dragPreviewRef.current.id === endedId) {
-                        const e = pendingMovesRef.current.get(endedId)
-                        if (e) {
+                        const indicator = pixiPendingIndicatorsRef.current.get(endedId)
+                        if (indicator) {
                             // Check if adding this waypoint would exceed movement (only if combat active)
                             let canAddWaypoint = true
 
@@ -2054,7 +1761,7 @@ const PixiBoard = ({
                                 const currentMovement = token?.stats?.currentMovement ?? 0
                                 const step = gridSizeRef.current
                                 let totalDistance = 0
-                                const pts = e.points
+                                const pts = indicator.points
                                 for (let i = 1; i < pts.length; i++) {
                                     const dxs = Math.abs(pts[i].x - pts[i - 1].x)
                                     const dys = Math.abs(pts[i].y - pts[i - 1].y)
@@ -2070,10 +1777,8 @@ const PixiBoard = ({
                             }
 
                             if (canAddWaypoint) {
-                                e.points.push({ x: dragPreviewRef.current.x, y: dragPreviewRef.current.y })
-                                e.endX = dragPreviewRef.current.x
-                                e.endY = dragPreviewRef.current.y
-                                upsertPendingOverlay(endedId, e.points[0].x, e.points[0].y, e.endX, e.endY)
+                                indicator.points.push({ x: dragPreviewRef.current.x, y: dragPreviewRef.current.y })
+                                indicator.updatePosition(dragPreviewRef.current.x, dragPreviewRef.current.y)
                             }
                         }
                         // dragged -> not a click
@@ -2190,7 +1895,7 @@ const PixiBoard = ({
                     let hoveredTokenData: Token | null = null
 
                     for (const t of tokensRef.current) {
-                        const pending = pendingMovesRef.current.get(t.id)
+                        const pending = pixiPendingIndicatorsRef.current.get(t.id)
                         const tx = pending ? pending.endX : t.x
                         const ty = pending ? pending.endY : t.y
                         const d = Math.hypot(tx - global.x, ty - global.y)
@@ -2203,7 +1908,7 @@ const PixiBoard = ({
 
                     viewport.cursor = over ? 'pointer' : 'default'
 
-                    // Update tooltip
+                    // Update PixiTooltip
                     if (hoveredTokenData && hoveredTokenData.stats) {
                         // Check if it's not a default token
                         const isDefaultToken =
@@ -2214,22 +1919,38 @@ const PixiBoard = ({
                             hoveredTokenData.mapId === ''
 
                         if (!isDefaultToken) {
-                            const screenPos = viewport.toScreen(global.x, global.y)
-                            const rect = hostRef.current?.getBoundingClientRect()
-                            if (rect) {
-                                setHoveredToken(hoveredTokenData)
-                                setTooltipPosition({
-                                    x: rect.left + screenPos.x,
-                                    y: rect.top + screenPos.y,
+                            // Create or update PixiTooltip
+                            if (!pixiTooltipRef.current) {
+                                pixiTooltipRef.current = createPixiTooltip({
+                                    token: hoveredTokenData,
+                                    x: global.x,
+                                    y: global.y,
+                                    screenWidth: window.innerWidth,
+                                    screenHeight: window.innerHeight,
+                                    zoom: viewport.scale.x,
+                                    viewport: viewport,
+                                })
+                            } else {
+                                pixiTooltipRef.current.updateToken(hoveredTokenData)
+                                pixiTooltipRef.current.updatePosition({
+                                    token: hoveredTokenData,
+                                    x: global.x,
+                                    y: global.y,
+                                    screenWidth: window.innerWidth,
+                                    screenHeight: window.innerHeight,
+                                    zoom: viewport.scale.x,
+                                    viewport: viewport,
                                 })
                             }
+                            pixiTooltipRef.current.show()
+                            hoveredTokenRef.current = hoveredTokenData
                         } else {
-                            setHoveredToken(null)
-                            setTooltipPosition(null)
+                            pixiTooltipRef.current?.hide()
+                            hoveredTokenRef.current = null
                         }
                     } else {
-                        setHoveredToken(null)
-                        setTooltipPosition(null)
+                        pixiTooltipRef.current?.hide()
+                        hoveredTokenRef.current = null
                     }
                 }
                 if (wallModeRef.current && erasingRef.current && eraseStartRef.current && wallLayerRef.current) {
@@ -2509,9 +2230,9 @@ const PixiBoard = ({
                     tokenLayerRef.current,
                     tokensRef.current,
                     new Map(
-                        Array.from(pendingMovesRef.current.entries()).map(([id, e]) => [
+                        Array.from(pixiPendingIndicatorsRef.current.entries()).map(([id, ind]) => [
                             id,
-                            { endX: e.endX, endY: e.endY },
+                            { endX: ind.endX, endY: ind.endY },
                         ])
                     ),
                     draggingRef.current.id,
@@ -2611,6 +2332,14 @@ const PixiBoard = ({
             clearTokenRendererCaches()
             // Clear blast renderer caches to release Sprite/Mask references
             clearBlastRendererCaches()
+            // Clear PixiTooltip
+            if (pixiTooltipRef.current) {
+                pixiTooltipRef.current.destroy()
+                pixiTooltipRef.current = null
+            }
+            // Clear PixiPendingIndicators
+            pixiPendingIndicatorsRef.current.forEach((indicator) => indicator.destroy())
+            pixiPendingIndicatorsRef.current.clear()
             viewportRef.current = null
             gridRef.current = null
             // No document-level handlers to remove
@@ -2644,61 +2373,15 @@ const PixiBoard = ({
         }
         // redraw tokens after resize
         renderTokens(tokenLayerRef.current, tokens)
-        // adjust pending overlays for new scale/layout
-        const viewport = viewportRef.current
-        if (viewport) {
-            for (const [, e] of pendingMovesRef.current) {
-                // reuse update path
-                const id = Array.from(pendingMovesRef.current.entries()).find(([, v]) => v === e)?.[0]
-                if (id) {
-                    // call updater with stored coords
-                    const endX = e.endX
-                    const endY = e.endY
-                    // directly adjust visuals similar to upsert
-                    const zoom = viewport.scale.x
-                    e.label.style.fontSize = Math.max(24, 24 / Math.max(0.1, zoom))
-                    e.label.x = endX + 8
-                    e.label.y = endY
-                    const invZoom = 1 / Math.max(0.1, zoom)
-                    const baseSize = 24 * invZoom
-                    const gap = 8 * invZoom
-                    const padding = 4 * invZoom
-                    const centerY = e.label.y
-                    const startRight = e.label.x + e.label.width + 8
-                    const cancelGlyphMax = Math.max(e.cancelIcon.width, e.cancelIcon.height)
-                    const acceptGlyphMax = Math.max(e.acceptIcon.width, e.acceptIcon.height)
-                    const cancelSize = Math.max(baseSize, cancelGlyphMax + padding * 2)
-                    const acceptSize = Math.max(baseSize, acceptGlyphMax + padding * 2)
-                    const cancelCenterX = startRight + cancelSize / 2
-                    const acceptCenterX = cancelCenterX + cancelSize + gap
-                    e.cancelContainer.position.set(cancelCenterX, centerY)
-                    e.acceptContainer.position.set(acceptCenterX, centerY)
-                    e.cancelBg.clear()
-                    e.cancelBg.setStrokeStyle({ width: 1, color: 0xff3b81, alpha: 0.38 })
-                    e.cancelBg
-                        .rect(-cancelSize / 2, -cancelSize / 2, cancelSize, cancelSize)
-                        .fill({ color: 0x280000, alpha: 0.4 })
-                        .stroke()
-                    e.acceptBg.clear()
-                    e.acceptBg.setStrokeStyle({ width: 1, color: 0x00ff88, alpha: 0.38 })
-                    e.acceptBg
-                        .rect(-acceptSize / 2, -acceptSize / 2, acceptSize, acceptSize)
-                        .fill({ color: 0x002800, alpha: 0.4 })
-                        .stroke()
-                    e.cancelIcon.style.fontSize = Math.max(16, 16 / Math.max(0.1, zoom))
-                    e.acceptIcon.style.fontSize = Math.max(16, 16 / Math.max(0.1, zoom))
-                }
-            }
-        }
     }, [width, height, worldDims, gridSize])
 
     // Keep measuring ref in sync so event handlers see latest value
     useEffect(() => {
         measuringRef.current = isMeasuring
-        // Hide tooltip when entering measuring mode
+        // Hide PixiTooltip when entering measuring mode
         if (isMeasuring) {
-            setHoveredToken(null)
-            setTooltipPosition(null)
+            pixiTooltipRef.current?.hide()
+            hoveredTokenRef.current = null
         }
     }, [isMeasuring])
 
@@ -2716,9 +2399,9 @@ const PixiBoard = ({
         if (!isWallMode) {
             if (wallLabelRef.current) wallLabelRef.current.visible = false
         } else {
-            // Hide tooltip when entering wall mode
-            setHoveredToken(null)
-            setTooltipPosition(null)
+            // Hide PixiTooltip when entering wall mode
+            pixiTooltipRef.current?.hide()
+            hoveredTokenRef.current = null
         }
     }, [isWallMode])
 
@@ -2803,7 +2486,7 @@ const PixiBoard = ({
         for (const t of tokens) {
             const p = prevById.get(t.id)
             if (!p) continue
-            if (pendingMovesRef.current.has(t.id)) continue
+            if (pixiPendingIndicatorsRef.current.has(t.id)) continue
             if (animationsRef.current.has(t.id)) continue
             if (p.x !== t.x || p.y !== t.y) {
                 schedulePathAnimation(
@@ -2827,19 +2510,21 @@ const PixiBoard = ({
                 if (first) override.set(id, { endX: first.sx, endY: first.sy })
             }
             // Merge pending endpoints (take precedence)
-            for (const [id, e] of pendingMovesRef.current) {
-                override.set(id, { endX: e.endX, endY: e.endY })
+            for (const [id, indicator] of pixiPendingIndicatorsRef.current) {
+                override.set(id, { endX: indicator.endX, endY: indicator.endY })
             }
             const live = dragPreviewRef.current
             renderTokensWithPending(tokenLayerRef.current, tokensRef.current, override, live?.id, live?.x, live?.y)
         } else {
             // No animations; check if there are pending moves
-            if (pendingMovesRef.current.size > 0) {
-                renderTokensWithPending(
-                    tokenLayerRef.current,
-                    tokens,
-                    pendingMovesRef.current as unknown as Map<string, { endX: number; endY: number }>
+            if (pixiPendingIndicatorsRef.current.size > 0) {
+                const pendingMap = new Map(
+                    Array.from(pixiPendingIndicatorsRef.current.entries()).map(([id, ind]) => [
+                        id,
+                        { endX: ind.endX, endY: ind.endY },
+                    ])
                 )
+                renderTokensWithPending(tokenLayerRef.current, tokens, pendingMap)
             } else {
                 // No pending moves, just render tokens normally
                 renderTokens(tokenLayerRef.current, tokens)
@@ -3071,77 +2756,6 @@ const PixiBoard = ({
                 )}
             </div>
 
-            {/* Token tooltip overlay - use Portal to render at document root to avoid z-index stacking issues */}
-            {hoveredToken &&
-                tooltipPosition &&
-                (() => {
-                    // Smart tooltip positioning that flips to opposite side when would overflow
-                    const baseX = tooltipPosition.x + gridSize / 2
-                    const baseY = tooltipPosition.y + gridSize / 2
-
-                    // Estimate tooltip dimensions
-                    const tooltipWidth = 300
-                    const tooltipHeight = 400
-                    const padding = 10
-                    const offset = 10 // offset from cursor
-
-                    // Board viewport bounds
-                    const boardBottomOffset = 170
-                    const maxScreenY = window.innerHeight - boardBottomOffset
-                    const maxScreenX = window.innerWidth
-
-                    // Determine horizontal position (default: right of cursor)
-                    let tooltipX = baseX + offset
-                    let transformX = '0'
-
-                    // Check if would overflow right
-                    if (tooltipX + tooltipWidth > maxScreenX - padding) {
-                        // Put it on the left instead
-                        tooltipX = baseX - offset
-                        transformX = '-100%'
-                    }
-
-                    // Check if would overflow left
-                    if (tooltipX - (transformX === '-100%' ? tooltipWidth : 0) < padding) {
-                        // Put it back on the right, clamped
-                        tooltipX = padding
-                        transformX = '0'
-                    }
-
-                    // Determine vertical position (default: above cursor)
-                    let tooltipY = baseY
-                    let transformY = '-100%'
-
-                    // Check if would overflow top
-                    if (tooltipY - tooltipHeight < padding) {
-                        // Put it below instead
-                        tooltipY = baseY + offset
-                        transformY = '0'
-                    }
-
-                    // Check if would overflow bottom
-                    if (tooltipY + (transformY === '0' ? tooltipHeight : 0) > maxScreenY - padding) {
-                        // Put it back above, clamped
-                        tooltipY = maxScreenY - padding
-                        transformY = '-100%'
-                    }
-
-                    return createPortal(
-                        <div
-                            style={{
-                                position: 'fixed',
-                                left: `${tooltipX}px`,
-                                top: `${tooltipY}px`,
-                                zIndex: 9999,
-                                pointerEvents: 'none',
-                                transform: `translate(${transformX}, ${transformY})`,
-                            }}
-                        >
-                            <TokenTooltip token={hoveredToken} />
-                        </div>,
-                        document.body
-                    )
-                })()}
             {/* Blast context menu */}
             <BlastContextMenu
                 anchorEl={blastContextMenuAnchor}

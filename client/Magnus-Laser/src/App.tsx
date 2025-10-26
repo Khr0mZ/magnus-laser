@@ -80,7 +80,6 @@ const AppContent = () => {
             // Only clear if the session is old (created more than 30 seconds ago)
             if (role === 'dm' && session && session.createdAt < Date.now() - 30000) {
                 try {
-                    console.log('Clearing stale DM session data from previous app instance')
                     await clearSession()
                 } catch (err) {
                     console.warn('Failed to clear stale DM session:', err)

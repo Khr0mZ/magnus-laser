@@ -59,7 +59,6 @@ export class WebRTCManager {
 
         pc.onconnectionstatechange = () => {
             const { connectionState } = pc
-            console.log('[WebRTC] Connection state change for', peer.id, ':', connectionState)
             if (connectionState === 'connected') {
                 this.opts.onPeerEvent({ type: 'connected', peerId: peer.id })
             } else if (
@@ -102,26 +101,15 @@ export class WebRTCManager {
     }
 
     async handleOffer(from: string, description: RTCSessionDescriptionInit) {
-        console.log('[WebRTC] Handling offer from', from)
         const ctx = this.ensurePeer({ id: from, name: '', role: 'dm', connected: true })
         const readyForOffer = !ctx.isMakingOffer && (ctx.pc.signalingState === 'stable' || ctx.polite)
-        console.log(
-            '[WebRTC] Ready for offer:',
-            readyForOffer,
-            'signalingState:',
-            ctx.pc.signalingState,
-            'polite:',
-            ctx.polite
-        )
         if (!readyForOffer) {
             return
         }
         await ctx.pc.setRemoteDescription(description)
-        console.log('[WebRTC] Set remote description, creating answer')
         const answer = await ctx.pc.createAnswer()
         await ctx.pc.setLocalDescription(answer)
         const resolvedDescription = ctx.pc.localDescription ?? answer
-        console.log('[WebRTC] Sending answer to', from)
         this.opts.sendSignal({ t: 'RTC_ANSWER', from: this.opts.selfId, to: from, sdp: resolvedDescription })
     }
 
@@ -235,12 +223,10 @@ export class WebRTCManager {
         }
 
         channel.onopen = () => {
-            console.log('[WebRTC] Data channel opened for', peerId)
             this.opts.onPeerEvent({ type: 'connected', peerId })
         }
 
         channel.onclose = () => {
-            console.log('[WebRTC] Data channel closed for', peerId)
             this.opts.onPeerEvent({ type: 'disconnected', peerId })
         }
 

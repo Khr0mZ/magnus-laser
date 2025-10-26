@@ -23,6 +23,7 @@
         "@mui/icons-material": "^7.3.4",
         "@mui/lab": "^7.0.1-beta.18",
         "@mui/material": "^7.3.4",
+        "@pixi/layout": "^3.2.0",
         "@pixi/react": "8.0.3",
         "@tauri-apps/api": "^2.8.0",
         "@tiptap/pm": "^3.6.5",
