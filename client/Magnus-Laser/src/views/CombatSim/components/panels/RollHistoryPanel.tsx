@@ -3,10 +3,10 @@ import { Box, Button, Checkbox, Divider, FormControlLabel, Stack, Typography } f
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Scrollbar from 'smooth-scrollbar'
-import CustomScrollbar from '../../components/CustomScrollbar'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import colors from '../../utils/colors'
-import type { RollHistoryEntry } from './types'
+import CustomScrollbar from '../../../../components/CustomScrollbar'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
+import colors from '../../../../utils/colors'
+import type { RollHistoryEntry } from '../../types'
 
 interface RollHistoryPanelProps {
     isOpen: boolean

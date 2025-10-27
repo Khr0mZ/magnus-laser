@@ -960,7 +960,7 @@ type SessionActions = {
     kickPlayer: (peerId: string) => Promise<void>
 }
 
-type SessionStore = SessionState & SessionActions
+export type SessionStore = SessionState & SessionActions
 
 export const useSession = create<SessionStore>()(
     persist(

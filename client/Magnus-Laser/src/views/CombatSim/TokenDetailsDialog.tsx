@@ -36,7 +36,7 @@ interface TokenDetailsDialogProps {
     images: Image[]
     gridSize: number
     onUpdateToken: (tokenId: string, updates: Partial<Token>) => void
-    onDeleteToken: (tokenId: string) => void
+    openDeleteTokenDialog: (tokenId: string) => void
     onUploadImage: (file: globalThis.File) => void
     toggleFullscreenImage: (image: string) => void
     resolveImageUrl: (imageId: string | undefined) => string | undefined
@@ -51,7 +51,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
     images,
     gridSize,
     onUpdateToken,
-    onDeleteToken,
+    openDeleteTokenDialog: onDeleteToken,
     onUploadImage,
     toggleFullscreenImage,
     resolveImageUrl,

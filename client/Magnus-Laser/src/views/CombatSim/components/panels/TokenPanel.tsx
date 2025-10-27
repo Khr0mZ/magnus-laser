@@ -1,3 +1,4 @@
+import { pixiToCss } from '@/views/CombatSim/pixiUtils'
 import { Add, ExpandMore } from '@mui/icons-material'
 import {
     Accordion,
@@ -13,20 +14,19 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
-import CustomScrollbar from '../../components/CustomScrollbar'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import colors from '../../utils/colors'
-import { db } from '../../utils/db'
-import { TokenContextMenu } from './TokenContextMenu'
-import { TokenTooltip } from './TokenTooltip'
-import { Token } from './types'
+import CustomScrollbar from '../../../../components/CustomScrollbar'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
+import colors from '../../../../utils/colors'
+import { db } from '../../../../utils/db'
+import { TokenContextMenu } from '../../TokenContextMenu'
+import { TokenTooltip } from '../../TokenTooltip'
+import { Token } from '../../types'
 
 interface TokenPanelProps {
     isSidePanelOpen: boolean
     setTokenDialogOpen: (tokenId: string | undefined) => void
     getActiveMapKey: () => string
     setTokens: React.Dispatch<React.SetStateAction<Token[]>>
-    pixiToCss: (color: number) => string
     resolveImageUrl: (imageId: string | undefined) => string | undefined
     gridSize: number
     tokens: Token[]
@@ -43,7 +43,6 @@ const TokenPanel = ({
     setTokenDialogOpen,
     getActiveMapKey,
     setTokens,
-    pixiToCss,
     resolveImageUrl,
     gridSize,
     tokens,

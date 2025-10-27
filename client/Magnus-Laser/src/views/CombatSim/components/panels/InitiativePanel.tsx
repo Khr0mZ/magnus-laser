@@ -1,3 +1,4 @@
+import { pixiToCss } from '@/views/CombatSim/pixiUtils'
 import { PlayArrow, SkipNext, Stop } from '@mui/icons-material'
 import {
     Avatar,
@@ -13,10 +14,10 @@ import {
 import { useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Scrollbar from 'smooth-scrollbar'
-import CustomScrollbar from '../../components/CustomScrollbar'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import colors from '../../utils/colors'
-import type { Token } from './types'
+import CustomScrollbar from '../../../../components/CustomScrollbar'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
+import colors from '../../../../utils/colors'
+import type { Token } from '../../types'
 
 interface InitiativePanelProps {
     isSidePanelOpen: boolean
@@ -35,7 +36,6 @@ interface InitiativePanelProps {
     onSkillCheck: (token: Token) => Promise<void>
     onGrenadeAttack: (token: Token) => Promise<void>
     resolveImageUrl: (imageId: string | undefined) => string | undefined
-    pixiToCss: (color: number) => string
     isCombatActive: boolean
     onToggleCombat: () => void
     isSeriouslyWounded: (token: Token) => boolean
@@ -58,7 +58,6 @@ const InitiativePanel = ({
     onSkillCheck,
     onGrenadeAttack,
     resolveImageUrl,
-    pixiToCss,
     isCombatActive,
     onToggleCombat,
     isSeriouslyWounded,

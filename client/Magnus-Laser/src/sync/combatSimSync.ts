@@ -1,4 +1,4 @@
-﻿import { useSession } from '@/state/sessionStore'
+﻿import { SessionStore, useSession } from '@/state/sessionStore'
 import type { GameSnapshot } from '@/types/session'
 import { db } from '@/utils/db'
 import type {
@@ -397,4 +397,24 @@ export function initCombatSimSync() {
         })
         started = false
     }
+}
+
+// Helper function to send mutations for real-time sync
+
+export const sendMutation = (
+    table: string,
+    op: 'insert' | 'update' | 'delete',
+    record: Record<string, unknown>,
+    useSessionTables: () => boolean,
+    session: SessionStore
+) => {
+    if (!useSessionTables() || !session.connected) {
+        return // Only players in sessions with WebRTC connection can send mutations
+    }
+
+    session.sendAction({
+        kind: 'COMBAT_SIM_MUTATION',
+        ops: [{ table, op, record }],
+        ts: Date.now(),
+    })
 }

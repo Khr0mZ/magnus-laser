@@ -109,3 +109,6 @@ export async function createBlankPngBlob(): Promise<Blob> {
         canvas.toBlob((b) => resolve(b ?? new Blob([''], { type: 'image/png' })), 'image/png')
     })
 }
+
+export const hexToPixi = (hex: string) => Number(`0x${hex.replace('#', '')}`)
+export const pixiToCss = (color: number) => `#${color.toString(16).padStart(6, '0')}`

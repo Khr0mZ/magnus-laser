@@ -64,10 +64,10 @@ type PixiBoardProps = {
     isErasingWalls: boolean
     isCombatActive: boolean
     onTokenClick: (id: string) => void
-    onTokenDelete: (id: string) => void
-    onTokenDuplicate: (id: string) => void
-    onTokenCut: (id: string) => void
-    onTokenCopy: (id: string) => void
+    openDeleteTokenDialog: (id: string) => void
+    pixiOnTokenDuplicate: (id: string) => void
+    pixiOnTokenCut: (id: string) => void
+    pixiOnTokenCopy: (id: string) => void
     onMapDeleteAllTokens: () => void
     onMapDeleteAllWalls: () => void
     onMapDeleteAllBlasts: () => void
@@ -78,7 +78,7 @@ type PixiBoardProps = {
     blastClipboard: Blast[] | null
     activeTokenId: string | null
     onTokenDrop?: (tokenId: string, worldX: number, worldY: number) => void
-    sidePanelWidth: number
+    pixiSidePanelWidth: number
     blasts: Blast[]
     blastsNotInMap: Blast[]
     blastDrawMode: BlastType | null
@@ -90,8 +90,8 @@ type PixiBoardProps = {
     onBlastCopy?: (id: string) => void
     onBlastCut?: (id: string) => void
     onBlastLock?: (id: string, locked: boolean) => void
-    ready: boolean
-    setReady: (ready: boolean) => void
+    pixiReady: boolean
+    setPixiReady: (ready: boolean) => void
 }
 
 const PixiBoard = ({
@@ -112,7 +112,7 @@ const PixiBoard = ({
     gridColor = 0xffffff,
     gridAlpha = 0.5,
     wallColor = DEFAULT_WALL_COLOR,
-    sidePanelWidth = 0,
+    pixiSidePanelWidth: sidePanelWidth = 0,
     wallAlpha = DEFAULT_WALL_ALPHA,
     mapKey,
     walls: wallsProp = [],
@@ -120,10 +120,10 @@ const PixiBoard = ({
     isErasingWalls = false,
     isCombatActive = false,
     onTokenClick,
-    onTokenDelete,
-    onTokenDuplicate,
-    onTokenCut,
-    onTokenCopy,
+    openDeleteTokenDialog: onTokenDelete,
+    pixiOnTokenDuplicate: onTokenDuplicate,
+    pixiOnTokenCut: onTokenCut,
+    pixiOnTokenCopy: onTokenCopy,
     onMapDeleteAllTokens,
     onMapDeleteAllWalls,
     onMapDeleteAllBlasts,
@@ -145,8 +145,8 @@ const PixiBoard = ({
     onBlastCopy,
     onBlastCut,
     onBlastLock,
-    ready,
-    setReady,
+    pixiReady: ready,
+    setPixiReady: setReady,
 }: PixiBoardProps) => {
     const { readerMode } = useUserPreferences()
     const hostRef = useRef<HTMLDivElement | null>(null)

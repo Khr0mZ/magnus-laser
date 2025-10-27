@@ -2,11 +2,11 @@ import { ExpandMore, Lock } from '@mui/icons-material'
 import { Accordion, AccordionDetails, AccordionSummary, Box, Stack, Typography } from '@mui/material'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import CustomScrollbar from '../../components/CustomScrollbar'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import colors from '../../utils/colors'
-import { BlastContextMenu } from './BlastContextMenu'
-import { Blast, BlastType } from './types'
+import CustomScrollbar from '../../../../components/CustomScrollbar'
+import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
+import colors from '../../../../utils/colors'
+import { BlastContextMenu } from '../../BlastContextMenu'
+import { Blast, BlastType } from '../../types'
 
 interface BlastsPanelProps {
     isSidePanelOpen: boolean
