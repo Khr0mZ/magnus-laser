@@ -1,40 +1,37 @@
 import { Viewport } from 'pixi-viewport'
 import type { FederatedPointerEvent } from 'pixi.js'
 import { Application, Graphics, Sprite, Text, Texture } from 'pixi.js'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
-import { BlastContextMenu } from './BlastContextMenu'
-import { MapContextMenu } from './MapContextMenu'
-import { TokenContextMenu } from './TokenContextMenu'
-import { schedulePathAnimation } from './animationUtils'
+import { BlastContextMenu } from './components/contextMenus/BlastContextMenu'
+import { MapContextMenu } from './components/contextMenus/MapContextMenu'
+import { TokenContextMenu } from './components/contextMenus/TokenContextMenu'
 import {
     calculateConePoints,
     clearBlastRendererCaches,
     drawBlastPreview,
     preloadBlastTextures,
     renderBlasts,
-} from './blastRenderer'
+} from './componentsPixi/blastRenderer'
 import { PixiPendingIndicator } from './componentsPixi/PixiPendingIndicator'
 import { PixiTooltip, createPixiTooltip } from './componentsPixi/PixiTooltip'
+import {
+    clearTokenRendererCaches,
+    preloadTextures,
+    renderTokens,
+    renderTokensWithPending,
+} from './componentsPixi/tokenRenderer'
+import type { Blast, BlastType, Image as ImageData, PixiDisplayObject, Token, Wall, WallShape } from './types'
+import { schedulePathAnimation } from './utils/animationUtils'
 import {
     getTargetSize,
     segmentHitsCircleBoundary,
     segmentIntersectsRectangle,
     segmentsIntersect,
-} from './geometryUtils'
-import { drawGrid, endpointFromAngleLength, snapToNinePoints } from './gridUtils'
-import { applyBackgroundTexture } from './pixiUtils'
-import { clearTokenRendererCaches, preloadTextures, renderTokens, renderTokensWithPending } from './tokenRenderer'
-import type { Blast, BlastType, Image as ImageData, Token, Wall, WallShape } from './types'
-
-// PIXI DisplayObject minimal interface for event targets
-interface PixiDisplayObject {
-    eventMode?: string
-    cursor?: string
-    zIndex?: number
-    parent?: PixiDisplayObject | undefined
-}
+} from './utils/geometryUtils'
+import { drawGrid, endpointFromAngleLength, snapToNinePoints } from './utils/gridUtils'
+import { applyBackgroundTexture } from './utils/pixiUtils'
 
 const DEFAULT_WALL_COLOR = 0xff3b81
 const DEFAULT_WALL_ALPHA = 0.95
@@ -91,64 +88,90 @@ type PixiBoardProps = {
     onBlastCut?: (id: string) => void
     onBlastLock?: (id: string, locked: boolean) => void
     pixiReady: boolean
-    setPixiReady: (ready: boolean) => void
+    pixiSetReady: (ready: boolean) => void
+    pixiHostReady: boolean
+    pixiSetHostReady: (ready: boolean) => void
+    pixiTokenContextMenuAnchor: HTMLElement | null
+    pixiSetTokenContextMenuAnchor: (anchor: HTMLElement | null) => void
+    pixiMapContextMenuAnchor: HTMLElement | null
+    pixiSetMapContextMenuAnchor: (anchor: HTMLElement | null) => void
+    pixiSelectedTokenId: string | null
+    pixiSetSelectedTokenId: (id: string | null) => void
+    pixiBlastContextMenuAnchor: HTMLElement | null
+    pixiSetBlastContextMenuAnchor: (anchor: HTMLElement | null) => void
+    pixiSelectedBlastId: string | null
+    pixiSetSelectedBlastId: (id: string | null) => void
 }
 
-const PixiBoard = ({
-    width,
-    height,
-    gridSize = 50,
-    snapToGrid = true,
-    isMeasuring = false,
-    isWallMode = false,
-    wallDrawingShape = undefined,
-    mapTexture: backgroundTexture,
-    onBindFit,
-    tokens = [],
-    images = [],
-    onTokenMove,
-    onPendingCountChange,
-    onBindPendingControls,
-    gridColor = 0xffffff,
-    gridAlpha = 0.5,
-    wallColor = DEFAULT_WALL_COLOR,
-    pixiSidePanelWidth: sidePanelWidth = 0,
-    wallAlpha = DEFAULT_WALL_ALPHA,
-    mapKey,
-    walls: wallsProp = [],
-    onWallsChange,
-    isErasingWalls = false,
-    isCombatActive = false,
-    onTokenClick,
-    openDeleteTokenDialog: onTokenDelete,
-    pixiOnTokenDuplicate: onTokenDuplicate,
-    pixiOnTokenCut: onTokenCut,
-    pixiOnTokenCopy: onTokenCopy,
-    onMapDeleteAllTokens,
-    onMapDeleteAllWalls,
-    onMapDeleteAllBlasts,
-    onMapCutAllTokens,
-    onMapPasteToken,
-    onMapPasteBlast,
-    tokenClipboard,
-    blastClipboard,
-    activeTokenId,
-    onTokenDrop,
-    blasts = [],
-    blastsNotInMap = [],
-    blastDrawMode,
-    onBlastDrop,
-    onBlastMove,
-    onBlastComplete,
-    onBlastUpdateCone,
-    onBlastDelete,
-    onBlastCopy,
-    onBlastCut,
-    onBlastLock,
-    pixiReady: ready,
-    setPixiReady: setReady,
-}: PixiBoardProps) => {
+const PixiBoard = (props: PixiBoardProps) => {
+    const {
+        width,
+        height,
+        gridSize = 50,
+        snapToGrid = true,
+        isMeasuring = false,
+        isWallMode = false,
+        wallDrawingShape = undefined,
+        mapTexture,
+        onBindFit,
+        tokens = [],
+        images = [],
+        onTokenMove,
+        onPendingCountChange,
+        onBindPendingControls,
+        gridColor = 0xffffff,
+        gridAlpha = 0.5,
+        wallColor = DEFAULT_WALL_COLOR,
+        pixiSidePanelWidth = 0,
+        wallAlpha = DEFAULT_WALL_ALPHA,
+        mapKey,
+        walls = [],
+        onWallsChange,
+        isErasingWalls = false,
+        isCombatActive = false,
+        onTokenClick,
+        openDeleteTokenDialog,
+        pixiOnTokenDuplicate,
+        pixiOnTokenCut,
+        pixiOnTokenCopy,
+        onMapDeleteAllTokens,
+        onMapDeleteAllWalls,
+        onMapDeleteAllBlasts,
+        onMapCutAllTokens,
+        onMapPasteToken,
+        onMapPasteBlast,
+        tokenClipboard,
+        blastClipboard,
+        activeTokenId,
+        onTokenDrop,
+        blasts = [],
+        blastsNotInMap = [],
+        blastDrawMode,
+        onBlastDrop,
+        onBlastMove,
+        onBlastComplete,
+        onBlastUpdateCone,
+        onBlastDelete,
+        onBlastCopy,
+        onBlastCut,
+        onBlastLock,
+        pixiReady,
+        pixiSetReady,
+        pixiHostReady,
+        pixiSetHostReady,
+        pixiTokenContextMenuAnchor,
+        pixiSetTokenContextMenuAnchor,
+        pixiMapContextMenuAnchor,
+        pixiSetMapContextMenuAnchor,
+        pixiSelectedTokenId,
+        pixiSetSelectedTokenId,
+        pixiBlastContextMenuAnchor,
+        pixiSetBlastContextMenuAnchor,
+        pixiSelectedBlastId,
+        pixiSetSelectedBlastId,
+    } = props
     const { readerMode } = useUserPreferences()
+
     const hostRef = useRef<HTMLDivElement | null>(null)
     const appRef = useRef<Application | null>(null)
     const viewportRef = useRef<Viewport | null>(null)
@@ -209,92 +232,28 @@ const PixiBoard = ({
     const tokensRef = useRef<Token[]>(tokens)
     const prevTokensRef = useRef<Token[]>(tokens)
     const gridSizeRef = useRef<number>(gridSize)
-    const snapRef = useRef<boolean>(snapToGrid)
+    const snapToGridRef = useRef<boolean>(snapToGrid)
     const isCombatActiveRef = useRef<boolean>(isCombatActive)
     const gridColorRef = useRef<number>(gridColor)
     const gridAlphaRef = useRef<number>(gridAlpha)
     const wallColorRef = useRef<number>(wallColor)
     const wallAlphaRef = useRef<number>(wallAlpha)
-    const bgTextureRef = useRef<Texture | null>(backgroundTexture ?? null)
+    const bgTextureRef = useRef<Texture | null>(mapTexture ?? null)
     const mapKeyRef = useRef<string | undefined>(mapKey)
 
     // PixiJS tooltip and pending indicator refs
     const pixiTooltipRef = useRef<PixiTooltip | null>(null)
     const pixiPendingIndicatorsRef = useRef<Map<string, PixiPendingIndicator>>(new Map())
 
-    const [hostReady, setHostReady] = useState(false)
-
-    // Track when host ref becomes available (runs after DOM updates)
-    useLayoutEffect(() => {
-        if (hostRef.current && !hostReady) {
-            setHostReady(true)
-        }
-    })
-
-    const measuringRef = useRef<boolean>(isMeasuring)
-    const wallModeRef = useRef<boolean>(isWallMode)
-    const erasingRef = useRef<boolean>(isErasingWalls)
+    const isMeasuringRef = useRef<boolean>(isMeasuring)
+    const isWallModeRef = useRef<boolean>(isWallMode)
+    const isErasingWallsRef = useRef<boolean>(isErasingWalls)
     const imagesRef = useRef<ImageData[]>(images)
 
-    // Update images ref when images prop changes
-    useEffect(() => {
-        imagesRef.current = images
-        // Preload textures for the images
-        preloadTextures(images)
-    }, [images])
-
-    // Update activeTokenId ref when prop changes and force crosshair redraw
-    useEffect(() => {
-        activeTokenIdRef.current = activeTokenId
-
-        // Force crosshair update immediately when active token changes
-        const crosshair = crosshairLayerRef.current
-        if (crosshair && activeTokenId) {
-            const token = tokensRef.current.find((t) => t.id === activeTokenId)
-            if (token) {
-                const pending = pixiPendingIndicatorsRef.current.get(token.id)
-                const x = pending ? pending.endX : token.x
-                const y = pending ? pending.endY : token.y
-
-                // Create a pulsing effect based on time
-                const time = Date.now() / 1000
-                const pulse = Math.sin(time * 3) * 0.2 + 0.8
-                const ringRadius = token.radius * 1.5
-
-                crosshair.clear()
-
-                // Draw outer ring with pulsing alpha
-                crosshair.setStrokeStyle({ width: 4, color: 0xffff00, alpha: pulse })
-                crosshair.circle(x, y, ringRadius)
-                crosshair.stroke()
-
-                // Draw inner ring
-                crosshair.setStrokeStyle({ width: 2, color: 0xff00ff, alpha: 0.9 })
-                crosshair.circle(x, y, ringRadius * 0.8)
-                crosshair.stroke()
-
-                // Draw crosshair lines
-                crosshair.setStrokeStyle({ width: 3, color: 0x00ffff, alpha: 0.7 })
-                const lineLength = token.radius * 2.5
-                crosshair.moveTo(x - lineLength, y)
-                crosshair.lineTo(x + lineLength, y)
-                crosshair.moveTo(x, y - lineLength)
-                crosshair.lineTo(x, y + lineLength)
-                crosshair.stroke()
-            } else {
-                crosshair.clear()
-            }
-        } else if (crosshair) {
-            crosshair.clear()
-        }
-    }, [activeTokenId])
     const dragStartRef = useRef<{ id: string; x: number; y: number } | null>(null)
     const dragPreviewRef = useRef<{ id: string; x: number; y: number } | null>(null)
     const clickCandidateRef = useRef<{ id: string; x: number; y: number } | null>(null)
-    // Context menu state
-    const [tokenContextMenuAnchor, setTokenContextMenuAnchor] = useState<HTMLElement | null>(null)
-    const [mapContextMenuAnchor, setMapContextMenuAnchor] = useState<HTMLElement | null>(null)
-    const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null)
+
     // Token clipboard for cut/copy/paste
 
     // PixiTooltip state for hovering tokens
@@ -321,41 +280,6 @@ const PixiBoard = ({
             }
         >
     >(new Map())
-
-    const notifyPendingCount = () => {
-        onPendingCountChange(pixiPendingIndicatorsRef.current.size)
-    }
-
-    const handleTokenDelete = (tokenId: string) => {
-        onTokenDelete(tokenId)
-    }
-
-    const handleTokenDuplicate = (tokenId: string) => {
-        onTokenDuplicate(tokenId)
-    }
-
-    const handleTokenCopy = (tokenId: string) => {
-        onTokenCopy(tokenId)
-    }
-
-    const handleTokenCut = (tokenId: string) => {
-        onTokenCut(tokenId)
-    }
-
-    const [blastContextMenuAnchor, setBlastContextMenuAnchor] = useState<HTMLElement | null>(null)
-    const [selectedBlastId, setSelectedBlastId] = useState<string | null>(null)
-
-    const handleMapDeleteAllTokens = () => {
-        onMapDeleteAllTokens()
-    }
-
-    const handleMapDeleteAllWalls = () => {
-        onMapDeleteAllWalls()
-    }
-
-    const handleMapDeleteAllBlasts = () => {
-        onMapDeleteAllBlasts()
-    }
 
     const handleMapPasteToken = (pasteX?: number, pasteY?: number) => {
         if (!tokenClipboard || tokenClipboard.length === 0 || !pasteX || !pasteY) return
@@ -401,149 +325,22 @@ const PixiBoard = ({
 
     const closeContextMenus = () => {
         // Clean up anchor elements
-        if (tokenContextMenuAnchor && tokenContextMenuAnchor.parentNode) {
-            tokenContextMenuAnchor.parentNode.removeChild(tokenContextMenuAnchor)
+        if (pixiTokenContextMenuAnchor && pixiTokenContextMenuAnchor.parentNode) {
+            pixiTokenContextMenuAnchor.parentNode.removeChild(pixiTokenContextMenuAnchor)
         }
-        if (mapContextMenuAnchor && mapContextMenuAnchor.parentNode) {
-            mapContextMenuAnchor.parentNode.removeChild(mapContextMenuAnchor)
+        if (pixiMapContextMenuAnchor && pixiMapContextMenuAnchor.parentNode) {
+            pixiMapContextMenuAnchor.parentNode.removeChild(pixiMapContextMenuAnchor)
         }
-        if (blastContextMenuAnchor && blastContextMenuAnchor.parentNode) {
-            blastContextMenuAnchor.parentNode.removeChild(blastContextMenuAnchor)
+        if (pixiBlastContextMenuAnchor && pixiBlastContextMenuAnchor.parentNode) {
+            pixiBlastContextMenuAnchor.parentNode.removeChild(pixiBlastContextMenuAnchor)
         }
 
-        setTokenContextMenuAnchor(null)
-        setMapContextMenuAnchor(null)
-        setBlastContextMenuAnchor(null)
-        setSelectedTokenId(null)
-        setSelectedBlastId(null)
+        pixiSetTokenContextMenuAnchor(null)
+        pixiSetMapContextMenuAnchor(null)
+        pixiSetBlastContextMenuAnchor(null)
+        pixiSetSelectedTokenId(null)
+        pixiSetSelectedBlastId(null)
     }
-
-    // Sync walls from prop
-    useEffect(() => {
-        wallsRef.current = (wallsProp || []).map((w) => ({
-            id: w.id,
-            x1: w.x1,
-            y1: w.y1,
-            x2: w.x2,
-            y2: w.y2,
-            ...(w.shape != null ? { shape: w.shape } : {}),
-            ...(w.color != null ? { color: w.color } : {}),
-            ...(w.alpha != null ? { alpha: w.alpha } : {}),
-        }))
-        // redraw walls layer
-        if (wallLayerRef.current) {
-            const g = wallLayerRef.current
-            g.clear()
-            for (const w of wallsRef.current) {
-                const c = w.color ?? DEFAULT_WALL_COLOR
-                const a = w.alpha ?? DEFAULT_WALL_ALPHA
-                g.setStrokeStyle({ width: 3, color: c, alpha: a })
-
-                const shape = w.shape
-                if (shape === 'line') {
-                    g.moveTo(w.x1, w.y1)
-                    g.lineTo(w.x2, w.y2)
-                    g.stroke()
-                } else if (shape === 'rectangle') {
-                    const dx = w.x2 - w.x1
-                    const dy = w.y2 - w.y1
-                    const width = Math.abs(dx)
-                    const height = Math.abs(dy)
-                    const x = Math.min(w.x1, w.x2)
-                    const y = Math.min(w.y1, w.y2)
-                    g.rect(x, y, width, height)
-                    g.stroke()
-                } else if (shape === 'circle') {
-                    const dx = w.x2 - w.x1
-                    const dy = w.y2 - w.y1
-                    const centerX = w.x1 + dx / 2
-                    const centerY = w.y1 + dy / 2
-                    const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
-                    g.circle(centerX, centerY, radius)
-                    g.stroke()
-                }
-            }
-        }
-    }, [wallsProp])
-
-    // Keep latest mapKey
-    useEffect(() => {
-        mapKeyRef.current = mapKey
-    }, [mapKey])
-
-    // Keep refs in sync
-    useEffect(() => {
-        gridColorRef.current = gridColor
-    }, [gridColor])
-    useEffect(() => {
-        gridAlphaRef.current = gridAlpha
-    }, [gridAlpha])
-    useEffect(() => {
-        wallColorRef.current = wallColor
-    }, [wallColor])
-    useEffect(() => {
-        wallAlphaRef.current = wallAlpha
-    }, [wallAlpha])
-    useEffect(() => {
-        measuringRef.current = isMeasuring
-    }, [isMeasuring])
-    useEffect(() => {
-        wallModeRef.current = isWallMode
-    }, [isWallMode])
-    useEffect(() => {
-        wallDrawingShapeRef.current = wallDrawingShape
-    }, [wallDrawingShape])
-    useEffect(() => {
-        erasingRef.current = isErasingWalls
-        // clear any in-progress draw when toggling eraser
-        wallStartRef.current = null
-        wallPreviewRef.current = null
-        eraseStartRef.current = null
-        erasePreviewRef.current = null
-        // Hide wall label when switching to erase mode
-        if (wallLabelRef.current) wallLabelRef.current.visible = false
-        if (wallLayerRef.current) {
-            const g = wallLayerRef.current
-            g.clear()
-            for (const w of wallsRef.current) {
-                const c = w.color ?? DEFAULT_WALL_COLOR
-                const a = w.alpha ?? DEFAULT_WALL_ALPHA
-                g.setStrokeStyle({ width: 3, color: c, alpha: a })
-
-                const wallShape = w.shape || 'line' // Default to 'line' if undefined
-                if (wallShape === 'line') {
-                    g.moveTo(w.x1, w.y1)
-                    g.lineTo(w.x2, w.y2)
-                    g.stroke()
-                } else if (wallShape === 'rectangle') {
-                    const dx = w.x2 - w.x1
-                    const dy = w.y2 - w.y1
-                    const width = Math.abs(dx)
-                    const height = Math.abs(dy)
-                    const x = Math.min(w.x1, w.x2)
-                    const y = Math.min(w.y1, w.y2)
-                    g.rect(x, y, width, height)
-                    g.stroke()
-                } else if (wallShape === 'circle') {
-                    const dx = w.x2 - w.x1
-                    const dy = w.y2 - w.y1
-                    const centerX = w.x1 + dx / 2
-                    const centerY = w.y1 + dy / 2
-                    const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
-                    g.circle(centerX, centerY, radius)
-                    g.stroke()
-                }
-            }
-        }
-    }, [isErasingWalls])
-
-    // Redraw grid when color/alpha change
-    useEffect(() => {
-        if (!gridRef.current) return
-        const { w: gw, h: gh } = getTargetSize(backgroundRef.current, worldDims)
-        gridRef.current.clear()
-        drawGrid(gridRef.current, gw, gh, gridSizeRef.current, gridColorRef.current, gridAlphaRef.current)
-    }, [gridColor, gridAlpha])
 
     const cancelAllPending = () => {
         // Clear overlays and redraw tokens at original positions
@@ -552,7 +349,7 @@ const PixiBoard = ({
         })
         pixiPendingIndicatorsRef.current.clear()
         renderTokens(tokenLayerRef.current, tokensRef.current)
-        notifyPendingCount()
+        onPendingCountChange(pixiPendingIndicatorsRef.current.size)
     }
 
     const acceptAllPending = () => {
@@ -599,7 +396,7 @@ const PixiBoard = ({
         pixiPendingIndicatorsRef.current.clear()
         // After committing, redraw tokens (parent will also update tokens prop shortly)
         renderTokens(tokenLayerRef.current, tokensRef.current)
-        notifyPendingCount()
+        onPendingCountChange(pixiPendingIndicatorsRef.current.size)
     }
 
     const worldDims = useMemo(
@@ -610,9 +407,124 @@ const PixiBoard = ({
         [width, height]
     )
 
+    // Track when host ref becomes available (runs after DOM updates)
+    useLayoutEffect(() => {
+        if (hostRef.current && !pixiHostReady) {
+            pixiSetHostReady(true)
+        }
+    })
+    // Update images ref when images prop changes
+    useEffect(() => {
+        imagesRef.current = images
+        // Preload textures for the images
+        preloadTextures(images)
+    }, [images])
+    // Update activeTokenId ref when prop changes and force crosshair redraw
+    useEffect(() => {
+        activeTokenIdRef.current = activeTokenId
+
+        // Force crosshair update immediately when active token changes
+        const crosshair = crosshairLayerRef.current
+        if (crosshair && activeTokenId) {
+            const token = tokensRef.current.find((t) => t.id === activeTokenId)
+            if (token) {
+                const pending = pixiPendingIndicatorsRef.current.get(token.id)
+                const x = pending ? pending.endX : token.x
+                const y = pending ? pending.endY : token.y
+
+                // Create a pulsing effect based on time
+                const time = Date.now() / 1000
+                const pulse = Math.sin(time * 3) * 0.2 + 0.8
+                const ringRadius = token.radius * 1.5
+
+                crosshair.clear()
+
+                // Draw outer ring with pulsing alpha
+                crosshair.setStrokeStyle({ width: 4, color: 0xffff00, alpha: pulse })
+                crosshair.circle(x, y, ringRadius)
+                crosshair.stroke()
+
+                // Draw inner ring
+                crosshair.setStrokeStyle({ width: 2, color: 0xff00ff, alpha: 0.9 })
+                crosshair.circle(x, y, ringRadius * 0.8)
+                crosshair.stroke()
+
+                // Draw crosshair lines
+                crosshair.setStrokeStyle({ width: 3, color: 0x00ffff, alpha: 0.7 })
+                const lineLength = token.radius * 2.5
+                crosshair.moveTo(x - lineLength, y)
+                crosshair.lineTo(x + lineLength, y)
+                crosshair.moveTo(x, y - lineLength)
+                crosshair.lineTo(x, y + lineLength)
+                crosshair.stroke()
+            } else {
+                crosshair.clear()
+            }
+        } else if (crosshair) {
+            crosshair.clear()
+        }
+    }, [activeTokenId])
+    // Sync walls from prop
+    useEffect(() => {
+        wallsRef.current = (walls || []).map((w) => ({
+            id: w.id,
+            x1: w.x1,
+            y1: w.y1,
+            x2: w.x2,
+            y2: w.y2,
+            ...(w.shape != null ? { shape: w.shape } : {}),
+            ...(w.color != null ? { color: w.color } : {}),
+            ...(w.alpha != null ? { alpha: w.alpha } : {}),
+        }))
+        // redraw walls layer
+        if (wallLayerRef.current) {
+            const g = wallLayerRef.current
+            g.clear()
+            for (const w of wallsRef.current) {
+                const c = w.color ?? DEFAULT_WALL_COLOR
+                const a = w.alpha ?? DEFAULT_WALL_ALPHA
+                g.setStrokeStyle({ width: 3, color: c, alpha: a })
+
+                const shape = w.shape
+                if (shape === 'line') {
+                    g.moveTo(w.x1, w.y1)
+                    g.lineTo(w.x2, w.y2)
+                    g.stroke()
+                } else if (shape === 'rectangle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const width = Math.abs(dx)
+                    const height = Math.abs(dy)
+                    const x = Math.min(w.x1, w.x2)
+                    const y = Math.min(w.y1, w.y2)
+                    g.rect(x, y, width, height)
+                    g.stroke()
+                } else if (shape === 'circle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const centerX = w.x1 + dx / 2
+                    const centerY = w.y1 + dy / 2
+                    const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                    g.circle(centerX, centerY, radius)
+                    g.stroke()
+                }
+            }
+        }
+    }, [walls])
+    // Keep latest mapKey
+    useEffect(() => {
+        mapKeyRef.current = mapKey
+    }, [mapKey])
+    // Redraw grid when color/alpha change
+    useEffect(() => {
+        if (!gridRef.current) return
+        const { w: gw, h: gh } = getTargetSize(backgroundRef.current, worldDims)
+        gridRef.current.clear()
+        drawGrid(gridRef.current, gw, gh, gridSizeRef.current, gridColorRef.current, gridAlphaRef.current)
+    }, [gridColor, gridAlpha])
     // Initialize PIXI Application + Viewport once
     useEffect(() => {
-        if (!hostReady) return
+        if (!pixiHostReady) return
         let destroyed = false
 
         // Pause rendering when tab is hidden, resume when visible
@@ -1037,7 +949,7 @@ const PixiBoard = ({
                             // Remove indicator
                             ind.destroy()
                             pixiPendingIndicatorsRef.current.delete(id)
-                            notifyPendingCount()
+                            onPendingCountChange(pixiPendingIndicatorsRef.current.size)
 
                             // Redraw with remaining pending overlays
                             const pendingMapAfter = new Map(
@@ -1065,7 +977,7 @@ const PixiBoard = ({
                                 // Remove indicator
                                 ind.destroy()
                                 pixiPendingIndicatorsRef.current.delete(id)
-                                notifyPendingCount()
+                                onPendingCountChange(pixiPendingIndicatorsRef.current.size)
                             } else {
                                 // Remove last waypoint and update end position
                                 ind.points.pop()
@@ -1086,7 +998,7 @@ const PixiBoard = ({
                         isPreview: false,
                     })
                     pixiPendingIndicatorsRef.current.set(id, indicator)
-                    notifyPendingCount()
+                    onPendingCountChange(pixiPendingIndicatorsRef.current.size)
                 } else {
                     // Update existing indicator
                     const isPreview = dragPreviewRef.current?.id === id
@@ -1257,8 +1169,8 @@ const PixiBoard = ({
                             anchorEl.style.height = '1px'
                             anchorEl.style.pointerEvents = 'auto'
                             document.body.appendChild(anchorEl)
-                            setTokenContextMenuAnchor(anchorEl)
-                            setSelectedTokenId(hit.id)
+                            pixiSetTokenContextMenuAnchor(anchorEl)
+                            pixiSetSelectedTokenId(hit.id)
                             return
                         } else {
                             // Left click on token: start drag
@@ -1276,7 +1188,7 @@ const PixiBoard = ({
                     }
 
                     // Only check for blast hits if no token was hit
-                    if (!blastDrawModeRef.current && !wallModeRef.current && !measuringRef.current) {
+                    if (!blastDrawModeRef.current && !isWallModeRef.current && !isMeasuringRef.current) {
                         // Check if clicking on a blast
                         clickedBlast =
                             blastsRef.current.find((blast) => {
@@ -1344,8 +1256,8 @@ const PixiBoard = ({
                                 anchorEl.style.height = '1px'
                                 anchorEl.style.pointerEvents = 'auto'
                                 document.body.appendChild(anchorEl)
-                                setBlastContextMenuAnchor(anchorEl)
-                                setSelectedBlastId(clickedBlast.id)
+                                pixiSetBlastContextMenuAnchor(anchorEl)
+                                pixiSetSelectedBlastId(clickedBlast.id)
                                 return
                             } else {
                                 // Left click: allow drag only if not locked
@@ -1376,7 +1288,7 @@ const PixiBoard = ({
                         anchorEl.style.height = '1px'
                         anchorEl.style.pointerEvents = 'auto'
                         document.body.appendChild(anchorEl)
-                        setMapContextMenuAnchor(anchorEl)
+                        pixiSetMapContextMenuAnchor(anchorEl)
                         return
                     }
                 }
@@ -1389,30 +1301,30 @@ const PixiBoard = ({
                     } catch {
                         console.error('Failed to stop propagation or prevent default')
                     }
-                    const snapped = snapToNinePoints(x, y, gridSizeRef.current, snapRef.current)
+                    const snapped = snapToNinePoints(x, y, gridSizeRef.current, snapToGridRef.current)
                     blastDrawStartRef.current = { x: snapped.x, y: snapped.y }
                     return
                 }
 
                 // Context menu closing is handled by MUI Menu
                 // Eraser mode: only start with left button
-                if (wallModeRef.current && erasingRef.current) {
+                if (isWallModeRef.current && isErasingWallsRef.current) {
                     if (btn !== 0) return
                     eraseStartRef.current = { x, y }
                     erasePreviewRef.current = null
                     return
                 }
                 // Wall draw mode: only start with left button
-                if (wallModeRef.current && wallDrawingShapeRef.current) {
+                if (isWallModeRef.current && wallDrawingShapeRef.current) {
                     if (btn !== 0) return
-                    const snapped = snapToNinePoints(x, y, gridSizeRef.current, snapRef.current)
+                    const snapped = snapToNinePoints(x, y, gridSizeRef.current, snapToGridRef.current)
                     wallStartRef.current = { x: snapped.x, y: snapped.y }
                     wallPreviewRef.current = null
                     // prevent panning start
                     return
                 }
                 // Measurement: only start with left button
-                if (measuringRef.current) {
+                if (isMeasuringRef.current) {
                     if (btn !== 0) return
                     try {
                         e.stopPropagation?.()
@@ -1421,7 +1333,7 @@ const PixiBoard = ({
                         console.error('Failed to stop propagation or prevent default')
                     }
                     const step = gridSizeRef.current
-                    const startSnapped = snapToNinePoints(x, y, step, snapRef.current)
+                    const startSnapped = snapToNinePoints(x, y, step, snapToGridRef.current)
                     measureStartRef.current = { x: startSnapped.x, y: startSnapped.y }
                     return
                 }
@@ -1434,7 +1346,7 @@ const PixiBoard = ({
                         lastPointerPosRef.current.x,
                         lastPointerPosRef.current.y,
                         gridSizeRef.current,
-                        snapRef.current
+                        snapToGridRef.current
                     )
                     const dragged = draggedBlastRef.current
                     const original = draggedBlastStartRef.current ?? dragged
@@ -1509,7 +1421,7 @@ const PixiBoard = ({
                         lastPointerPosRef.current.x,
                         lastPointerPosRef.current.y,
                         gridSizeRef.current,
-                        snapRef.current
+                        snapToGridRef.current
                     )
 
                     const dx = snapped.x - start.x
@@ -1563,7 +1475,7 @@ const PixiBoard = ({
                             let endX = start.x + directionX * fixedLength
                             let endY = start.y + directionY * fixedLength
 
-                            if (snapRef.current) {
+                            if (snapToGridRef.current) {
                                 const snappedEndpoint = snapToNinePoints(endX, endY, gridSizeRef.current, true)
                                 endX = snappedEndpoint.x
                                 endY = snappedEndpoint.y
@@ -1589,7 +1501,12 @@ const PixiBoard = ({
                         blastLabelRef.current.visible = false
                     }
                 }
-                if (wallModeRef.current && erasingRef.current && eraseStartRef.current && wallLayerRef.current) {
+                if (
+                    isWallModeRef.current &&
+                    isErasingWallsRef.current &&
+                    eraseStartRef.current &&
+                    wallLayerRef.current
+                ) {
                     const start = eraseStartRef.current
                     const end = erasePreviewRef.current
                     if (end) {
@@ -1669,7 +1586,7 @@ const PixiBoard = ({
                     }
                 }
                 if (
-                    wallModeRef.current &&
+                    isWallModeRef.current &&
                     wallStartRef.current &&
                     wallLayerRef.current &&
                     wallDrawingShapeRef.current
@@ -1789,8 +1706,8 @@ const PixiBoard = ({
                         if (
                             cand &&
                             cand.id === endedId &&
-                            !wallModeRef.current &&
-                            !measuringRef.current &&
+                            !isWallModeRef.current &&
+                            !isMeasuringRef.current &&
                             typeof onTokenClick === 'function'
                         ) {
                             onTokenClick(cand.id)
@@ -1827,7 +1744,7 @@ const PixiBoard = ({
                         angle,
                         lenToUse,
                         gridSizeRef.current,
-                        snapRef.current
+                        snapToGridRef.current
                     )
                     drawBlastPreview(
                         blastPreviewLayerRef.current,
@@ -1847,7 +1764,7 @@ const PixiBoard = ({
 
                 // Handle blast dragging
                 if (draggedBlastRef.current && onBlastMove) {
-                    const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapRef.current)
+                    const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapToGridRef.current)
                     const dragged = draggedBlastRef.current
                     const original = draggedBlastStartRef.current
                     // Compute delta from original apex so endpoint translates consistently
@@ -1890,7 +1807,7 @@ const PixiBoard = ({
                 }
 
                 // hover cursor over tokens and show tooltip
-                if (!wallModeRef.current && !measuringRef.current) {
+                if (!isWallModeRef.current && !isMeasuringRef.current) {
                     let over = false
                     let hoveredTokenData: Token | null = null
 
@@ -1953,7 +1870,12 @@ const PixiBoard = ({
                         hoveredTokenRef.current = null
                     }
                 }
-                if (wallModeRef.current && erasingRef.current && eraseStartRef.current && wallLayerRef.current) {
+                if (
+                    isWallModeRef.current &&
+                    isErasingWallsRef.current &&
+                    eraseStartRef.current &&
+                    wallLayerRef.current
+                ) {
                     // live eraser preview line
                     const g = wallLayerRef.current
                     const sx = eraseStartRef.current.x
@@ -2027,7 +1949,7 @@ const PixiBoard = ({
                 // Blast drawing preview
                 if (blastDrawModeRef.current && blastDrawStartRef.current && blastPreviewLayerRef.current) {
                     // Snap during preview if snapToGrid is enabled
-                    const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapRef.current)
+                    const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapToGridRef.current)
                     // Only draw preview for adaptable blasts (not grenade)
                     if (blastDrawModeRef.current !== 'grenade') {
                         const { sizeText, labelX, labelY } = drawBlastPreview(
@@ -2051,7 +1973,7 @@ const PixiBoard = ({
                 }
 
                 // Only check blast hover if no token is hovered (tokens take precedence)
-                if (!wallModeRef.current && !measuringRef.current && viewport.cursor === 'default') {
+                if (!isWallModeRef.current && !isMeasuringRef.current && viewport.cursor === 'default') {
                     const hoveredBlast = blastsRef.current.find((blast) => {
                         const dx = global.x - blast.x
                         const dy = global.y - blast.y
@@ -2103,12 +2025,12 @@ const PixiBoard = ({
                 }
 
                 if (
-                    wallModeRef.current &&
+                    isWallModeRef.current &&
                     wallStartRef.current &&
                     wallLayerRef.current &&
                     wallDrawingShapeRef.current
                 ) {
-                    const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapRef.current)
+                    const snapped = snapToNinePoints(global.x, global.y, gridSizeRef.current, snapToGridRef.current)
                     const ex = snapped.x
                     const ey = snapped.y
                     wallPreviewRef.current = { x: ex, y: ey }
@@ -2183,21 +2105,21 @@ const PixiBoard = ({
 
                         if (shape === 'line') {
                             const length = Math.sqrt(dx * dx + dy * dy)
-                            const gridLength = snapRef.current
+                            const gridLength = snapToGridRef.current
                                 ? Math.round(length / gridSizeRef.current)
                                 : (length / gridSizeRef.current).toFixed(2)
-                            labelText = snapRef.current ? `${gridLength}` : `${gridLength}`
+                            labelText = snapToGridRef.current ? `${gridLength}` : `${gridLength}`
                         } else if (shape === 'rectangle') {
                             const width = Math.abs(dx) / gridSizeRef.current
                             const height = Math.abs(dy) / gridSizeRef.current
-                            const widthText = snapRef.current ? Math.round(width) : width.toFixed(1)
-                            const heightText = snapRef.current ? Math.round(height) : height.toFixed(1)
+                            const widthText = snapToGridRef.current ? Math.round(width) : width.toFixed(1)
+                            const heightText = snapToGridRef.current ? Math.round(height) : height.toFixed(1)
                             labelText = `${widthText}x${heightText}`
                             labelX = wallStartRef.current.x + dx / 2
                             labelY = wallStartRef.current.y + dy / 2 - 20
                         } else if (shape === 'circle') {
                             const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2 / gridSizeRef.current
-                            const radiusText = snapRef.current ? Math.round(radius) : radius.toFixed(1)
+                            const radiusText = snapToGridRef.current ? Math.round(radius) : radius.toFixed(1)
                             labelText = `r=${radiusText}`
                             labelX = wallStartRef.current.x + dx / 2
                             labelY = wallStartRef.current.y + dy / 2 - radius - 20
@@ -2220,8 +2142,8 @@ const PixiBoard = ({
                     const moved = Math.hypot(global.x - cand.x, global.y - cand.y)
                     if (moved > 4) clickCandidateRef.current = null
                 }
-                if (snapRef.current) {
-                    const snapped = snapToNinePoints(nx, ny, gridSizeRef.current, snapRef.current)
+                if (snapToGridRef.current) {
+                    const snapped = snapToNinePoints(nx, ny, gridSizeRef.current, snapToGridRef.current)
                     nx = snapped.x
                     ny = snapped.y
                 }
@@ -2254,7 +2176,7 @@ const PixiBoard = ({
                 const step = gridSizeRef.current
                 const sx = measureStartRef.current.x
                 const sy = measureStartRef.current.y
-                const endSnapped = snapToNinePoints(global.x, global.y, step, snapRef.current)
+                const endSnapped = snapToNinePoints(global.x, global.y, step, snapToGridRef.current)
                 const ex = endSnapped.x
                 const ey = endSnapped.y
                 const dx = Math.abs(ex - sx)
@@ -2274,7 +2196,7 @@ const PixiBoard = ({
                 // label
                 const label = measureLabelRef.current
                 if (label) {
-                    const txt = snapRef.current ? `${Math.round(cells * 2)}m` : `${(cells * 2).toFixed(2)}m`
+                    const txt = snapToGridRef.current ? `${Math.round(cells * 2)}m` : `${(cells * 2).toFixed(2)}m`
                     label.text = txt
                     const zoom = viewportRef.current ? Math.max(0.1, viewportRef.current.scale.x) : 1
                     label.style.fontSize = Math.max(24, 24 / zoom)
@@ -2344,8 +2266,7 @@ const PixiBoard = ({
             gridRef.current = null
             // No document-level handlers to remove
         }
-    }, [hostReady])
-
+    }, [pixiHostReady])
     // Cleanup on unmount to ensure Pixi resources are properly disposed
     useEffect(() => {
         return () => {
@@ -2359,7 +2280,6 @@ const PixiBoard = ({
             gridRef.current = null
         }
     }, [])
-
     // Resize handler
     useEffect(() => {
         if (!appRef.current || !viewportRef.current) return
@@ -2374,17 +2294,15 @@ const PixiBoard = ({
         // redraw tokens after resize
         renderTokens(tokenLayerRef.current, tokens)
     }, [width, height, worldDims, gridSize])
-
     // Keep measuring ref in sync so event handlers see latest value
     useEffect(() => {
-        measuringRef.current = isMeasuring
+        isMeasuringRef.current = isMeasuring
         // Hide PixiTooltip when entering measuring mode
         if (isMeasuring) {
             pixiTooltipRef.current?.hide()
             hoveredTokenRef.current = null
         }
     }, [isMeasuring])
-
     // When measure toggles off, clear overlay; no need to pause drag since it's on middle button
     useEffect(() => {
         if (!isMeasuring) {
@@ -2393,7 +2311,6 @@ const PixiBoard = ({
             if (measureLabelRef.current) measureLabelRef.current.visible = false
         }
     }, [isMeasuring])
-
     // When wall mode toggles off, hide wall label
     useEffect(() => {
         if (!isWallMode) {
@@ -2404,16 +2321,15 @@ const PixiBoard = ({
             hoveredTokenRef.current = null
         }
     }, [isWallMode])
-
     // Sync bg texture ref and apply when either texture prop or viewport becomes available
     useEffect(() => {
-        bgTextureRef.current = backgroundTexture ?? null
+        bgTextureRef.current = mapTexture ?? null
         if (!viewportRef.current || !backgroundRef.current) {
             return
         }
-        if (backgroundTexture) {
+        if (mapTexture) {
             applyBackgroundTexture(
-                backgroundTexture,
+                mapTexture,
                 viewportRef.current,
                 backgroundRef,
                 gridRef,
@@ -2448,11 +2364,10 @@ const PixiBoard = ({
             }
         }
         // Set ready after background is applied
-        if (!ready) {
-            setReady(true)
+        if (!pixiReady) {
+            pixiSetReady(true)
         }
-    }, [backgroundTexture, ready, worldDims])
-
+    }, [mapTexture, pixiReady, worldDims])
     // Create and bind fit function with current dimensions
     useEffect(() => {
         if (!viewportRef.current) return
@@ -2460,7 +2375,7 @@ const PixiBoard = ({
         const viewport = viewportRef.current
         const fitFn = () => {
             const { w, h } = getTargetSize(backgroundRef.current, worldDims)
-            const sw = viewport.screenWidth - sidePanelWidth
+            const sw = viewport.screenWidth - pixiSidePanelWidth
             const sh = viewport.screenHeight
             const scale = Math.min(sw / w, sh / h)
             viewport.setZoom(scale, true)
@@ -2471,12 +2386,11 @@ const PixiBoard = ({
             viewport.moveCorner(w / 2 - sw / scale / 2, h / 2 - sh / scale / 2)
         }
         onBindFit(fitFn)
-    }, [onBindFit, worldDims, sidePanelWidth])
-
+    }, [onBindFit, worldDims, pixiSidePanelWidth])
     // Redraw tokens on token prop change, start movement animations (single segment) for non-pending external moves
     useEffect(() => {
         // Guard: Don't render if board isn't ready yet
-        if (!ready) return
+        if (!pixiReady) return
 
         tokensRef.current = tokens
         const prev = prevTokensRef.current
@@ -2530,17 +2444,15 @@ const PixiBoard = ({
                 renderTokens(tokenLayerRef.current, tokens)
             }
         }
-    }, [tokens, images, ready])
-
+    }, [tokens, images, pixiReady])
     // Render blasts when they change
     useEffect(() => {
-        if (!ready) return
+        if (!pixiReady) return
         blastsRef.current = blasts
         blastsNotInMapRef.current = blastsNotInMap
         renderBlasts(blastLayerRef.current, blasts, gridSize)
-    }, [blasts, blastsNotInMap, gridSize, ready])
-
-    // Keep refs in sync for grid and snap
+    }, [blasts, blastsNotInMap, gridSize, pixiReady])
+    // Keep refs in sync
     useEffect(() => {
         gridSizeRef.current = gridSize
         if (gridRef.current) {
@@ -2550,16 +2462,78 @@ const PixiBoard = ({
         }
     }, [gridSize, worldDims])
     useEffect(() => {
-        snapRef.current = snapToGrid
+        snapToGridRef.current = snapToGrid
     }, [snapToGrid])
-
-    useEffect(() => {
-        isCombatActiveRef.current = isCombatActive
-    }, [isCombatActive])
-
     useEffect(() => {
         blastDrawModeRef.current = blastDrawMode
     }, [blastDrawMode])
+    useEffect(() => {
+        gridColorRef.current = gridColor
+    }, [gridColor])
+    useEffect(() => {
+        gridAlphaRef.current = gridAlpha
+    }, [gridAlpha])
+    useEffect(() => {
+        wallColorRef.current = wallColor
+    }, [wallColor])
+    useEffect(() => {
+        wallAlphaRef.current = wallAlpha
+    }, [wallAlpha])
+    useEffect(() => {
+        isCombatActiveRef.current = isCombatActive
+    }, [isCombatActive])
+    useEffect(() => {
+        isMeasuringRef.current = isMeasuring
+    }, [isMeasuring])
+    useEffect(() => {
+        isWallModeRef.current = isWallMode
+    }, [isWallMode])
+    useEffect(() => {
+        wallDrawingShapeRef.current = wallDrawingShape
+    }, [wallDrawingShape])
+    useEffect(() => {
+        isErasingWallsRef.current = isErasingWalls
+        // clear any in-progress draw when toggling eraser
+        wallStartRef.current = null
+        wallPreviewRef.current = null
+        eraseStartRef.current = null
+        erasePreviewRef.current = null
+        // Hide wall label when switching to erase mode
+        if (wallLabelRef.current) wallLabelRef.current.visible = false
+        if (wallLayerRef.current) {
+            const g = wallLayerRef.current
+            g.clear()
+            for (const w of wallsRef.current) {
+                const c = w.color ?? DEFAULT_WALL_COLOR
+                const a = w.alpha ?? DEFAULT_WALL_ALPHA
+                g.setStrokeStyle({ width: 3, color: c, alpha: a })
+
+                const wallShape = w.shape || 'line' // Default to 'line' if undefined
+                if (wallShape === 'line') {
+                    g.moveTo(w.x1, w.y1)
+                    g.lineTo(w.x2, w.y2)
+                    g.stroke()
+                } else if (wallShape === 'rectangle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const width = Math.abs(dx)
+                    const height = Math.abs(dy)
+                    const x = Math.min(w.x1, w.x2)
+                    const y = Math.min(w.y1, w.y2)
+                    g.rect(x, y, width, height)
+                    g.stroke()
+                } else if (wallShape === 'circle') {
+                    const dx = w.x2 - w.x1
+                    const dy = w.y2 - w.y1
+                    const centerX = w.x1 + dx / 2
+                    const centerY = w.y1 + dy / 2
+                    const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                    g.circle(centerX, centerY, radius)
+                    g.stroke()
+                }
+            }
+        }
+    }, [isErasingWalls])
 
     return (
         <>
@@ -2611,7 +2585,7 @@ const PixiBoard = ({
                         let finalY = worldPos.y
 
                         // Apply snapping if enabled
-                        if (snapRef.current) {
+                        if (snapToGridRef.current) {
                             const snapped = snapToNinePoints(worldPos.x, worldPos.y, gridSizeRef.current, true)
                             finalX = snapped.x
                             finalY = snapped.y
@@ -2711,7 +2685,7 @@ const PixiBoard = ({
                 }}
             >
                 {/* Show loading spinner overlay while PIXI initializes */}
-                {!ready && (
+                {!pixiReady && (
                     <div
                         style={{
                             position: 'absolute',
@@ -2755,44 +2729,41 @@ const PixiBoard = ({
                     </div>
                 )}
             </div>
-
-            {/* Blast context menu */}
             <BlastContextMenu
-                anchorEl={blastContextMenuAnchor}
-                blastId={selectedBlastId}
-                isLocked={Boolean(blastsRef.current.find?.((b) => b.id === selectedBlastId)?.locked)}
+                anchorEl={pixiBlastContextMenuAnchor}
+                blastId={pixiSelectedBlastId}
+                isLocked={Boolean(blastsRef.current.find?.((b) => b.id === pixiSelectedBlastId)?.locked)}
                 onDelete={(id) => onBlastDelete?.(id)}
                 onCopy={(id) => onBlastCopy?.(id)}
                 onCut={(id) => onBlastCut?.(id)}
                 onLock={(id, locked) => onBlastLock?.(id, locked)}
                 onClose={closeContextMenus}
             />
-
             <TokenContextMenu
-                anchorEl={tokenContextMenuAnchor}
-                tokenId={selectedTokenId}
-                onDelete={handleTokenDelete}
-                onDuplicate={handleTokenDuplicate}
-                onCopy={handleTokenCopy}
-                onCut={handleTokenCut}
+                anchorEl={pixiTokenContextMenuAnchor}
+                tokenId={pixiSelectedTokenId}
+                onDelete={openDeleteTokenDialog}
+                onDuplicate={pixiOnTokenDuplicate}
+                onCopy={pixiOnTokenCopy}
+                onCut={pixiOnTokenCut}
                 onClose={closeContextMenus}
             />
             <MapContextMenu
-                anchorEl={mapContextMenuAnchor}
-                onDeleteAllTokens={handleMapDeleteAllTokens}
-                onDeleteAllWalls={handleMapDeleteAllWalls}
-                onDeleteAllBlasts={handleMapDeleteAllBlasts}
+                anchorEl={pixiMapContextMenuAnchor}
+                onDeleteAllTokens={onMapDeleteAllTokens}
+                onDeleteAllWalls={onMapDeleteAllWalls}
+                onDeleteAllBlasts={onMapDeleteAllBlasts}
                 onPasteToken={() => {
-                    if (mapContextMenuAnchor) {
-                        const pasteX = parseFloat(mapContextMenuAnchor.dataset.pasteX || '0')
-                        const pasteY = parseFloat(mapContextMenuAnchor.dataset.pasteY || '0')
+                    if (pixiMapContextMenuAnchor) {
+                        const pasteX = parseFloat(pixiMapContextMenuAnchor.dataset.pasteX || '0')
+                        const pasteY = parseFloat(pixiMapContextMenuAnchor.dataset.pasteY || '0')
                         handleMapPasteToken(pasteX, pasteY)
                     }
                 }}
                 onPasteBlast={() => {
-                    if (mapContextMenuAnchor) {
-                        const pasteX = parseFloat(mapContextMenuAnchor.dataset.pasteX || '0')
-                        const pasteY = parseFloat(mapContextMenuAnchor.dataset.pasteY || '0')
+                    if (pixiMapContextMenuAnchor) {
+                        const pasteX = parseFloat(pixiMapContextMenuAnchor.dataset.pasteX || '0')
+                        const pasteY = parseFloat(pixiMapContextMenuAnchor.dataset.pasteY || '0')
                         handleMapPasteBlast(pasteX, pasteY)
                     }
                 }}

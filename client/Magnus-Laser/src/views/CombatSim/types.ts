@@ -1,5 +1,5 @@
 import { Dices } from '../../graphql/types'
-import type { RollResult, RollType } from './diceUtils'
+import type { RollResult, RollType } from './utils/diceUtils'
 
 export type BoardMap = {
     id: string
@@ -124,4 +124,11 @@ export type Initiative = {
     autoRerollInitiative: boolean
     autoRollDamage: boolean
     initiativeRolls: Record<string, number>
+}
+
+export interface PixiDisplayObject {
+    eventMode?: string
+    cursor?: string
+    zIndex?: number
+    parent?: PixiDisplayObject | undefined
 }

@@ -1,4 +1,4 @@
-import { pixiToCss } from '@/views/CombatSim/pixiUtils'
+import { pixiToCss } from '@/views/CombatSim/utils/pixiUtils'
 import { PlayArrow, SkipNext, Stop } from '@mui/icons-material'
 import {
     Avatar,

@@ -1,6 +1,6 @@
 import { Graphics, Sprite, Texture } from 'pixi.js'
-import { snapToNinePoints } from './gridUtils'
-import { Blast } from './types'
+import { Blast } from '../types'
+import { snapToNinePoints } from '../utils/gridUtils'
 
 // Cache for blast textures
 const textureCache: Record<string, Texture> = {}

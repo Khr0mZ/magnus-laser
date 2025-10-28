@@ -7,14 +7,14 @@ import type { ColorResult } from '@uiw/color-convert'
 import { Colorful } from '@uiw/react-color'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import CyberpunkCheckbox from '../../components/CyberpunkCheckbox'
-import CyberpunkFormControl from '../../components/CyberpunkFormControl'
-import CyberpunkFormControlLabel from '../../components/CyberpunkFormControlLabel'
-import { flicker, glitch, pulseGlowBlue, pulseGlowCyan } from '../../components/common/Animations'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import colors from '../../utils/colors'
-import { TokenTooltip } from './TokenTooltip'
-import { Image, Map, Token } from './types'
+import CyberpunkCheckbox from '../../../components/CyberpunkCheckbox'
+import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
+import CyberpunkFormControlLabel from '../../../components/CyberpunkFormControlLabel'
+import { flicker, glitch, pulseGlowBlue, pulseGlowCyan } from '../../../components/common/Animations'
+import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
+import colors from '../../../utils/colors'
+import { TokenTooltip } from '../components/TokenTooltip'
+import { Image, Map, Token } from '../types'
 
 // Utility function for safe nested property access and setting
 const setNestedProperty = (obj: Record<string, unknown>, path: string[], value: unknown): void => {
@@ -31,7 +31,7 @@ const setNestedProperty = (obj: Record<string, unknown>, path: string[], value: 
 
 interface TokenDetailsDialogProps {
     tokenDialogOpen: string | undefined
-    setTokenDialogOpen: (tokenDialogOpen: string | undefined) => void
+    onCloseTokenDialog: () => void
     tokens: Token[]
     images: Image[]
     gridSize: number
@@ -46,7 +46,7 @@ interface TokenDetailsDialogProps {
 
 const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
     tokenDialogOpen,
-    setTokenDialogOpen,
+    onCloseTokenDialog,
     tokens,
     images,
     gridSize,
@@ -262,14 +262,14 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
         if (tokenDialogOpen && editedToken) {
             onUpdateToken(tokenDialogOpen, editedToken)
         }
-        setTokenDialogOpen(tokenDialogOpen)
+        onCloseTokenDialog()
     }
 
     const handleDelete = () => {
         if (tokenDialogOpen) {
             onDeleteToken(tokenDialogOpen)
         }
-        setTokenDialogOpen(tokenDialogOpen)
+        onCloseTokenDialog()
     }
 
     const handleFieldChange = (field: string, value: unknown) => {
@@ -617,7 +617,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             </IconButton>
                             <IconButton
                                 size="small"
-                                onClick={() => setTokenDialogOpen(tokenDialogOpen)}
+                                onClick={() => onCloseTokenDialog()}
                                 sx={{
                                     ...windowButtonBaseStyle,
                                     bgcolor: 'rgba(40, 0, 0, 0.4)',
@@ -1615,7 +1615,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             </Button>
                         )}
                         <Button
-                            onClick={() => setTokenDialogOpen(tokenDialogOpen)}
+                            onClick={() => onCloseTokenDialog()}
                             sx={
                                 readerMode
                                     ? {

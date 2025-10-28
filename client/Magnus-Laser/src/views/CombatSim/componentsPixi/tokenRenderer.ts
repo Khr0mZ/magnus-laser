@@ -1,5 +1,5 @@
 import { Graphics, Sprite, Text, Texture } from 'pixi.js'
-import type { Image as ImageData, Token } from './types'
+import type { Image as ImageData, Token } from '../types'
 
 // Texture cache for preloaded images
 const textureCache = new Map<string, Texture>()

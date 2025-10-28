@@ -1,17 +1,35 @@
-import { toAlphaHex } from '@/views/CombatSim/pixiUtils'
+import { toAlphaHex } from '@/views/CombatSim/utils/pixiUtils'
 import { FindReplace, Upload } from '@mui/icons-material'
 import Close from '@mui/icons-material/Close'
 import { Box, Button, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
-import { Dispatch, SetStateAction } from 'react'
+import React, { Dispatch, SetStateAction, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ClearAllButton from '../../components/ClearAllButton'
-import CyberpunkCheckbox from '../../components/CyberpunkCheckbox'
-import CyberpunkFormControlLabel from '../../components/CyberpunkFormControlLabel'
-import GenerateButton from '../../components/GenerateButton'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import colors from '../../utils/colors'
-import { ModuleTypes } from '../../utils/constants'
-import { BoardMap, Map as MapType } from './types'
+import ClearAllButton from '../../../components/ClearAllButton'
+import CyberpunkCheckbox from '../../../components/CyberpunkCheckbox'
+import CyberpunkFormControlLabel from '../../../components/CyberpunkFormControlLabel'
+import GenerateButton from '../../../components/GenerateButton'
+import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
+import colors from '../../../utils/colors'
+import { ModuleTypes } from '../../../utils/constants'
+import { BoardMap, Map as MapType } from '../types'
+
+// debounce function
+function debounce(func: (size: number) => void, wait = 500) {
+    let timeout: ReturnType<typeof setTimeout>
+    function debounced(size: number) {
+        const later = () => {
+            func(size)
+        }
+        clearTimeout(timeout)
+        timeout = setTimeout(later, wait)
+    }
+
+    debounced.clear = () => {
+        clearTimeout(timeout)
+    }
+
+    return debounced
+}
 
 interface CombatSimHeaderProps {
     maps: MapType[]
@@ -21,12 +39,12 @@ interface CombatSimHeaderProps {
     onUploadMap: (file: globalThis.File) => void
     onSelectMap: (mapId: string) => void
     gridSize: number
-    setGridSize: Dispatch<SetStateAction<number>>
+    onGridSizeChange: (size: number) => void
     gridColorHex: string
     gridAlpha: number
     setGridColorAnchor: Dispatch<SetStateAction<HTMLElement | null>>
     snapToGrid: boolean
-    setSnapToGrid: Dispatch<SetStateAction<boolean>>
+    onSnapToGridChange: (value: boolean) => void
     setDeleteMapDialogOpen: Dispatch<SetStateAction<boolean>>
 }
 
@@ -39,16 +57,28 @@ const CombatSimHeader = (props: CombatSimHeaderProps) => {
         onUploadMap,
         onSelectMap,
         gridSize,
-        setGridSize,
+        onGridSizeChange,
         gridColorHex,
         gridAlpha,
         setGridColorAnchor,
         snapToGrid,
-        setSnapToGrid,
+        onSnapToGridChange,
         setDeleteMapDialogOpen,
     } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
+
+    // Local state for debounced grid size input
+    const [gridSizeValue, setGridSizeValue] = useState(gridSize.toString())
+
+    // Update local state when prop changes
+    React.useEffect(() => {
+        setGridSizeValue(gridSize.toString())
+    }, [gridSize])
+
+    // Debounced function needs to be memoized to keep the same timeout between each render.
+    // For the same reason, the `onGridSizeChange` needs to be wrapped in useCallback.
+    const debouncedOnGridSizeChange = useMemo(() => debounce(onGridSizeChange, 1000), [onGridSizeChange])
     const fieldSx = readerMode
         ? {
               '& .MuiOutlinedInput-root': {
@@ -192,13 +222,18 @@ const CombatSimHeader = (props: CombatSimHeaderProps) => {
                                             },
                                         },
                                     }}
-                                    value={gridSize}
+                                    value={gridSizeValue}
                                     onChange={(e) => {
-                                        let val = parseFloat(e.target.value)
-                                        if (e.target.value === '') {
+                                        const newValue = e.target.value
+                                        setGridSizeValue(newValue)
+
+                                        let val = parseFloat(newValue)
+                                        if (newValue === '') {
                                             val = 100
                                         }
-                                        if (!Number.isNaN(val) && val > 0) setGridSize(val)
+                                        if (!Number.isNaN(val) && val > 0) {
+                                            debouncedOnGridSizeChange(val)
+                                        }
                                     }}
                                     sx={{ width: '100%', ...fieldSx }}
                                 />
@@ -225,7 +260,7 @@ const CombatSimHeader = (props: CombatSimHeaderProps) => {
                                 <CyberpunkCheckbox
                                     readerMode={readerMode}
                                     checked={snapToGrid}
-                                    onChange={(e) => setSnapToGrid(e.target.checked)}
+                                    onChange={(e) => onSnapToGridChange(e.target.checked)}
                                 />
                             }
                             label={t('combatSim.snapToGrid')}

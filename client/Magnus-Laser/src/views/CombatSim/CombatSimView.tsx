@@ -1,10 +1,11 @@
-import CombatSimHeader from '@/views/CombatSim/CombatSimHeader'
 import ColorPopper from '@/views/CombatSim/components/ColorPopper'
+import CombatSimHeader from '@/views/CombatSim/components/CombatSimHeader'
 import FloatingButtons from '@/views/CombatSim/components/FloatingButtons'
 import ImageDialog from '@/views/CombatSim/components/ImageDialog'
 import CombatPanels from '@/views/CombatSim/components/panels/CombatPanels'
-import { hexToPixi } from '@/views/CombatSim/pixiUtils'
 import useCombatSim from '@/views/CombatSim/useCombatSim'
+import usePixi from '@/views/CombatSim/usePixi'
+import { hexToPixi } from '@/views/CombatSim/utils/pixiUtils'
 import { Box, Container, Paper, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { WarningDialog } from '../../components/common/WarningDialog'
@@ -13,7 +14,7 @@ import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { db } from '../../utils/db'
 import PixiBoard from './PixiBoard'
-import TokenDetailsDialog from './TokenDetailsDialog'
+import TokenDetailsDialog from './components/TokenDetailsDialog'
 import { Token } from './types'
 
 const CombatSimView = () => {
@@ -26,11 +27,8 @@ const CombatSimView = () => {
         onReplaceMap,
         onUploadMap,
         onSelectMap,
-        pixiOnTokenDuplicate,
-        pixiOnTokenCut,
-        pixiOnTokenCopy,
         getActiveMapKey,
-        handleRevealDamage,
+        panelHistoryOnRevealDamage,
         blasts,
         blastsNotInMap,
         onActivateDrawMode,
@@ -49,7 +47,6 @@ const CombatSimView = () => {
         acceptAllRef,
         cancelAllRef,
         wallAlpha,
-        pixiOnTokenDrop,
         wallColorHex,
         setIsMeasuring,
         setIsWallMode,
@@ -62,34 +59,23 @@ const CombatSimView = () => {
         onDeleteToken,
         setDefaultTokens,
         setTokensNotInMap,
-        pixiOnWallDraw,
-        pixiOnBindPendingControls,
-        pixiOnBindFit,
-        pixiOnTokenMove,
         onTokenClick,
-        openDeleteAllTokensDialog,
-        openDeleteAllWallsDialog,
-        openDeleteAllBlastsDialog,
-        pixiOnCutAllTokens,
-        pixiOnPasteToken,
-        pixiOnPasteBlast,
+        onCloseTokenDialog,
         tokens,
         tokensNotInMap,
         mapTexture,
         images,
         pendingCount,
         deleteMapDialogOpen,
-        deleteAllTokensDialogOpen,
         setDeleteMapDialogOpen,
         deleteTokenDialogOpen,
-        deleteAllWallsDialogOpen,
         tokenDialogsOpen,
         gridColorAnchor,
         wallColorAnchor,
         fullscreenImage,
         resolveImageUrl,
         onUploadImage,
-        handleUpdateInitiative,
+        panelInitOnChangeInitiative,
         panelInitOnMeleeAttack,
         panelInitOnRangedAttack,
         panelInitOnSkillCheck,
@@ -101,7 +87,6 @@ const CombatSimView = () => {
         setWallColorHex,
         setWallAlpha,
         paperRef,
-        deleteAllBlastsDialogOpen,
         setGridColorAnchor,
         setWallColorAnchor,
         rollHistory,
@@ -110,11 +95,11 @@ const CombatSimView = () => {
         blastClipboard,
         defaultTokens,
         gridSize,
-        setGridSize,
+        onGridSizeChange,
         gridColorHex,
         gridAlpha,
         snapToGrid,
-        setSnapToGrid,
+        onSnapToGridChange,
         isTokenPanelOpen,
         setTokens,
         openDeleteTokenDialog,
@@ -125,7 +110,7 @@ const CombatSimView = () => {
         currentRound,
         autoRerollInitiative,
         isCombatActive,
-        isSeriouslyWounded,
+        panelInitCheckSeriouslyWounded,
         panelInitOnUpdateTokenCurrent,
         isInitiativePanelOpen,
         autoRollDamage,
@@ -136,25 +121,89 @@ const CombatSimView = () => {
         setBlastDrawMode,
         setGridColorHex,
         setGridAlpha,
-        panelOnTokenDuplicate,
-        panelOnTokenCut,
-        panelOnTokenCopy,
+        panelTokenOnDuplicate,
+        panelTokenOnCut,
+        panelTokenOnCopy,
         panelInitOnSetAutoReroll,
         panelInitOnSetActiveToken,
         panelHistoryOnSetAutoRollDamage,
         panelHistoryOnClear,
         panelHistoryOnDelete,
+        deleteAllTokensDialogOpen,
+        deleteAllWallsDialogOpen,
+        deleteAllBlastsDialogOpen,
+        setBlasts,
+        setBlastsNotInMap,
+        getBlastsTable,
+        getTokensTable,
+        getWallsTable,
+        useSessionTables,
+        session,
+        setTokenClipboard,
+        setWalls,
+        setDeleteAllTokensDialogOpen,
+        setDeleteAllWallsDialogOpen,
+        setDeleteAllBlastsDialogOpen,
+    } = useCombatSim()
+
+    const {
+        pixiReady,
+        pixiSetReady,
+        pixiHostReady,
+        pixiSetHostReady,
+        pixiTokenContextMenuAnchor,
+        pixiSetTokenContextMenuAnchor,
+        pixiMapContextMenuAnchor,
+        pixiSetMapContextMenuAnchor,
+        pixiSelectedTokenId,
+        pixiSetSelectedTokenId,
+        pixiBlastContextMenuAnchor,
+        pixiSetBlastContextMenuAnchor,
+        pixiSelectedBlastId,
+        pixiSetSelectedBlastId,
+        pixiOnTokenDuplicate,
+        pixiOnTokenCut,
+        pixiOnTokenCopy,
+        pixiOnTokenDrop,
+        pixiOnWallDraw,
+        pixiOnBindPendingControls,
+        pixiOnBindFit,
+        pixiOnTokenMove,
+        pixiOnCutAllTokens,
+        pixiOnPasteToken,
+        pixiOnPasteBlast,
         pixiOnBlastMove,
         pixiOnBlastComplete,
         pixiOnBlastDrop,
         pixiOnBlastUpdateCone,
         pixiSidePanelWidth,
-        pixiReady,
-        setPixiReady,
-        closeDeleteAllTokensDialog,
-        closeDeleteAllWallsDialog,
-        closeDeleteAllBlastsDialog,
-    } = useCombatSim()
+    } = usePixi({
+        blasts,
+        blastsNotInMap,
+        tokens,
+        setTokens,
+        getActiveMapKey,
+        gridSize,
+        isTokenPanelOpen,
+        isInitiativePanelOpen,
+        isRollHistoryOpen,
+        isBlastPanelOpen,
+        setBlastDrawMode,
+        setTokensNotInMap,
+        tokensNotInMap,
+        setBlasts,
+        setBlastsNotInMap,
+        getBlastsTable,
+        getTokensTable,
+        getWallsTable,
+        useSessionTables,
+        session,
+        setTokenClipboard,
+        setWalls,
+        fitRef,
+        acceptAllRef,
+        cancelAllRef,
+    })
 
     return (
         <Container maxWidth={false} sx={{ pt: 0.5 }}>
@@ -166,12 +215,12 @@ const CombatSimView = () => {
                 onUploadMap={onUploadMap}
                 onSelectMap={onSelectMap}
                 gridSize={gridSize}
-                setGridSize={setGridSize}
+                onGridSizeChange={onGridSizeChange}
                 gridColorHex={gridColorHex}
                 gridAlpha={gridAlpha}
                 setGridColorAnchor={setGridColorAnchor}
                 snapToGrid={snapToGrid}
-                setSnapToGrid={setSnapToGrid}
+                onSnapToGridChange={onSnapToGridChange}
                 setDeleteMapDialogOpen={setDeleteMapDialogOpen}
             />
             <Paper
@@ -199,9 +248,9 @@ const CombatSimView = () => {
                     tokensNotInMap={tokensNotInMap}
                     defaultTokens={defaultTokens}
                     openDeleteTokenDialog={openDeleteTokenDialog}
-                    panelTokenDuplicate={panelOnTokenDuplicate}
-                    panelTokenCut={panelOnTokenCut}
-                    panelTokenCopy={panelOnTokenCopy}
+                    panelTokenDuplicate={panelTokenOnDuplicate}
+                    panelTokenCut={panelTokenOnCut}
+                    panelTokenCopy={panelTokenOnCopy}
                     isInitiativePanelOpen={isInitiativePanelOpen}
                     initiativeRolls={initiativeRolls}
                     activeTokenId={activeTokenId}
@@ -211,21 +260,21 @@ const CombatSimView = () => {
                     panelInitOnSetActiveToken={panelInitOnSetActiveToken}
                     handleNextTurn={panelInitOnNextTurn}
                     handleUpdateTokenCurrent={panelInitOnUpdateTokenCurrent}
-                    handleUpdateInitiative={handleUpdateInitiative}
+                    handleUpdateInitiative={panelInitOnChangeInitiative}
                     handleMeleeAttack={panelInitOnMeleeAttack}
                     handleRangedAttack={panelInitOnRangedAttack}
                     handleSkillCheck={panelInitOnSkillCheck}
                     handleGrenadeAttack={panelInitOnGrenadeAttack}
                     isCombatActive={isCombatActive}
                     handleToggleCombat={panelInitOnToggleCombat}
-                    isSeriouslyWounded={isSeriouslyWounded}
+                    isSeriouslyWounded={panelInitCheckSeriouslyWounded}
                     isRollHistoryOpen={isRollHistoryOpen}
                     rollHistory={rollHistory}
                     autoRollDamage={autoRollDamage}
                     panelHistoryOnSetAutoRollDamage={panelHistoryOnSetAutoRollDamage}
                     panelHistoryOnClear={panelHistoryOnClear}
                     panelHistoryOnDelete={panelHistoryOnDelete}
-                    handleRevealDamage={handleRevealDamage}
+                    handleRevealDamage={panelHistoryOnRevealDamage}
                     isBlastPanelOpen={isBlastPanelOpen}
                     blasts={blasts}
                     blastsNotInMap={blastsNotInMap}
@@ -241,48 +290,48 @@ const CombatSimView = () => {
                 <Box sx={{ position: 'relative', flex: 1, minWidth: 0 }}>
                     <PixiBoard
                         pixiReady={pixiReady}
-                        setPixiReady={setPixiReady}
-                        tokenClipboard={tokenClipboard}
+                        pixiSetReady={pixiSetReady}
+                        mapTexture={mapTexture}
+                        mapKey={getActiveMapKey()}
                         gridSize={gridSize}
+                        snapToGrid={snapToGrid}
+                        tokens={tokens}
+                        images={images}
+                        walls={walls}
+                        blasts={blasts}
+                        tokenClipboard={tokenClipboard}
                         width={dimensions.width}
                         height={dimensions.height}
-                        snapToGrid={snapToGrid}
                         isMeasuring={isMeasuring}
                         isWallMode={isWallMode}
                         wallDrawingShape={wallDrawingShape}
                         isErasingWalls={isErasingWalls}
                         isCombatActive={isCombatActive}
-                        mapKey={getActiveMapKey()}
-                        walls={walls}
-                        onWallsChange={pixiOnWallDraw}
                         onPendingCountChange={setPendingCount}
-                        onBindPendingControls={pixiOnBindPendingControls}
-                        onBindFit={pixiOnBindFit}
-                        mapTexture={mapTexture}
-                        tokens={tokens}
-                        images={images}
-                        onTokenMove={pixiOnTokenMove}
                         gridColor={hexToPixi(gridColorHex)}
                         gridAlpha={gridAlpha}
                         wallColor={hexToPixi(wallColorHex)}
                         wallAlpha={wallAlpha}
                         onTokenClick={onTokenClick}
                         openDeleteTokenDialog={openDeleteTokenDialog}
+                        onMapDeleteAllTokens={() => setDeleteAllTokensDialogOpen(true)}
+                        onMapDeleteAllWalls={() => setDeleteAllWallsDialogOpen(true)}
+                        onMapDeleteAllBlasts={() => setDeleteAllBlastsDialogOpen(true)}
+                        activeTokenId={activeTokenId}
+                        blastClipboard={blastClipboard}
+                        blastsNotInMap={blastsNotInMap}
+                        blastDrawMode={blastDrawMode}
+                        onTokenMove={pixiOnTokenMove}
+                        onBindPendingControls={pixiOnBindPendingControls}
+                        onWallsChange={pixiOnWallDraw}
+                        onBindFit={pixiOnBindFit}
                         pixiOnTokenDuplicate={pixiOnTokenDuplicate}
                         pixiOnTokenCut={pixiOnTokenCut}
                         pixiOnTokenCopy={pixiOnTokenCopy}
-                        onMapDeleteAllTokens={openDeleteAllTokensDialog}
-                        onMapDeleteAllWalls={openDeleteAllWallsDialog}
-                        onMapDeleteAllBlasts={openDeleteAllBlastsDialog}
                         onMapCutAllTokens={pixiOnCutAllTokens}
                         onMapPasteToken={pixiOnPasteToken}
                         onMapPasteBlast={pixiOnPasteBlast}
-                        activeTokenId={activeTokenId}
-                        blastClipboard={blastClipboard}
                         onTokenDrop={pixiOnTokenDrop}
-                        blasts={blasts}
-                        blastsNotInMap={blastsNotInMap}
-                        blastDrawMode={blastDrawMode}
                         onBlastDrop={pixiOnBlastDrop}
                         onBlastMove={pixiOnBlastMove}
                         onBlastComplete={pixiOnBlastComplete}
@@ -292,6 +341,18 @@ const CombatSimView = () => {
                         onBlastCut={onBlastCut}
                         onBlastLock={onBlastLock}
                         pixiSidePanelWidth={pixiSidePanelWidth}
+                        pixiHostReady={pixiHostReady}
+                        pixiSetHostReady={pixiSetHostReady}
+                        pixiTokenContextMenuAnchor={pixiTokenContextMenuAnchor}
+                        pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
+                        pixiMapContextMenuAnchor={pixiMapContextMenuAnchor}
+                        pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
+                        pixiSelectedTokenId={pixiSelectedTokenId}
+                        pixiSetSelectedTokenId={pixiSetSelectedTokenId}
+                        pixiBlastContextMenuAnchor={pixiBlastContextMenuAnchor}
+                        pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
+                        pixiSelectedBlastId={pixiSelectedBlastId}
+                        pixiSetSelectedBlastId={pixiSetSelectedBlastId}
                     />
                     {/* Debug info */}
                     {mapTexture && (
@@ -360,7 +421,7 @@ const CombatSimView = () => {
                 />
                 <WarningDialog
                     open={deleteAllTokensDialogOpen}
-                    onClose={closeDeleteAllTokensDialog}
+                    onClose={() => setDeleteAllTokensDialogOpen(false)}
                     onConfirm={onDeleteAllTokens}
                     title={t('common.clearAllConfirmTitle')}
                     message={t('common.clearAllConfirmMessage', {
@@ -384,7 +445,7 @@ const CombatSimView = () => {
                 />
                 <WarningDialog
                     open={deleteAllWallsDialogOpen}
-                    onClose={closeDeleteAllWallsDialog}
+                    onClose={() => setDeleteAllWallsDialogOpen(false)}
                     onConfirm={onDeleteAllWalls}
                     title={t('common.clearAllConfirmTitle')}
                     message={t('common.clearAllConfirmMessage', {
@@ -396,7 +457,7 @@ const CombatSimView = () => {
                 />
                 <WarningDialog
                     open={deleteAllBlastsDialogOpen}
-                    onClose={closeDeleteAllBlastsDialog}
+                    onClose={() => setDeleteAllBlastsDialogOpen(false)}
                     onConfirm={onDeleteAllBlasts}
                     title={t('common.clearAllConfirmTitle')}
                     message={t('common.clearAllConfirmMessage', {
@@ -413,7 +474,7 @@ const CombatSimView = () => {
                     key={tokenId}
                     maps={sortedMaps}
                     tokenDialogOpen={tokenId}
-                    setTokenDialogOpen={onTokenClick}
+                    onCloseTokenDialog={() => onCloseTokenDialog(tokenId)}
                     initialPosition={{ x: 100 + index * 50, y: 100 + index * 50 }}
                     tokens={[...defaultTokens, ...tokens, ...tokensNotInMap]}
                     images={images}

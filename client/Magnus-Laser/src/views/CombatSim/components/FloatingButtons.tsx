@@ -1,7 +1,7 @@
 import { useUserPreferences } from '@/contexts/userPreferencesHooks'
 import colors from '@/utils/colors'
-import { toAlphaHex } from '@/views/CombatSim/pixiUtils'
 import { BlastType, WallShape } from '@/views/CombatSim/types'
+import { toAlphaHex } from '@/views/CombatSim/utils/pixiUtils'
 import { Close, Done } from '@mui/icons-material'
 import { Box, Stack } from '@mui/material'
 import { Dispatch, RefObject, SetStateAction } from 'react'

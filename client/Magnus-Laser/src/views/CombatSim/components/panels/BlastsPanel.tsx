@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import CustomScrollbar from '../../../../components/CustomScrollbar'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import colors from '../../../../utils/colors'
-import { BlastContextMenu } from '../../BlastContextMenu'
 import { Blast, BlastType } from '../../types'
+import { BlastContextMenu } from '../contextMenus/BlastContextMenu'
 
 interface BlastsPanelProps {
     isSidePanelOpen: boolean

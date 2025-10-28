@@ -1,4 +1,4 @@
-import { pixiToCss } from '@/views/CombatSim/pixiUtils'
+import { pixiToCss } from '@/views/CombatSim/utils/pixiUtils'
 import { Add, ExpandMore } from '@mui/icons-material'
 import {
     Accordion,
@@ -18,9 +18,9 @@ import CustomScrollbar from '../../../../components/CustomScrollbar'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import colors from '../../../../utils/colors'
 import { db } from '../../../../utils/db'
-import { TokenContextMenu } from '../../TokenContextMenu'
-import { TokenTooltip } from '../../TokenTooltip'
 import { Token } from '../../types'
+import { TokenContextMenu } from '../contextMenus/TokenContextMenu'
+import { TokenTooltip } from '../TokenTooltip'
 
 interface TokenPanelProps {
     isSidePanelOpen: boolean

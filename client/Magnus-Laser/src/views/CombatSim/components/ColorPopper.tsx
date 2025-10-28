@@ -1,5 +1,5 @@
 import colors from '@/utils/colors'
-import { toAlphaHex } from '@/views/CombatSim/pixiUtils'
+import { toAlphaHex } from '@/views/CombatSim/utils/pixiUtils'
 import { Box, Popper } from '@mui/material'
 import { Colorful } from '@uiw/react-color'
 

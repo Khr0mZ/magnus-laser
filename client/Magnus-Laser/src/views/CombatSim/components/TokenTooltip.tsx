@@ -1,8 +1,8 @@
 import { Box, Grid, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import colors from '../../utils/colors'
-import { Token } from './types'
+import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
+import colors from '../../../utils/colors'
+import { Token } from '../types'
 
 interface TokenTooltipProps {
     token: Token
