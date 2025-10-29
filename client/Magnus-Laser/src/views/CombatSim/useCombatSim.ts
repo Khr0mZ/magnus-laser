@@ -132,7 +132,7 @@ const useCombatSim = () => {
     const [autoRerollInitiative, setAutoRerollInitiative] = useState(false)
     const [autoRollDamage, setAutoRollDamage] = useState(false)
     const [rollHistory, setRollHistory] = useState<RollHistoryEntry[]>([])
-    const [isRollHistoryOpen, setIsRollHistoryOpen] = useState(false)
+    const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false)
     const [isCombatActive, setIsCombatActive] = useState(false)
 
     // Session state
@@ -909,7 +909,7 @@ const useCombatSim = () => {
         await rollHistoryTable.put(entry)
     }
     // BLASTS
-    const onActivateDrawMode = (type: BlastType) => {
+    const onActivateBlastDrawMode = (type: BlastType) => {
         // Toggle off if clicking the same mode
         if (blastDrawMode === type) {
             setBlastDrawMode(null)
@@ -948,13 +948,7 @@ const useCombatSim = () => {
         setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, locked } : b)))
         setBlastsNotInMap((prev) => prev.map((b) => (b.id === blastId ? { ...b, locked } : b)))
     }
-    const openDeleteTokenDialog = (id: string | null) => {
-        setDeleteTokenDialogOpen(id)
-    }
-    const closeDeleteTokenDialog = () => {
-        setDeleteTokenDialogOpen(null)
-    }
-    const onTokenClick = (id: string | undefined) => {
+    const onOpenTokenDialog = (id: string | undefined) => {
         if (id) {
             setTokenDialogsOpen((prev) => (prev.includes(id) ? prev : [...prev, id]))
         }
@@ -1323,7 +1317,7 @@ const useCombatSim = () => {
         panelHistoryOnRevealDamage,
         blasts,
         blastsNotInMap,
-        onActivateDrawMode,
+        onActivateBlastDrawMode,
         onBlastDelete,
         onBlastCopy,
         onBlastCut,
@@ -1351,7 +1345,7 @@ const useCombatSim = () => {
         onDeleteToken,
         setDefaultTokens,
         setTokensNotInMap,
-        onTokenClick,
+        onOpenTokenDialog,
         onCloseTokenDialog,
         tokens,
         tokensNotInMap,
@@ -1382,7 +1376,7 @@ const useCombatSim = () => {
         setGridColorAnchor,
         setWallColorAnchor,
         rollHistory,
-        setIsRollHistoryOpen,
+        setIsHistoryPanelOpen,
         setIsBlastPanelOpen,
         blastClipboard,
         defaultTokens,
@@ -1392,8 +1386,7 @@ const useCombatSim = () => {
         snapToGrid,
         isTokenPanelOpen,
         setTokens,
-        openDeleteTokenDialog,
-        closeDeleteTokenDialog,
+        setDeleteTokenDialogOpen,
         setFullscreenImage,
         initiativeRolls,
         activeTokenId,
@@ -1404,7 +1397,7 @@ const useCombatSim = () => {
         panelInitOnUpdateTokenCurrent,
         isInitiativePanelOpen,
         autoRollDamage,
-        isRollHistoryOpen,
+        isHistoryPanelOpen,
         isBlastPanelOpen,
         blastDrawMode,
         fitRef,

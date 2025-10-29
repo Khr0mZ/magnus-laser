@@ -1,5 +1,6 @@
 mod server;
 mod tunnel;
+mod embedded_cloudflared;
 
 use crate::server::{generate_code, start_server, RoomSeed, ServerError, ServerHandle};
 use regex::Regex;

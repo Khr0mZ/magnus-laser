@@ -24,7 +24,7 @@ import { TokenTooltip } from '../TokenTooltip'
 
 interface TokenPanelProps {
     isSidePanelOpen: boolean
-    setTokenDialogOpen: (tokenId: string | undefined) => void
+    onOpenTokenDialog: (tokenId: string | undefined) => void
     getActiveMapKey: () => string
     setTokens: React.Dispatch<React.SetStateAction<Token[]>>
     resolveImageUrl: (imageId: string | undefined) => string | undefined
@@ -40,7 +40,7 @@ interface TokenPanelProps {
 
 const TokenPanel = ({
     isSidePanelOpen,
-    setTokenDialogOpen,
+    onOpenTokenDialog,
     getActiveMapKey,
     setTokens,
     resolveImageUrl,
@@ -157,7 +157,7 @@ const TokenPanel = ({
                         opacity: 0.5,
                     },
                 }}
-                onClick={() => setTokenDialogOpen(token.id)}
+                onClick={() => onOpenTokenDialog(token.id)}
                 onContextMenu={(e) => {
                     e.preventDefault()
                     if (!isDefault) {

@@ -6,7 +6,7 @@ import TokenPanel from './TokenPanel'
 
 interface CombatPanelsProps {
     isTokenPanelOpen: boolean
-    onTokenDialogOpen: (tokenId: string | undefined) => void
+    onOpenTokenDialog: (tokenId: string | undefined) => void
     getActiveMapKey: () => string
     setTokens: React.Dispatch<React.SetStateAction<Token[]>>
     resolveImageUrl: (imageId: string | undefined) => string | undefined
@@ -14,7 +14,7 @@ interface CombatPanelsProps {
     tokens: Token[]
     tokensNotInMap: Token[]
     defaultTokens: Token[]
-    openDeleteTokenDialog: (id: string) => void
+    setDeleteTokenDialogOpen: (id: string) => void
     panelTokenDuplicate: (id: string) => void
     panelTokenCut: (id: string) => void
     panelTokenCopy: (id: string) => void
@@ -46,7 +46,7 @@ interface CombatPanelsProps {
     blasts: Blast[]
     blastsNotInMap: Blast[]
     blastDrawMode: BlastType | null
-    onActivateDrawMode: (type: BlastType) => void
+    onActivateBlastDrawMode: (type: BlastType) => void
     onBlastDelete: (id: string) => void
     onBlastCopy: (id: string) => void
     onBlastCut: (id: string) => void
@@ -56,7 +56,7 @@ interface CombatPanelsProps {
 const CombatPanels = (props: CombatPanelsProps) => {
     const {
         isTokenPanelOpen,
-        onTokenDialogOpen,
+        onOpenTokenDialog,
         getActiveMapKey,
         setTokens,
         resolveImageUrl,
@@ -64,7 +64,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
         tokens,
         tokensNotInMap,
         defaultTokens,
-        openDeleteTokenDialog: setDeleteTokenDialogOpen,
+        setDeleteTokenDialogOpen,
         panelTokenDuplicate,
         panelTokenCut,
         panelTokenCopy,
@@ -96,7 +96,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
         blasts,
         blastsNotInMap,
         blastDrawMode,
-        onActivateDrawMode,
+        onActivateBlastDrawMode,
         onBlastDelete,
         onBlastCopy,
         onBlastCut,
@@ -107,7 +107,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
             {isTokenPanelOpen && (
                 <TokenPanel
                     isSidePanelOpen={isTokenPanelOpen}
-                    setTokenDialogOpen={onTokenDialogOpen}
+                    onOpenTokenDialog={onOpenTokenDialog}
                     getActiveMapKey={getActiveMapKey}
                     setTokens={setTokens}
                     resolveImageUrl={resolveImageUrl}
@@ -162,7 +162,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
                     blasts={blasts}
                     blastsNotInMap={blastsNotInMap}
                     blastDrawMode={blastDrawMode}
-                    onActivateDrawMode={onActivateDrawMode}
+                    onActivateBlastDrawMode={onActivateBlastDrawMode}
                     onBlastDelete={onBlastDelete}
                     onBlastCopy={onBlastCopy}
                     onBlastCut={onBlastCut}

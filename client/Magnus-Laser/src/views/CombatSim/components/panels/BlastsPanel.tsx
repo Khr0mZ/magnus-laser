@@ -14,7 +14,7 @@ interface BlastsPanelProps {
     blasts: Blast[]
     blastsNotInMap: Blast[]
     blastDrawMode: BlastType | null
-    onActivateDrawMode: (type: BlastType) => void
+    onActivateBlastDrawMode: (type: BlastType) => void
     onBlastDelete: (id: string) => void
     onBlastCopy: (id: string) => void
     onBlastCut: (id: string) => void
@@ -27,7 +27,7 @@ const BlastsPanel = ({
     blasts,
     blastsNotInMap,
     blastDrawMode,
-    onActivateDrawMode,
+    onActivateBlastDrawMode,
     onBlastDelete,
     onBlastCopy,
     onBlastCut,
@@ -143,7 +143,7 @@ const BlastsPanel = ({
                 }}
                 onClick={() => {
                     if (!isDraggable) {
-                        onActivateDrawMode(type)
+                        onActivateBlastDrawMode(type)
                     }
                 }}
                 sx={{

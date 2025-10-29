@@ -21,60 +21,111 @@ const CombatSimView = () => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
     const {
-        maps,
-        currentMap,
-        sortedMaps,
+        // MAP
+        dimensions,
+        paperRef,
+        fitRef,
+        onSelectMap,
         onReplaceMap,
         onUploadMap,
-        onSelectMap,
+        onDeleteMap,
         getActiveMapKey,
-        panelHistoryOnRevealDamage,
+        maps,
+        sortedMaps,
+        mapTexture,
+        currentMap,
+        // GRID
+        onGridSizeChange,
+        gridSize,
+        onSnapToGridChange,
+        snapToGrid,
+        setGridColorHex,
+        gridColorHex,
+        setGridAlpha,
+        gridAlpha,
+        setGridColorAnchor,
+        gridColorAnchor,
+        // TOKENS, WALLS, BLASTS
+        setDefaultTokens,
+        defaultTokens,
+        setTokens,
+        tokens,
+        setTokensNotInMap,
+        tokensNotInMap,
+        setWalls,
+        walls,
+        setBlasts,
         blasts,
+        setBlastsNotInMap,
         blastsNotInMap,
-        onActivateDrawMode,
+        // DELETE DIALOGS
+        setDeleteTokenDialogOpen,
+        deleteTokenDialogOpen,
+        setDeleteAllTokensDialogOpen,
+        deleteAllTokensDialogOpen,
+        setDeleteAllWallsDialogOpen,
+        deleteAllWallsDialogOpen,
+        setDeleteAllBlastsDialogOpen,
+        deleteAllBlastsDialogOpen,
+        setDeleteMapDialogOpen,
+        deleteMapDialogOpen,
+        // CLIPBOARDS
+        setTokenClipboard,
+        tokenClipboard,
+        blastClipboard,
+        // FLOATING BUTTONS
+        setIsMeasuring,
+        isMeasuring,
+        setIsWallMode,
+        isWallMode,
+        setWallDrawingShape,
+        wallDrawingShape,
+        setIsErasingWalls,
+        isErasingWalls,
+        setWallColorHex,
+        wallColorHex,
+        setWallAlpha,
+        wallAlpha,
+        setWallColorAnchor,
+        wallColorAnchor,
+        setBlastDrawMode,
+        blastDrawMode,
+        onActivateBlastDrawMode,
+        acceptAllRef,
+        cancelAllRef,
+        // CONTEXT MENUS
         onBlastDelete,
         onBlastCopy,
         onBlastCut,
         onBlastLock,
-        tokenClipboard,
-        dimensions,
-        isMeasuring,
-        isWallMode,
-        wallDrawingShape,
-        isErasingWalls,
-        walls,
-        setPendingCount,
-        acceptAllRef,
-        cancelAllRef,
-        wallAlpha,
-        wallColorHex,
-        setIsMeasuring,
-        setIsWallMode,
-        setIsErasingWalls,
-        setIsTokenPanelOpen,
-        setIsInitiativePanelOpen,
-        setWallDrawingShape,
-        onDeleteMap,
-        onDeleteAllTokens,
         onDeleteToken,
-        setDefaultTokens,
-        setTokensNotInMap,
-        onTokenClick,
+        onDeleteAllTokens,
+        onDeleteAllWalls,
+        onDeleteAllBlasts,
+        // TOKEN DETAILS DIALOGS
+        onOpenTokenDialog,
         onCloseTokenDialog,
-        tokens,
-        tokensNotInMap,
-        mapTexture,
-        images,
-        pendingCount,
-        deleteMapDialogOpen,
-        setDeleteMapDialogOpen,
-        deleteTokenDialogOpen,
         tokenDialogsOpen,
-        gridColorAnchor,
-        wallColorAnchor,
+        onUploadImage,
+        images,
+        setFullscreenImage,
         fullscreenImage,
         resolveImageUrl,
-        onUploadImage,
+        // TOKEN PANEL
+        setIsTokenPanelOpen,
+        isTokenPanelOpen,
+        panelTokenOnDuplicate,
+        panelTokenOnCut,
+        panelTokenOnCopy,
+        setPendingCount,
+        pendingCount,
+        // INITIATIVE PANEL
+        setIsInitiativePanelOpen,
+        isInitiativePanelOpen,
+        panelInitOnSetAutoReroll,
+        panelInitOnSetActiveToken,
+        panelInitCheckSeriouslyWounded,
+        panelInitOnUpdateTokenCurrent,
         panelInitOnChangeInitiative,
         panelInitOnMeleeAttack,
         panelInitOnRangedAttack,
@@ -82,85 +133,46 @@ const CombatSimView = () => {
         panelInitOnGrenadeAttack,
         panelInitOnNextTurn,
         panelInitOnToggleCombat,
-        onDeleteAllWalls,
-        onDeleteAllBlasts,
-        setWallColorHex,
-        setWallAlpha,
-        paperRef,
-        setGridColorAnchor,
-        setWallColorAnchor,
-        rollHistory,
-        setIsRollHistoryOpen,
-        setIsBlastPanelOpen,
-        blastClipboard,
-        defaultTokens,
-        gridSize,
-        onGridSizeChange,
-        gridColorHex,
-        gridAlpha,
-        snapToGrid,
-        onSnapToGridChange,
-        isTokenPanelOpen,
-        setTokens,
-        openDeleteTokenDialog,
-        closeDeleteTokenDialog,
-        setFullscreenImage,
-        initiativeRolls,
+        isCombatActive,
+        autoRerollInitiative,
         activeTokenId,
         currentRound,
-        autoRerollInitiative,
-        isCombatActive,
-        panelInitCheckSeriouslyWounded,
-        panelInitOnUpdateTokenCurrent,
-        isInitiativePanelOpen,
-        autoRollDamage,
-        isRollHistoryOpen,
-        isBlastPanelOpen,
-        blastDrawMode,
-        fitRef,
-        setBlastDrawMode,
-        setGridColorHex,
-        setGridAlpha,
-        panelTokenOnDuplicate,
-        panelTokenOnCut,
-        panelTokenOnCopy,
-        panelInitOnSetAutoReroll,
-        panelInitOnSetActiveToken,
+        initiativeRolls,
+        // ROLL HISTORY PANEL
+        setIsHistoryPanelOpen,
+        isHistoryPanelOpen,
+        panelHistoryOnRevealDamage,
         panelHistoryOnSetAutoRollDamage,
         panelHistoryOnClear,
         panelHistoryOnDelete,
-        deleteAllTokensDialogOpen,
-        deleteAllWallsDialogOpen,
-        deleteAllBlastsDialogOpen,
-        setBlasts,
-        setBlastsNotInMap,
+        rollHistory,
+        autoRollDamage,
+        // BLAST PANEL
+        setIsBlastPanelOpen,
+        isBlastPanelOpen,
+        // SESSION
+        useSessionTables,
+        session,
         getBlastsTable,
         getTokensTable,
         getWallsTable,
-        useSessionTables,
-        session,
-        setTokenClipboard,
-        setWalls,
-        setDeleteAllTokensDialogOpen,
-        setDeleteAllWallsDialogOpen,
-        setDeleteAllBlastsDialogOpen,
     } = useCombatSim()
 
     const {
-        pixiReady,
         pixiSetReady,
-        pixiHostReady,
+        pixiReady,
         pixiSetHostReady,
-        pixiTokenContextMenuAnchor,
+        pixiHostReady,
         pixiSetTokenContextMenuAnchor,
-        pixiMapContextMenuAnchor,
+        pixiTokenContextMenuAnchor,
         pixiSetMapContextMenuAnchor,
-        pixiSelectedTokenId,
+        pixiMapContextMenuAnchor,
         pixiSetSelectedTokenId,
-        pixiBlastContextMenuAnchor,
+        pixiSelectedTokenId,
         pixiSetBlastContextMenuAnchor,
-        pixiSelectedBlastId,
+        pixiBlastContextMenuAnchor,
         pixiSetSelectedBlastId,
+        pixiSelectedBlastId,
         pixiOnTokenDuplicate,
         pixiOnTokenCut,
         pixiOnTokenCopy,
@@ -186,7 +198,7 @@ const CombatSimView = () => {
         gridSize,
         isTokenPanelOpen,
         isInitiativePanelOpen,
-        isRollHistoryOpen,
+        isRollHistoryOpen: isHistoryPanelOpen,
         isBlastPanelOpen,
         setBlastDrawMode,
         setTokensNotInMap,
@@ -239,7 +251,7 @@ const CombatSimView = () => {
                 {/* Left panels - can show both simultaneously */}
                 <CombatPanels
                     isTokenPanelOpen={isTokenPanelOpen}
-                    onTokenDialogOpen={onTokenClick}
+                    onOpenTokenDialog={onOpenTokenDialog}
                     getActiveMapKey={getActiveMapKey}
                     setTokens={setTokens}
                     resolveImageUrl={resolveImageUrl}
@@ -247,7 +259,7 @@ const CombatSimView = () => {
                     tokens={tokens}
                     tokensNotInMap={tokensNotInMap}
                     defaultTokens={defaultTokens}
-                    openDeleteTokenDialog={openDeleteTokenDialog}
+                    setDeleteTokenDialogOpen={setDeleteTokenDialogOpen}
                     panelTokenDuplicate={panelTokenOnDuplicate}
                     panelTokenCut={panelTokenOnCut}
                     panelTokenCopy={panelTokenOnCopy}
@@ -268,7 +280,7 @@ const CombatSimView = () => {
                     isCombatActive={isCombatActive}
                     handleToggleCombat={panelInitOnToggleCombat}
                     isSeriouslyWounded={panelInitCheckSeriouslyWounded}
-                    isRollHistoryOpen={isRollHistoryOpen}
+                    isRollHistoryOpen={isHistoryPanelOpen}
                     rollHistory={rollHistory}
                     autoRollDamage={autoRollDamage}
                     panelHistoryOnSetAutoRollDamage={panelHistoryOnSetAutoRollDamage}
@@ -279,7 +291,7 @@ const CombatSimView = () => {
                     blasts={blasts}
                     blastsNotInMap={blastsNotInMap}
                     blastDrawMode={blastDrawMode}
-                    onActivateDrawMode={onActivateDrawMode}
+                    onActivateBlastDrawMode={onActivateBlastDrawMode}
                     onBlastDelete={onBlastDelete}
                     onBlastCopy={onBlastCopy}
                     onBlastCut={onBlastCut}
@@ -291,6 +303,34 @@ const CombatSimView = () => {
                     <PixiBoard
                         pixiReady={pixiReady}
                         pixiSetReady={pixiSetReady}
+                        pixiOnTokenMove={pixiOnTokenMove}
+                        pixiOnBindPendingControls={pixiOnBindPendingControls}
+                        pixiOnWallDraw={pixiOnWallDraw}
+                        pixiOnBindFit={pixiOnBindFit}
+                        pixiOnTokenDuplicate={pixiOnTokenDuplicate}
+                        pixiOnTokenCut={pixiOnTokenCut}
+                        pixiOnTokenCopy={pixiOnTokenCopy}
+                        pixiOnCutAllTokens={pixiOnCutAllTokens}
+                        pixiOnPasteToken={pixiOnPasteToken}
+                        pixiOnPasteBlast={pixiOnPasteBlast}
+                        pixiOnTokenDrop={pixiOnTokenDrop}
+                        pixiOnBlastDrop={pixiOnBlastDrop}
+                        pixiOnBlastMove={pixiOnBlastMove}
+                        pixiOnBlastComplete={pixiOnBlastComplete}
+                        onBlastpixiOnBlastUpdateConepdateCone={pixiOnBlastUpdateCone}
+                        pixiSidePanelWidth={pixiSidePanelWidth}
+                        pixiHostReady={pixiHostReady}
+                        pixiSetHostReady={pixiSetHostReady}
+                        pixiTokenContextMenuAnchor={pixiTokenContextMenuAnchor}
+                        pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
+                        pixiMapContextMenuAnchor={pixiMapContextMenuAnchor}
+                        pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
+                        pixiSelectedTokenId={pixiSelectedTokenId}
+                        pixiSetSelectedTokenId={pixiSetSelectedTokenId}
+                        pixiBlastContextMenuAnchor={pixiBlastContextMenuAnchor}
+                        pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
+                        pixiSelectedBlastId={pixiSelectedBlastId}
+                        pixiSetSelectedBlastId={pixiSetSelectedBlastId}
                         mapTexture={mapTexture}
                         mapKey={getActiveMapKey()}
                         gridSize={gridSize}
@@ -312,8 +352,8 @@ const CombatSimView = () => {
                         gridAlpha={gridAlpha}
                         wallColor={hexToPixi(wallColorHex)}
                         wallAlpha={wallAlpha}
-                        onTokenClick={onTokenClick}
-                        openDeleteTokenDialog={openDeleteTokenDialog}
+                        onOpenTokenDialog={onOpenTokenDialog}
+                        setDeleteTokenDialogOpen={setDeleteTokenDialogOpen}
                         onMapDeleteAllTokens={() => setDeleteAllTokensDialogOpen(true)}
                         onMapDeleteAllWalls={() => setDeleteAllWallsDialogOpen(true)}
                         onMapDeleteAllBlasts={() => setDeleteAllBlastsDialogOpen(true)}
@@ -321,38 +361,10 @@ const CombatSimView = () => {
                         blastClipboard={blastClipboard}
                         blastsNotInMap={blastsNotInMap}
                         blastDrawMode={blastDrawMode}
-                        onTokenMove={pixiOnTokenMove}
-                        onBindPendingControls={pixiOnBindPendingControls}
-                        onWallsChange={pixiOnWallDraw}
-                        onBindFit={pixiOnBindFit}
-                        pixiOnTokenDuplicate={pixiOnTokenDuplicate}
-                        pixiOnTokenCut={pixiOnTokenCut}
-                        pixiOnTokenCopy={pixiOnTokenCopy}
-                        onMapCutAllTokens={pixiOnCutAllTokens}
-                        onMapPasteToken={pixiOnPasteToken}
-                        onMapPasteBlast={pixiOnPasteBlast}
-                        onTokenDrop={pixiOnTokenDrop}
-                        onBlastDrop={pixiOnBlastDrop}
-                        onBlastMove={pixiOnBlastMove}
-                        onBlastComplete={pixiOnBlastComplete}
-                        onBlastUpdateCone={pixiOnBlastUpdateCone}
                         onBlastDelete={onBlastDelete}
                         onBlastCopy={onBlastCopy}
                         onBlastCut={onBlastCut}
                         onBlastLock={onBlastLock}
-                        pixiSidePanelWidth={pixiSidePanelWidth}
-                        pixiHostReady={pixiHostReady}
-                        pixiSetHostReady={pixiSetHostReady}
-                        pixiTokenContextMenuAnchor={pixiTokenContextMenuAnchor}
-                        pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
-                        pixiMapContextMenuAnchor={pixiMapContextMenuAnchor}
-                        pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
-                        pixiSelectedTokenId={pixiSelectedTokenId}
-                        pixiSetSelectedTokenId={pixiSetSelectedTokenId}
-                        pixiBlastContextMenuAnchor={pixiBlastContextMenuAnchor}
-                        pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
-                        pixiSelectedBlastId={pixiSelectedBlastId}
-                        pixiSetSelectedBlastId={pixiSetSelectedBlastId}
                     />
                     {/* Debug info */}
                     {mapTexture && (
@@ -389,8 +401,8 @@ const CombatSimView = () => {
                         setIsTokenPanelOpen={setIsTokenPanelOpen}
                         isInitiativePanelOpen={isInitiativePanelOpen}
                         setIsInitiativePanelOpen={setIsInitiativePanelOpen}
-                        isRollHistoryOpen={isRollHistoryOpen}
-                        setIsRollHistoryOpen={setIsRollHistoryOpen}
+                        isRollHistoryOpen={isHistoryPanelOpen}
+                        setIsRollHistoryOpen={setIsHistoryPanelOpen}
                         isBlastPanelOpen={isBlastPanelOpen}
                         setIsBlastPanelOpen={setIsBlastPanelOpen}
                         acceptAllRef={acceptAllRef}
@@ -433,7 +445,7 @@ const CombatSimView = () => {
                 />
                 <WarningDialog
                     open={deleteTokenDialogOpen !== null}
-                    onClose={closeDeleteTokenDialog}
+                    onClose={() => setDeleteTokenDialogOpen(null)}
                     onConfirm={onDeleteToken}
                     title={t('common.deleteConfirmTitle')}
                     message={t('common.deleteConfirmMessage', {
@@ -511,7 +523,7 @@ const CombatSimView = () => {
                             }
                         }
                     }}
-                    openDeleteTokenDialog={openDeleteTokenDialog}
+                    setDeleteTokenDialogOpen={setDeleteTokenDialogOpen}
                     onUploadImage={onUploadImage}
                     toggleFullscreenImage={setFullscreenImage}
                     resolveImageUrl={resolveImageUrl}

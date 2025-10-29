@@ -46,43 +46,43 @@ type PixiBoardProps = {
     wallDrawingShape: WallShape | undefined
     mapKey: string
     mapTexture: Texture | null
-    onBindFit: (fn: () => void) => void
+    pixiOnBindFit: (fn: () => void) => void
     tokens: Token[]
     images: ImageData[]
-    onTokenMove: (id: string, x: number, y: number, distanceTraveled?: number) => void
+    pixiOnTokenMove: (id: string, x: number, y: number, distanceTraveled?: number) => void
     onPendingCountChange: (count: number) => void
-    onBindPendingControls: (acceptAll: () => void, cancelAll: () => void) => void
+    pixiOnBindPendingControls: (acceptAll: () => void, cancelAll: () => void) => void
     gridColor: number
     gridAlpha: number
     wallColor: number
     wallAlpha: number
     walls: Wall[]
-    onWallsChange: (walls: Wall[], mapKey: string) => void
+    pixiOnWallDraw: (walls: Wall[], mapKey: string) => void
     isErasingWalls: boolean
     isCombatActive: boolean
-    onTokenClick: (id: string) => void
-    openDeleteTokenDialog: (id: string) => void
+    onOpenTokenDialog: (id: string) => void
+    setDeleteTokenDialogOpen: (id: string) => void
     pixiOnTokenDuplicate: (id: string) => void
     pixiOnTokenCut: (id: string) => void
     pixiOnTokenCopy: (id: string) => void
     onMapDeleteAllTokens: () => void
     onMapDeleteAllWalls: () => void
     onMapDeleteAllBlasts: () => void
-    onMapCutAllTokens: () => void
-    onMapPasteToken: (tokens: Token[]) => void
-    onMapPasteBlast: (blasts: Blast[]) => void
+    pixiOnCutAllTokens: () => void
+    pixiOnPasteToken: (tokens: Token[]) => void
+    pixiOnPasteBlast: (blasts: Blast[]) => void
     tokenClipboard: Token[] | null
     blastClipboard: Blast[] | null
     activeTokenId: string | null
-    onTokenDrop?: (tokenId: string, worldX: number, worldY: number) => void
+    pixiOnTokenDrop?: (tokenId: string, worldX: number, worldY: number) => void
     pixiSidePanelWidth: number
     blasts: Blast[]
     blastsNotInMap: Blast[]
     blastDrawMode: BlastType | null
-    onBlastDrop?: (blastData: { type: BlastType; id?: string }, worldX: number, worldY: number) => void
-    onBlastMove?: (blastId: string, worldX: number, worldY: number) => void
-    onBlastComplete?: (blast: Blast) => void
-    onBlastUpdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
+    pixiOnBlastDrop?: (blastData: { type: BlastType; id?: string }, worldX: number, worldY: number) => void
+    pixiOnBlastMove?: (blastId: string, worldX: number, worldY: number) => void
+    pixiOnBlastComplete?: (blast: Blast) => void
+    onBlastpixiOnBlastUpdateConepdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
     onBlastDelete?: (id: string) => void
     onBlastCopy?: (id: string) => void
     onBlastCut?: (id: string) => void
@@ -113,12 +113,12 @@ const PixiBoard = (props: PixiBoardProps) => {
         isWallMode = false,
         wallDrawingShape = undefined,
         mapTexture,
-        onBindFit,
+        pixiOnBindFit: onBindFit,
         tokens = [],
         images = [],
-        onTokenMove,
+        pixiOnTokenMove: onTokenMove,
         onPendingCountChange,
-        onBindPendingControls,
+        pixiOnBindPendingControls: onBindPendingControls,
         gridColor = 0xffffff,
         gridAlpha = 0.5,
         wallColor = DEFAULT_WALL_COLOR,
@@ -126,31 +126,31 @@ const PixiBoard = (props: PixiBoardProps) => {
         wallAlpha = DEFAULT_WALL_ALPHA,
         mapKey,
         walls = [],
-        onWallsChange,
+        pixiOnWallDraw: onWallsChange,
         isErasingWalls = false,
         isCombatActive = false,
-        onTokenClick,
-        openDeleteTokenDialog,
+        onOpenTokenDialog,
+        setDeleteTokenDialogOpen,
         pixiOnTokenDuplicate,
         pixiOnTokenCut,
         pixiOnTokenCopy,
         onMapDeleteAllTokens,
         onMapDeleteAllWalls,
         onMapDeleteAllBlasts,
-        onMapCutAllTokens,
-        onMapPasteToken,
-        onMapPasteBlast,
+        pixiOnCutAllTokens: onMapCutAllTokens,
+        pixiOnPasteToken: onMapPasteToken,
+        pixiOnPasteBlast: onMapPasteBlast,
         tokenClipboard,
         blastClipboard,
         activeTokenId,
-        onTokenDrop,
+        pixiOnTokenDrop: onTokenDrop,
         blasts = [],
         blastsNotInMap = [],
         blastDrawMode,
-        onBlastDrop,
-        onBlastMove,
-        onBlastComplete,
-        onBlastUpdateCone,
+        pixiOnBlastDrop: onBlastDrop,
+        pixiOnBlastMove: onBlastMove,
+        pixiOnBlastComplete: onBlastComplete,
+        onBlastpixiOnBlastUpdateConepdateCone: onBlastUpdateCone,
         onBlastDelete,
         onBlastCopy,
         onBlastCut,
@@ -1708,9 +1708,9 @@ const PixiBoard = (props: PixiBoardProps) => {
                             cand.id === endedId &&
                             !isWallModeRef.current &&
                             !isMeasuringRef.current &&
-                            typeof onTokenClick === 'function'
+                            typeof onOpenTokenDialog === 'function'
                         ) {
-                            onTokenClick(cand.id)
+                            onOpenTokenDialog(cand.id)
                         }
                     }
                     dragPreviewRef.current = null
@@ -2742,7 +2742,7 @@ const PixiBoard = (props: PixiBoardProps) => {
             <TokenContextMenu
                 anchorEl={pixiTokenContextMenuAnchor}
                 tokenId={pixiSelectedTokenId}
-                onDelete={openDeleteTokenDialog}
+                onDelete={setDeleteTokenDialogOpen}
                 onDuplicate={pixiOnTokenDuplicate}
                 onCopy={pixiOnTokenCopy}
                 onCut={pixiOnTokenCut}
