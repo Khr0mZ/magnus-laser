@@ -8,8 +8,6 @@ use tokio::{
 };
 
 #[cfg(windows)]
-use std::os::windows::process::CommandExt;
-
 use crate::embedded_cloudflared::{CLOUDFLARED_BINARY, CLOUDFLARED_BINARY_NAME};
 
 
