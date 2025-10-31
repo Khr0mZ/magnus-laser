@@ -51,10 +51,12 @@ interface CombatPanelsProps {
     onBlastCopy: (id: string) => void
     onBlastCut: (id: string) => void
     onBlastLock: (id: string, locked: boolean) => void
+    isPlayerConnected: boolean
 }
 
 const CombatPanels = (props: CombatPanelsProps) => {
     const {
+        isPlayerConnected,
         isTokenPanelOpen,
         onOpenTokenDialog,
         getActiveMapKey,
@@ -142,6 +144,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
                     isCombatActive={isCombatActive}
                     onToggleCombat={handleToggleCombat}
                     isSeriouslyWounded={isSeriouslyWounded}
+                    isPlayerConnected={isPlayerConnected}
                 />
             )}
             {isRollHistoryOpen && (
@@ -153,6 +156,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
                     onClear={panelHistoryOnClear}
                     onDelete={panelHistoryOnDelete}
                     onRevealDamage={handleRevealDamage}
+                    isPlayerConnected={isPlayerConnected}
                 />
             )}
             {isBlastPanelOpen && (

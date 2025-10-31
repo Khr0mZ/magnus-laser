@@ -7,6 +7,7 @@ import useCombatSim from '@/views/CombatSim/useCombatSim'
 import usePixi from '@/views/CombatSim/usePixi'
 import { hexToPixi } from '@/views/CombatSim/utils/pixiUtils'
 import { Box, Container, Paper, Typography } from '@mui/material'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
@@ -156,6 +157,7 @@ const CombatSimView = () => {
         getBlastsTable,
         getTokensTable,
         getWallsTable,
+        isPlayerConnected,
     } = useCombatSim()
 
     const {
@@ -198,7 +200,7 @@ const CombatSimView = () => {
         gridSize,
         isTokenPanelOpen,
         isInitiativePanelOpen,
-        isRollHistoryOpen: isHistoryPanelOpen,
+        isHistoryPanelOpen,
         isBlastPanelOpen,
         setBlastDrawMode,
         setTokensNotInMap,
@@ -217,9 +219,34 @@ const CombatSimView = () => {
         cancelAllRef,
     })
 
+    // Track previous token positions for cleanup event dispatching
+    const prevTokensRef = useRef<Token[]>([])
+
+    // Dispatch cleanup events when tokens move (for session sync updates)
+    useEffect(() => {
+        const movedTokens = tokens.filter((token, index) => {
+            const prevToken = prevTokensRef.current[index]
+            return prevToken && (prevToken.x !== token.x || prevToken.y !== token.y) && prevToken.id === token.id
+        })
+
+        // Dispatch cleanup events for moved tokens
+        movedTokens.forEach((token) => {
+            if (typeof window !== 'undefined') {
+                const cleanupEvent = new CustomEvent('cleanupPendingMovement', {
+                    detail: { tokenId: token.id },
+                })
+                window.dispatchEvent(cleanupEvent)
+            }
+        })
+
+        // Update previous tokens reference
+        prevTokensRef.current = tokens.map((t) => ({ ...t }))
+    }, [tokens])
+
     return (
         <Container maxWidth={false} sx={{ pt: 0.5 }}>
             <CombatSimHeader
+                isPlayerConnected={isPlayerConnected}
                 maps={maps}
                 currentMap={currentMap}
                 sortedMaps={sortedMaps}
@@ -250,6 +277,7 @@ const CombatSimView = () => {
             >
                 {/* Left panels - can show both simultaneously */}
                 <CombatPanels
+                    isPlayerConnected={isPlayerConnected}
                     isTokenPanelOpen={isTokenPanelOpen}
                     onOpenTokenDialog={onOpenTokenDialog}
                     getActiveMapKey={getActiveMapKey}
@@ -365,6 +393,7 @@ const CombatSimView = () => {
                         onBlastCopy={onBlastCopy}
                         onBlastCut={onBlastCut}
                         onBlastLock={onBlastLock}
+                        isPlayerConnected={isPlayerConnected}
                     />
                     {/* Debug info */}
                     {mapTexture && (
@@ -414,6 +443,7 @@ const CombatSimView = () => {
                         wallColorHex={wallColorHex}
                         wallAlpha={wallAlpha}
                         pendingCount={pendingCount}
+                        isPlayerConnected={isPlayerConnected}
                     />
                 </Box>
             </Paper>

@@ -96,6 +96,12 @@ function isCombatSimMutation(v: unknown): v is CombatSimMutationMsg {
     return isObject(v) && v.kind === 'COMBAT_SIM_MUTATION' && Array.isArray(v.ops)
 }
 
+type PendingMovementMsg = { kind: 'PENDING_MOVEMENT'; tokenId: string; points: { x: number; y: number }[]; mapId: string }
+
+function isPendingMovement(v: unknown): v is PendingMovementMsg {
+    return isObject(v) && v.kind === 'PENDING_MOVEMENT' && typeof v.tokenId === 'string' && Array.isArray(v.points) && typeof v.mapId === 'string'
+}
+
 async function bytesSHA256Base64(bytes: Uint8Array): Promise<string> {
     const ab =
         bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
@@ -456,6 +462,34 @@ async function handleInboundMessage(
                 const actorPeer = state.peers.find((p) => p.id === actorId)
                 const actorName = actorPeer?.name ?? ''
                 const payload: unknown = msg.action
+                // Handle PENDING_MOVEMENT actions (DM receives from players, DM broadcasts to all)
+                if (isPendingMovement(payload)) {
+                    // Dispatch event for local UI to show pending movement overlay
+                    const event = new CustomEvent('pendingMovementReceived', {
+                        detail: {
+                            tokenId: payload.tokenId,
+                            points: payload.points,
+                            mapId: payload.mapId,
+                            actorId: actorId,
+                            actorName: actorName,
+                        },
+                    })
+                    window.dispatchEvent(event)
+
+                    // DM broadcasts to all connected players
+                    if (state.role === 'dm') {
+                        for (const peer of runtime.rtcConnectedPeers) {
+                            runtime.webrtc?.sendToPeer(peer, {
+                                t: 'ACTION',
+                                id: `${msg.id}-broadcast`,
+                                actor: runtime.selfId ?? 'dm',
+                                action: payload,
+                            } as WireMsg)
+                        }
+                    }
+                    break
+                }
+
                 // Player-side: handle incoming asset chunks
                 if (state.role !== 'dm') {
                     if (isAssetChunk(payload)) {
@@ -728,6 +762,16 @@ async function handleInboundMessage(
                         if (op.op === 'update') {
                             const { id, ...changes } = rec
                             await db.tokens.update(id as string, changes)
+
+                            // Dispatch cleanup event for pending movements if token moved
+                            if (changes.x !== undefined || changes.y !== undefined) {
+                                if (typeof window !== 'undefined') {
+                                    const cleanupEvent = new CustomEvent('cleanupPendingMovement', {
+                                        detail: { tokenId: id }
+                                    })
+                                    window.dispatchEvent(cleanupEvent)
+                                }
+                            }
                         } else if (op.op === 'delete') {
                             await db.tokens.delete(rec.id as string)
                         }

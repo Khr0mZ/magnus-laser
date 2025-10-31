@@ -14,10 +14,10 @@ const isTauri = () =>
         ?.core?.invoke === 'function'
 const NavigationDrawer = () => {
     const { readerMode } = useUserPreferences()
-    const { session, connected, role } = useSession()
+    const { session, connected } = useSession()
     // For players, show as connected if they have a session (they're in the session)
     // For DMs, show as connected only when WebRTC is connected
-    const isConnected = Boolean(session && (role === 'player' || connected))
+    const isConnected = Boolean(session && connected)
 
     return (
         <Box sx={{ mb: 11 }}>

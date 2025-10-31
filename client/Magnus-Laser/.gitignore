@@ -26,3 +26,6 @@ dist-ssr
 
 # .history
 .history
+
+# Tauri generated files
+src-tauri/src/embedded_cloudflared.rs

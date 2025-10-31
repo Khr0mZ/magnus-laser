@@ -4,6 +4,13 @@ import type { Image as ImageData, Token } from '../types'
 // Texture cache for preloaded images
 const textureCache = new Map<string, Texture>()
 
+// Callback for when textures are loaded
+let onTexturesReady: (() => void) | null = null
+
+export function setTexturesReadyCallback(callback: () => void) {
+    onTexturesReady = callback
+}
+
 // Persistent caches for sprites and labels (keyed by token id)
 const spriteCache = new Map<string, Sprite>()
 const labelCache = new Map<string, Text>()
@@ -112,8 +119,19 @@ export function preloadTextures(images: ImageData[]) {
     }
 
     // Load new textures
+    let loadingCount = 0
+    let loadedCount = 0
+
+    const checkAllLoaded = () => {
+        loadedCount++
+        if (loadedCount >= loadingCount && onTexturesReady) {
+            onTexturesReady()
+        }
+    }
+
     for (const image of images) {
         if (!textureCache.has(image.id)) {
+            loadingCount++
             try {
                 const url = URL.createObjectURL(image.blob)
                 const img = new globalThis.Image()
@@ -127,18 +145,26 @@ export function preloadTextures(images: ImageData[]) {
                         console.error('Error creating texture for image:', image.id, error)
                     }
                     URL.revokeObjectURL(url)
+                    checkAllLoaded()
                 }
 
                 img.onerror = () => {
                     console.error('Failed to load image for texture:', image.id)
                     URL.revokeObjectURL(url)
+                    checkAllLoaded()
                 }
 
                 img.src = url
             } catch (error) {
                 console.error('Error setting up texture loading for image:', image.id, error)
+                loadingCount--
             }
         }
+    }
+
+    // If no textures are loading, call callback immediately
+    if (loadingCount === 0 && onTexturesReady) {
+        onTexturesReady()
     }
 }
 

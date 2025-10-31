@@ -39,6 +39,7 @@ interface InitiativePanelProps {
     isCombatActive: boolean
     onToggleCombat: () => void
     isSeriouslyWounded: (token: Token) => boolean
+    isPlayerConnected: boolean
 }
 
 const InitiativePanel = ({
@@ -61,6 +62,7 @@ const InitiativePanel = ({
     isCombatActive,
     onToggleCombat,
     isSeriouslyWounded,
+    isPlayerConnected,
 }: InitiativePanelProps) => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
@@ -174,23 +176,29 @@ const InitiativePanel = ({
                 {/* Header */}
                 <Box>
                     <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-                        <IconButton
-                            onClick={onToggleCombat}
-                            sx={{
-                                color: isCombatActive ? colors.neons.red.default : colors.neons.green.default,
-                                border: `1px solid ${isCombatActive ? colors.neons.red.dark : colors.neons.green.dark}`,
-                                borderRadius: 1,
-                                width: 36,
-                                height: 36,
-                                '&:hover': {
-                                    borderColor: isCombatActive ? colors.neons.red.default : colors.neons.green.default,
-                                    bgcolor: isCombatActive ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 255, 0, 0.1)',
-                                },
-                            }}
-                            title={isCombatActive ? t('combatSim.stopCombat') : t('combatSim.startCombat')}
-                        >
-                            {isCombatActive ? <Stop /> : <PlayArrow />}
-                        </IconButton>
+                        {!isPlayerConnected && (
+                            <IconButton
+                                onClick={onToggleCombat}
+                                sx={{
+                                    color: isCombatActive ? colors.neons.red.default : colors.neons.green.default,
+                                    border: `1px solid ${
+                                        isCombatActive ? colors.neons.red.dark : colors.neons.green.dark
+                                    }`,
+                                    borderRadius: 1,
+                                    width: 36,
+                                    height: 36,
+                                    '&:hover': {
+                                        borderColor: isCombatActive
+                                            ? colors.neons.red.default
+                                            : colors.neons.green.default,
+                                        bgcolor: isCombatActive ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 255, 0, 0.1)',
+                                    },
+                                }}
+                                title={isCombatActive ? t('combatSim.stopCombat') : t('combatSim.startCombat')}
+                            >
+                                {isCombatActive ? <Stop /> : <PlayArrow />}
+                            </IconButton>
+                        )}
                         <Typography
                             variant="h4"
                             className="glitch-text"
@@ -205,54 +213,58 @@ const InitiativePanel = ({
                         >
                             {t('combatSim.round')} {currentRound}
                         </Typography>
-                        <IconButton
-                            onClick={onNextTurn}
-                            disabled={!isCombatActive}
-                            sx={{
-                                color: colors.neons.yellow.default,
-                                border: `1px solid ${colors.neons.yellow.dark}`,
-                                borderRadius: 1,
-                                width: 36,
-                                height: 36,
-                                '&:hover': {
-                                    borderColor: colors.neons.yellow.default,
-                                    bgcolor: 'rgba(255, 255, 0, 0.1)',
-                                },
-                                '&:disabled': {
-                                    color: colors.grays.gray600,
-                                    borderColor: colors.grays.gray700,
-                                },
-                            }}
-                            title={t('combatSim.nextRound')}
-                        >
-                            <SkipNext />
-                        </IconButton>
-                    </Stack>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={autoRerollInitiative}
-                                onChange={(e) => onSetAutoReroll(e.target.checked)}
+                        {!isPlayerConnected && (
+                            <IconButton
+                                onClick={onNextTurn}
+                                disabled={!isCombatActive}
                                 sx={{
-                                    color: colors.neons.cyan.default,
-                                    '&.Mui-checked': {
-                                        color: colors.neons.cyan.light,
+                                    color: colors.neons.yellow.default,
+                                    border: `1px solid ${colors.neons.yellow.dark}`,
+                                    borderRadius: 1,
+                                    width: 36,
+                                    height: 36,
+                                    '&:hover': {
+                                        borderColor: colors.neons.yellow.default,
+                                        bgcolor: 'rgba(255, 255, 0, 0.1)',
+                                    },
+                                    '&:disabled': {
+                                        color: colors.grays.gray600,
+                                        borderColor: colors.grays.gray700,
                                     },
                                 }}
-                            />
-                        }
-                        label={
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    color: readerMode ? colors.grays.gray700 : colors.neons.cyan.light,
-                                }}
+                                title={t('combatSim.nextRound')}
                             >
-                                {t('combatSim.autoRerollInitiative')}
-                            </Typography>
-                        }
-                        sx={{ mb: 1 }}
-                    />
+                                <SkipNext />
+                            </IconButton>
+                        )}
+                    </Stack>
+                    {!isPlayerConnected && (
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={autoRerollInitiative}
+                                    onChange={(e) => onSetAutoReroll(e.target.checked)}
+                                    sx={{
+                                        color: colors.neons.cyan.default,
+                                        '&.Mui-checked': {
+                                            color: colors.neons.cyan.light,
+                                        },
+                                    }}
+                                />
+                            }
+                            label={
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: readerMode ? colors.grays.gray700 : colors.neons.cyan.light,
+                                    }}
+                                >
+                                    {t('combatSim.autoRerollInitiative')}
+                                </Typography>
+                            }
+                            sx={{ mb: 1 }}
+                        />
+                    )}
                 </Box>
 
                 {/* Token list */}
@@ -267,7 +279,7 @@ const InitiativePanel = ({
                                 <Box
                                     key={token.id}
                                     data-token-id={token.id}
-                                    onClick={() => onTokenClick(token.id)}
+                                    onClick={!isPlayerConnected ? () => onTokenClick(token.id) : undefined}
                                     sx={{
                                         background: isActive
                                             ? readerMode
@@ -278,7 +290,7 @@ const InitiativePanel = ({
                                             : `linear-gradient(0deg, ${colors.neons.cyan.default}20, transparent)`,
                                         borderRadius: 1,
                                         p: 1,
-                                        cursor: 'pointer',
+                                        cursor: !isPlayerConnected ? 'pointer' : 'default',
                                         border: isActive
                                             ? `2px solid ${colors.neons.pink.default}`
                                             : `1px solid ${colors.neons.cyan.dark}40`,
@@ -643,48 +655,50 @@ const InitiativePanel = ({
                 </CustomScrollbar>
 
                 {/* Footer - Navigation buttons */}
-                <Stack direction="row" spacing={1} mt={1}>
-                    <Button
-                        variant="outlined"
-                        onClick={handlePrevious}
-                        disabled={!isCombatActive || currentIndex <= 0}
-                        sx={{
-                            flex: 1,
-                            color: colors.neons.cyan.default,
-                            borderColor: colors.neons.cyan.dark,
-                            '&:hover': {
-                                borderColor: colors.neons.cyan.default,
-                                bgcolor: 'rgba(0, 255, 255, 0.1)',
-                            },
-                            '&:disabled': {
-                                color: colors.grays.gray600,
-                                borderColor: colors.grays.gray700,
-                            },
-                        }}
-                    >
-                        {t('combatSim.previousTurn')}
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={handleNext}
-                        disabled={!isCombatActive || sortedTokens.length === 0}
-                        sx={{
-                            flex: 1,
-                            color: colors.neons.pink.default,
-                            borderColor: colors.neons.pink.dark,
-                            '&:hover': {
-                                borderColor: colors.neons.pink.default,
-                                bgcolor: 'rgba(255, 0, 255, 0.1)',
-                            },
-                            '&:disabled': {
-                                color: colors.grays.gray600,
-                                borderColor: colors.grays.gray700,
-                            },
-                        }}
-                    >
-                        {t('combatSim.nextTurn')}
-                    </Button>
-                </Stack>
+                {!isPlayerConnected && (
+                    <Stack direction="row" spacing={1} mt={1}>
+                        <Button
+                            variant="outlined"
+                            onClick={handlePrevious}
+                            disabled={!isCombatActive || currentIndex <= 0}
+                            sx={{
+                                flex: 1,
+                                color: colors.neons.cyan.default,
+                                borderColor: colors.neons.cyan.dark,
+                                '&:hover': {
+                                    borderColor: colors.neons.cyan.default,
+                                    bgcolor: 'rgba(0, 255, 255, 0.1)',
+                                },
+                                '&:disabled': {
+                                    color: colors.grays.gray600,
+                                    borderColor: colors.grays.gray700,
+                                },
+                            }}
+                        >
+                            {t('combatSim.previousTurn')}
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={handleNext}
+                            disabled={!isCombatActive || sortedTokens.length === 0}
+                            sx={{
+                                flex: 1,
+                                color: colors.neons.pink.default,
+                                borderColor: colors.neons.pink.dark,
+                                '&:hover': {
+                                    borderColor: colors.neons.pink.default,
+                                    bgcolor: 'rgba(255, 0, 255, 0.1)',
+                                },
+                                '&:disabled': {
+                                    color: colors.grays.gray600,
+                                    borderColor: colors.grays.gray700,
+                                },
+                            }}
+                        >
+                            {t('combatSim.nextTurn')}
+                        </Button>
+                    </Stack>
+                )}
             </Box>
         </Box>
     )

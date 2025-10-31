@@ -21,7 +21,7 @@ interface UsePixiProps {
     gridSize: number
     isTokenPanelOpen: boolean
     isInitiativePanelOpen: boolean
-    isRollHistoryOpen: boolean
+    isHistoryPanelOpen: boolean
     isBlastPanelOpen: boolean
     setBlastDrawMode: React.Dispatch<React.SetStateAction<BlastType | null>>
     setTokenClipboard: React.Dispatch<React.SetStateAction<Token[] | null>>
@@ -50,7 +50,7 @@ const usePixi = (props: UsePixiProps) => {
         gridSize,
         isTokenPanelOpen,
         isInitiativePanelOpen,
-        isRollHistoryOpen,
+        isHistoryPanelOpen,
         isBlastPanelOpen,
         setBlastDrawMode,
         setTokenClipboard,
@@ -265,10 +265,10 @@ const usePixi = (props: UsePixiProps) => {
         return (
             (isTokenPanelOpen ? 260 : 0) +
             (isInitiativePanelOpen ? 260 : 0) +
-            (isRollHistoryOpen ? 260 : 0) +
+            (isHistoryPanelOpen ? 260 : 0) +
             (isBlastPanelOpen ? 260 : 0)
         )
-    }, [isTokenPanelOpen, isInitiativePanelOpen, isRollHistoryOpen, isBlastPanelOpen])
+    }, [isTokenPanelOpen, isInitiativePanelOpen, isHistoryPanelOpen, isBlastPanelOpen])
 
     const pixiOnCutAllTokens = async () => {
         // Copy all current map tokens to clipboard
@@ -436,6 +436,15 @@ const usePixi = (props: UsePixiProps) => {
                 return { ...tk, x, y }
             })
         )
+
+        // Clean up any pending movement overlays for this token
+        // This handles the case where DM accepts a player's pending movement
+        if (typeof window !== 'undefined') {
+            const cleanupEvent = new CustomEvent('cleanupPendingMovement', {
+                detail: { tokenId: id },
+            })
+            window.dispatchEvent(cleanupEvent)
+        }
         // Update database
         const tokensTable = getTokensTable()
         const token = tokens.find((t) => t.id === id)

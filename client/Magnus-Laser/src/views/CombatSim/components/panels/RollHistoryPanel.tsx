@@ -16,6 +16,7 @@ interface RollHistoryPanelProps {
     onClear: () => void
     onDelete: (id: string) => void
     onRevealDamage: (id: string) => void
+    isPlayerConnected: boolean
 }
 
 const RollHistoryPanel = ({
@@ -26,6 +27,7 @@ const RollHistoryPanel = ({
     onClear,
     onDelete,
     onRevealDamage,
+    isPlayerConnected,
 }: RollHistoryPanelProps) => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
@@ -149,95 +151,99 @@ const RollHistoryPanel = ({
                     >
                         {t('combatSim.rollHistory')}
                     </Typography>
-                    <Button
-                        title={t('combatSim.clearHistory')}
-                        onClick={onClear}
-                        disabled={rollHistory.length === 0}
-                        sx={{
-                            minWidth: '30px',
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '2px',
-                            p: 0,
-                            bgcolor: readerMode ? '#f5f5f5' : 'rgba(40, 0, 0, 0.4)',
-                            color: readerMode ? '#d32f2f' : colors.neons.red.default,
-                            border: readerMode ? '1px solid #d32f2f' : `1px solid ${colors.neons.red.default}60`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            position: 'relative',
-                            fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                            fontWeight: 'bold',
-                            '&::before': !readerMode
-                                ? {
-                                      content: '""',
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '1px',
-                                      background: `linear-gradient(90deg, transparent, ${colors.neons.red.default}, transparent)`,
-                                      opacity: 0.7,
-                                  }
-                                : {},
-                            '&:hover': readerMode
-                                ? {
-                                      bgcolor: '#f0f0f0',
-                                      color: '#b71c1c',
-                                  }
-                                : {
-                                      bgcolor: 'rgba(60, 0, 0, 0.6)',
-                                      color: colors.neons.red.light,
-                                      boxShadow: `0 0 8px ${colors.neons.red.default}80`,
-                                      '&::after': {
-                                          opacity: 0.8,
-                                          height: '100%',
+                    {!isPlayerConnected && (
+                        <Button
+                            title={t('combatSim.clearHistory')}
+                            onClick={onClear}
+                            disabled={rollHistory.length === 0}
+                            sx={{
+                                minWidth: '30px',
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '2px',
+                                p: 0,
+                                bgcolor: readerMode ? '#f5f5f5' : 'rgba(40, 0, 0, 0.4)',
+                                color: readerMode ? '#d32f2f' : colors.neons.red.default,
+                                border: readerMode ? '1px solid #d32f2f' : `1px solid ${colors.neons.red.default}60`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s',
+                                position: 'relative',
+                                fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                fontWeight: 'bold',
+                                '&::before': !readerMode
+                                    ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: 0,
+                                          left: 0,
+                                          width: '100%',
+                                          height: '1px',
+                                          background: `linear-gradient(90deg, transparent, ${colors.neons.red.default}, transparent)`,
+                                          opacity: 0.7,
+                                      }
+                                    : {},
+                                '&:hover': readerMode
+                                    ? {
+                                          bgcolor: '#f0f0f0',
+                                          color: '#b71c1c',
+                                      }
+                                    : {
+                                          bgcolor: 'rgba(60, 0, 0, 0.6)',
+                                          color: colors.neons.red.light,
+                                          boxShadow: `0 0 8px ${colors.neons.red.default}80`,
+                                          '&::after': {
+                                              opacity: 0.8,
+                                              height: '100%',
+                                          },
                                       },
-                                  },
-                            '&::after': !readerMode
-                                ? {
-                                      content: '""',
-                                      position: 'absolute',
-                                      bottom: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '0%',
-                                      opacity: 0,
-                                      background: `linear-gradient(0deg, ${colors.neons.red.default}30, transparent)`,
-                                      transition: 'all 0.2s',
-                                  }
-                                : {},
-                        }}
-                    >
-                        <Close sx={{ textShadow: `0 0 5px ${colors.neons.red.default}`, zIndex: 2 }} />
-                    </Button>
-                </Stack>
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={autoRollDamage}
-                            onChange={(e) => onSetAutoRollDamage(e.target.checked)}
-                            sx={{
-                                color: colors.neons.cyan.default,
-                                '&.Mui-checked': {
-                                    color: colors.neons.cyan.light,
-                                },
-                            }}
-                        />
-                    }
-                    label={
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                color: readerMode ? colors.grays.gray700 : colors.neons.cyan.light,
+                                '&::after': !readerMode
+                                    ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          bottom: 0,
+                                          left: 0,
+                                          width: '100%',
+                                          height: '0%',
+                                          opacity: 0,
+                                          background: `linear-gradient(0deg, ${colors.neons.red.default}30, transparent)`,
+                                          transition: 'all 0.2s',
+                                      }
+                                    : {},
                             }}
                         >
-                            {t('combatSim.autoRollDamage')}
-                        </Typography>
-                    }
-                    sx={{ mb: 1 }}
-                />
+                            <Close sx={{ textShadow: `0 0 5px ${colors.neons.red.default}`, zIndex: 2 }} />
+                        </Button>
+                    )}
+                </Stack>
+                {!isPlayerConnected && (
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={autoRollDamage}
+                                onChange={(e) => onSetAutoRollDamage(e.target.checked)}
+                                sx={{
+                                    color: colors.neons.cyan.default,
+                                    '&.Mui-checked': {
+                                        color: colors.neons.cyan.light,
+                                    },
+                                }}
+                            />
+                        }
+                        label={
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: readerMode ? colors.grays.gray700 : colors.neons.cyan.light,
+                                }}
+                            >
+                                {t('combatSim.autoRollDamage')}
+                            </Typography>
+                        }
+                        sx={{ mb: 1 }}
+                    />
+                )}
 
                 {/* Roll history list */}
                 <Box ref={containerRef} sx={{ flex: 1, overflow: 'hidden' }}>
@@ -283,81 +289,86 @@ const RollHistoryPanel = ({
                                         }}
                                     >
                                         {/* Delete button - only visible on hover */}
-                                        <Button
-                                            className="delete-btn"
-                                            title={t('combatSim.clearHistory')}
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                onDelete(entry.id)
-                                            }}
-                                            disabled={rollHistory.length === 0}
-                                            sx={{
-                                                zIndex: 100,
-                                                position: 'absolute',
-                                                bottom: 0,
-                                                right: 0,
-                                                minWidth: '24px',
-                                                width: '24px',
-                                                height: '24px',
-                                                borderRadius: '2px',
-                                                p: 0,
-                                                bgcolor: readerMode ? '#f5f5f5' : 'rgba(40, 0, 0, 0.4)',
-                                                color: readerMode ? '#d32f2f' : colors.neons.red.default,
-                                                border: readerMode
-                                                    ? '1px solid #d32f2f'
-                                                    : `1px solid ${colors.neons.red.default}60`,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                transition: 'all 0.2s',
-                                                //position: 'relative',
-                                                fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                                                fontWeight: 'bold',
-                                                '&::before': !readerMode
-                                                    ? {
-                                                          content: '""',
-                                                          position: 'absolute',
-                                                          top: 0,
-                                                          left: 0,
-                                                          width: '100%',
-                                                          height: '1px',
-                                                          background: `linear-gradient(90deg, transparent, ${colors.neons.red.default}, transparent)`,
-                                                          opacity: 0.7,
-                                                      }
-                                                    : {},
-                                                '&:hover': readerMode
-                                                    ? {
-                                                          bgcolor: '#f0f0f0',
-                                                          color: '#b71c1c',
-                                                      }
-                                                    : {
-                                                          bgcolor: 'rgba(60, 0, 0, 0.6)',
-                                                          color: colors.neons.red.light,
-                                                          boxShadow: `0 0 8px ${colors.neons.red.default}80`,
-                                                          '&::after': {
-                                                              opacity: 0.8,
-                                                              height: '100%',
+                                        {!isPlayerConnected && (
+                                            <Button
+                                                className="delete-btn"
+                                                title={t('combatSim.clearHistory')}
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    onDelete(entry.id)
+                                                }}
+                                                disabled={rollHistory.length === 0}
+                                                sx={{
+                                                    zIndex: 100,
+                                                    position: 'absolute',
+                                                    bottom: 0,
+                                                    right: 0,
+                                                    minWidth: '24px',
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    borderRadius: '2px',
+                                                    p: 0,
+                                                    bgcolor: readerMode ? '#f5f5f5' : 'rgba(40, 0, 0, 0.4)',
+                                                    color: readerMode ? '#d32f2f' : colors.neons.red.default,
+                                                    border: readerMode
+                                                        ? '1px solid #d32f2f'
+                                                        : `1px solid ${colors.neons.red.default}60`,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    transition: 'all 0.2s',
+                                                    //position: 'relative',
+                                                    fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                                    fontWeight: 'bold',
+                                                    '&::before': !readerMode
+                                                        ? {
+                                                              content: '""',
+                                                              position: 'absolute',
+                                                              top: 0,
+                                                              left: 0,
+                                                              width: '100%',
+                                                              height: '1px',
+                                                              background: `linear-gradient(90deg, transparent, ${colors.neons.red.default}, transparent)`,
+                                                              opacity: 0.7,
+                                                          }
+                                                        : {},
+                                                    '&:hover': readerMode
+                                                        ? {
+                                                              bgcolor: '#f0f0f0',
+                                                              color: '#b71c1c',
+                                                          }
+                                                        : {
+                                                              bgcolor: 'rgba(60, 0, 0, 0.6)',
+                                                              color: colors.neons.red.light,
+                                                              boxShadow: `0 0 8px ${colors.neons.red.default}80`,
+                                                              '&::after': {
+                                                                  opacity: 0.8,
+                                                                  height: '100%',
+                                                              },
                                                           },
-                                                      },
-                                                '&::after': !readerMode
-                                                    ? {
-                                                          content: '""',
-                                                          position: 'absolute',
-                                                          bottom: 0,
-                                                          left: 0,
-                                                          width: '100%',
-                                                          height: '0%',
-                                                          opacity: 0,
-                                                          background: `linear-gradient(0deg, ${colors.neons.red.default}30, transparent)`,
-                                                          transition: 'all 0.2s',
-                                                      }
-                                                    : {},
-                                            }}
-                                        >
-                                            <Close
-                                                sx={{ textShadow: `0 0 5px ${colors.neons.red.default}`, zIndex: 2 }}
-                                            />
-                                        </Button>
+                                                    '&::after': !readerMode
+                                                        ? {
+                                                              content: '""',
+                                                              position: 'absolute',
+                                                              bottom: 0,
+                                                              left: 0,
+                                                              width: '100%',
+                                                              height: '0%',
+                                                              opacity: 0,
+                                                              background: `linear-gradient(0deg, ${colors.neons.red.default}30, transparent)`,
+                                                              transition: 'all 0.2s',
+                                                          }
+                                                        : {},
+                                                }}
+                                            >
+                                                <Close
+                                                    sx={{
+                                                        textShadow: `0 0 5px ${colors.neons.red.default}`,
+                                                        zIndex: 2,
+                                                    }}
+                                                />
+                                            </Button>
+                                        )}
                                         {/* Token name and emoji */}
                                         <Stack
                                             direction="row"

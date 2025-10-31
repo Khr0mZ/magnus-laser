@@ -136,7 +136,11 @@ const useCombatSim = () => {
     const [isCombatActive, setIsCombatActive] = useState(false)
 
     // Session state
+
     const session = useSession()
+    // For players, show as connected if they have a session (they're in the session)
+    // For DMs, show as connected only when WebRTC is connected
+    const isPlayerConnected = Boolean(session.session && session.role === 'player' && session.connected)
     // Helper function to determine if we should use session tables
     const useSessionTables = () => {
         const result = session.role === 'player' && !!session.session
@@ -1422,6 +1426,7 @@ const useCombatSim = () => {
         getWallsTable,
         useSessionTables,
         session,
+        isPlayerConnected,
         setTokenClipboard,
         setWalls,
         setDeleteAllTokensDialogOpen,

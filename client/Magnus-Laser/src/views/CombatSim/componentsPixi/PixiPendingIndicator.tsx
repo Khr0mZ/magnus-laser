@@ -16,6 +16,7 @@ export interface PixiPendingIndicatorProps {
     viewport: Viewport
     onAccept: () => void
     onCancel: () => void
+    isPlayerConnected?: boolean
     isPreview?: boolean
 }
 
@@ -199,32 +200,54 @@ export class PixiPendingIndicator extends Container {
         const buttonSize = Math.max(8, 8 / Math.max(0.1, zoom)) // Half the original size (32/2)
         const gap = Math.max(6, 6 / Math.max(0.1, zoom)) // Half the original gap (12/2)
         const centerY = labelY
+        const showAcceptButton = this.props.isPlayerConnected !== false // Default to true
 
-        // Calculate positions: cancel button - distance label - accept button
-        const cancelCenterX = labelX - buttonSize - gap - this.distanceLabel.width / 2
-        const labelCenterX = labelX
-        const acceptCenterX = labelX + this.distanceLabel.width / 2 + gap + buttonSize
+        let cancelCenterX: number
+        let labelCenterX: number
+        let acceptCenterX: number
 
-        // Position distance label in center
+        if (showAcceptButton) {
+            // Calculate positions: cancel button - distance label - accept button
+            cancelCenterX = labelX - buttonSize - gap - this.distanceLabel.width / 2
+            labelCenterX = labelX
+            acceptCenterX = labelX + this.distanceLabel.width / 2 + gap + buttonSize
+        } else {
+            // Only cancel button: distance label - cancel button
+            labelCenterX = labelX - buttonSize / 2 - gap / 2
+            cancelCenterX = labelX + this.distanceLabel.width / 2 + gap / 2
+            acceptCenterX = 0 // Not used
+        }
+
+        // Position distance label
         this.distanceLabel.x = labelCenterX - this.distanceLabel.width / 2
         this.distanceLabel.y = centerY
 
         // Scale buttons to match the calculated buttonSize (original was 32, now half)
         const scaleFactor = buttonSize / 16 // Original button size in code was 16 now
         this.cancelContainer.scale.set(scaleFactor)
-        this.acceptContainer.scale.set(scaleFactor)
 
         this.cancelContainer.visible = true
         this.cancelContainer.position.set(cancelCenterX, centerY)
-        this.acceptContainer.visible = true
-        this.acceptContainer.position.set(acceptCenterX, centerY)
+
+        if (showAcceptButton) {
+            this.acceptContainer.scale.set(scaleFactor)
+            this.acceptContainer.visible = true
+            this.acceptContainer.position.set(acceptCenterX, centerY)
+        } else {
+            this.acceptContainer.visible = false
+        }
 
         // Draw background container around label and buttons
         this.background.clear()
         const paddingX = Math.max(8, 8 / Math.max(0.1, zoom)) // Half the original padding (8/2)
         const paddingY = Math.max(4, 4 / Math.max(0.1, zoom)) // Half the original padding (8/2)
-        const bgLeft = cancelCenterX - buttonSize / 2 - paddingX
-        const bgRight = acceptCenterX + buttonSize / 2 + paddingX
+        //const bgLeft = cancelCenterX - buttonSize / 2 - paddingX
+        const bgLeft = showAcceptButton
+            ? cancelCenterX - buttonSize / 2 - paddingX
+            : labelCenterX - buttonSize / 2 - paddingX
+        const bgRight = showAcceptButton
+            ? acceptCenterX + buttonSize / 2 + paddingX
+            : cancelCenterX + buttonSize / 2 + paddingX
         // Calculate height based on the scaled font size and button size
         const labelHeight = this.distanceLabel.height || this.distanceLabel.style.fontSize
         const contentHeight = Math.max(buttonSize, labelHeight)

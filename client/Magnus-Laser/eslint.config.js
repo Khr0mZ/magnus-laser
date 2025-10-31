@@ -35,6 +35,8 @@ export default [
                 HTMLInputElement: 'readonly',
                 HTMLTextAreaElement: 'readonly',
                 Event: 'readonly',
+                CustomEvent: 'readonly',
+                EventListener: 'readonly',
                 ResizeObserver: 'readonly',
                 MutationObserver: 'readonly',
 

@@ -32,6 +32,7 @@ interface FloatingButtonsProps {
     wallColorHex: string
     wallAlpha: number
     pendingCount: number
+    isPlayerConnected: boolean
 }
 
 const FloatingButtons = (props: FloatingButtonsProps) => {
@@ -60,6 +61,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
         wallColorHex,
         wallAlpha,
         pendingCount,
+        isPlayerConnected,
     } = props
     const { readerMode } = useUserPreferences()
     const { t } = useTranslation()
@@ -163,112 +165,169 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                 </Box>
             </Box>
             {/* Wall mode button */}
-            <Box
-                onClick={() => {
-                    setIsWallMode((v) => {
-                        const nv = !v
-                        if (nv) {
-                            setIsMeasuring(false)
-                            setBlastDrawMode(null)
-                            setWallDrawingShape('line') // Reset to line mode when entering wall mode
-                        }
-                        if (!nv) {
-                            setIsErasingWalls(false)
-                            setWallColorAnchor(null)
-                        }
-                        return nv
-                    })
-                }}
-                sx={{
-                    position: 'absolute',
-                    top: 94,
-                    left: 10,
-                    width: '36px',
-                    height: '36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: isWallMode
-                        ? 'rgba(255, 0, 255, 0.3)'
-                        : readerMode
-                        ? 'rgba(0, 0, 40, 0.7)'
-                        : 'rgba(0, 0, 40, 0.6)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    border: `1px solid ${isWallMode ? colors.neons.green.default : colors.neons.blue.default}60`,
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                        border: `1px solid ${colors.neons.green.default}60`,
-                        boxShadow: `0 0 8px ${colors.neons.green.default}80`,
-                    },
-                    '&:hover .wall-mode-icon': {
-                        color: colors.neons.green.default,
-                    },
-                }}
-                title={t('combatSim.wallMode')}
-            >
+            {!isPlayerConnected && (
                 <Box
+                    onClick={() => {
+                        setIsWallMode((v) => {
+                            const nv = !v
+                            if (nv) {
+                                setIsMeasuring(false)
+                                setBlastDrawMode(null)
+                                setWallDrawingShape('line') // Reset to line mode when entering wall mode
+                            }
+                            if (!nv) {
+                                setIsErasingWalls(false)
+                                setWallColorAnchor(null)
+                            }
+                            return nv
+                        })
+                    }}
                     sx={{
-                        fontSize: isWallMode ? '30px' : '20px',
-                        color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                        position: 'absolute',
+                        top: 94,
+                        left: 10,
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isWallMode
+                            ? 'rgba(255, 0, 255, 0.3)'
+                            : readerMode
+                            ? 'rgba(0, 0, 40, 0.7)'
+                            : 'rgba(0, 0, 40, 0.6)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        border: `1px solid ${isWallMode ? colors.neons.green.default : colors.neons.blue.default}60`,
                         transition: 'all 0.2s',
                         '&:hover': {
-                            fontSize: '30px',
+                            backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                            border: `1px solid ${colors.neons.green.default}60`,
+                            boxShadow: `0 0 8px ${colors.neons.green.default}80`,
+                        },
+                        '&:hover .wall-mode-icon': {
+                            color: colors.neons.green.default,
                         },
                     }}
+                    title={t('combatSim.wallMode')}
                 >
-                    🧱
+                    <Box
+                        sx={{
+                            fontSize: isWallMode ? '30px' : '20px',
+                            color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                fontSize: '30px',
+                            },
+                        }}
+                    >
+                        🧱
+                    </Box>
                 </Box>
-            </Box>
+            )}
             {/* Token Panel button */}
-            <Box
-                onClick={() => setIsTokenPanelOpen((v) => !v)}
-                sx={{
-                    position: 'absolute',
-                    top: 136,
-                    left: 10,
-                    width: '36px',
-                    height: '36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: isTokenPanelOpen
-                        ? 'rgba(255, 0, 255, 0.3)'
-                        : readerMode
-                        ? 'rgba(0, 0, 40, 0.7)'
-                        : 'rgba(0, 0, 40, 0.6)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    border: `1px solid ${isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default}60`,
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                        border: `1px solid ${colors.neons.pink.default}60`,
-                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                    },
-                }}
-                title={t('combatSim.tokensPanel')}
-            >
+            {!isPlayerConnected && (
                 <Box
+                    onClick={() => {
+                        if (isPlayerConnected) return
+                        setIsTokenPanelOpen((v) => !v)
+                    }}
                     sx={{
-                        fontSize: isTokenPanelOpen ? '30px' : '20px',
-                        color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                        position: 'absolute',
+                        top: 136,
+                        left: 10,
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isTokenPanelOpen
+                            ? 'rgba(255, 0, 255, 0.3)'
+                            : readerMode
+                            ? 'rgba(0, 0, 40, 0.7)'
+                            : 'rgba(0, 0, 40, 0.6)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        border: `1px solid ${
+                            isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default
+                        }60`,
                         transition: 'all 0.2s',
                         '&:hover': {
-                            fontSize: '30px',
+                            backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                            border: `1px solid ${colors.neons.pink.default}60`,
+                            boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
                         },
                     }}
+                    title={t('combatSim.tokensPanel')}
                 >
-                    👨‍🎤
+                    <Box
+                        sx={{
+                            fontSize: isTokenPanelOpen ? '30px' : '20px',
+                            color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                fontSize: '30px',
+                            },
+                        }}
+                    >
+                        👨‍🎤
+                    </Box>
                 </Box>
-            </Box>
+            )}
+            {/* Blasts button */}
+            {!isPlayerConnected && (
+                <Box
+                    onClick={() => {
+                        setIsBlastPanelOpen((v) => !v)
+                    }}
+                    sx={{
+                        position: 'absolute',
+                        top: 178,
+                        left: 10,
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isBlastPanelOpen
+                            ? 'rgba(255, 0, 255, 0.3)'
+                            : readerMode
+                            ? 'rgba(0, 0, 40, 0.7)'
+                            : 'rgba(0, 0, 40, 0.6)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        border: `1px solid ${
+                            isBlastPanelOpen ? colors.neons.pink.default : colors.neons.blue.default
+                        }60`,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                            border: `1px solid ${colors.neons.pink.default}60`,
+                            boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                        },
+                    }}
+                    title="Blasts"
+                >
+                    <Box
+                        sx={{
+                            fontSize: isBlastPanelOpen ? '30px' : '20px',
+                            color: isBlastPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                fontSize: '30px',
+                            },
+                        }}
+                    >
+                        ✨
+                    </Box>
+                </Box>
+            )}
             {/* Initiative Panel button */}
             <Box
                 onClick={() => setIsInitiativePanelOpen((v) => !v)}
                 sx={{
                     position: 'absolute',
-                    top: 178,
+                    top: isPlayerConnected ? 94 : 220,
                     left: 10,
                     width: '36px',
                     height: '36px',
@@ -312,7 +371,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                 onClick={() => setIsRollHistoryOpen((v) => !v)}
                 sx={{
                     position: 'absolute',
-                    top: 220,
+                    top: isPlayerConnected ? 136 : 262,
                     left: 10,
                     width: '36px',
                     height: '36px',
@@ -347,48 +406,6 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                     }}
                 >
                     🎲
-                </Box>
-            </Box>
-            {/* Blasts button */}
-            <Box
-                onClick={() => setIsBlastPanelOpen((v) => !v)}
-                sx={{
-                    position: 'absolute',
-                    top: 262,
-                    left: 10,
-                    width: '36px',
-                    height: '36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: isBlastPanelOpen
-                        ? 'rgba(255, 0, 255, 0.3)'
-                        : readerMode
-                        ? 'rgba(0, 0, 40, 0.7)'
-                        : 'rgba(0, 0, 40, 0.6)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    border: `1px solid ${isBlastPanelOpen ? colors.neons.pink.default : colors.neons.blue.default}60`,
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                        border: `1px solid ${colors.neons.pink.default}60`,
-                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                    },
-                }}
-                title="Blasts"
-            >
-                <Box
-                    sx={{
-                        fontSize: isBlastPanelOpen ? '30px' : '20px',
-                        color: isBlastPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
-                        transition: 'all 0.2s',
-                        '&:hover': {
-                            fontSize: '30px',
-                        },
-                    }}
-                >
-                    ✨
                 </Box>
             </Box>
             {/* Eraser & Wall color (visible in wall mode) */}
@@ -655,7 +672,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                 </>
             )}
             {/* Accept & Cancel All Pending */}
-            {pendingCount > 0 && (
+            {pendingCount > 0 && !isPlayerConnected && (
                 <Stack
                     direction="row"
                     spacing={1}

@@ -129,7 +129,6 @@ fn generate_embedded_cloudflared() {
 
     // Tell cargo to rebuild if the binary changes
     println!("cargo:rerun-if-changed={}", target_path.display());
-    println!("cargo:rerun-if-changed={}", embedded_rs_path.display());
 }
 
 fn download_cloudflared_binaries() {

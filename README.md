@@ -44,7 +44,7 @@ A cyberpunk-themed desktop application for managing tabletop RPG game elements. 
   - **Gigs**: Plan and manage fixer jobs and missions with complex plot structures.
   - **Bounties**: Track and manage bounty hunting activities with target details.
   - **Map**: Interactive map with draggable markers for buildings, gangs, and contacts.
-  - **Combat Simulator**: Tactical grid-based combat system with token management, initiative tracking, dice rolling, and line-of-sight mechanics.
+  - **Combat Simulator**: Fully implemented tactical grid-based combat system with per-map initiative tracking, dice rolling, real-time multiplayer sync, persistent storage, and tactical tools.
   - **Settings**: Configure API keys, reader mode, animations, and other preferences.
 - **AI-Assisted Generation**: Auto-generate content using Google Generative AI (Gemini), OpenAI, and Hugging Face APIs.
 - **Rich Text Editor**: Integrated TipTap v3 editor for notes and descriptions with markdown support.
@@ -213,6 +213,15 @@ Magnus Laser uses **Dexie.js** (an IndexedDB wrapper) for offline-first data per
   - `bounties` - Bounty targets and details
   - `preferences` - User settings and API keys
   - `mapMarkers` - Custom map markers
+  - **Combat Simulator Tables**:
+    - `boardMaps` - Combat maps with grid configuration
+    - `tokens` - Combat tokens with stats and positioning
+    - `maps` - Map layers and configurations
+    - `walls` - Barrier placement for tactical positioning
+    - `images` - Custom map backgrounds and assets
+    - `blasts` - Area-of-effect visualizations
+    - `initiative` - Per-map initiative state and settings
+    - `rollHistory` - Per-map dice roll history with timestamps
 
 All data is stored locally in your browser's IndexedDB, ensuring:
 
@@ -223,24 +232,61 @@ All data is stored locally in your browser's IndexedDB, ensuring:
 
 ## Combat Simulator
 
-The Combat Simulator is a fully-featured tactical combat system built with PixiJS:
+The Combat Simulator is a **fully implemented tactical combat system** with real-time multiplayer synchronization, built with PixiJS. All major features have been implemented and tested, providing a seamless combat experience with persistent state across sessions.
+
+### ✅ **Core Features**
 
 - **Grid-Based Combat**: Customizable grid with adjustable size and cell dimensions
 - **Token Management**: Create and manage combat tokens with colors, sizes, and stats
-- **Initiative Tracking**: Automatic initiative ordering with manual adjustments
-- **Dice Rolling System**: D10-based rolls with critical success/failure handling
+- **Per-Map Initiative**: Each map maintains its own initiative state (active token, round, combat status, auto-settings)
+- **Per-Map Roll History**: Roll history is isolated per map and sorted by timestamp
+- **Real-time Sync**: Full integration with session plumbing for multiplayer support between DM and players
+- **Persistent Settings**: Auto-roll damage and auto-reroll initiative settings are stored per-map
+
+### ✅ **Implementation Status**
+
+**Database Schema**: All tables implemented with proper indexing for per-map state isolation
+
+- `initiative: "mapId"` - Per-map initiative state
+- `rollHistory: "id, tokenId, timestamp, mapId"` - Per-map roll history with timestamps
+
+**Dice Rolling System**: D10-based rolls with critical success/failure handling
+
   - Attack rolls with modifiers
-  - Damage rolls
+- Damage rolls with auto-roll settings
   - General D10 rolls with special results
-- **Tactical Tools**:
-  - Wall/barrier placement for line-of-sight mechanics
+- Comprehensive roll history tracking
+
+**Tactical Tools**:
+
+- Wall/barrier placement for tactical positioning
   - Ruler tool for measuring distances
   - Context menus for quick actions
   - Token tooltips with stats
-- **Map Import**: Support for custom background images
-- **Persistent Storage**: Separate Dexie database for saving combat scenarios
+- Blast effects and area-of-effect visualization
 
-- You can find useful maps, for example, here: https://www.reddit.com/r/cyberpunkred/comments/1eko852/stop_making_assumptions_if_they_come_with_knives/
+**Map & Assets**:
+
+- Support for custom background images
+- Map markers for buildings, gangs, and contacts
+- District and street name overlays
+- Asset management with persistent storage
+
+### ✅ **Multiplayer Features**
+
+- **Real-time Synchronization**: Changes sync immediately between DM and players
+- **Session Hosting**: Built-in WebRTC + Cloudflare tunnel relay system
+- **Error Recovery**: Comprehensive logging and graceful error handling
+- **State Management**: Automatic loading/saving of per-map combat state
+
+### ✅ **Data Persistence**
+
+- **Offline-First Storage**: Dexie/IndexedDB for automatic saving and loading
+- **Per-Map Isolation**: All combat state (initiative, roll history, auto-settings) is isolated per map
+- **Data Import/Export**: Export and import combat scenarios as JSON files
+- **Automatic Persistence**: State automatically saves when changed and loads when switching maps
+
+You can find useful maps, for example, here: https://www.reddit.com/r/cyberpunkred/comments/1eko852/stop_making_assumptions_if_they_come_with_knives/
 
 ## Building for Release
 
