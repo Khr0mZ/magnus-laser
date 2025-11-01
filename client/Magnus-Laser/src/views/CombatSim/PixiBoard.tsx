@@ -409,6 +409,7 @@ const PixiBoard = (props: PixiBoardProps) => {
 
     // PixiJS tooltip and pending indicator refs
     const pixiTooltipRef = useRef<PixiTooltip | null>(null)
+    const pixiTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const pixiPendingIndicatorsRef = useRef<Map<string, PixiPendingIndicator>>(new Map())
 
     const isMeasuringRef = useRef<boolean>(isMeasuring)
@@ -1451,6 +1452,10 @@ const PixiBoard = (props: PixiBoardProps) => {
                 const btn = e.button ?? 0 // 0: left, 1: middle, 2: right
 
                 // Hide PixiTooltip on pointer down
+                if (pixiTooltipTimeoutRef.current) {
+                    clearTimeout(pixiTooltipTimeoutRef.current)
+                    pixiTooltipTimeoutRef.current = null
+                }
                 pixiTooltipRef.current?.hide()
                 hoveredTokenRef.current = null
 
@@ -2260,36 +2265,56 @@ const PixiBoard = (props: PixiBoardProps) => {
                             hoveredTokenData.mapId === ''
 
                         if (!isDefaultToken) {
-                            // Create or update PixiTooltip
-                            if (!pixiTooltipRef.current) {
-                                pixiTooltipRef.current = createPixiTooltip({
-                                    token: hoveredTokenData,
-                                    x: global.x,
-                                    y: global.y,
-                                    screenWidth: window.innerWidth,
-                                    screenHeight: window.innerHeight,
-                                    zoom: viewport.scale.x,
-                                    viewport: viewport,
-                                })
-                            } else {
-                                pixiTooltipRef.current.updateToken(hoveredTokenData)
-                                pixiTooltipRef.current.updatePosition({
-                                    token: hoveredTokenData,
-                                    x: global.x,
-                                    y: global.y,
-                                    screenWidth: window.innerWidth,
-                                    screenHeight: window.innerHeight,
-                                    zoom: viewport.scale.x,
-                                    viewport: viewport,
-                                })
+                            // Clear any existing timeout
+                            if (pixiTooltipTimeoutRef.current) {
+                                clearTimeout(pixiTooltipTimeoutRef.current)
+                                pixiTooltipTimeoutRef.current = null
                             }
-                            pixiTooltipRef.current.show()
-                            hoveredTokenRef.current = hoveredTokenData
+
+                            // Set timeout to show tooltip after 500ms delay
+                            pixiTooltipTimeoutRef.current = setTimeout(() => {
+                                // Create or update PixiTooltip
+                                if (!pixiTooltipRef.current) {
+                                    pixiTooltipRef.current = createPixiTooltip({
+                                        token: hoveredTokenData,
+                                        x: global.x,
+                                        y: global.y,
+                                        screenWidth: window.innerWidth,
+                                        screenHeight: window.innerHeight,
+                                        zoom: viewport.scale.x,
+                                        viewport: viewport,
+                                    })
+                                } else {
+                                    pixiTooltipRef.current.updateToken(hoveredTokenData)
+                                    pixiTooltipRef.current.updatePosition({
+                                        token: hoveredTokenData,
+                                        x: global.x,
+                                        y: global.y,
+                                        screenWidth: window.innerWidth,
+                                        screenHeight: window.innerHeight,
+                                        zoom: viewport.scale.x,
+                                        viewport: viewport,
+                                    })
+                                }
+                                pixiTooltipRef.current.show()
+                                hoveredTokenRef.current = hoveredTokenData
+                                pixiTooltipTimeoutRef.current = null
+                            }, 500)
                         } else {
+                            // Clear timeout and hide tooltip
+                            if (pixiTooltipTimeoutRef.current) {
+                                clearTimeout(pixiTooltipTimeoutRef.current)
+                                pixiTooltipTimeoutRef.current = null
+                            }
                             pixiTooltipRef.current?.hide()
                             hoveredTokenRef.current = null
                         }
                     } else {
+                        // Clear timeout and hide tooltip
+                        if (pixiTooltipTimeoutRef.current) {
+                            clearTimeout(pixiTooltipTimeoutRef.current)
+                            pixiTooltipTimeoutRef.current = null
+                        }
                         pixiTooltipRef.current?.hide()
                         hoveredTokenRef.current = null
                     }
@@ -2679,6 +2704,10 @@ const PixiBoard = (props: PixiBoardProps) => {
             // Clear blast renderer caches to release Sprite/Mask references
             clearBlastRendererCaches()
             // Clear PixiTooltip
+            if (pixiTooltipTimeoutRef.current) {
+                clearTimeout(pixiTooltipTimeoutRef.current)
+                pixiTooltipTimeoutRef.current = null
+            }
             if (pixiTooltipRef.current) {
                 pixiTooltipRef.current.destroy()
                 pixiTooltipRef.current = null
@@ -2723,6 +2752,10 @@ const PixiBoard = (props: PixiBoardProps) => {
         isMeasuringRef.current = isMeasuring
         // Hide PixiTooltip when entering measuring mode
         if (isMeasuring) {
+            if (pixiTooltipTimeoutRef.current) {
+                clearTimeout(pixiTooltipTimeoutRef.current)
+                pixiTooltipTimeoutRef.current = null
+            }
             pixiTooltipRef.current?.hide()
             hoveredTokenRef.current = null
         }
@@ -2741,6 +2774,10 @@ const PixiBoard = (props: PixiBoardProps) => {
             if (wallLabelRef.current) wallLabelRef.current.visible = false
         } else {
             // Hide PixiTooltip when entering wall mode
+            if (pixiTooltipTimeoutRef.current) {
+                clearTimeout(pixiTooltipTimeoutRef.current)
+                pixiTooltipTimeoutRef.current = null
+            }
             pixiTooltipRef.current?.hide()
             hoveredTokenRef.current = null
         }
