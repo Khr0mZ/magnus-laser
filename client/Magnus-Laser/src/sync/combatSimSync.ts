@@ -181,13 +181,14 @@ async function applyCombatSimSnapshot(snap: GameSnapshot) {
                 db.sessionMaps.bulkPut(
                     await Promise.all(
                         ((cs?.maps ?? []) as (MLMap & { blobBase64?: string })[]).map(async (m) => {
-                            const result = { ...m } as unknown as MLMap
+                            const result = { ...m, blob: undefined } as unknown as MLMap
+                            // Ensure blob field is either a valid Blob or undefined
                             if (m.blobBase64) {
                                 try {
                                     const binary = globalThis.atob(m.blobBase64)
                                     const bytes = new Uint8Array(binary.length)
                                     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-                                    result.blob = new Blob([bytes])
+                                    result.blob = new Blob([bytes], { type: m.mimeType })
                                 } catch (error) {
                                     console.warn('[CombatSimSync] Failed to decode map blob:', error)
                                 }
@@ -200,13 +201,14 @@ async function applyCombatSimSnapshot(snap: GameSnapshot) {
                 db.sessionImages.bulkPut(
                     await Promise.all(
                         ((cs?.images ?? []) as (MLImage & { blobBase64?: string })[]).map(async (im) => {
-                            const result = { ...im } as unknown as MLImage
+                            const result = { ...im, blob: undefined } as unknown as MLImage
+                            // Ensure blob field is either a valid Blob or undefined
                             if (im.blobBase64) {
                                 try {
                                     const binary = globalThis.atob(im.blobBase64)
                                     const bytes = new Uint8Array(binary.length)
                                     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-                                    result.blob = new Blob([bytes])
+                                    result.blob = new Blob([bytes], { type: im.mimeType })
                                 } catch (error) {
                                     console.warn('[CombatSimSync] Failed to decode image blob:', error)
                                 }

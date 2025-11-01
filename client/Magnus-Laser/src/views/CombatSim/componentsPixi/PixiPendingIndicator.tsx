@@ -18,6 +18,7 @@ export interface PixiPendingIndicatorProps {
     onCancel: () => void
     isPlayerConnected?: boolean
     isPreview?: boolean
+    fromRemotePlayer?: boolean
 }
 
 /**
@@ -31,12 +32,19 @@ export class PixiPendingIndicator extends Container {
     public acceptContainer: Container
     public cancelContainer: Container
     public props: PixiPendingIndicatorProps
+    public startX: number
+    public startY: number
+    public fromRemotePlayer: boolean
     private lastZoom: number = 1
 
     constructor(props: PixiPendingIndicatorProps) {
         super()
 
         this.props = props
+        this.startX = props.startX
+        this.startY = props.startY
+        this.fromRemotePlayer = props.fromRemotePlayer ?? false
+
         this.lastZoom = props.viewport.scale.x
 
         // Create line graphics for movement path
@@ -67,10 +75,13 @@ export class PixiPendingIndicator extends Container {
 
         // Create accept and cancel buttons
         this.acceptContainer = createAcceptButton(() => {
-            this.props.onAccept()
+            if (this.props.onAccept) {
+                this.props.onAccept()
+            }
         })
         this.cancelContainer = createCancelButton(() => {
-            this.props.onCancel()
+            // Dispatch event for PixiBoard to handle the cancel logic
+            window.dispatchEvent(new CustomEvent('indicatorCancel', { detail: { tokenId: this.props.id } }))
         })
 
         this.acceptContainer.zIndex = 6
@@ -134,6 +145,12 @@ export class PixiPendingIndicator extends Container {
     // Method to update points (used for waypoint management)
     updatePoints(points: { x: number; y: number }[]) {
         this.props.points = points
+        // Update end position to the last point in the new path
+        if (points.length > 0) {
+            const lastPoint = points[points.length - 1]
+            this.props.endX = lastPoint.x
+            this.props.endY = lastPoint.y
+        }
         this.update()
     }
 
@@ -200,21 +217,32 @@ export class PixiPendingIndicator extends Container {
         const buttonSize = Math.max(8, 8 / Math.max(0.1, zoom)) // Half the original size (32/2)
         const gap = Math.max(6, 6 / Math.max(0.1, zoom)) // Half the original gap (12/2)
         const centerY = labelY
-        const showAcceptButton = this.props.isPlayerConnected !== false // Default to true
+
+        // Determine button visibility based on context
+        // For players receiving movements from DM (fromRemotePlayer: true), show no buttons
+        const showButtons = !(this.props.fromRemotePlayer && this.props.isPlayerConnected === false)
+        const showAcceptButton = showButtons && this.props.isPlayerConnected !== false // Default to true when showing buttons
 
         let cancelCenterX: number
         let labelCenterX: number
         let acceptCenterX: number
 
-        if (showAcceptButton) {
-            // Calculate positions: cancel button - distance label - accept button
-            cancelCenterX = labelX - buttonSize - gap - this.distanceLabel.width / 2
-            labelCenterX = labelX
-            acceptCenterX = labelX + this.distanceLabel.width / 2 + gap + buttonSize
+        if (showButtons) {
+            if (showAcceptButton) {
+                // Calculate positions: cancel button - distance label - accept button
+                cancelCenterX = labelX - buttonSize - gap - this.distanceLabel.width / 2
+                labelCenterX = labelX
+                acceptCenterX = labelX + this.distanceLabel.width / 2 + gap + buttonSize
+            } else {
+                // Only cancel button: distance label - cancel button
+                labelCenterX = labelX - buttonSize / 2 - gap / 2
+                cancelCenterX = labelX + this.distanceLabel.width / 2 + gap / 2
+                acceptCenterX = 0 // Not used
+            }
         } else {
-            // Only cancel button: distance label - cancel button
-            labelCenterX = labelX - buttonSize / 2 - gap / 2
-            cancelCenterX = labelX + this.distanceLabel.width / 2 + gap / 2
+            // No buttons, just center the label
+            labelCenterX = labelX
+            cancelCenterX = 0 // Not used
             acceptCenterX = 0 // Not used
         }
 
@@ -224,16 +252,22 @@ export class PixiPendingIndicator extends Container {
 
         // Scale buttons to match the calculated buttonSize (original was 32, now half)
         const scaleFactor = buttonSize / 16 // Original button size in code was 16 now
-        this.cancelContainer.scale.set(scaleFactor)
 
-        this.cancelContainer.visible = true
-        this.cancelContainer.position.set(cancelCenterX, centerY)
+        if (showButtons) {
+            this.cancelContainer.scale.set(scaleFactor)
+            this.cancelContainer.visible = true
+            this.cancelContainer.position.set(cancelCenterX, centerY)
 
-        if (showAcceptButton) {
-            this.acceptContainer.scale.set(scaleFactor)
-            this.acceptContainer.visible = true
-            this.acceptContainer.position.set(acceptCenterX, centerY)
+            if (showAcceptButton) {
+                this.acceptContainer.scale.set(scaleFactor)
+                this.acceptContainer.visible = true
+                this.acceptContainer.position.set(acceptCenterX, centerY)
+            } else {
+                this.acceptContainer.visible = false
+            }
         } else {
+            // Hide all buttons for DM-triggered animations on players
+            this.cancelContainer.visible = false
             this.acceptContainer.visible = false
         }
 
@@ -241,16 +275,26 @@ export class PixiPendingIndicator extends Container {
         this.background.clear()
         const paddingX = Math.max(8, 8 / Math.max(0.1, zoom)) // Half the original padding (8/2)
         const paddingY = Math.max(4, 4 / Math.max(0.1, zoom)) // Half the original padding (8/2)
-        //const bgLeft = cancelCenterX - buttonSize / 2 - paddingX
-        const bgLeft = showAcceptButton
-            ? cancelCenterX - buttonSize / 2 - paddingX
-            : labelCenterX - buttonSize / 2 - paddingX
-        const bgRight = showAcceptButton
-            ? acceptCenterX + buttonSize / 2 + paddingX
-            : cancelCenterX + buttonSize / 2 + paddingX
+
+        let bgLeft: number
+        let bgRight: number
+
+        if (showButtons) {
+            bgLeft = showAcceptButton
+                ? cancelCenterX - buttonSize / 2 - paddingX
+                : labelCenterX - buttonSize / 2 - paddingX
+            bgRight = showAcceptButton
+                ? acceptCenterX + buttonSize / 2 + paddingX
+                : cancelCenterX + buttonSize / 2 + paddingX
+        } else {
+            // No buttons, just background around label
+            bgLeft = labelCenterX - this.distanceLabel.width / 2 - paddingX
+            bgRight = labelCenterX + this.distanceLabel.width / 2 + paddingX
+        }
+
         // Calculate height based on the scaled font size and button size
         const labelHeight = this.distanceLabel.height || this.distanceLabel.style.fontSize
-        const contentHeight = Math.max(buttonSize, labelHeight)
+        const contentHeight = showButtons ? Math.max(buttonSize, labelHeight) : labelHeight
         const bgY = centerY - contentHeight / 2 - paddingY
         const bgWidth = bgRight - bgLeft
         const bgHeight = contentHeight + paddingY * 2

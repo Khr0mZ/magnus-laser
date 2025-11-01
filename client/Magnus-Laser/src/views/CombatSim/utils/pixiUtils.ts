@@ -76,6 +76,23 @@ export async function blobToImage(blob: Blob | undefined): Promise<globalThis.HT
         console.warn('blobToImage called with null/undefined blob')
         return null
     }
+
+    // Additional validation to check if blob is actually a Blob instance
+    if (!(blob instanceof Blob)) {
+        console.error('blobToImage called with invalid blob - not a Blob instance:', {
+            type: typeof blob,
+            value: blob,
+            constructor: (blob as unknown)?.constructor?.name,
+        })
+        return null
+    }
+
+    // Check if blob has valid size
+    if (blob.size === 0) {
+        console.warn('blobToImage called with empty blob')
+        return null
+    }
+
     return new Promise((resolve, reject) => {
         try {
             const url = URL.createObjectURL(blob)
@@ -90,7 +107,11 @@ export async function blobToImage(blob: Blob | undefined): Promise<globalThis.HT
             }
             img.src = url
         } catch (error) {
-            console.error('Error creating object URL from blob:', error)
+            console.error('Error creating object URL from blob:', error, 'Blob details:', {
+                type: blob.type,
+                size: blob.size,
+                constructor: blob.constructor.name,
+            })
             reject(error)
         }
     })

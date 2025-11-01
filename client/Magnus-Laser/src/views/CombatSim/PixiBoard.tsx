@@ -175,7 +175,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         isPlayerConnected,
     } = props
     const { readerMode } = useUserPreferences()
-    const { sendAction } = useSession()
+    const { sendAction, role, session } = useSession()
 
     // Force re-render when textures are ready
     const [renderTrigger, forceRender] = useState(0)
@@ -193,7 +193,8 @@ const PixiBoard = (props: PixiBoardProps) => {
         sy: number,
         ex: number,
         ey: number,
-        points?: { x: number; y: number }[]
+        points?: { x: number; y: number }[],
+        fromRemotePlayer?: boolean
     ) => {
         const viewport = viewportRef.current
         if (!viewport) return
@@ -225,9 +226,24 @@ const PixiBoard = (props: PixiBoardProps) => {
             token,
             viewport,
             isPlayerConnected: !isPlayerConnected,
+            fromRemotePlayer: true,
             onAccept: () => {
                 const ind = pixiPendingIndicatorsRef.current.get(id)
-                if (!ind) return
+                if (!ind) {
+                    return
+                }
+
+                // Send movement acceptance to synchronize with other players
+                // DM always sends when in session, players only send for their own actions
+                const inSession = !!session
+                if (inSession) {
+                    sendAction({
+                        kind: 'PENDING_MOVEMENT',
+                        tokenId: id,
+                        points: ind.points,
+                        mapId: mapKeyRef.current || '',
+                    })
+                }
 
                 // Calculate total distance traveled
                 const step = gridSizeRef.current
@@ -246,19 +262,80 @@ const PixiBoard = (props: PixiBoardProps) => {
                 // Round distance to integer
                 totalDistance = Math.round(totalDistance)
 
-                onTokenMove(id, ind.endX, ind.endY, isCombatActiveRef.current ? totalDistance : undefined)
+                // Destroy indicator first so animation can take effect
                 indicator.destroy()
+
+                // Schedule animation after indicator is removed
+                schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
+
+                // Update token position after animation is scheduled
+                onTokenMove(id, ind.endX, ind.endY, isCombatActiveRef.current ? totalDistance : undefined)
+
                 pixiPendingIndicatorsRef.current.delete(id)
                 onPendingCountChange(pixiPendingIndicatorsRef.current.size)
             },
             onCancel: () => {
                 const ind = pixiPendingIndicatorsRef.current.get(id)
-                if (!ind) return
+                if (!ind) {
+                    return
+                }
 
-                // Remove indicator
-                ind.destroy()
-                pixiPendingIndicatorsRef.current.delete(id)
-                onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+                if (ind.points.length < 2) {
+                    // Cancel entire movement for 1 point
+                    // Move token back to start position
+                    onTokenMove(id, ind.props.startX, ind.props.startY)
+
+                    // Remove indicator
+                    ind.destroy()
+                    pixiPendingIndicatorsRef.current.delete(id)
+                    onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+                } else {
+                    // Remove last waypoint
+                    ind.points.pop()
+                    const newPoints = ind.points
+
+                    // If after removing the waypoint we have 2 or fewer points, cancel entirely
+                    if (newPoints.length <= 2) {
+                        // Cancel entire movement
+                        onTokenMove(id, ind.props.startX, ind.props.startY)
+
+                        // Send rejection to synchronize with other players
+                        // DM always sends when in session, players only send for their own actions
+                        const inSession = !!session
+                        if (inSession && (role === 'dm' || !fromRemotePlayer)) {
+                            sendAction({
+                                kind: 'REJECT_MOVEMENT',
+                                tokenId: id,
+                            })
+                        }
+
+                        // Remove indicator
+                        ind.destroy()
+                        pixiPendingIndicatorsRef.current.delete(id)
+                        onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+                    } else {
+                        // Update to the new points
+                        const newLastPoint = newPoints[newPoints.length - 1]
+                        if (newLastPoint) {
+                            ind.updatePosition(newLastPoint.x, newLastPoint.y)
+
+                            // Send update to synchronize with other players
+                            // DM always sends when in session, players only send for their own actions
+                            const inSession = !!session
+                            if (inSession && (role === 'dm' || !fromRemotePlayer)) {
+                                sendAction({
+                                    kind: 'PENDING_MOVEMENT',
+                                    tokenId: id,
+                                    points: newPoints,
+                                    mapId: mapKeyRef.current || '',
+                                })
+                            }
+
+                            // Trigger re-render to update token positions
+                            forceRender((prev) => prev + 1)
+                        }
+                    }
+                }
             },
         })
         pixiPendingIndicatorsRef.current.set(id, indicator)
@@ -525,13 +602,53 @@ const PixiBoard = (props: PixiBoardProps) => {
             // Store the movement points for animation when accepted
             pendingMovementPointsRef.current.set(tokenId, points)
 
-            // Create the overlay with appropriate accept button visibility
+            // Check if this token recently moved and might need re-animation
+            const token = tokensRef.current.find((t) => t.id === tokenId)
+            const prevToken = prevTokensRef.current.find((t) => t.id === tokenId)
+            if (
+                token &&
+                prevToken &&
+                (token.x !== prevToken.x || token.y !== prevToken.y) &&
+                !animationsRef.current.has(tokenId)
+            ) {
+                // Token moved recently, and we now have the movement points - re-trigger animation
+                // This handles the case where DM accepts movement and sends PENDING_MOVEMENT after token position update
+                setTimeout(() => {
+                    // Force a re-render to trigger animation logic with stored points
+                    forceRender((prev) => prev + 1)
+                }, 50) // Small delay to ensure state is updated
+            }
+
+            // Create or update the overlay with appropriate accept button visibility
             if (points.length >= 2) {
+                // Always destroy existing and create new to ensure correct onCancel callback
+                const existingIndicator = pixiPendingIndicatorsRef.current.get(tokenId)
+                if (existingIndicator) {
+                    existingIndicator.destroy()
+                    pixiPendingIndicatorsRef.current.delete(tokenId)
+                }
+
                 const startPoint = points[0]
                 const endPoint = points[points.length - 1]
                 // Store the movement points for animation
                 pendingMovementPointsRef.current.set(tokenId, points)
-                createPendingOverlayWithOptions(tokenId, startPoint.x, startPoint.y, endPoint.x, endPoint.y, points)
+                createPendingOverlayWithOptions(
+                    tokenId,
+                    startPoint.x,
+                    startPoint.y,
+                    endPoint.x,
+                    endPoint.y,
+                    points,
+                    true
+                )
+
+                // If player receives PENDING_MOVEMENT from DM, start the animation
+                if (role === 'player') {
+                    schedulePathAnimation(tokenId, points, gridSizeRef.current, animationsRef.current)
+                }
+
+                // Trigger re-render to update token positions
+                forceRender((prev) => prev + 1)
             }
         }
 
@@ -562,6 +679,134 @@ const PixiBoard = (props: PixiBoardProps) => {
             window.removeEventListener('cleanupPendingMovement', handleCleanupPendingMovement as EventListener)
         }
     }, [])
+
+    // Listen for pending movement rejection events
+    useEffect(() => {
+        const handlePendingMovementRejected = (event: CustomEvent) => {
+            const { tokenId } = event.detail
+
+            // Remove the pending overlay for this token (applies to all maps)
+            const indicator = pixiPendingIndicatorsRef.current.get(tokenId)
+            if (indicator) {
+                // Move token back to the start position of the pending movement
+                onTokenMove(tokenId, indicator.startX, indicator.startY)
+
+                // Destroy the indicator
+                indicator.destroy()
+                pixiPendingIndicatorsRef.current.delete(tokenId)
+                onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+
+                // Clear stored movement points
+                pendingMovementPointsRef.current.delete(tokenId)
+            }
+        }
+
+        window.addEventListener('pendingMovementRejected', handlePendingMovementRejected as EventListener)
+        return () => {
+            window.removeEventListener('pendingMovementRejected', handlePendingMovementRejected as EventListener)
+        }
+    }, [])
+
+    // Listen for pending movement update events (segment changes)
+    useEffect(() => {
+        const handlePendingMovementUpdated = (event: CustomEvent) => {
+            const { tokenId, points, mapId } = event.detail
+
+            // Only handle updates for the current map
+            if (mapId !== mapKey) {
+                return
+            }
+
+            // Update the pending overlay for this token
+            const indicator = pixiPendingIndicatorsRef.current.get(tokenId)
+            if (indicator) {
+                // Update the points and reposition the indicator
+                indicator.updatePoints(points)
+
+                // Update stored movement points for animation
+                pendingMovementPointsRef.current.set(tokenId, points)
+
+                // Trigger re-render to update token positions
+                forceRender((prev) => prev + 1)
+            }
+        }
+
+        window.addEventListener('pendingMovementUpdated', handlePendingMovementUpdated as EventListener)
+        return () => {
+            window.removeEventListener('pendingMovementUpdated', handlePendingMovementUpdated as EventListener)
+        }
+    }, [mapKey])
+
+    // Listen for indicator cancel events
+    useEffect(() => {
+        const handleIndicatorCancel = (event: CustomEvent) => {
+            const { tokenId } = event.detail
+
+            const ind = pixiPendingIndicatorsRef.current.get(tokenId)
+            if (!ind) {
+                return
+            }
+
+            if (ind.points.length < 2) {
+                // Cancel entire movement for 1 point
+                onTokenMove(tokenId, ind.props.startX, ind.props.startY)
+
+                // Remove indicator
+                ind.destroy()
+                pixiPendingIndicatorsRef.current.delete(tokenId)
+                onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+            } else {
+                // Remove last waypoint
+                ind.points.pop()
+                const newPoints = ind.points
+
+                // If after removing the waypoint we have 2 or fewer points, cancel entirely
+                if (newPoints.length <= 2) {
+                    // Cancel entire movement
+                    onTokenMove(tokenId, ind.props.startX, ind.props.startY)
+
+                    // Send rejection to synchronize with other players
+                    const inSession = !!session
+                    if (inSession) {
+                        sendAction({
+                            kind: 'REJECT_MOVEMENT',
+                            tokenId,
+                        })
+                    }
+
+                    // Remove indicator
+                    ind.destroy()
+                    pixiPendingIndicatorsRef.current.delete(tokenId)
+                    onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+                } else {
+                    // Update to the new points
+                    const newLastPoint = newPoints[newPoints.length - 1]
+                    if (newLastPoint) {
+                        ind.updatePosition(newLastPoint.x, newLastPoint.y)
+
+                        // Send update to synchronize with other players
+                        const inSession = !!session
+                        if (inSession) {
+                            sendAction({
+                                kind: 'PENDING_MOVEMENT',
+                                tokenId,
+                                points: newPoints,
+                                mapId: mapKeyRef.current || '',
+                            })
+                        }
+
+                        // Trigger re-render to update token positions
+                        forceRender((prev) => prev + 1)
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('indicatorCancel', handleIndicatorCancel as EventListener)
+        return () => {
+            window.removeEventListener('indicatorCancel', handleIndicatorCancel as EventListener)
+        }
+    }, [session, sendAction])
 
     // Update images ref when images prop changes
     useEffect(() => {
@@ -1057,7 +1302,21 @@ const PixiBoard = (props: PixiBoardProps) => {
                         isPlayerConnected: !isPlayerConnected,
                         onAccept: () => {
                             const ind = pixiPendingIndicatorsRef.current.get(id)
-                            if (!ind) return
+                            if (!ind) {
+                                return
+                            }
+
+                            // Send movement acceptance to synchronize with other players
+                            // DM always sends when in session, players only send for their own actions
+                            const inSession = !!session
+                            if (inSession) {
+                                sendAction({
+                                    kind: 'PENDING_MOVEMENT',
+                                    tokenId: id,
+                                    points: ind.points,
+                                    mapId: mapKeyRef.current || '',
+                                })
+                            }
 
                             // Calculate total distance traveled
                             const step = gridSizeRef.current
@@ -2539,6 +2798,11 @@ const PixiBoard = (props: PixiBoardProps) => {
         if (!onBindFit) return
         const viewport = viewportRef.current
         const fitFn = () => {
+            // Prevent fit-to-bounds during token animations or pending movements to avoid disrupting player view
+            if (animationsRef.current.size > 0 || pixiPendingIndicatorsRef.current.size > 0) {
+                return
+            }
+
             const { w, h } = getTargetSize(backgroundRef.current, worldDims)
             const sw = viewport.screenWidth - pixiSidePanelWidth
             const sh = viewport.screenHeight
@@ -2565,9 +2829,22 @@ const PixiBoard = (props: PixiBoardProps) => {
         for (const t of tokens) {
             const p = prevById.get(t.id)
             if (!p) continue
-            if (animationsRef.current.has(t.id)) continue
-            // Don't skip if token has stored movement points (was pending and accepted)
             const hasStoredPoints = pendingMovementPointsRef.current.has(t.id)
+            const existingAnimation = animationsRef.current.get(t.id)
+
+            // If there's an existing animation and we have stored points for waypoint animation,
+            // remove the existing animation and allow waypoint animation
+            const storedPoints = pendingMovementPointsRef.current.get(t.id)
+            if (existingAnimation && hasStoredPoints && storedPoints && storedPoints.length > 2) {
+                // Remove existing animation to allow waypoint animation
+                animationsRef.current.delete(t.id)
+            }
+
+            // Skip if there's still an animation and no stored points for replacement
+            if (animationsRef.current.has(t.id) && !(hasStoredPoints && storedPoints && storedPoints.length > 2)) {
+                continue
+            }
+
             if (pixiPendingIndicatorsRef.current.has(t.id) && !hasStoredPoints) continue
             if (p.x !== t.x || p.y !== t.y) {
                 // Use stored movement points if available (for waypoint animations), otherwise use simple start/end

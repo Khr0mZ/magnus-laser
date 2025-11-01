@@ -96,10 +96,26 @@ function isCombatSimMutation(v: unknown): v is CombatSimMutationMsg {
     return isObject(v) && v.kind === 'COMBAT_SIM_MUTATION' && Array.isArray(v.ops)
 }
 
-type PendingMovementMsg = { kind: 'PENDING_MOVEMENT'; tokenId: string; points: { x: number; y: number }[]; mapId: string }
+type PendingMovementMsg = {
+    kind: 'PENDING_MOVEMENT'
+    tokenId: string
+    points: { x: number; y: number }[]
+    mapId: string
+}
+type RejectMovementMsg = { kind: 'REJECT_MOVEMENT'; tokenId: string }
 
 function isPendingMovement(v: unknown): v is PendingMovementMsg {
-    return isObject(v) && v.kind === 'PENDING_MOVEMENT' && typeof v.tokenId === 'string' && Array.isArray(v.points) && typeof v.mapId === 'string'
+    return (
+        isObject(v) &&
+        v.kind === 'PENDING_MOVEMENT' &&
+        typeof v.tokenId === 'string' &&
+        Array.isArray(v.points) &&
+        typeof v.mapId === 'string'
+    )
+}
+
+function isRejectMovement(v: unknown): v is RejectMovementMsg {
+    return isObject(v) && v.kind === 'REJECT_MOVEMENT' && typeof v.tokenId === 'string'
 }
 
 async function bytesSHA256Base64(bytes: Uint8Array): Promise<string> {
@@ -462,29 +478,69 @@ async function handleInboundMessage(
                 const actorPeer = state.peers.find((p) => p.id === actorId)
                 const actorName = actorPeer?.name ?? ''
                 const payload: unknown = msg.action
-                // Handle PENDING_MOVEMENT actions (DM receives from players, DM broadcasts to all)
+                // Handle PENDING_MOVEMENT actions (broadcast to all players when received by DM)
                 if (isPendingMovement(payload)) {
-                    // Dispatch event for local UI to show pending movement overlay
-                    const event = new CustomEvent('pendingMovementReceived', {
-                        detail: {
-                            tokenId: payload.tokenId,
-                            points: payload.points,
-                            mapId: payload.mapId,
-                            actorId: actorId,
-                            actorName: actorName,
-                        },
-                    })
-                    window.dispatchEvent(event)
+                    // Don't process our own actions to avoid loops
+                    if (actorId === runtime.selfId) {
+                        // Skip processing own actions to avoid loops
+                    } else {
+                        // Dispatch event for local UI to show pending movement overlay
+                        const event = new CustomEvent('pendingMovementReceived', {
+                            detail: {
+                                tokenId: payload.tokenId,
+                                points: payload.points,
+                                mapId: payload.mapId,
+                                actorId: actorId,
+                                actorName: actorName,
+                            },
+                        })
+                        window.dispatchEvent(event)
+                    }
 
-                    // DM broadcasts to all connected players
+                    // DM broadcasts to all connected players (except the sender if they're connected)
                     if (state.role === 'dm') {
                         for (const peer of runtime.rtcConnectedPeers) {
-                            runtime.webrtc?.sendToPeer(peer, {
-                                t: 'ACTION',
-                                id: `${msg.id}-broadcast`,
-                                actor: runtime.selfId ?? 'dm',
-                                action: payload,
-                            } as WireMsg)
+                            // Don't send back to the sender to avoid duplicates
+                            if (peer !== actorId) {
+                                runtime.webrtc?.sendToPeer(peer, {
+                                    t: 'ACTION',
+                                    id: `${msg.id}-broadcast`,
+                                    actor: runtime.selfId ?? 'dm',
+                                    action: payload,
+                                } as WireMsg)
+                            }
+                        }
+                    }
+                    break
+                }
+
+                // Handle REJECT_MOVEMENT actions (broadcast to all players when received by DM)
+                if (isRejectMovement(payload)) {
+                    // Don't process our own actions to avoid loops
+                    if (actorId === runtime.selfId) {
+                        // Skip processing own actions to avoid loops
+                    } else {
+                        // Dispatch event for local UI to clean up rejected movement
+                        const event = new CustomEvent('pendingMovementRejected', {
+                            detail: {
+                                tokenId: payload.tokenId,
+                            },
+                        })
+                        window.dispatchEvent(event)
+                    }
+
+                    // DM broadcasts to all connected players (except the sender if they're connected)
+                    if (state.role === 'dm') {
+                        for (const peer of runtime.rtcConnectedPeers) {
+                            // Don't send back to the sender to avoid duplicates
+                            if (peer !== actorId) {
+                                runtime.webrtc?.sendToPeer(peer, {
+                                    t: 'ACTION',
+                                    id: `${msg.id}-broadcast`,
+                                    actor: runtime.selfId ?? 'dm',
+                                    action: payload,
+                                } as WireMsg)
+                            }
                         }
                     }
                     break
@@ -526,7 +582,24 @@ async function handleInboundMessage(
                                     runtime.assetBuffers.delete(key)
                                     break
                                 }
-                                const blob = new Blob([bytes])
+                                // Create blob with proper MIME type from metadata
+                                let mimeType = ''
+                                if (payload.asset.type === 'map') {
+                                    const meta = await db.sessionMaps.get(payload.asset.id)
+                                    mimeType = meta?.mimeType || 'image/png' // fallback to png
+                                } else {
+                                    const meta = await db.sessionImages.get(payload.asset.id)
+                                    mimeType = meta?.mimeType || 'image/png' // fallback to png
+                                }
+                                const blob = new Blob([bytes], { type: mimeType })
+
+                                // Validate the blob was created correctly
+                                if (!blob || blob.size === 0) {
+                                    console.warn('Created invalid blob for asset', payload.asset, 'size:', blob?.size)
+                                    runtime.assetBuffers.delete(key)
+                                    break
+                                }
+
                                 if (payload.asset.type === 'map') {
                                     const assetId = payload.asset.id
                                     const meta = await db.sessionMaps.get(assetId)
@@ -767,7 +840,7 @@ async function handleInboundMessage(
                             if (changes.x !== undefined || changes.y !== undefined) {
                                 if (typeof window !== 'undefined') {
                                     const cleanupEvent = new CustomEvent('cleanupPendingMovement', {
-                                        detail: { tokenId: id }
+                                        detail: { tokenId: id },
                                     })
                                     window.dispatchEvent(cleanupEvent)
                                 }

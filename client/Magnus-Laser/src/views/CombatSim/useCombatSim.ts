@@ -1188,17 +1188,26 @@ const useCombatSim = () => {
             if (map.mapId) {
                 const m = await mapsTable.get(map.mapId)
                 if (m) {
-                    const img = await blobToImage(m.blob)
-                    if (img) {
-                        const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
-                        await replaceMapTexture(texture)
-                        setGridSize(m.gridSize)
-                        prevGridSizeRef.current = m.gridSize
-                        setSnapToGrid(m.snapToGrid)
-                        setGridColorHex(m.gridColorHex)
-                        setGridAlpha(m.gridAlpha)
-                    } else {
-                        console.warn('Failed to load map image, map may not display correctly')
+                    try {
+                        const img = await blobToImage(m.blob)
+                        if (img) {
+                            const texture = Texture.from(img as unknown as globalThis.HTMLImageElement)
+                            await replaceMapTexture(texture)
+                            setGridSize(m.gridSize)
+                            prevGridSizeRef.current = m.gridSize
+                            setSnapToGrid(m.snapToGrid)
+                            setGridColorHex(m.gridColorHex)
+                            setGridAlpha(m.gridAlpha)
+                        } else {
+                            console.warn('Failed to load map image, map may not display correctly. Map blob details:', {
+                                hasBlob: !!m.blob,
+                                blobType: m.blob?.type,
+                                blobSize: m.blob?.size,
+                                blobConstructor: m.blob?.constructor?.name
+                            })
+                        }
+                    } catch (error) {
+                        console.error('Error loading map image:', error)
                     }
                 }
             }
