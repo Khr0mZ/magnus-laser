@@ -12,7 +12,7 @@ import {
     PlotBuildingComplicationType,
     PlotComplicationType,
 } from '../graphql/types'
-import { Blast, BoardMap, Image, Initiative, Map, RollHistoryEntry, Token, Wall } from '../views/CombatSim/types'
+import { Blast, BoardMap, Image, Initiative, Map, RollHistoryEntry, Token, Wall } from '../views/CombatSim/utils/types'
 
 // Normalized database types (for storage only)
 export type DbBounty = {

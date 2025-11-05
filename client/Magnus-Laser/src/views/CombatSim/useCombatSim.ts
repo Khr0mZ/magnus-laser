@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from '../../state/sessionStore'
 import { db } from '../../utils/db'
 import { randomNPCs } from '../../utils/generators/npc/npcs'
+import { rollD10WithSpecial, rollDamage, rollToHit } from './utils/diceUtils'
 import type {
     Blast,
     BlastType,
@@ -12,17 +13,20 @@ import type {
     Image,
     Map as MapType,
     RollHistoryEntry,
+    RollResult,
+    RollType,
     Token,
     Wall,
     WallShape,
-} from './types'
-import { rollD10WithSpecial, rollDamage, rollToHit, type RollResult, type RollType } from './utils/diceUtils'
+} from './utils/types'
 
 type ImageUrlCacheEntry = {
     url: string
     size: number
     type: string
 }
+
+// Helper functions to extract values from new actions structure
 
 const useCombatSim = () => {
     // Dialogs
@@ -70,7 +74,6 @@ const useCombatSim = () => {
                 mapId: '',
                 x: half,
                 y: half,
-                radius: half,
                 color: 0x00ff00,
                 stats: randomNPCs.EASY,
                 name: 'Easy',
@@ -80,7 +83,6 @@ const useCombatSim = () => {
                 mapId: '',
                 x: half,
                 y: half,
-                radius: half,
                 color: 0xffff00,
                 stats: randomNPCs.TYPICAL,
                 name: 'Typical',
@@ -90,7 +92,6 @@ const useCombatSim = () => {
                 mapId: '',
                 x: half,
                 y: half,
-                radius: half,
                 color: 0xff0000,
                 stats: randomNPCs.DANGEROUS,
                 name: 'Dangerous',
@@ -100,7 +101,6 @@ const useCombatSim = () => {
                 mapId: '',
                 x: half,
                 y: half,
-                radius: half,
                 color: 0xff00ff,
                 stats: randomNPCs.DEADLY,
                 name: 'Deadly',
@@ -137,9 +137,9 @@ const useCombatSim = () => {
 
     // Session state
 
-    const session = useSession()
     // For players, show as connected if they have a session (they're in the session)
     // For DMs, show as connected only when WebRTC is connected
+    const session = useSession()
     const isPlayerConnected = Boolean(session.session && session.role === 'player' && session.connected)
     // Helper function to determine if we should use session tables
     const useSessionTables = () => {
@@ -167,6 +167,10 @@ const useCombatSim = () => {
     const upsertImageUrl = useCallback((image: Image): string => {
         const cache = imageUrlCacheRef.current
         const existing = cache.get(image.id)
+        if (!image.blob) {
+            // If blob is not available, return a placeholder or handle gracefully
+            return existing?.url || ''
+        }
         const size = image.blob.size
         const type = image.blob.type
         if (existing && existing.size === size && existing.type === type) {
@@ -191,7 +195,8 @@ const useCombatSim = () => {
             if (cacheEntry) return cacheEntry.url
             const image = images.find((img) => img.id === imageId)
             if (!image) return undefined
-            return upsertImageUrl(image)
+            const url = upsertImageUrl(image)
+            return url || undefined
         },
         [images, upsertImageUrl]
     )
@@ -350,12 +355,11 @@ const useCombatSim = () => {
 
         if (!hasGridSizeChanged) return
 
-        // Recalculate token radii based on new grid size
+        // Recalculate token positions based on new grid size (radius is now always gridSize/2)
         const allTokens = [...tokens, ...tokensNotInMap]
-        const updates: { token: Token; newRadius: number; newX: number; newY: number }[] = []
+        const updates: { token: Token; newX: number; newY: number }[] = []
 
         for (const token of allTokens) {
-            const newRadius = Math.max(1, Math.round((token.radius * oldGridSize) / size))
             const gridX = Math.round(token.x / oldGridSize)
             const gridY = Math.round(token.y / oldGridSize)
             const newX = gridX * size
@@ -363,7 +367,6 @@ const useCombatSim = () => {
 
             updates.push({
                 token,
-                newRadius,
                 newX,
                 newY,
             })
@@ -375,7 +378,7 @@ const useCombatSim = () => {
                 prev.map((t) => {
                     const update = updates.find((u) => u.token.id === t.id)
                     if (update) {
-                        return { ...t, radius: update.newRadius, x: update.newX, y: update.newY }
+                        return { ...t, x: update.newX, y: update.newY }
                     }
                     return t
                 })
@@ -386,7 +389,7 @@ const useCombatSim = () => {
                 prev.map((t) => {
                     const update = updates.find((u) => u.token.id === t.id)
                     if (update) {
-                        return { ...t, radius: update.newRadius, x: update.newX, y: update.newY }
+                        return { ...t, x: update.newX, y: update.newY }
                     }
                     return t
                 })
@@ -403,8 +406,6 @@ const useCombatSim = () => {
     // PANEL DATA
     // TOKEN
     const panelTokenOnDuplicate = async (id: string) => {
-        const tokenInMap = tokens.find((t) => t.id === id)
-        const setTargetTokens = tokenInMap ? setTokens : setTokensNotInMap
         const allTokens = [...tokens, ...tokensNotInMap]
         const existingTokens = [...tokens, ...tokensNotInMap]
         const token = allTokens.find((t) => t.id === id)
@@ -422,14 +423,36 @@ const useCombatSim = () => {
             const newToken = {
                 ...token,
                 name: newName,
-                radius: Math.max(1, Math.floor(gridSize / 2)),
                 id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
                 mapId: getActiveMapKey(),
                 // Keep same position as original token
             }
             await db.tokens.add(newToken)
-            setTargetTokens((prev) => [...prev, newToken])
+            // Always add the duplicate to the current map
+            setTokens((prev) => [...prev, newToken])
         }
+    }
+    const pixiOnTokenUpdate = (id: string, updates: Partial<Token>) => {
+        // Find the token in current map or other maps
+        const tokenInMap = tokens.find((t) => t.id === id)
+        const tokenInNotInMap = tokensNotInMap.find((t) => t.id === id)
+
+        // If not found, force update in tokens (assuming it's a displayed token)
+        const setTargetTokens = tokenInMap ? setTokens : (tokenInNotInMap ? setTokensNotInMap : setTokens)
+
+        // Update in state synchronously
+        setTargetTokens((prev) =>
+            prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+        )
+
+        // Update in database asynchronously
+        const tokensTable = getTokensTable()
+        tokensTable.update(id, updates).catch((error) => {
+            console.error('Failed to update token in database:', error)
+        })
+
+        // Send mutation for sync
+        sendMutation('tokens', 'update', { id, ...updates }, useSessionTables, session)
     }
     const panelTokenOnCut = async (id: string) => {
         const tokenInMap = tokens.find((t) => t.id === id)
@@ -439,7 +462,6 @@ const useCombatSim = () => {
         if (token) {
             const newToken = {
                 ...token,
-                radius: Math.max(1, Math.floor(gridSize / 2)),
             }
             setTokenClipboard([newToken])
             // Cut removes the token but stores it in clipboard
@@ -464,7 +486,6 @@ const useCombatSim = () => {
             const clipboardToken = {
                 ...token,
                 name: newName,
-                radius: Math.max(1, Math.floor(gridSize / 2)),
                 id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
             }
             setTokenClipboard([clipboardToken])
@@ -513,86 +534,103 @@ const useCombatSim = () => {
                 // Add to roll history
                 const initiativeMod = token.stats?.initiative ?? 0
                 const { value, fumble, critical, rolls } = rollD10WithSpecial()
-                await panelHistoryOnAddToRollHistory(token, 'initiative', {
-                    total: value + initiativeMod,
-                    rolls,
-                    fumble,
-                    critical,
-                    breakdown: `${value}${fumble ? ' (fumble)' : critical ? ' (critical)' : ''} + ${initiativeMod}`,
-                })
+                await panelHistoryOnAddToRollHistory(
+                    token,
+                    'initiative',
+                    {
+                        total: value + initiativeMod,
+                        rolls,
+                        fumble,
+                        critical,
+                        breakdown: `${value}${fumble ? ' (fumble)' : critical ? ' (critical)' : ''} + ${initiativeMod}`,
+                    },
+                    'Initiative'
+                )
             })
         )
         setInitiativeRolls(newRolls)
         return newRolls
     }
-    const panelInitOnMeleeAttack = async (token: Token) => {
-        const combat = token.stats?.combat ?? 0
+    const panelInitOnMeleeAttack = async (token: Token, actionId: string) => {
+        const actions = token.stats?.actions ?? []
+        const action = actions.find((a) => a.id === actionId)
+        if (!action || action.type !== 'melee') return
+
+        const combat = action.value
         const woundedPenalty =
             panelInitCheckSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
         const hitResult = rollToHit(combat, woundedPenalty)
 
-        const diceCount = token.stats?.weapons?.melee?.d6 ?? 1
+        const damageDice = action.damage
+        const diceCount = damageDice?.d6 ?? 1
         const damageResult = rollDamage(diceCount)
 
-        await panelHistoryOnAddToRollHistory(token, 'melee-hit', hitResult, damageResult)
+        await panelHistoryOnAddToRollHistory(
+            token,
+            'melee-hit',
+            hitResult,
+            action.name || 'Melee Attack',
+            damageResult,
+            'melee'
+        )
     }
-    const panelInitOnRangedAttack = async (token: Token) => {
-        const combat = token.stats?.combat ?? 0
+    const panelInitOnRangedAttack = async (token: Token, actionId: string) => {
+        const actions = token.stats?.actions ?? []
+        const action = actions.find((a) => a.id === actionId)
+        if (!action || action.type !== 'ranged') return
+
+        const combat = action.value
         const woundedPenalty =
             panelInitCheckSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
         const hitResult = rollToHit(combat, woundedPenalty)
 
-        const diceCount = token.stats?.weapons?.ranged?.d6 ?? 1
+        const damageDice = action.damage
+        const diceCount = damageDice?.d6 ?? 1
         const damageResult = rollDamage(diceCount)
 
-        await panelHistoryOnAddToRollHistory(token, 'ranged-hit', hitResult, damageResult)
+        await panelHistoryOnAddToRollHistory(
+            token,
+            'ranged-hit',
+            hitResult,
+            action.name || 'Ranged Attack',
+            damageResult,
+            'ranged'
+        )
     }
-    const panelInitOnSkillCheck = async (token: Token) => {
-        const skills = token.stats?.skills ?? 0
+    const panelInitOnSkillCheck = async (token: Token, actionId: string) => {
+        const actions = token.stats?.actions ?? []
+        const action = actions.find((a) => a.id === actionId)
+        if (!action || action.type !== 'skill') return
+
+        const skills = action.value
         const woundedPenalty =
             panelInitCheckSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
         const result = rollToHit(skills, woundedPenalty)
 
-        await panelHistoryOnAddToRollHistory(token, 'skill', result)
+        await panelHistoryOnAddToRollHistory(token, 'skill', result, action.name || 'Skill Check', undefined, 'skill')
     }
-    const panelInitOnGrenadeAttack = async (token: Token) => {
-        const combat = token.stats?.combat ?? 0
+    const panelInitOnGrenadeAttack = async (token: Token, actionId: string) => {
+        const actions = token.stats?.actions ?? []
+        const action = actions.find((a) => a.id === actionId)
+        if (!action || action.type !== 'grenade') return
+
+        const combat = action.value
         const woundedPenalty =
             panelInitCheckSeriouslyWounded(token) && !token.stats?.ignoreSeriouslyWoundedPenalty ? -2 : 0
         const hitResult = rollToHit(combat, woundedPenalty)
-        const damageResult = rollDamage(6) // 6d6
 
-        await panelHistoryOnAddToRollHistory(token, 'grenade-hit', hitResult, damageResult)
+        const damageDice = action.damage
+        const diceCount = damageDice?.d6 ?? 6 // Default to 6d6 for grenades
+        const damageResult = rollDamage(diceCount)
 
-        // Decrease currentGrenadesOrSpecialAmmo by 1
-        const newCount = Math.max(0, (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) - 1)
-
-        setTokens((prev) =>
-            prev.map((t) => {
-                if (t.id !== token.id || !t.stats) return t
-                return {
-                    ...t,
-                    stats: {
-                        ...t.stats,
-                        weapons: {
-                            ...t.stats.weapons,
-                            currentGrenadesOrSpecialAmmo: newCount,
-                        },
-                    },
-                }
-            })
+        await panelHistoryOnAddToRollHistory(
+            token,
+            'grenade-hit',
+            hitResult,
+            action.name || 'Grenade Attack',
+            damageResult,
+            'grenade'
         )
-
-        // Also update database if not default token
-        if (token.mapId !== '') {
-            try {
-                await db.tokens.update(token.id, {
-                    'stats.weapons.currentGrenadesOrSpecialAmmo': newCount,
-                })
-            } catch (error) {
-                console.error('Error updating grenades:', error)
-            }
-        }
     }
     const panelInitOnUpdateTokenCurrent = async (
         tokenId: string,
@@ -700,39 +738,6 @@ const useCombatSim = () => {
                         let updatedStats = { ...t.stats }
                         let needsUpdate = false
 
-                        // Initialize grenades
-                        if (t.stats.weapons.currentGrenadesOrSpecialAmmo === undefined) {
-                            const grenades = t.stats.weapons.grenadesOrSpecialAmmo
-                            if (grenades) {
-                                // Roll the grenades dice
-                                let count = 0
-                                if (grenades.d4) {
-                                    for (let i = 0; i < grenades.d4; i++) {
-                                        count += Math.floor(Math.random() * 4) + 1
-                                    }
-                                }
-                                if (grenades.d6) {
-                                    for (let i = 0; i < grenades.d6; i++) {
-                                        count += Math.floor(Math.random() * 6) + 1
-                                    }
-                                }
-                                if (grenades.d8) {
-                                    for (let i = 0; i < grenades.d8; i++) {
-                                        count += Math.floor(Math.random() * 8) + 1
-                                    }
-                                }
-
-                                updatedStats = {
-                                    ...updatedStats,
-                                    weapons: {
-                                        ...updatedStats.weapons,
-                                        currentGrenadesOrSpecialAmmo: count,
-                                    },
-                                }
-                                needsUpdate = true
-                            }
-                        }
-
                         // Initialize currentMovement to movement
                         updatedStats = {
                             ...updatedStats,
@@ -742,14 +747,7 @@ const useCombatSim = () => {
 
                         // Update database for non-default tokens
                         if (needsUpdate && t.mapId !== '') {
-                            const updates: Record<string, unknown> = {
-                                'stats.currentMovement': updatedStats.movement,
-                            }
-                            if (updatedStats.weapons.currentGrenadesOrSpecialAmmo !== undefined) {
-                                updates['stats.weapons.currentGrenadesOrSpecialAmmo'] =
-                                    updatedStats.weapons.currentGrenadesOrSpecialAmmo
-                            }
-                            db.tokens.update(t.id, updates).catch(console.error)
+                            db.tokens.update(t.id, { stats: updatedStats }).catch(console.error)
                         }
 
                         return needsUpdate ? { ...t, stats: updatedStats } : t
@@ -890,7 +888,9 @@ const useCombatSim = () => {
         token: Token,
         rollType: RollType,
         result: RollResult,
-        damageResult?: RollResult
+        actionName: string,
+        damageResult?: RollResult,
+        actionType?: 'melee' | 'ranged' | 'grenade' | 'skill'
     ) => {
         const entry: RollHistoryEntry = {
             id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
@@ -898,6 +898,8 @@ const useCombatSim = () => {
             tokenId: token.id,
             tokenName: token.name,
             rollType,
+            actionName: actionName,
+            actionType: actionType,
             result,
             damageResult,
             damageRevealed: damageResult ? autoRollDamage : undefined, // Auto-reveal if setting is enabled
@@ -1203,7 +1205,7 @@ const useCombatSim = () => {
                                 hasBlob: !!m.blob,
                                 blobType: m.blob?.type,
                                 blobSize: m.blob?.size,
-                                blobConstructor: m.blob?.constructor?.name
+                                blobConstructor: m.blob?.constructor?.name,
                             })
                         }
                     } catch (error) {
@@ -1293,13 +1295,18 @@ const useCombatSim = () => {
         if (activeTokenId && isCombatActive) {
             const token = tokens.find((t) => t.id === activeTokenId)
             if (token) {
-                panelHistoryOnAddToRollHistory(token, 'turn-start', {
-                    total: 0,
-                    rolls: [],
-                    fumble: false,
-                    critical: false,
-                    breakdown: '',
-                }).catch(console.error)
+                panelHistoryOnAddToRollHistory(
+                    token,
+                    'turn-start',
+                    {
+                        total: 0,
+                        rolls: [],
+                        fumble: false,
+                        critical: false,
+                        breakdown: '',
+                    },
+                    'Turn Start'
+                ).catch(console.error)
             }
         }
     }, [activeTokenId, isCombatActive])
@@ -1420,6 +1427,7 @@ const useCombatSim = () => {
         panelTokenOnDuplicate,
         panelTokenOnCut,
         panelTokenOnCopy,
+        pixiOnTokenUpdate,
         panelInitOnSetAutoReroll,
         panelInitOnSetActiveToken,
         panelHistoryOnSetAutoRollDamage,

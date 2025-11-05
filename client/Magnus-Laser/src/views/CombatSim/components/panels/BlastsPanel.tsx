@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import CustomScrollbar from '../../../../components/CustomScrollbar'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import colors from '../../../../utils/colors'
-import { Blast, BlastType } from '../../types'
+import { Blast, BlastType } from '../../utils/types'
 import { BlastContextMenu } from '../contextMenus/BlastContextMenu'
 
 interface BlastsPanelProps {

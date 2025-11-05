@@ -10,7 +10,7 @@ import type {
     RollHistoryEntry,
     Token,
     Wall,
-} from '@/views/CombatSim/types'
+} from '@/views/CombatSim/utils/types'
 
 let started = false
 let sendTimer: ReturnType<typeof setTimeout> | undefined

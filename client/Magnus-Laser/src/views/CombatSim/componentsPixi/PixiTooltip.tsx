@@ -1,7 +1,35 @@
 import { Layout } from '@pixi/layout'
+import { t } from 'i18next'
 import { Viewport } from 'pixi-viewport'
 import { Container, Graphics, Text, TextStyle } from 'pixi.js'
-import { Token } from '../types'
+import type { StatsActions, Token } from '../utils/types'
+
+// Helper functions to extract display values from actions
+const getActionDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
+    const action = actions.find((a) => a.type === type)
+    return action ? `${action.value}` : '0'
+}
+
+const getWeaponDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
+    const action = actions.find((a) => a.type === type)
+    if (!action || !action.damage) return '0D6'
+    const dice = action.damage.d6 || 1
+    return `${dice}D6`
+}
+
+const getGrenadeDisplayInfo = (actions: StatsActions[]) => {
+    const grenadeAction = actions.find((a) => a.type === 'grenade')
+    if (!grenadeAction || !grenadeAction.damage) return null
+
+    const diceParts = []
+    if (grenadeAction.damage.d4) diceParts.push(`${grenadeAction.damage.d4}D4`)
+    if (grenadeAction.damage.d6) diceParts.push(`${grenadeAction.damage.d6}D6`)
+    if (grenadeAction.damage.d8) diceParts.push(`${grenadeAction.damage.d8}D8`)
+
+    return {
+        dice: diceParts.join(' '),
+    }
+}
 
 export interface PixiTooltipProps {
     token: Token
@@ -96,6 +124,7 @@ export class PixiTooltip extends Container {
     private createTokenContent(token: Token): void {
         const stats = token.stats
         if (!stats) return
+        const actions = stats.actions || []
 
         // Clear existing content
         this.content.removeChildren()
@@ -203,7 +232,7 @@ export class PixiTooltip extends Container {
         combatLabel.y = yOffset
         this.content.addChild(combatLabel)
 
-        const combatValue = new Text({ text: `${stats.combat}`, style: healthValueStyle })
+        const combatValue = new Text({ text: getActionDisplayValue(actions, 'melee'), style: healthValueStyle })
         combatValue.x = 95
         combatValue.y = yOffset
         this.content.addChild(combatValue)
@@ -213,7 +242,7 @@ export class PixiTooltip extends Container {
         skillsLabel.y = yOffset
         this.content.addChild(skillsLabel)
 
-        const skillsValue = new Text({ text: `${stats.skills}`, style: healthValueStyle })
+        const skillsValue = new Text({ text: getActionDisplayValue(actions, 'skill'), style: healthValueStyle })
         skillsValue.x = 200
         skillsValue.y = yOffset
         this.content.addChild(skillsValue)
@@ -232,7 +261,7 @@ export class PixiTooltip extends Container {
         meleeLabel.y = yOffset
         this.content.addChild(meleeLabel)
 
-        const meleeValue = new Text({ text: `${stats.weapons.melee.d6}D6`, style: healthValueStyle })
+        const meleeValue = new Text({ text: getWeaponDisplayValue(actions, 'melee'), style: healthValueStyle })
         meleeValue.x = 80
         meleeValue.y = yOffset
         this.content.addChild(meleeValue)
@@ -242,18 +271,15 @@ export class PixiTooltip extends Container {
         rangedLabel.y = yOffset
         this.content.addChild(rangedLabel)
 
-        const rangedValue = new Text({ text: `${stats.weapons.ranged.d6}D6`, style: healthValueStyle })
+        const rangedValue = new Text({ text: getWeaponDisplayValue(actions, 'ranged'), style: healthValueStyle })
         rangedValue.x = 220
         rangedValue.y = yOffset
         this.content.addChild(rangedValue)
         yOffset += 24
 
         // Grenades/Special Ammo if available
-        if (
-            (stats.weapons.grenadesOrSpecialAmmo?.d4 ?? 0) > 0 ||
-            (stats.weapons.grenadesOrSpecialAmmo?.d6 ?? 0) > 0 ||
-            (stats.weapons.grenadesOrSpecialAmmo?.d8 ?? 0) > 0
-        ) {
+        const grenadeInfo = getGrenadeDisplayInfo(actions)
+        if (grenadeInfo) {
             const grenadesLabelStyle = new TextStyle({
                 fontSize: 16,
                 fill: 0x0099ff, // colors.neons.blue.default
@@ -261,19 +287,13 @@ export class PixiTooltip extends Container {
                 fontFamily: '"Orbitron", monospace',
             })
 
-            const grenadesLabel = new Text({ text: 'Grenades:', style: grenadesLabelStyle })
+            const grenadesLabel = new Text({ text: t('combatSim.grenade'), style: grenadesLabelStyle })
             grenadesLabel.x = 15
             grenadesLabel.y = yOffset
             this.content.addChild(grenadesLabel)
 
             const grenadesValue = new Text({
-                text: `${stats.weapons.currentGrenadesOrSpecialAmmo}/${[
-                    stats.weapons.grenadesOrSpecialAmmo?.d4 && `${stats.weapons.grenadesOrSpecialAmmo.d4}D4`,
-                    stats.weapons.grenadesOrSpecialAmmo?.d6 && `${stats.weapons.grenadesOrSpecialAmmo.d6}D6`,
-                    stats.weapons.grenadesOrSpecialAmmo?.d8 && `${stats.weapons.grenadesOrSpecialAmmo.d8}D8`,
-                ]
-                    .filter(Boolean)
-                    .join(' ')}`,
+                text: grenadeInfo.dice,
                 style: healthValueStyle,
             })
             grenadesValue.x = 115
@@ -418,6 +438,7 @@ export class PixiTooltip extends Container {
 
         const stats = this.currentToken.stats
         if (!stats) return { width: 300, height: 200 }
+        const actions = stats.actions || []
 
         let yOffset = 10 // initial padding
 
@@ -441,11 +462,8 @@ export class PixiTooltip extends Container {
         yOffset += 24
 
         // Grenades row (if present)
-        if (
-            (stats.weapons.grenadesOrSpecialAmmo?.d4 ?? 0) > 0 ||
-            (stats.weapons.grenadesOrSpecialAmmo?.d6 ?? 0) > 0 ||
-            (stats.weapons.grenadesOrSpecialAmmo?.d8 ?? 0) > 0
-        ) {
+        const grenadeInfo = getGrenadeDisplayInfo(actions)
+        if (grenadeInfo) {
             yOffset += 24
         }
 

@@ -6,6 +6,7 @@ import {
     Button,
     Checkbox,
     FormControlLabel,
+    Grid,
     IconButton,
     Stack,
     TextField,
@@ -17,7 +18,7 @@ import Scrollbar from 'smooth-scrollbar'
 import CustomScrollbar from '../../../../components/CustomScrollbar'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import colors from '../../../../utils/colors'
-import type { Token } from '../../types'
+import type { Token } from '../../utils/types'
 
 interface InitiativePanelProps {
     isSidePanelOpen: boolean
@@ -31,10 +32,10 @@ interface InitiativePanelProps {
     onNextTurn: () => void
     onUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => void
     onUpdateInitiative: (tokenId: string, value: number) => void
-    onMeleeAttack: (token: Token) => Promise<void>
-    onRangedAttack: (token: Token) => Promise<void>
-    onSkillCheck: (token: Token) => Promise<void>
-    onGrenadeAttack: (token: Token) => Promise<void>
+    onMeleeAttack: (token: Token, actionId: string) => Promise<void>
+    onRangedAttack: (token: Token, actionId: string) => Promise<void>
+    onSkillCheck: (token: Token, actionId: string) => Promise<void>
+    onGrenadeAttack: (token: Token, actionId: string) => Promise<void>
     resolveImageUrl: (imageId: string | undefined) => string | undefined
     isCombatActive: boolean
     onToggleCombat: () => void
@@ -269,17 +270,20 @@ const InitiativePanel = ({
 
                 {/* Token list */}
                 <CustomScrollbar scrollDirection="vertical" height="100%">
-                    <Stack spacing={1}>
+                    <Grid container spacing={1}>
                         {sortedTokens.map((token) => {
                             const isActive = token.id === activeTokenId
                             const initiative = initiativeRolls.get(token.id) ?? 0
                             const stats = token.stats
 
                             return (
-                                <Box
+                                <Grid
+                                    size={12}
                                     key={token.id}
                                     data-token-id={token.id}
-                                    onClick={!isPlayerConnected ? () => onTokenClick(token.id) : undefined}
+                                    onClick={
+                                        !isPlayerConnected && isCombatActive ? () => onTokenClick(token.id) : undefined
+                                    }
                                     sx={{
                                         background: isActive
                                             ? readerMode
@@ -290,9 +294,9 @@ const InitiativePanel = ({
                                             : `linear-gradient(0deg, ${colors.neons.cyan.default}20, transparent)`,
                                         borderRadius: 1,
                                         p: 1,
-                                        cursor: !isPlayerConnected ? 'pointer' : 'default',
+                                        cursor: !isPlayerConnected && isCombatActive ? 'pointer' : 'default',
                                         border: isActive
-                                            ? `2px solid ${colors.neons.pink.default}`
+                                            ? `1px solid ${colors.neons.pink.default}`
                                             : `1px solid ${colors.neons.cyan.dark}40`,
                                         boxShadow: isActive ? `0 0 12px ${colors.neons.pink.default}80` : 'none',
                                         transition: 'all 0.2s',
@@ -303,7 +307,7 @@ const InitiativePanel = ({
                                     }}
                                 >
                                     {/* Top row: Avatar, name, initiative */}
-                                    <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                                    <Grid container size={12} spacing={1} alignItems="center" mb={1}>
                                         <Avatar
                                             sx={{ width: 32, height: 32, color: pixiToCss(token.color) }}
                                             src={resolveImageUrl(token.imageId)}
@@ -348,310 +352,271 @@ const InitiativePanel = ({
                                                 },
                                             }}
                                         />
-                                    </Stack>
+                                    </Grid>
 
                                     {/* Stats row */}
-                                    {stats && (
-                                        <Box>
-                                            {/* Health */}
-                                            <Stack direction="row" spacing={0.5} alignItems="center" mb={0.5}>
-                                                <Typography
-                                                    variant="caption"
-                                                    sx={{
-                                                        color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
-                                                        minWidth: 35,
-                                                    }}
-                                                >
-                                                    {t('combatSim.hp')}:
-                                                </Typography>
-                                                <TextField
-                                                    size="small"
-                                                    type="tel"
-                                                    value={stats.currentHealth ?? stats.health}
-                                                    onChange={(e) => {
-                                                        const val = parseInt(e.target.value) || 0
-                                                        onUpdateTokenCurrent(token.id, 'health', val)
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    sx={{
-                                                        width: 45,
-                                                        '& input': {
-                                                            padding: '2px 4px',
-                                                            fontSize: '0.75rem',
-                                                            color: readerMode
-                                                                ? colors.grays.gray900
-                                                                : colors.neons.red.default,
-                                                            textAlign: 'center',
-                                                        },
-                                                    }}
-                                                />
-                                                <Typography
-                                                    variant="caption"
-                                                    sx={{
-                                                        color: readerMode
-                                                            ? colors.grays.gray700
-                                                            : colors.neons.red.default,
-                                                    }}
-                                                >
-                                                    / {stats.health}
-                                                </Typography>
-                                                {isSeriouslyWounded(token) &&
-                                                    !token.stats?.ignoreSeriouslyWoundedPenalty && (
-                                                        <Typography
-                                                            sx={{
-                                                                fontSize: '14px',
-                                                                lineHeight: 1,
-                                                                ml: 0.5,
-                                                            }}
-                                                            title="Seriously Wounded (-2 to hit/skill rolls)"
-                                                        >
-                                                            🩸
-                                                        </Typography>
-                                                    )}
-                                            </Stack>
-
-                                            {/* Movement */}
-                                            <Stack direction="row" spacing={0.5} alignItems="center" mb={0.5}>
-                                                <Typography
-                                                    variant="caption"
-                                                    sx={{
-                                                        color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
-                                                        minWidth: 35,
-                                                    }}
-                                                >
-                                                    {t('combatSim.move')}:
-                                                </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    sx={{
+                                    <Grid container size={12} spacing={0.5}>
+                                        {/* Health */}
+                                        <Grid size={6}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
+                                                    mr: 0.5,
+                                                }}
+                                            >
+                                                {t('combatSim.hp')}:
+                                            </Typography>
+                                            <TextField
+                                                size="small"
+                                                type="tel"
+                                                value={stats.currentHealth ?? stats.health}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0
+                                                    onUpdateTokenCurrent(token.id, 'health', val)
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                sx={{
+                                                    width: 45,
+                                                    '& input': {
+                                                        padding: '2px 4px',
+                                                        fontSize: '0.75rem',
                                                         color: readerMode
                                                             ? colors.grays.gray900
-                                                            : colors.neons.purple.default,
-                                                        fontWeight: 600,
-                                                    }}
-                                                >
-                                                    {stats.currentMovement} / {stats.movement}
-                                                </Typography>
-                                            </Stack>
-
-                                            {/* Armor */}
-                                            <Stack direction="row" spacing={1} mb={0.5}>
-                                                {/* SPH */}
-                                                <Stack direction="row" spacing={0.5} alignItems="center" flex={1}>
+                                                            : colors.neons.red.default,
+                                                        textAlign: 'center',
+                                                    },
+                                                    mr: 0.5,
+                                                }}
+                                            />
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray700 : colors.neons.red.default,
+                                                }}
+                                            >
+                                                / {stats.health}
+                                            </Typography>
+                                            {isSeriouslyWounded(token) &&
+                                                !token.stats?.ignoreSeriouslyWoundedPenalty && (
                                                     <Typography
-                                                        variant="caption"
                                                         sx={{
-                                                            color: readerMode
-                                                                ? colors.grays.gray700
-                                                                : colors.grays.gray900,
+                                                            fontSize: '14px',
+                                                            lineHeight: 1,
+                                                            ml: 0.5,
                                                         }}
+                                                        title="Seriously Wounded (-2 to hit/skill rolls)"
                                                     >
-                                                        {t('combatSim.sph')}:
+                                                        🩸
                                                     </Typography>
-                                                    <TextField
+                                                )}
+                                        </Grid>
+
+                                        {/* Movement */}
+                                        <Grid size={6} spacing={1}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
+                                                    mr: 0.5,
+                                                }}
+                                            >
+                                                {t('combatSim.move')}:
+                                            </Typography>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode
+                                                        ? colors.grays.gray900
+                                                        : colors.neons.purple.default,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                {stats.currentMovement} / {stats.movement}
+                                            </Typography>
+                                        </Grid>
+
+                                        {/* Armor */}
+                                        {/* SPH */}
+                                        <Grid size={6}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
+                                                    mr: 0.5,
+                                                }}
+                                            >
+                                                {t('combatSim.sph')}:
+                                            </Typography>
+                                            <TextField
+                                                size="small"
+                                                type="tel"
+                                                value={stats.armor.currentSph ?? stats.armor.sph}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0
+                                                    onUpdateTokenCurrent(token.id, 'sph', val)
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                sx={{
+                                                    width: 35,
+                                                    '& input': {
+                                                        padding: '2px 4px',
+                                                        fontSize: '0.70rem',
+                                                        color: readerMode
+                                                            ? colors.grays.gray900
+                                                            : colors.neons.green.default,
+                                                        textAlign: 'center',
+                                                    },
+                                                    mr: 0.5,
+                                                }}
+                                            />
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode
+                                                        ? colors.grays.gray700
+                                                        : colors.neons.green.default,
+                                                }}
+                                            >
+                                                / {stats.armor.sph}
+                                            </Typography>
+                                        </Grid>
+                                        {/* SPB */}
+                                        <Grid size={6}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
+                                                    mr: 0.5,
+                                                }}
+                                            >
+                                                {t('combatSim.spb')}:
+                                            </Typography>
+                                            <TextField
+                                                size="small"
+                                                type="tel"
+                                                value={stats.armor.currentSpb ?? stats.armor.spb}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0
+                                                    onUpdateTokenCurrent(token.id, 'spb', val)
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                sx={{
+                                                    width: 35,
+                                                    '& input': {
+                                                        padding: '2px 4px',
+                                                        fontSize: '0.70rem',
+                                                        color: readerMode
+                                                            ? colors.grays.gray900
+                                                            : colors.neons.green.default,
+                                                        textAlign: 'center',
+                                                    },
+                                                    mr: 0.5,
+                                                }}
+                                            />
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: readerMode
+                                                        ? colors.grays.gray700
+                                                        : colors.neons.green.default,
+                                                }}
+                                            >
+                                                / {stats.armor.spb}
+                                            </Typography>
+                                        </Grid>
+
+                                        {/* Action buttons */}
+                                        <Grid container size={12} spacing={1}>
+                                            {token.stats.actions.map((action) => (
+                                                <Grid size={6} spacing={1} key={action.id}>
+                                                    <IconButton
                                                         size="small"
-                                                        type="tel"
-                                                        value={stats.armor.currentSph ?? stats.armor.sph}
-                                                        onChange={(e) => {
-                                                            const val = parseInt(e.target.value) || 0
-                                                            onUpdateTokenCurrent(token.id, 'sph', val)
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            if (action.type === 'melee') {
+                                                                onMeleeAttack(token, action.id)
+                                                            } else if (action.type === 'ranged') {
+                                                                onRangedAttack(token, action.id)
+                                                            } else if (action.type === 'grenade') {
+                                                                onGrenadeAttack(token, action.id)
+                                                            } else if (action.type === 'skill') {
+                                                                onSkillCheck(token, action.id)
+                                                            }
                                                         }}
-                                                        onClick={(e) => e.stopPropagation()}
+                                                        title={action.name}
                                                         sx={{
-                                                            width: 35,
-                                                            '& input': {
-                                                                padding: '2px 4px',
-                                                                fontSize: '0.70rem',
-                                                                color: readerMode
-                                                                    ? colors.grays.gray900
-                                                                    : colors.neons.green.default,
-                                                                textAlign: 'center',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            width: '100%',
+                                                            color:
+                                                                action.type === 'melee'
+                                                                    ? colors.neons.red.default
+                                                                    : action.type === 'ranged'
+                                                                    ? colors.neons.yellow.default
+                                                                    : action.type === 'grenade'
+                                                                    ? colors.neons.orange.default
+                                                                    : colors.neons.cyan.default,
+                                                            border: `1px solid ${
+                                                                action.type === 'melee'
+                                                                    ? colors.neons.red.dark
+                                                                    : action.type === 'ranged'
+                                                                    ? colors.neons.yellow.dark
+                                                                    : action.type === 'grenade'
+                                                                    ? colors.neons.orange.dark
+                                                                    : colors.neons.cyan.dark
+                                                            }`,
+                                                            borderRadius: 1,
+                                                            fontSize: '16px',
+                                                            '&:hover': {
+                                                                bgcolor:
+                                                                    action.type === 'melee'
+                                                                        ? 'rgba(255, 0, 0, 0.1)'
+                                                                        : action.type === 'ranged'
+                                                                        ? 'rgba(255, 255, 0, 0.1)'
+                                                                        : action.type === 'grenade'
+                                                                        ? 'rgba(255, 140, 0, 0.1)'
+                                                                        : 'rgba(0, 255, 255, 0.1)',
+                                                                boxShadow: `0 0 6px ${
+                                                                    action.type === 'melee'
+                                                                        ? colors.neons.red.default
+                                                                        : action.type === 'ranged'
+                                                                        ? colors.neons.yellow.default
+                                                                        : action.type === 'grenade'
+                                                                        ? colors.neons.orange.default
+                                                                        : colors.neons.cyan.default
+                                                                }60`,
                                                             },
                                                         }}
-                                                    />
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{
-                                                            color: readerMode
-                                                                ? colors.grays.gray700
-                                                                : colors.neons.green.default,
-                                                        }}
                                                     >
-                                                        /{stats.armor.sph}
-                                                    </Typography>
-                                                </Stack>
-
-                                                {/* SPB */}
-                                                <Stack direction="row" spacing={0.5} alignItems="center" flex={1}>
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{
-                                                            color: readerMode
-                                                                ? colors.grays.gray700
-                                                                : colors.grays.gray900,
-                                                        }}
-                                                    >
-                                                        {t('combatSim.spb')}:
-                                                    </Typography>
-                                                    <TextField
-                                                        size="small"
-                                                        type="tel"
-                                                        value={stats.armor.currentSpb ?? stats.armor.spb}
-                                                        onChange={(e) => {
-                                                            const val = parseInt(e.target.value) || 0
-                                                            onUpdateTokenCurrent(token.id, 'spb', val)
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        sx={{
-                                                            width: 35,
-                                                            '& input': {
-                                                                padding: '2px 4px',
-                                                                fontSize: '0.70rem',
+                                                        <Typography
+                                                            variant="caption"
+                                                            sx={{
                                                                 color: readerMode
-                                                                    ? colors.grays.gray900
-                                                                    : colors.neons.green.default,
-                                                                textAlign: 'center',
-                                                            },
-                                                        }}
-                                                    />
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{
-                                                            color: readerMode
-                                                                ? colors.grays.gray700
-                                                                : colors.neons.green.default,
-                                                        }}
-                                                    >
-                                                        /{stats.armor.spb}
-                                                    </Typography>
-                                                </Stack>
-                                            </Stack>
-
-                                            {/* Action buttons */}
-                                            <Stack direction="row" spacing={0.5}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        onMeleeAttack(token)
-                                                    }}
-                                                    sx={{
-                                                        flex: 1,
-                                                        color: colors.neons.red.default,
-                                                        border: `1px solid ${colors.neons.red.dark}`,
-                                                        borderRadius: 1,
-                                                        fontSize: '16px',
-                                                        '&:hover': {
-                                                            bgcolor: 'rgba(255, 0, 0, 0.1)',
-                                                            boxShadow: `0 0 6px ${colors.neons.red.default}60`,
-                                                        },
-                                                    }}
-                                                    title={t('combatSim.meleeAttack')}
-                                                >
-                                                    🪓
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        onRangedAttack(token)
-                                                    }}
-                                                    sx={{
-                                                        flex: 1,
-                                                        color: colors.neons.yellow.default,
-                                                        border: `1px solid ${colors.neons.yellow.dark}`,
-                                                        borderRadius: 1,
-                                                        fontSize: '16px',
-                                                        '&:hover': {
-                                                            bgcolor: 'rgba(255, 255, 0, 0.1)',
-                                                            boxShadow: `0 0 6px ${colors.neons.yellow.default}60`,
-                                                        },
-                                                    }}
-                                                    title={t('combatSim.rangedAttack')}
-                                                >
-                                                    🔫
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        const isDisabled =
-                                                            !isCombatActive ||
-                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
-                                                                0
-                                                        if (isDisabled) return
-                                                        onGrenadeAttack(token)
-                                                    }}
-                                                    sx={{
-                                                        flex: 1,
-                                                        color:
-                                                            !isCombatActive ||
-                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
-                                                                0
-                                                                ? colors.grays.gray600
-                                                                : '#ff8c00',
-                                                        border: `1px solid ${
-                                                            !isCombatActive ||
-                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
-                                                                0
-                                                                ? colors.grays.gray700
-                                                                : '#cc7000'
-                                                        }`,
-                                                        borderRadius: 1,
-                                                        fontSize: '12px',
-                                                        cursor:
-                                                            !isCombatActive ||
-                                                            (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0) <=
-                                                                0
-                                                                ? 'not-allowed'
-                                                                : 'pointer',
-                                                        '&:hover': {
-                                                            bgcolor:
-                                                                !isCombatActive ||
-                                                                (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ??
-                                                                    0) <= 0
-                                                                    ? 'transparent'
-                                                                    : 'rgba(255, 140, 0, 0.1)',
-                                                            boxShadow:
-                                                                !isCombatActive ||
-                                                                (token.stats?.weapons?.currentGrenadesOrSpecialAmmo ??
-                                                                    0) <= 0
-                                                                    ? 'none'
-                                                                    : `0 0 6px #ff8c0060`,
-                                                        },
-                                                    }}
-                                                    title={t('combatSim.grenadeAttack')}
-                                                >
-                                                    {token.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0} 💣
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        onSkillCheck(token)
-                                                    }}
-                                                    sx={{
-                                                        flex: 1,
-                                                        color: colors.neons.cyan.default,
-                                                        border: `1px solid ${colors.neons.cyan.dark}`,
-                                                        borderRadius: 1,
-                                                        fontSize: '16px',
-                                                        '&:hover': {
-                                                            bgcolor: 'rgba(0, 255, 255, 0.1)',
-                                                            boxShadow: `0 0 6px ${colors.neons.cyan.default}60`,
-                                                        },
-                                                    }}
-                                                    title={t('combatSim.skillCheck')}
-                                                >
-                                                    🧩
-                                                </IconButton>
-                                            </Stack>
-                                        </Box>
-                                    )}
-                                </Box>
+                                                                    ? colors.grays.gray700
+                                                                    : colors.grays.gray900,
+                                                            }}
+                                                            noWrap
+                                                        >
+                                                            {action.name}
+                                                        </Typography>
+                                                        {action.type === 'melee'
+                                                            ? '🪓'
+                                                            : action.type === 'ranged'
+                                                            ? '🔫'
+                                                            : action.type === 'grenade'
+                                                            ? '💣'
+                                                            : '🧩'}
+                                                    </IconButton>
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
                             )
                         })}
-                    </Stack>
+                    </Grid>
                 </CustomScrollbar>
 
                 {/* Footer - Navigation buttons */}

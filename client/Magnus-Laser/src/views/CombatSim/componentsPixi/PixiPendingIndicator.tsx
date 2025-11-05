@@ -1,6 +1,6 @@
 import { Viewport } from 'pixi-viewport'
 import { Container, Graphics, Text, TextStyle } from 'pixi.js'
-import { Token } from '../types'
+import { Token } from '../utils/types'
 import { createAcceptButton, createCancelButton } from './PixiButton'
 
 export interface PixiPendingIndicatorProps {

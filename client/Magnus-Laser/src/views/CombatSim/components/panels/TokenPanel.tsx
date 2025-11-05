@@ -1,3 +1,4 @@
+import { useSession } from '@/state/sessionStore'
 import { pixiToCss } from '@/views/CombatSim/utils/pixiUtils'
 import { Add, ExpandMore } from '@mui/icons-material'
 import {
@@ -18,7 +19,7 @@ import CustomScrollbar from '../../../../components/CustomScrollbar'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import colors from '../../../../utils/colors'
 import { db } from '../../../../utils/db'
-import { Token } from '../../types'
+import { Token } from '../../utils/types'
 import { TokenContextMenu } from '../contextMenus/TokenContextMenu'
 import { TokenTooltip } from '../TokenTooltip'
 
@@ -28,7 +29,6 @@ interface TokenPanelProps {
     getActiveMapKey: () => string
     setTokens: React.Dispatch<React.SetStateAction<Token[]>>
     resolveImageUrl: (imageId: string | undefined) => string | undefined
-    gridSize: number
     tokens: Token[]
     tokensNotInMap: Token[]
     defaultTokens: Token[]
@@ -36,6 +36,7 @@ interface TokenPanelProps {
     onTokenDuplicate: (id: string) => void
     onTokenCopy: (id: string) => void
     onTokenCut: (id: string) => void
+    isPlayerConnected: boolean
 }
 
 const TokenPanel = ({
@@ -44,7 +45,6 @@ const TokenPanel = ({
     getActiveMapKey,
     setTokens,
     resolveImageUrl,
-    gridSize,
     tokens,
     tokensNotInMap,
     defaultTokens,
@@ -52,11 +52,13 @@ const TokenPanel = ({
     onTokenDuplicate,
     onTokenCut,
     onTokenCopy,
+    isPlayerConnected,
 }: TokenPanelProps) => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
     const [tokenContextMenuAnchor, setTokenContextMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null)
+    const { displayName } = useSession()
 
     const renderToken = (token: Token, isDefault?: boolean) => {
         const tokenElement = (
@@ -205,23 +207,17 @@ const TokenPanel = ({
 
                             const newToken: Token = {
                                 ...token,
-                                radius: Math.max(1, Math.floor(gridSize / 2)),
                                 name: `${baseName} ${copyNumber}`,
                                 mapId: getActiveMapKey(),
                                 stats: {
                                     ...token.stats,
-                                    combat: token.stats?.combat ?? 0,
-                                    skills: token.stats?.skills ?? 0,
+                                    actions: token.stats?.actions ?? [],
                                     initiative: token.stats?.initiative ?? 0,
                                     health: token.stats?.health ?? 0,
                                     movement: token.stats?.movement ?? 0,
                                     currentMovement: token.stats?.movement ?? 0,
-                                    weapons: {
-                                        melee: { d6: token.stats?.weapons?.melee?.d6 ?? 0 },
-                                        ranged: { d6: token.stats?.weapons?.ranged?.d6 ?? 0 },
-                                        grenadesOrSpecialAmmo: token.stats?.weapons?.grenadesOrSpecialAmmo,
-                                    },
                                     currentHealth: token.stats?.health ?? 0,
+                                    ignoreSeriouslyWoundedPenalty: token.stats?.ignoreSeriouslyWoundedPenalty ?? false,
                                     armor: {
                                         ...token.stats?.armor,
                                         currentSph: token.stats?.armor?.sph ?? 0,
@@ -414,12 +410,22 @@ const TokenPanel = ({
                         >
                             {/* Default tokens */}
                             {defaultTokens.length > 0 &&
+                                !isPlayerConnected &&
                                 renderAccordion(defaultTokens, t('combatSim.defaultTokens'), true)}
                             {/* Map tokens */}
-                            {tokens.length > 0 && renderAccordion(tokens, t('combatSim.mapTokens'))}
+                            {tokens.length > 0 &&
+                                !isPlayerConnected &&
+                                renderAccordion(tokens, t('combatSim.mapTokens'))}
                             {/* Tokens not in map */}
                             {tokensNotInMap.length > 0 &&
+                                !isPlayerConnected &&
                                 renderAccordion(tokensNotInMap, t('combatSim.tokensNotInMap'))}
+                            {isPlayerConnected &&
+                                [...tokens, ...tokensNotInMap].filter((t) => t.owner === displayName).length > 0 &&
+                                renderAccordion(
+                                    [...tokens, ...tokensNotInMap].filter((t) => t.owner === displayName),
+                                    t('combatSim.myTokens')
+                                )}
                         </Box>
                     </CustomScrollbar>
                 </Box>

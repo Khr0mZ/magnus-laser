@@ -6,7 +6,7 @@ import Scrollbar from 'smooth-scrollbar'
 import CustomScrollbar from '../../../../components/CustomScrollbar'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import colors from '../../../../utils/colors'
-import type { RollHistoryEntry } from '../../types'
+import type { RollHistoryEntry } from '../../utils/types'
 
 interface RollHistoryPanelProps {
     isOpen: boolean
@@ -68,28 +68,14 @@ const RollHistoryPanel = ({
         return `${hours}h ago`
     }
 
-    const getRollTypeLabel = (rollType: string): string => {
+    const getRollTypeLabel = (rollType: string, actionName: string): string => {
         switch (rollType) {
             case 'initiative':
                 return t('combatSim.initiative')
-            case 'melee-hit':
-                return `${t('combatSim.toHit')}`
-            case 'melee-damage':
-                return `${t('combatSim.meleeAttack')} - ${t('combatSim.damage')}`
-            case 'ranged-hit':
-                return `${t('combatSim.toHit')}`
-            case 'ranged-damage':
-                return `${t('combatSim.rangedAttack')} - ${t('combatSim.damage')}`
-            case 'skill':
-                return t('combatSim.skillCheck')
             case 'turn-start':
                 return t('combatSim.turnStart')
-            case 'grenade-hit':
-                return `${t('combatSim.toHit')}`
-            case 'grenade-damage':
-                return `${t('combatSim.grenadeAttack')} - ${t('combatSim.damage')}`
             default:
-                return rollType
+                return actionName
         }
     }
 
@@ -267,9 +253,15 @@ const RollHistoryPanel = ({
                                         key={entry.id}
                                         sx={{
                                             position: 'relative',
-                                            background: readerMode
-                                                ? `linear-gradient(0deg, ${colors.blues.dark}, ${colors.blues.default}90)`
-                                                : `linear-gradient(0deg, ${colors.neons.pink.default}30, transparent)`,
+                                            background: `linear-gradient(0deg, ${
+                                                entry.actionType === 'melee'
+                                                    ? colors.neons.red.default
+                                                    : entry.actionType === 'ranged'
+                                                    ? colors.neons.yellow.default
+                                                    : entry.actionType === 'grenade'
+                                                    ? colors.neons.orange.default
+                                                    : colors.neons.cyan.default
+                                            }30, transparent)`,
                                             borderRadius: 1,
                                             p: 1,
                                             border: `1px solid ${getRollTypeColor(entry.rollType)}40`,
@@ -387,7 +379,7 @@ const RollHistoryPanel = ({
                                             </Typography>
                                             <Typography
                                                 sx={{
-                                                    fontSize: '20px',
+                                                    fontSize: '16px',
                                                     lineHeight: 1,
                                                     userSelect: 'none',
                                                 }}
@@ -400,19 +392,24 @@ const RollHistoryPanel = ({
 
                                         {/* Result - skip for turn-start entries */}
                                         {entry.rollType !== 'turn-start' && (
-                                            <Stack spacing={1}>
-                                                <Divider sx={{ height: '2px', bgcolor: colors.neons.purple.default }} />
+                                            <Stack>
+                                                <Divider
+                                                    sx={{
+                                                        height: '2px',
+                                                        bgcolor: colors.neons.purple.default,
+                                                        my: 0.5,
+                                                    }}
+                                                />
                                                 <Stack direction="row" alignItems="baseline" spacing={1}>
                                                     <Typography
-                                                        variant="caption"
                                                         sx={{
                                                             color: getRollTypeColor(entry.rollType),
-                                                            display: 'block',
-                                                            mb: 0.5,
                                                         }}
                                                     >
-                                                        {getRollTypeLabel(entry.rollType)}
+                                                        {getRollTypeLabel(entry.rollType, entry.actionName)}
                                                     </Typography>
+                                                </Stack>
+                                                <Stack direction="row" alignItems="baseline" spacing={1}>
                                                     <Typography
                                                         variant="h6"
                                                         sx={{
@@ -438,8 +435,6 @@ const RollHistoryPanel = ({
                                                             {entry.result.fumble ? '🖕' : '💥'}
                                                         </Typography>
                                                     )}
-                                                </Stack>
-                                                <Stack direction="row" alignItems="center" spacing={1}>
                                                     <Typography
                                                         fontFamily={'monospace'}
                                                         variant="caption"
@@ -485,19 +480,32 @@ const RollHistoryPanel = ({
                                             </Box>
                                         )}
                                         {entry.damageResult && entry.damageRevealed && (
-                                            <Box mt={0.5}>
-                                                <Divider />
-                                                <Stack direction="row" alignItems="center" spacing={1}>
+                                            <Box>
+                                                <Divider
+                                                    sx={{ bgcolor: colors.neons.cyan.default, opacity: 0.5, my: 0.5 }}
+                                                />
+                                                {entry.damageResult?.criticalDamage && entry.damageRevealed ? (
                                                     <Typography
-                                                        variant="caption"
+                                                        sx={{
+                                                            color: colors.neons.yellow.default,
+                                                            fontWeight: 700,
+                                                        }}
+                                                    >
+                                                        {t('combatSim.criticalDamage')}
+                                                    </Typography>
+                                                ) : (
+                                                    <Typography
                                                         sx={{
                                                             color: getRollTypeColor(entry.rollType),
                                                         }}
                                                     >
-                                                        {t('combatSim.damage')}:
+                                                        {t('combatSim.damage')}
                                                     </Typography>
+                                                )}
+                                                <Box>
                                                     <Typography
                                                         variant="body1"
+                                                        component="span"
                                                         sx={{
                                                             color: readerMode
                                                                 ? colors.grays.gray900
@@ -511,53 +519,31 @@ const RollHistoryPanel = ({
                                                     {entry.damageResult.criticalDamage && (
                                                         <Typography
                                                             variant="body1"
+                                                            component="span"
                                                             sx={{
                                                                 color: colors.neons.yellow.default,
-
                                                                 fontWeight: 700,
+                                                                marginLeft: 1,
                                                             }}
                                                         >
                                                             + 5
                                                         </Typography>
                                                     )}
-                                                </Stack>
-                                                <Typography
-                                                    variant="caption"
-                                                    fontFamily={'monospace'}
-                                                    sx={{
-                                                        color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
-                                                    }}
-                                                >
-                                                    {entry.damageResult.breakdown}
-                                                </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        component="span"
+                                                        fontFamily={'monospace'}
+                                                        sx={{
+                                                            color: readerMode
+                                                                ? colors.grays.gray700
+                                                                : colors.grays.gray900,
+                                                            marginLeft: 1,
+                                                        }}
+                                                    >
+                                                        {entry.damageResult.breakdown}
+                                                    </Typography>
+                                                </Box>
                                             </Box>
-                                        )}
-                                        {entry.damageResult?.criticalDamage && entry.damageRevealed && (
-                                            <Stack direction="row" alignItems="center" spacing={1}>
-                                                <Typography
-                                                    variant="caption"
-                                                    sx={{
-                                                        color: colors.neons.yellow.default,
-                                                        fontWeight: 700,
-                                                        display: 'block',
-                                                        fontSize: '18px',
-                                                    }}
-                                                >
-                                                    {t('combatSim.criticalDamage')}
-                                                </Typography>
-                                                <Typography
-                                                    variant="caption"
-                                                    sx={{
-                                                        color: colors.neons.yellow.default,
-                                                        fontWeight: 700,
-                                                        display: 'block',
-                                                        fontSize: '24px',
-                                                    }}
-                                                >
-                                                    {entry.rollType === 'melee-hit' && '🦾'}
-                                                    {entry.rollType === 'ranged-hit' && '🎯'}
-                                                </Typography>
-                                            </Stack>
                                         )}
 
                                         {/* Timestamp */}

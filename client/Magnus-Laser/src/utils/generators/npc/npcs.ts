@@ -1,11 +1,11 @@
-import { Stats } from '../../../views/CombatSim/types'
+import { Stats } from '../../../views/CombatSim/utils/types'
 
 export const randomNPCs: { [key: string]: Stats } = {
     EASY: {
+        isPC: false,
+        ignoreSeriouslyWoundedPenalty: false,
         movement: 4,
         currentMovement: 4,
-        combat: 8,
-        skills: 8,
         initiative: 5,
         armor: {
             sph: 0,
@@ -15,13 +15,17 @@ export const randomNPCs: { [key: string]: Stats } = {
         },
         health: 15,
         currentHealth: 15,
-        weapons: { melee: { d6: 2 }, ranged: { d6: 3 } },
+        actions: [
+            { id: 'melee', name: 'Melee', type: 'melee', value: 8, damage: { d6: 2 } },
+            { id: 'ranged', name: 'Ranged', type: 'ranged', value: 8, damage: { d6: 3 } },
+            { id: 'skill', name: 'Skill', type: 'skill', value: 8 },
+        ],
     },
     TYPICAL: {
+        isPC: false,
+        ignoreSeriouslyWoundedPenalty: false,
         movement: 5,
         currentMovement: 5,
-        combat: 10,
-        skills: 10,
         initiative: 6,
         armor: {
             sph: 4,
@@ -31,13 +35,18 @@ export const randomNPCs: { [key: string]: Stats } = {
         },
         health: 25,
         currentHealth: 25,
-        weapons: { melee: { d6: 3 }, ranged: { d6: 4 }, grenadesOrSpecialAmmo: { d4: 1 } },
+        actions: [
+            { id: 'melee', name: 'Melee', type: 'melee', value: 10, damage: { d6: 3 } },
+            { id: 'ranged', name: 'Ranged', type: 'ranged', value: 10, damage: { d6: 4 } },
+            { id: 'grenade', name: 'Grenade', type: 'grenade', value: 10, damage: { d6: 6 } },
+            { id: 'skill', name: 'Skill', type: 'skill', value: 10 },
+        ],
     },
     DANGEROUS: {
+        isPC: false,
+        ignoreSeriouslyWoundedPenalty: false,
         movement: 6,
         currentMovement: 6,
-        combat: 12,
-        skills: 12,
         initiative: 7,
         armor: {
             sph: 7,
@@ -47,13 +56,18 @@ export const randomNPCs: { [key: string]: Stats } = {
         },
         health: 35,
         currentHealth: 35,
-        weapons: { melee: { d6: 4 }, ranged: { d6: 5 }, grenadesOrSpecialAmmo: { d6: 1 } },
+        actions: [
+            { id: 'melee', name: 'Melee', type: 'melee', value: 12, damage: { d6: 4 } },
+            { id: 'ranged', name: 'Ranged', type: 'ranged', value: 12, damage: { d6: 5 } },
+            { id: 'grenade', name: 'Grenade', type: 'grenade', value: 12, damage: { d6: 6 } },
+            { id: 'skill', name: 'Skill', type: 'skill', value: 12 },
+        ],
     },
     DEADLY: {
+        isPC: false,
+        ignoreSeriouslyWoundedPenalty: false,
         movement: 7,
         currentMovement: 7,
-        combat: 14,
-        skills: 14,
         initiative: 8,
         armor: {
             sph: 11,
@@ -63,6 +77,11 @@ export const randomNPCs: { [key: string]: Stats } = {
         },
         health: 55,
         currentHealth: 55,
-        weapons: { melee: { d6: 5 }, ranged: { d6: 6 }, grenadesOrSpecialAmmo: { d8: 1 } },
+        actions: [
+            { id: 'melee', name: 'Melee', type: 'melee', value: 14, damage: { d6: 5 } },
+            { id: 'ranged', name: 'Ranged', type: 'ranged', value: 14, damage: { d6: 6 } },
+            { id: 'grenade', name: 'Grenade', type: 'grenade', value: 14, damage: { d6: 6 } },
+            { id: 'skill', name: 'Skill', type: 'skill', value: 14 },
+        ],
     },
 }

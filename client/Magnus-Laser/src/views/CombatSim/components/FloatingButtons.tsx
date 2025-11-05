@@ -1,7 +1,7 @@
 import { useUserPreferences } from '@/contexts/userPreferencesHooks'
 import colors from '@/utils/colors'
-import { BlastType, WallShape } from '@/views/CombatSim/types'
 import { toAlphaHex } from '@/views/CombatSim/utils/pixiUtils'
+import { BlastType, WallShape } from '@/views/CombatSim/utils/types'
 import { Close, Done } from '@mui/icons-material'
 import { Box, Stack } from '@mui/material'
 import { Dispatch, RefObject, SetStateAction } from 'react'
@@ -225,55 +225,6 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                     </Box>
                 </Box>
             )}
-            {/* Token Panel button */}
-            {!isPlayerConnected && (
-                <Box
-                    onClick={() => {
-                        if (isPlayerConnected) return
-                        setIsTokenPanelOpen((v) => !v)
-                    }}
-                    sx={{
-                        position: 'absolute',
-                        top: 136,
-                        left: 10,
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: isTokenPanelOpen
-                            ? 'rgba(255, 0, 255, 0.3)'
-                            : readerMode
-                            ? 'rgba(0, 0, 40, 0.7)'
-                            : 'rgba(0, 0, 40, 0.6)',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        border: `1px solid ${
-                            isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default
-                        }60`,
-                        transition: 'all 0.2s',
-                        '&:hover': {
-                            backgroundColor: 'rgba(0, 0, 60, 0.8)',
-                            border: `1px solid ${colors.neons.pink.default}60`,
-                            boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
-                        },
-                    }}
-                    title={t('combatSim.tokensPanel')}
-                >
-                    <Box
-                        sx={{
-                            fontSize: isTokenPanelOpen ? '30px' : '20px',
-                            color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                                fontSize: '30px',
-                            },
-                        }}
-                    >
-                        👨‍🎤
-                    </Box>
-                </Box>
-            )}
             {/* Blasts button */}
             {!isPlayerConnected && (
                 <Box
@@ -282,7 +233,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                     }}
                     sx={{
                         position: 'absolute',
-                        top: 178,
+                        top: 136,
                         left: 10,
                         width: '36px',
                         height: '36px',
@@ -322,12 +273,56 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                     </Box>
                 </Box>
             )}
+            {/* Token Panel button */}
+            <Box
+                onClick={() => {
+                    setIsTokenPanelOpen((v) => !v)
+                }}
+                sx={{
+                    position: 'absolute',
+                    top: isPlayerConnected ? 94 : 178,
+                    left: 10,
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: isTokenPanelOpen
+                        ? 'rgba(255, 0, 255, 0.3)'
+                        : readerMode
+                        ? 'rgba(0, 0, 40, 0.7)'
+                        : 'rgba(0, 0, 40, 0.6)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    border: `1px solid ${isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default}60`,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 60, 0.8)',
+                        border: `1px solid ${colors.neons.pink.default}60`,
+                        boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
+                    },
+                }}
+                title={t('combatSim.tokensPanel')}
+            >
+                <Box
+                    sx={{
+                        fontSize: isTokenPanelOpen ? '30px' : '20px',
+                        color: isTokenPanelOpen ? colors.neons.pink.default : colors.neons.blue.default,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                            fontSize: '30px',
+                        },
+                    }}
+                >
+                    👨‍🎤
+                </Box>
+            </Box>
             {/* Initiative Panel button */}
             <Box
                 onClick={() => setIsInitiativePanelOpen((v) => !v)}
                 sx={{
                     position: 'absolute',
-                    top: isPlayerConnected ? 94 : 220,
+                    top: isPlayerConnected ? 136 : 220,
                     left: 10,
                     width: '36px',
                     height: '36px',
@@ -371,7 +366,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                 onClick={() => setIsRollHistoryOpen((v) => !v)}
                 sx={{
                     position: 'absolute',
-                    top: isPlayerConnected ? 136 : 262,
+                    top: isPlayerConnected ? 178 : 262,
                     left: 10,
                     width: '36px',
                     height: '36px',

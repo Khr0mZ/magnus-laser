@@ -1,7 +1,7 @@
 import { SessionStore } from '@/state/sessionStore'
 import { sendMutation } from '@/sync/combatSimSync'
 import { db } from '@/utils/db'
-import { Blast, BlastType, Token, Wall } from '@/views/CombatSim/types'
+import { Blast, BlastType, Token, Wall } from '@/views/CombatSim/utils/types'
 import { Table } from 'dexie'
 import { RefObject, useMemo, useState } from 'react'
 
@@ -287,7 +287,6 @@ const usePixi = (props: UsePixiProps) => {
         for (const token of tokens) {
             const newToken: Token = {
                 ...token,
-                radius: Math.max(1, Math.floor(gridSize / 2)),
                 mapId: getActiveMapKey(),
             }
             await db.tokens.add(newToken)
@@ -310,17 +309,16 @@ const usePixi = (props: UsePixiProps) => {
             allTokens?: Token[]
             existingTokens?: Token[]
             setTargetTokens?: React.Dispatch<React.SetStateAction<Token[]>>
-            gridSize?: number
             getActiveMapKey?: () => string
         } = {}
     ) => {
         const {
-            allTokens = tokens,
-            existingTokens = tokens,
+            allTokens = [...tokens, ...tokensNotInMap],
+            existingTokens = [...tokens, ...tokensNotInMap],
             setTargetTokens = setTokens,
-            gridSize = 50,
-            getActiveMapKey = () => '',
+            getActiveMapKey: optionGetActiveMapKey = getActiveMapKey,
         } = options
+        const actualGetActiveMapKey = optionGetActiveMapKey
 
         const token = allTokens.find((t) => t.id === id)
         if (token) {
@@ -337,9 +335,8 @@ const usePixi = (props: UsePixiProps) => {
             const newToken = {
                 ...token,
                 name: newName,
-                radius: Math.max(1, Math.floor(gridSize / 2)),
                 id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
-                mapId: getActiveMapKey(),
+                mapId: actualGetActiveMapKey(),
                 // Keep same position as original token
             }
             await db.tokens.add(newToken)
@@ -417,8 +414,8 @@ const usePixi = (props: UsePixiProps) => {
         fitRef.current = fn
     }
     const pixiOnTokenMove = async (id: string, x: number, y: number, distanceTraveled?: number) => {
-        setTokens((prev) =>
-            prev.map((tk) => {
+        setTokens((prev) => {
+            const updated = prev.map((tk) => {
                 if (tk.id !== id) return tk
                 // If distance traveled is provided, update currentMovement
                 if (distanceTraveled !== undefined && tk.stats) {
@@ -435,7 +432,8 @@ const usePixi = (props: UsePixiProps) => {
                 }
                 return { ...tk, x, y }
             })
-        )
+            return updated
+        })
 
         // Clean up any pending movement overlays for this token
         // This handles the case where DM accepts a player's pending movement
@@ -480,13 +478,12 @@ const usePixi = (props: UsePixiProps) => {
 
         const currentMapId = getActiveMapKey()
 
-        // Update token position, map, and radius based on current grid size
+        // Update token position and map based on current grid size
         const updatedToken: Token = {
             ...token,
             mapId: currentMapId,
             x: worldX,
             y: worldY,
-            radius: Math.max(1, Math.floor(gridSize / 2)),
         }
 
         // Update in database (only for non-default tokens)

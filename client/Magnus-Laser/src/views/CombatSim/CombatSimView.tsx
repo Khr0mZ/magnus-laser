@@ -14,9 +14,9 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { db } from '../../utils/db'
-import PixiBoard from './PixiBoard'
 import TokenDetailsDialog from './components/TokenDetailsDialog'
-import { Token } from './types'
+import PixiBoard from './componentsPixi/PixiBoard'
+import { Token } from './utils/types'
 
 const CombatSimView = () => {
     const { t } = useTranslation()
@@ -118,6 +118,7 @@ const CombatSimView = () => {
         panelTokenOnDuplicate,
         panelTokenOnCut,
         panelTokenOnCopy,
+        pixiOnTokenUpdate,
         setPendingCount,
         pendingCount,
         // INITIATIVE PANEL
@@ -338,6 +339,7 @@ const CombatSimView = () => {
                         pixiOnTokenDuplicate={pixiOnTokenDuplicate}
                         pixiOnTokenCut={pixiOnTokenCut}
                         pixiOnTokenCopy={pixiOnTokenCopy}
+                        pixiOnTokenUpdate={pixiOnTokenUpdate}
                         pixiOnCutAllTokens={pixiOnCutAllTokens}
                         pixiOnPasteToken={pixiOnPasteToken}
                         pixiOnPasteBlast={pixiOnPasteBlast}
@@ -514,7 +516,6 @@ const CombatSimView = () => {
             {tokenDialogsOpen.map((tokenId, index) => (
                 <TokenDetailsDialog
                     key={tokenId}
-                    maps={sortedMaps}
                     tokenDialogOpen={tokenId}
                     onCloseTokenDialog={() => onCloseTokenDialog(tokenId)}
                     initialPosition={{ x: 100 + index * 50, y: 100 + index * 50 }}

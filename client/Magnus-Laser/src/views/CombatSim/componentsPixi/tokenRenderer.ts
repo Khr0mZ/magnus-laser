@@ -1,5 +1,5 @@
-import { Graphics, Sprite, Text, Texture } from 'pixi.js'
-import type { Image as ImageData, Token } from '../types'
+import { Circle, Graphics, Sprite, Text, Texture } from 'pixi.js'
+import type { Image as ImageData, Token } from '../utils/types'
 
 // Texture cache for preloaded images
 const textureCache = new Map<string, Texture>()
@@ -12,10 +12,10 @@ export function setTexturesReadyCallback(callback: () => void) {
 }
 
 // Persistent caches for sprites and labels (keyed by token id)
-const spriteCache = new Map<string, Sprite>()
+export const spriteCache = new Map<string, Sprite>()
 const labelCache = new Map<string, Text>()
 // Ghost overlays when a token has a pending move (semi-transparent original position)
-const ghostSpriteCache = new Map<string, Sprite>()
+export const ghostSpriteCache = new Map<string, Sprite>()
 const ghostLabelCache = new Map<string, Text>()
 
 function ensureParent(child: Sprite | Text, parent: Graphics['parent']): void {
@@ -130,7 +130,7 @@ export function preloadTextures(images: ImageData[]) {
     }
 
     for (const image of images) {
-        if (!textureCache.has(image.id)) {
+        if (!textureCache.has(image.id) && image.blob) {
             loadingCount++
             try {
                 const url = URL.createObjectURL(image.blob)
@@ -171,6 +171,7 @@ export function preloadTextures(images: ImageData[]) {
 export function renderTokens(
     layer: Graphics | null,
     tokens: Token[],
+    gridSize: number,
     overrideId?: string,
     overrideX?: number,
     overrideY?: number
@@ -203,23 +204,29 @@ export function renderTokens(
                 ensureParent(sprite, layer.parent)
                 sprite.x = x
                 sprite.y = y
-                const scale = (t.radius * 2) / Math.max(sprite.texture.width, sprite.texture.height)
+                const radius = t.customRadius ?? gridSize / 2
+                const scale = (radius * 2) / Math.max(sprite.texture.width, sprite.texture.height)
                 sprite.scale.set(scale)
+                // Set hit area to match the visual size
+                sprite.hitArea = new Circle(0, 0, radius)
                 sprite.visible = true
             } else {
                 // Texture not loaded yet, render as circle for now
-                layer.circle(x, y, t.radius).fill({ color: t.color })
+                const radius = t.customRadius ?? gridSize / 2
+                layer.circle(x, y, radius).fill({ color: t.color })
                 // If a sprite existed previously (switched from image to not), remove it
                 if (spriteCache.has(t.id)) destroySprite(spriteCache, t.id)
             }
         } else {
             // Render as colored circle
-            layer.circle(x, y, t.radius).fill({ color: t.color })
+            const radius = t.customRadius ?? gridSize / 2
+            layer.circle(x, y, radius).fill({ color: t.color })
             if (spriteCache.has(t.id)) destroySprite(spriteCache, t.id)
         }
 
         // Upsert name label above the token
-        upsertLabel(t.id, layer.parent, t.name, x, y - t.radius - 4)
+        const radius = t.customRadius ?? gridSize / 2
+        upsertLabel(t.id, layer.parent, t.name, x, y - radius - 4)
     }
 
     // Remove any sprites/labels for tokens that no longer exist
@@ -235,6 +242,7 @@ export function renderTokens(
 export function renderTokensWithPending(
     layer: Graphics | null,
     tokens: Token[],
+    gridSize: number,
     pending: Map<
         string,
         {
@@ -286,20 +294,26 @@ export function renderTokensWithPending(
                 ensureParent(sprite, layer.parent)
                 sprite.x = x
                 sprite.y = y
-                const scale = (t.radius * 2) / Math.max(sprite.texture.width, sprite.texture.height)
+                const radius = t.customRadius ?? gridSize / 2
+                const scale = (radius * 2) / Math.max(sprite.texture.width, sprite.texture.height)
                 sprite.scale.set(scale)
+                // Set hit area to match the visual size
+                sprite.hitArea = new Circle(0, 0, radius)
                 sprite.visible = true
             } else {
                 // Texture not loaded yet, render as circle for now
-                layer.circle(x, y, t.radius).fill({ color: t.color })
+                const radius = t.customRadius ?? gridSize / 2
+                layer.circle(x, y, radius).fill({ color: t.color })
                 if (spriteCache.has(t.id)) destroySprite(spriteCache, t.id)
             }
         } else {
-            layer.circle(x, y, t.radius).fill({ color: t.color })
+            const radius = t.customRadius ?? gridSize / 2
+            layer.circle(x, y, radius).fill({ color: t.color })
             if (spriteCache.has(t.id)) destroySprite(spriteCache, t.id)
         }
 
-        upsertLabel(t.id, layer.parent, t.name, x, y - t.radius - 4)
+        const radius = t.customRadius ?? gridSize / 2
+        upsertLabel(t.id, layer.parent, t.name, x, y - radius - 4)
     }
 
     // Draw pending overlays (ghosts at original positions)
@@ -326,16 +340,21 @@ export function renderTokensWithPending(
                 ensureParent(sprite, layer.parent)
                 sprite.x = t.x
                 sprite.y = t.y
-                const scale = (t.radius * 2) / Math.max(sprite.texture.width, sprite.texture.height)
+                const radius = t.customRadius ?? gridSize / 2
+                const scale = (radius * 2) / Math.max(sprite.texture.width, sprite.texture.height)
                 sprite.scale.set(scale)
+                // Set hit area to match the visual size
+                sprite.hitArea = new Circle(0, 0, radius)
                 sprite.visible = true
             }
         } else {
-            layer.circle(t.x, t.y, t.radius).fill({ color: t.color, alpha: 0.5 })
+            const radius = t.customRadius ?? gridSize / 2
+            layer.circle(t.x, t.y, radius).fill({ color: t.color, alpha: 0.5 })
             if (ghostSpriteCache.has(ghostKey)) destroySprite(ghostSpriteCache, ghostKey)
         }
 
-        upsertGhostLabel(`${id}_ghost_label`, layer.parent, t.name, t.x, t.y - t.radius - 4)
+        const radius = t.customRadius ?? gridSize / 2
+        upsertGhostLabel(`${id}_ghost_label`, layer.parent, t.name, t.x, t.y - radius - 4)
     }
 
     // Cleanup caches for objects that are no longer needed

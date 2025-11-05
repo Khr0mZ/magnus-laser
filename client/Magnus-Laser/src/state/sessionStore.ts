@@ -12,7 +12,7 @@ import type {
     RollHistoryEntry,
     Token,
     Wall,
-} from '@/views/CombatSim/types'
+} from '@/views/CombatSim/utils/types'
 import { invoke } from '@tauri-apps/api/core'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -605,14 +605,14 @@ async function handleInboundMessage(
                                     const meta = await db.sessionMaps.get(assetId)
                                     if (meta)
                                         await db.sessionMaps.update(assetId, { blob } as Partial<
-                                            import('@/views/CombatSim/types').Map
+                                            import('@/views/CombatSim/utils/types').Map
                                         >)
                                 } else {
                                     const assetId = payload.asset.id
                                     const meta = await db.sessionImages.get(assetId)
                                     if (meta)
                                         await db.sessionImages.update(assetId, { blob } as Partial<
-                                            import('@/views/CombatSim/types').Image
+                                            import('@/views/CombatSim/utils/types').Image
                                         >)
                                 }
                                 runtime.assetBuffers.delete(key)
@@ -809,15 +809,15 @@ async function handleInboundMessage(
                         const recAny = op.record as unknown
                         if (!recAny) continue
                         if (op.op === 'insert') {
-                            await db.blasts.put(recAny as import('@/views/CombatSim/types').Blast)
+                            await db.blasts.put(recAny as import('@/views/CombatSim/utils/types').Blast)
                         } else if (op.op === 'update') {
                             const recTyped = recAny as { id?: string } & Partial<
-                                import('@/views/CombatSim/types').Blast
+                                import('@/views/CombatSim/utils/types').Blast
                             >
                             const id = recTyped.id
                             if (id) {
                                 // Build changes without id to satisfy types and linter
-                                const rest: Partial<import('@/views/CombatSim/types').Blast> = { ...recTyped }
+                                const rest: Partial<import('@/views/CombatSim/utils/types').Blast> = { ...recTyped }
                                 delete (rest as { id?: string }).id
                                 await db.blasts.update(id, rest)
                             }
@@ -834,7 +834,59 @@ async function handleInboundMessage(
                         if (owner && actorName && owner !== actorName) continue
                         if (op.op === 'update') {
                             const { id, ...changes } = rec
-                            await db.tokens.update(id as string, changes)
+
+                            // Handle array element updates (e.g., stats.actions.0.currentAmmo)
+                            // by fetching current token and applying changes manually
+                            const currentToken = await db.tokens.get(id as string)
+                            if (currentToken) {
+                                let updatedToken = { ...currentToken }
+
+                                // Apply changes, handling nested array updates
+                                function applyChanges(
+                                    obj: Record<string, unknown>,
+                                    changes: Record<string, unknown>,
+                                    path: string[] = []
+                                ): void {
+                                    for (const [key, value] of Object.entries(changes)) {
+                                        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                                            // Nested object, recurse
+                                            if (!obj[key]) obj[key] = {}
+                                            applyChanges(
+                                                obj[key] as Record<string, unknown>,
+                                                value as Record<string, unknown>,
+                                                [...path, key]
+                                            )
+                                        } else if (key.includes('.')) {
+                                            // Handle dotted keys like 'stats.actions.0.currentAmmo'
+                                            const parts = key.split('.')
+                                            let current: Record<string, unknown> | unknown[] = obj
+                                            for (let i = 0; i < parts.length - 1; i++) {
+                                                const part = parts[i]
+                                                if (part.match(/^\d+$/)) {
+                                                    // Array index
+                                                    const index = parseInt(part)
+                                                    if (!Array.isArray(current)) current = []
+                                                    const arr = current as unknown[]
+                                                    while (arr.length <= index) arr.push({})
+                                                    current = arr[index] as Record<string, unknown>
+                                                } else {
+                                                    // Object property
+                                                    const obj = current as Record<string, unknown>
+                                                    if (!obj[part]) obj[part] = {}
+                                                    current = obj[part] as Record<string, unknown>
+                                                }
+                                            }
+                                            const finalObj = current as Record<string, unknown>
+                                            finalObj[parts[parts.length - 1]] = value
+                                        } else {
+                                            obj[key] = value
+                                        }
+                                    }
+                                }
+
+                                applyChanges(updatedToken, changes)
+                                await db.tokens.put(updatedToken)
+                            }
 
                             // Dispatch cleanup event for pending movements if token moved
                             if (changes.x !== undefined || changes.y !== undefined) {
@@ -857,7 +909,7 @@ async function handleInboundMessage(
                         const mapId = (bm as unknown as { mapId?: string })?.mapId ?? boardMapId
                         // Get current initiative by mapId
                         const current = await db.initiative.get(mapId)
-                        const next: import('@/views/CombatSim/types').Initiative = {
+                        const next: import('@/views/CombatSim/utils/types').Initiative = {
                             ...(current ?? {
                                 mapId,
                                 activeTokenId: null,

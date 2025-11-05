@@ -1,4 +1,4 @@
-import { Blast, BlastType, RollHistoryEntry, Token } from '@/views/CombatSim/types'
+import { Blast, BlastType, RollHistoryEntry, Token } from '@/views/CombatSim/utils/types'
 import BlastsPanel from './BlastsPanel'
 import InitiativePanel from './InitiativePanel'
 import RollHistoryPanel from './RollHistoryPanel'
@@ -28,10 +28,10 @@ interface CombatPanelsProps {
     handleNextTurn: () => void
     handleUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => void
     handleUpdateInitiative: (tokenId: string, value: number) => void
-    handleMeleeAttack: (token: Token) => Promise<void>
-    handleRangedAttack: (token: Token) => Promise<void>
-    handleSkillCheck: (token: Token) => Promise<void>
-    handleGrenadeAttack: (token: Token) => Promise<void>
+    handleMeleeAttack: (token: Token, actionId: string) => Promise<void>
+    handleRangedAttack: (token: Token, actionId: string) => Promise<void>
+    handleSkillCheck: (token: Token, actionId: string) => Promise<void>
+    handleGrenadeAttack: (token: Token, actionId: string) => Promise<void>
     isCombatActive: boolean
     handleToggleCombat: () => void
     isSeriouslyWounded: (token: Token) => boolean
@@ -106,6 +106,21 @@ const CombatPanels = (props: CombatPanelsProps) => {
     } = props
     return (
         <>
+            {isBlastPanelOpen && (
+                <BlastsPanel
+                    isSidePanelOpen={isBlastPanelOpen}
+                    gridSize={gridSize}
+                    blasts={blasts}
+                    blastsNotInMap={blastsNotInMap}
+                    blastDrawMode={blastDrawMode}
+                    onActivateBlastDrawMode={onActivateBlastDrawMode}
+                    onBlastDelete={onBlastDelete}
+                    onBlastCopy={onBlastCopy}
+                    onBlastCut={onBlastCut}
+                    onBlastLock={onBlastLock}
+                    mapKey={getActiveMapKey()}
+                />
+            )}
             {isTokenPanelOpen && (
                 <TokenPanel
                     isSidePanelOpen={isTokenPanelOpen}
@@ -113,7 +128,6 @@ const CombatPanels = (props: CombatPanelsProps) => {
                     getActiveMapKey={getActiveMapKey}
                     setTokens={setTokens}
                     resolveImageUrl={resolveImageUrl}
-                    gridSize={gridSize}
                     tokens={tokens}
                     tokensNotInMap={tokensNotInMap}
                     defaultTokens={defaultTokens}
@@ -121,6 +135,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
                     onTokenDuplicate={panelTokenDuplicate}
                     onTokenCut={panelTokenCut}
                     onTokenCopy={panelTokenCopy}
+                    isPlayerConnected={isPlayerConnected}
                 />
             )}
             {isInitiativePanelOpen && (
@@ -157,21 +172,6 @@ const CombatPanels = (props: CombatPanelsProps) => {
                     onDelete={panelHistoryOnDelete}
                     onRevealDamage={handleRevealDamage}
                     isPlayerConnected={isPlayerConnected}
-                />
-            )}
-            {isBlastPanelOpen && (
-                <BlastsPanel
-                    isSidePanelOpen={isBlastPanelOpen}
-                    gridSize={gridSize}
-                    blasts={blasts}
-                    blastsNotInMap={blastsNotInMap}
-                    blastDrawMode={blastDrawMode}
-                    onActivateBlastDrawMode={onActivateBlastDrawMode}
-                    onBlastDelete={onBlastDelete}
-                    onBlastCopy={onBlastCopy}
-                    onBlastCut={onBlastCut}
-                    onBlastLock={onBlastLock}
-                    mapKey={getActiveMapKey()}
                 />
             )}
         </>

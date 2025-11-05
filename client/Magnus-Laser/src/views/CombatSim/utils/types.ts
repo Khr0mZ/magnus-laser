@@ -1,5 +1,4 @@
-import { Dices } from '../../graphql/types'
-import type { RollResult, RollType } from './utils/diceUtils'
+import { Dices } from '@/graphql/types'
 
 export type BoardMap = {
     id: string
@@ -13,18 +12,18 @@ export type Token = {
     mapId: string
     x: number
     y: number
-    radius: number
     color: number
-    stats?: Stats
+    stats: Stats
     imageId?: string
     owner?: string
+    customRadius?: number
 }
 
 export type Stats = {
+    isPC?: boolean
+    // SHARED STATS
     movement: number
     currentMovement: number
-    combat: number
-    skills: number
     initiative: number
     armor: {
         sph: number
@@ -34,13 +33,20 @@ export type Stats = {
     }
     health: number
     currentHealth: number
-    weapons: {
-        melee: Dices
-        ranged: Dices
-        grenadesOrSpecialAmmo?: Dices
-        currentGrenadesOrSpecialAmmo?: number
-    }
-    ignoreSeriouslyWoundedPenalty?: boolean
+    ignoreSeriouslyWoundedPenalty: boolean
+    actions: StatsActions[]
+
+    // PC STATS
+    luck?: number
+    currentLuck?: number
+}
+
+export type StatsActions = {
+    id: string
+    name: string
+    type: 'melee' | 'ranged' | 'grenade' | 'skill'
+    value: number
+    damage?: Dices
 }
 
 export type Map = {
@@ -111,9 +117,11 @@ export interface RollHistoryEntry {
     tokenName: string
     rollType: RollType
     result: RollResult
+    actionName: string
     damageResult?: RollResult // for attacks that include damage
     damageRevealed?: boolean // whether damage has been revealed (starts hidden)
     mapId: string
+    actionType?: 'melee' | 'ranged' | 'grenade' | 'skill'
 }
 
 export type Initiative = {
@@ -131,4 +139,39 @@ export interface PixiDisplayObject {
     cursor?: string
     zIndex?: number
     parent?: PixiDisplayObject | undefined
+}
+
+export type AnimationSegment = {
+    sx: number
+    sy: number
+    ex: number
+    ey: number
+    len: number
+}
+
+export type AnimationEntry = {
+    segments: AnimationSegment[]
+    startTime: number
+    totalMs: number
+    totalLen: number
+}
+
+export type RollType =
+    | 'initiative'
+    | 'melee-hit'
+    | 'melee-damage'
+    | 'ranged-hit'
+    | 'ranged-damage'
+    | 'skill'
+    | 'turn-start'
+    | 'grenade-hit'
+    | 'grenade-damage'
+
+export interface RollResult {
+    total: number
+    rolls: number[]
+    fumble: boolean
+    critical: boolean
+    criticalDamage?: boolean
+    breakdown: string
 }

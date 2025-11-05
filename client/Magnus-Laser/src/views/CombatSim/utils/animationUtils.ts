@@ -1,19 +1,6 @@
 // Animation utilities for token movement
 
-export type AnimationSegment = {
-    sx: number
-    sy: number
-    ex: number
-    ey: number
-    len: number
-}
-
-export type AnimationEntry = {
-    segments: AnimationSegment[]
-    startTime: number
-    totalMs: number
-    totalLen: number
-}
+import { AnimationEntry, AnimationSegment } from '@/views/CombatSim/utils/types'
 
 // Schedule a multi-segment animation along provided waypoints
 export function schedulePathAnimation(

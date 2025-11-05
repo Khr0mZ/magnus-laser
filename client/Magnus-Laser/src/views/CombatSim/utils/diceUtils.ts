@@ -1,22 +1,4 @@
-export type RollType =
-    | 'initiative'
-    | 'melee-hit'
-    | 'melee-damage'
-    | 'ranged-hit'
-    | 'ranged-damage'
-    | 'skill'
-    | 'turn-start'
-    | 'grenade-hit'
-    | 'grenade-damage'
-
-export interface RollResult {
-    total: number
-    rolls: number[]
-    fumble: boolean
-    critical: boolean
-    criticalDamage?: boolean
-    breakdown: string
-}
+import { RollResult } from '@/views/CombatSim/utils/types'
 
 // Roll 1d10 with fumble/critical logic
 export const rollD10WithSpecial = (): { value: number; fumble: boolean; critical: boolean; rolls: number[] } => {

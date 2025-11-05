@@ -2,10 +2,37 @@ import { Box, Grid, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import colors from '../../../utils/colors'
-import { Token } from '../types'
+import type { StatsActions, Token } from '../utils/types'
 
 interface TokenTooltipProps {
     token: Token
+}
+
+// Helper functions to extract display values from actions
+const getActionDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
+    const action = actions.find((a) => a.type === type)
+    return action ? `${action.value}` : '0'
+}
+
+const getWeaponDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
+    const action = actions.find((a) => a.type === type)
+    if (!action || !action.damage) return '0D6'
+    const dice = action.damage.d6 || 1
+    return `${dice}D6`
+}
+
+const getGrenadeDisplayInfo = (actions: StatsActions[]) => {
+    const grenadeAction = actions.find((a) => a.type === 'grenade')
+    if (!grenadeAction || !grenadeAction.damage) return null
+
+    const diceParts = []
+    if (grenadeAction.damage.d4) diceParts.push(`${grenadeAction.damage.d4}D4`)
+    if (grenadeAction.damage.d6) diceParts.push(`${grenadeAction.damage.d6}D6`)
+    if (grenadeAction.damage.d8) diceParts.push(`${grenadeAction.damage.d8}D8`)
+
+    return {
+        dice: diceParts.join(' '),
+    }
 }
 
 export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
@@ -13,6 +40,7 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
     const { readerMode } = useUserPreferences()
 
     const stats = token.stats
+    const actions = stats?.actions || []
 
     return (
         <Box
@@ -122,7 +150,7 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                                 color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
                             }}
                         >
-                            {stats.combat}
+                            {getActionDisplayValue(actions, 'melee')}
                         </Typography>
                     </Grid>
                     <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
@@ -139,7 +167,7 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                                 color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
                             }}
                         >
-                            {stats.skills}
+                            {getActionDisplayValue(actions, 'skill')}
                         </Typography>
                     </Grid>
                     <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
@@ -156,7 +184,7 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                                 color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
                             }}
                         >
-                            {stats.weapons.melee.d6}D6
+                            {getWeaponDisplayValue(actions, 'melee')}
                         </Typography>
                     </Grid>
                     <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
@@ -173,39 +201,34 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                                 color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
                             }}
                         >
-                            {stats.weapons.ranged.d6}D6
+                            {getWeaponDisplayValue(actions, 'ranged')}
                         </Typography>
                     </Grid>
-                    {((stats.weapons.grenadesOrSpecialAmmo?.d4 ?? 0) > 0 ||
-                        (stats.weapons.grenadesOrSpecialAmmo?.d6 ?? 0) > 0 ||
-                        (stats.weapons.grenadesOrSpecialAmmo?.d8 ?? 0) > 0) && (
-                        <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
-                            <Typography
-                                sx={{
-                                    color: readerMode ? colors.blues.default : colors.neons.blue.default,
-                                    fontWeight: 700,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                {t('combatSim.grenadesOrSpecialAmmo')}:
-                            </Typography>
-                            <Typography
-                                sx={{
-                                    color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
-                                }}
-                            >
-                                {stats.weapons.currentGrenadesOrSpecialAmmo} /{' '}
-                                {stats.weapons.grenadesOrSpecialAmmo?.d4 &&
-                                    `${stats.weapons.grenadesOrSpecialAmmo?.d4}D4`}
-                                {stats.weapons.grenadesOrSpecialAmmo?.d6 &&
-                                    `${stats.weapons.grenadesOrSpecialAmmo?.d6}D6`}
-                                {stats.weapons.grenadesOrSpecialAmmo?.d8 &&
-                                    `${stats.weapons.grenadesOrSpecialAmmo?.d8}D8`}
-                            </Typography>
-                        </Grid>
-                    )}
+                    {(() => {
+                        const grenadeInfo = getGrenadeDisplayInfo(actions)
+                        return grenadeInfo ? (
+                            <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
+                                <Typography
+                                    sx={{
+                                        color: readerMode ? colors.blues.default : colors.neons.blue.default,
+                                        fontWeight: 700,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {t('combatSim.grenade')}:
+                                </Typography>
+                                <Typography
+                                    sx={{
+                                        color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
+                                    }}
+                                >
+                                    {grenadeInfo.dice}
+                                </Typography>
+                            </Grid>
+                        ) : null
+                    })()}
                 </Grid>
             )}
         </Box>

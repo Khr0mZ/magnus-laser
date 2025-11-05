@@ -1,12 +1,30 @@
+import { useSession } from '@/state/sessionStore'
+import { Clear } from '@mui/icons-material'
+import Add from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import MinimizeIcon from '@mui/icons-material/Minimize'
 import Save from '@mui/icons-material/Save'
-import { Avatar, Box, Button, Grid, IconButton, MenuItem, Popper, Select, TextField, Typography } from '@mui/material'
+import type { SxProps } from '@mui/material'
+import {
+    Avatar,
+    Box,
+    Button,
+    Grid,
+    IconButton,
+    MenuItem,
+    Popper,
+    Select,
+    TextField,
+    Tooltip,
+    Typography,
+} from '@mui/material'
 import type { ColorResult } from '@uiw/color-convert'
 import { Colorful } from '@uiw/react-color'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { v4 as uuidv4 } from 'uuid'
+import CustomScrollbar from '../../../components/CustomScrollbar'
 import CyberpunkCheckbox from '../../../components/CyberpunkCheckbox'
 import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
 import CyberpunkFormControlLabel from '../../../components/CyberpunkFormControlLabel'
@@ -14,7 +32,174 @@ import { flicker, glitch, pulseGlowBlue, pulseGlowCyan } from '../../../componen
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import colors from '../../../utils/colors'
 import { TokenTooltip } from '../components/TokenTooltip'
-import { Image, Map, Token } from '../types'
+import type { Image, StatsActions, Token } from '../utils/types'
+
+// Window button styles similar to WindowButtons component
+const windowButtonBaseStyle = {
+    minWidth: '30px',
+    width: '30px',
+    height: '30px',
+    borderRadius: '2px',
+    p: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+    position: 'relative' as const,
+}
+
+const windowButtonBeforeStyle = (color: string) => ({
+    content: '""',
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '1px',
+    background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+    opacity: 0.7,
+})
+
+const windowButtonAfterStyle = (color: string) => ({
+    content: '""',
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: '0%',
+    opacity: 0,
+    background: `linear-gradient(0deg, ${color}30, transparent)`,
+    transition: 'all 0.2s',
+})
+
+const windowButtonHoverStyle = (color: string, lightColor: string) => ({
+    bgcolor: `rgba(${hexToRgb(color).r}, ${hexToRgb(color).g}, ${hexToRgb(color).b}, 0.2)`,
+    color: lightColor,
+    boxShadow: `0 0 8px ${color}80`,
+    '&::after': {
+        opacity: 0.8,
+        height: '100%',
+    },
+    '& .MuiSvgIcon-root': {
+        color: lightColor,
+        textShadow: `0 0 8px ${lightColor}`,
+        filter: `drop-shadow(0 0 3px ${color})`,
+        animation: `${color === colors.neons.red.default ? flicker : glitch} 2s infinite`,
+    },
+})
+
+// Helper to convert hex to RGB
+const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result
+        ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+          }
+        : { r: 0, g: 0, b: 0 }
+}
+
+const ActionRow = ({
+    action,
+    handleActionChange,
+    handleRemoveAction,
+    selectStyle,
+    textFieldOutlinedStyle,
+    readerMode,
+}: {
+    action: StatsActions
+    handleActionChange: (actionId: string, field: string, value: unknown) => void
+    handleRemoveAction: (actionId: string) => void
+    selectStyle: SxProps
+    textFieldOutlinedStyle: SxProps
+    readerMode: boolean
+}) => {
+    const { t } = useTranslation()
+
+    return (
+        <Grid container spacing={2} sx={{ alignItems: 'center', mb: 1, gap: 2, pr: 2 }}>
+            <Grid size={4.5}>
+                <TextField
+                    fullWidth
+                    label={t('combatSim.name')}
+                    type="text"
+                    value={action.name ?? ''}
+                    onChange={(e) => handleActionChange(action.id, 'name', e.target.value)}
+                    variant="outlined"
+                    sx={textFieldOutlinedStyle}
+                />
+            </Grid>
+            <Grid size={3}>
+                <CyberpunkFormControl readerMode={readerMode} label={t('combatSim.actionType')}>
+                    <Select
+                        value={action.type}
+                        onChange={(e) => handleActionChange(action.id, 'type', e.target.value)}
+                        label={t('combatSim.actionType')}
+                        sx={selectStyle}
+                    >
+                        <MenuItem value="melee">{t('combatSim.melee')}</MenuItem>
+                        <MenuItem value="ranged">{t('combatSim.ranged')}</MenuItem>
+                        <MenuItem value="skill">{t('combatSim.skills')}</MenuItem>
+                        <MenuItem value="grenade">{t('combatSim.grenade')}</MenuItem>
+                    </Select>
+                </CyberpunkFormControl>
+            </Grid>
+            <Grid size={2}>
+                <TextField
+                    fullWidth
+                    label={t('combatSim.value')}
+                    type="tel"
+                    value={action.value ?? 0}
+                    onChange={(e) => handleActionChange(action.id, 'value', Number(e.target.value) || 0)}
+                    variant="outlined"
+                    sx={textFieldOutlinedStyle}
+                />
+            </Grid>
+            <Grid size={2}>
+                {(action.type === 'melee' || action.type === 'ranged' || action.type === 'grenade') && (
+                    <TextField
+                        fullWidth
+                        label={t('combatSim.dice')}
+                        type="tel"
+                        value={action.damage?.d6 ?? 0}
+                        onChange={(e) => handleActionChange(action.id, 'damage.d6', Number(e.target.value) || 1)}
+                        variant="outlined"
+                        sx={textFieldOutlinedStyle}
+                        slotProps={{
+                            input: {
+                                renderSuffix: () => (
+                                    <Typography variant="button" sx={{ mr: 0.5, fontSize: '10px' }}>
+                                        D6
+                                    </Typography>
+                                ),
+                            },
+                        }}
+                    />
+                )}
+            </Grid>
+            <Grid size={0.5}>
+                <IconButton
+                    onClick={() => handleRemoveAction(action.id)}
+                    sx={{
+                        ...windowButtonBaseStyle,
+                        bgcolor: 'rgba(40, 0, 0, 0.4)',
+                        color: colors.neons.red.default,
+                        border: `1px solid ${colors.neons.red.default}60`,
+                        '&::before': windowButtonBeforeStyle(colors.neons.red.default),
+                        '&::after': windowButtonAfterStyle(colors.neons.red.default),
+                        '&:hover': {
+                            ...windowButtonHoverStyle(colors.neons.red.default, colors.neons.red.dark),
+                            bgcolor: 'rgba(60, 0, 0, 0.6)',
+                        },
+                    }}
+                    title={t('common.close')}
+                >
+                    <CloseIcon sx={{ fontSize: '16px' }} />
+                </IconButton>
+            </Grid>
+        </Grid>
+    )
+}
 
 // Utility function for safe nested property access and setting
 const setNestedProperty = (obj: Record<string, unknown>, path: string[], value: unknown): void => {
@@ -40,7 +225,6 @@ interface TokenDetailsDialogProps {
     onUploadImage: (file: globalThis.File) => void
     toggleFullscreenImage: (image: string) => void
     resolveImageUrl: (imageId: string | undefined) => string | undefined
-    maps: Map[] // will be used to get the gridSize for tokens on other maps
     initialPosition?: { x: number; y: number }
 }
 
@@ -55,12 +239,14 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
     onUploadImage,
     toggleFullscreenImage,
     resolveImageUrl,
-    maps,
     initialPosition = { x: 100, y: 100 },
 }) => {
+    const { session, peers, connected, role } = useSession()
+    const isInSession = session && connected
+    const isDMInSession = session && connected && role === 'dm'
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const [editedToken, setEditedToken] = useState<Partial<Token>>({})
+    const [editedToken, setEditedToken] = useState<Partial<Token>>()
     const [selectedImage, setSelectedImage] = useState<Image>()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [tokenColorAnchor, setTokenColorAnchor] = useState<HTMLElement | null>(null)
@@ -113,8 +299,6 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
             currentToken?.id === 'DEADLY') &&
         currentToken?.mapId === ''
 
-    const [selectedSpecialDice, setSelectedSpecialDice] = useState<number>(4)
-
     const sortedImages = useMemo(() => {
         const arr = [...images]
         arr.sort((a, b) => a.name.localeCompare(b.name))
@@ -123,19 +307,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
 
     useEffect(() => {
         if (currentToken) {
-            if (currentToken.stats?.weapons?.grenadesOrSpecialAmmo?.d4) {
-                setSelectedSpecialDice(4)
-            } else if (currentToken.stats?.weapons?.grenadesOrSpecialAmmo?.d6) {
-                setSelectedSpecialDice(6)
-            } else if (currentToken.stats?.weapons?.grenadesOrSpecialAmmo?.d8) {
-                setSelectedSpecialDice(8)
-            }
-        }
-    }, [currentToken])
-
-    useEffect(() => {
-        if (currentToken) {
-            setEditedToken({ ...currentToken })
+            setEditedToken(structuredClone(currentToken))
             // Find the selected image based on the token's imageId
             if (currentToken.imageId && !currentToken.imageId.startsWith('/')) {
                 // It's an image ID, find the matching image
@@ -148,17 +320,17 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
         }
     }, [currentToken, images])
 
-    // Sync selectedImage when editedToken.imageId changes
+    // Sync selectedImage when editedToken?.imageId changes
     useEffect(() => {
-        if (editedToken.imageId && !editedToken.imageId.startsWith('/')) {
+        if (editedToken?.imageId && !editedToken?.imageId.startsWith('/')) {
             // It's an image ID, find the matching image
-            const matchingImage = images.find((img) => img.id === editedToken.imageId)
+            const matchingImage = images.find((img) => img.id === editedToken?.imageId)
             setSelectedImage(matchingImage)
-        } else if (!editedToken.imageId) {
+        } else if (!editedToken?.imageId) {
             // imageId was cleared
             setSelectedImage(undefined)
         }
-    }, [editedToken.imageId, images])
+    }, [editedToken?.imageId, images])
 
     // Detect when a new image is uploaded and automatically set it as selected
     useEffect(() => {
@@ -289,6 +461,81 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
         })
     }
 
+    const handleActionChange = useCallback((actionId: string, field: string, value: unknown) => {
+        setEditedToken((prev) => {
+            if (!prev?.stats?.actions) return prev || undefined
+
+            const actionIndex = prev.stats.actions.findIndex((action) => action.id === actionId)
+            if (actionIndex === -1) return prev
+
+            const actions = [...prev.stats.actions]
+            const action = { ...actions[actionIndex] }
+
+            if (field === 'type') {
+                action.type = value as StatsActions['type']
+                // Reset damage when changing type
+                if (value === 'skill') {
+                    delete action.damage
+                } else if (value === 'melee' || value === 'ranged') {
+                    action.damage = { ...action.damage, d6: action.damage?.d6 ?? 1 }
+                } else if (value === 'grenade') {
+                    action.damage = { ...action.damage, d6: action.damage?.d6 ?? 6 }
+                }
+            } else if (field === 'value') {
+                action.value = value as number
+            } else if (field === 'damage.d6') {
+                action.damage = { ...action.damage, d6: value as number }
+            } else if (field === 'name') {
+                action.name = value as string
+            }
+
+            actions[actionIndex] = action
+
+            return {
+                ...prev,
+                stats: {
+                    ...prev.stats,
+                    actions,
+                },
+            }
+        })
+    }, [])
+
+    const handleAddAction = useCallback(() => {
+        const newAction: StatsActions = {
+            id: uuidv4(),
+            name: 'New Action',
+            type: 'melee' as StatsActions['type'],
+            value: 0,
+            damage: { d6: 1 },
+        }
+        setEditedToken((prev) => {
+            if (!prev?.stats) return prev || undefined
+
+            return {
+                ...prev,
+                stats: {
+                    ...prev.stats,
+                    actions: [...prev.stats.actions, newAction],
+                },
+            }
+        })
+    }, [])
+
+    const handleRemoveAction = useCallback((actionId: string) => {
+        setEditedToken((prev) => {
+            if (!prev?.stats?.actions) return prev || undefined
+
+            return {
+                ...prev,
+                stats: {
+                    ...prev.stats,
+                    actions: prev.stats.actions.filter((action) => action.id !== actionId),
+                },
+            }
+        })
+    }, [])
+
     const handleImageUploadClick = () => {
         fileInputRef.current?.click()
     }
@@ -305,8 +552,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
     }
 
     const handleImageClick = () => {
-        if (editedToken.imageId) {
-            const imageUrl = resolveImageUrl(editedToken.imageId)
+        if (editedToken?.imageId) {
+            const imageUrl = resolveImageUrl(editedToken?.imageId)
             if (imageUrl) {
                 toggleFullscreenImage(imageUrl)
             }
@@ -314,12 +561,12 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
     }
 
     const handleDownloadClick = () => {
-        if (editedToken.imageId) {
-            const imageUrl = resolveImageUrl(editedToken.imageId)
+        if (editedToken?.imageId) {
+            const imageUrl = resolveImageUrl(editedToken?.imageId)
             if (imageUrl) {
                 const link = document.createElement('a')
                 link.href = imageUrl
-                link.download = `${editedToken.name || 'token'}.png`
+                link.download = `${editedToken?.name || 'token'}.png`
                 document.body.appendChild(link)
                 link.click()
                 document.body.removeChild(link)
@@ -436,71 +683,6 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
         )
     }
 
-    // Window button styles similar to WindowButtons component
-    const windowButtonBaseStyle = {
-        minWidth: '30px',
-        width: '30px',
-        height: '30px',
-        borderRadius: '2px',
-        p: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s',
-        position: 'relative' as const,
-    }
-
-    const windowButtonBeforeStyle = (color: string) => ({
-        content: '""',
-        position: 'absolute' as const,
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '1px',
-        background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
-        opacity: 0.7,
-    })
-
-    const windowButtonAfterStyle = (color: string) => ({
-        content: '""',
-        position: 'absolute' as const,
-        bottom: 0,
-        left: 0,
-        width: '100%',
-        height: '0%',
-        opacity: 0,
-        background: `linear-gradient(0deg, ${color}30, transparent)`,
-        transition: 'all 0.2s',
-    })
-
-    const windowButtonHoverStyle = (color: string, lightColor: string) => ({
-        bgcolor: `rgba(${hexToRgb(color).r}, ${hexToRgb(color).g}, ${hexToRgb(color).b}, 0.2)`,
-        color: lightColor,
-        boxShadow: `0 0 8px ${color}80`,
-        '&::after': {
-            opacity: 0.8,
-            height: '100%',
-        },
-        '& .MuiSvgIcon-root': {
-            color: lightColor,
-            textShadow: `0 0 8px ${lightColor}`,
-            filter: `drop-shadow(0 0 3px ${color})`,
-            animation: `${color === colors.neons.red.default ? flicker : glitch} 2s infinite`,
-        },
-    })
-
-    // Helper to convert hex to RGB
-    const hexToRgb = (hex: string) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-        return result
-            ? {
-                  r: parseInt(result[1], 16),
-                  g: parseInt(result[2], 16),
-                  b: parseInt(result[3], 16),
-              }
-            : { r: 0, g: 0, b: 0 }
-    }
-
     return (
         <>
             <input
@@ -583,18 +765,37 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                 : {},
                         }}
                     >
-                        <Typography
-                            variant="h6"
-                            component="div"
-                            sx={{
-                                color: readerMode ? '#0288d1' : colors.neons.cyan.default,
-                                textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
-                                fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
-                                fontWeight: 'bold',
-                            }}
-                        >
-                            {t('combatSim.tokenDialogTitle')}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {/* Is PC */}
+                            <Grid size={1.5} sx={{ pl: 0.5 }}>
+                                <CyberpunkFormControlLabel
+                                    readerMode={readerMode}
+                                    control={
+                                        <CyberpunkCheckbox
+                                            readerMode={readerMode}
+                                            checked={editedToken?.stats?.isPC ?? false}
+                                            onChange={(e) => handleFieldChange('stats.isPC', e.target.checked)}
+                                        />
+                                    }
+                                    sx={{
+                                        height: '100%',
+                                    }}
+                                    label={t('combatSim.isPC')}
+                                />
+                            </Grid>
+                            <Typography
+                                variant="h6"
+                                component="div"
+                                sx={{
+                                    color: readerMode ? '#0288d1' : colors.neons.cyan.default,
+                                    textShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.cyan.default}`,
+                                    fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                    fontWeight: 'bold',
+                                }}
+                            >
+                                {t('combatSim.tokenDialogTitle')}
+                            </Typography>
+                        </Box>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <IconButton
                                 size="small"
@@ -617,7 +818,9 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             </IconButton>
                             <IconButton
                                 size="small"
-                                onClick={() => onCloseTokenDialog()}
+                                onClick={() => {
+                                    onCloseTokenDialog()
+                                }}
                                 sx={{
                                     ...windowButtonBaseStyle,
                                     bgcolor: 'rgba(40, 0, 0, 0.4)',
@@ -638,243 +841,163 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                     </Box>
 
                     {/* Content */}
-                    <Box
-                        sx={{
-                            flex: 1,
-                            overflow: 'auto',
-                            px: 3,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            pr: 0,
-                            '&::-webkit-scrollbar': {
-                                width: '8px',
-                            },
-                            '&::-webkit-scrollbar-track': {
-                                background: readerMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 255, 255, 0.1)',
-                            },
-                            '&::-webkit-scrollbar-thumb': {
-                                background: readerMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 255, 255, 0.3)',
-                                borderRadius: '4px',
-                            },
-                        }}
-                    >
-                        <Grid container spacing={2} sx={{ pr: 3, mt: 3 }}>
-                            {/* Name - full width */}
-                            <Grid size={12}>
+                    <CustomScrollbar height="100%">
+                        <Grid container spacing={2} sx={{ px: 2, mt: 2 }}>
+                            {/* Name - full width if not in session */}
+                            <Grid size={isInSession ? 6 : 12}>
                                 <TextField
                                     fullWidth
                                     label={t('common.name')}
-                                    value={editedToken.name || ''}
+                                    value={editedToken?.name || ''}
                                     onChange={(e) => handleFieldChange('name', e.target.value)}
                                     variant="outlined"
                                     sx={textFieldOutlinedStyle}
                                 />
                             </Grid>
-
-                            {/* Left Column - Fields */}
-                            <Grid container size={{ xs: 12, md: 9 }}>
-                                {/* NPC Stats */}
-                                {/* Combat */}
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.combat')}
-                                        type="tel"
-                                        value={editedToken.stats?.combat ?? 0}
-                                        onChange={(e) => handleFieldChange('stats.combat', Number(e.target.value) || 0)}
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-                                {/* Skills */}
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.skills')}
-                                        type="tel"
-                                        value={editedToken.stats?.skills ?? 0}
-                                        onChange={(e) => handleFieldChange('stats.skills', Number(e.target.value) || 0)}
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-                                {/* Initiative */}
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.initiative')}
-                                        type="tel"
-                                        value={editedToken.stats?.initiative ?? 0}
-                                        onChange={(e) =>
-                                            handleFieldChange('stats.initiative', Number(e.target.value) || 0)
-                                        }
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-                                {/* Movement */}
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.movement')}
-                                        type="tel"
-                                        value={editedToken.stats?.movement ?? 0}
-                                        onChange={(e) =>
-                                            handleFieldChange('stats.movement', Number(e.target.value) || 0)
-                                        }
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.health')}
-                                        type="tel"
-                                        value={editedToken.stats?.health ?? 0}
-                                        onChange={(e) => handleFieldChange('stats.health', Number(e.target.value) || 0)}
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.sph')}
-                                        type="tel"
-                                        value={editedToken.stats?.armor?.sph ?? 0}
-                                        onChange={(e) =>
-                                            handleFieldChange('stats.armor.sph', Number(e.target.value) || 0)
-                                        }
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.spb')}
-                                        type="tel"
-                                        value={editedToken.stats?.armor?.spb ?? 0}
-                                        onChange={(e) =>
-                                            handleFieldChange('stats.armor.spb', Number(e.target.value) || 0)
-                                        }
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                    />
-                                </Grid>
-                                {/* Weapons D6 */}
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.melee')}
-                                        type="tel"
-                                        value={editedToken.stats?.weapons?.melee?.d6 || 0}
-                                        onChange={(e) =>
-                                            handleFieldChange('stats.weapons.melee.d6', Number(e.target.value) || 0)
-                                        }
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                        slotProps={{
-                                            input: {
-                                                renderSuffix: () => (
-                                                    <Typography variant="button" sx={{ mr: 0.5, fontSize: '10px' }}>
-                                                        D6
-                                                    </Typography>
-                                                ),
-                                            },
-                                        }}
-                                    />
-                                </Grid>
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.ranged')}
-                                        type="tel"
-                                        value={editedToken.stats?.weapons?.ranged?.d6 || 0}
-                                        onChange={(e) =>
-                                            handleFieldChange('stats.weapons.ranged.d6', Number(e.target.value) || 0)
-                                        }
-                                        variant="outlined"
-                                        sx={{ ...textFieldOutlinedStyle }}
-                                        slotProps={{
-                                            input: {
-                                                renderSuffix: () => (
-                                                    <Typography variant="button" sx={{ mr: 0.5, fontSize: '10px' }}>
-                                                        D6
-                                                    </Typography>
-                                                ),
-                                            },
-                                        }}
-                                    />
-                                </Grid>
-
-                                <Grid size={2}>
-                                    <CyberpunkFormControl readerMode={readerMode} label={t('combatSim.amount')}>
+                            {/* Token Owner - displayed only while in session */}
+                            {isInSession && (
+                                <Grid size={6}>
+                                    {/* Owner Selection */}
+                                    <CyberpunkFormControl readerMode={readerMode} label={t('combatSim.owner')}>
                                         <Select
-                                            fullWidth
-                                            label={t('combatSim.amount')}
-                                            value={selectedSpecialDice}
+                                            disabled={!isDMInSession}
+                                            value={editedToken?.owner ?? ''}
                                             onChange={(e) => {
-                                                setSelectedSpecialDice(Number(e.target.value) || 0)
-                                                handleFieldChange('stats.weapons.grenadesOrSpecialAmmo.d4', 0)
-                                                handleFieldChange('stats.weapons.grenadesOrSpecialAmmo.d6', 0)
-                                                handleFieldChange('stats.weapons.grenadesOrSpecialAmmo.d8', 0)
+                                                const selectedValue = e.target.value
+                                                handleFieldChange('owner', selectedValue)
                                             }}
-                                            variant="outlined"
+                                            label={t('combatSim.owner')}
                                             sx={selectStyle}
+                                            endAdornment={
+                                                editedToken?.owner && isDMInSession ? (
+                                                    <Tooltip title={t('common.clear')}>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleFieldChange('owner', undefined)}
+                                                            sx={{
+                                                                right: 16,
+                                                            }}
+                                                        >
+                                                            <Clear />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                ) : undefined
+                                            }
                                         >
-                                            <MenuItem value={4} key="d4">
-                                                D4
-                                            </MenuItem>
-                                            <MenuItem value={6} key="d6">
-                                                D6
-                                            </MenuItem>
-                                            <MenuItem value={8} key="d8">
-                                                D8
-                                            </MenuItem>
+                                            {editedToken?.owner &&
+                                                peers.find((peer) => peer.name === editedToken?.owner) ===
+                                                    undefined && (
+                                                    <MenuItem key={editedToken?.owner} value={editedToken?.owner}>
+                                                        {editedToken?.owner}
+                                                    </MenuItem>
+                                                )}
+                                            {peers
+                                                .filter((peer) => peer.role !== 'dm')
+                                                .map((peer) => (
+                                                    <MenuItem key={peer.name} value={peer.name}>
+                                                        {peer.name}
+                                                    </MenuItem>
+                                                ))}
                                         </Select>
                                     </CyberpunkFormControl>
                                 </Grid>
-                                <Grid size={2}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('combatSim.grenadesOrSpecialAmmo')}
-                                        type="tel"
-                                        value={
-                                            selectedSpecialDice === 4
-                                                ? editedToken.stats?.weapons?.grenadesOrSpecialAmmo?.d4 ?? 0
-                                                : selectedSpecialDice === 6
-                                                ? editedToken.stats?.weapons?.grenadesOrSpecialAmmo?.d6 ?? 0
-                                                : selectedSpecialDice === 8
-                                                ? editedToken.stats?.weapons?.grenadesOrSpecialAmmo?.d8 ?? 0
-                                                : 0
-                                        }
-                                        onChange={(e) => {
-                                            handleFieldChange(
-                                                `stats.weapons.grenadesOrSpecialAmmo.d${selectedSpecialDice}`,
-                                                Number(e.target.value) || 0
-                                            )
-                                        }}
-                                        variant="outlined"
-                                        sx={textFieldOutlinedStyle}
-                                        slotProps={{
-                                            input: {
-                                                renderSuffix: () => (
-                                                    <Typography variant="button" sx={{ mr: 0.5, fontSize: '10px' }}>
-                                                        D{selectedSpecialDice}
-                                                    </Typography>
-                                                ),
-                                            },
-                                        }}
-                                    />
+                            )}
+                            {/* Left Column - Fields */}
+                            <Grid container size={{ xs: 12, md: 9 }}>
+                                {/* Basic Stats */}
+
+                                <Grid container size={12}>
+                                    {/* Initiative */}
+                                    <Grid size={editedToken?.stats?.isPC ? 2 : 2.4}>
+                                        <TextField
+                                            fullWidth
+                                            label={t('combatSim.initiative')}
+                                            type="tel"
+                                            value={editedToken?.stats?.initiative ?? 0}
+                                            onChange={(e) =>
+                                                handleFieldChange('stats.initiative', Number(e.target.value) || 0)
+                                            }
+                                            variant="outlined"
+                                            sx={textFieldOutlinedStyle}
+                                        />
+                                    </Grid>
+                                    {/* Movement */}
+                                    <Grid size={editedToken?.stats?.isPC ? 2 : 2.4}>
+                                        <TextField
+                                            fullWidth
+                                            label={t('combatSim.movement')}
+                                            type="tel"
+                                            value={editedToken?.stats?.movement ?? 0}
+                                            onChange={(e) =>
+                                                handleFieldChange('stats.movement', Number(e.target.value) || 0)
+                                            }
+                                            variant="outlined"
+                                            sx={textFieldOutlinedStyle}
+                                        />
+                                    </Grid>
+                                    {/* Health */}
+                                    <Grid size={editedToken?.stats?.isPC ? 2 : 2.4}>
+                                        <TextField
+                                            fullWidth
+                                            label={t('combatSim.health')}
+                                            type="tel"
+                                            value={editedToken?.stats?.health ?? 0}
+                                            onChange={(e) =>
+                                                handleFieldChange('stats.health', Number(e.target.value) || 0)
+                                            }
+                                            variant="outlined"
+                                            sx={textFieldOutlinedStyle}
+                                        />
+                                    </Grid>
+                                    {/* SPH */}
+                                    <Grid size={editedToken?.stats?.isPC ? 2 : 2.4}>
+                                        <TextField
+                                            fullWidth
+                                            label={t('combatSim.sph')}
+                                            type="tel"
+                                            value={editedToken?.stats?.armor?.sph ?? 0}
+                                            onChange={(e) =>
+                                                handleFieldChange('stats.armor.sph', Number(e.target.value) || 0)
+                                            }
+                                            variant="outlined"
+                                            sx={textFieldOutlinedStyle}
+                                        />
+                                    </Grid>
+                                    {/* SPB */}
+                                    <Grid size={editedToken?.stats?.isPC ? 2 : 2.4}>
+                                        <TextField
+                                            fullWidth
+                                            label={t('combatSim.spb')}
+                                            type="tel"
+                                            value={editedToken?.stats?.armor?.spb ?? 0}
+                                            onChange={(e) =>
+                                                handleFieldChange('stats.armor.spb', Number(e.target.value) || 0)
+                                            }
+                                            variant="outlined"
+                                            sx={textFieldOutlinedStyle}
+                                        />
+                                    </Grid>
+                                    {/* Luck */}
+                                    {editedToken?.stats?.isPC && (
+                                        <Grid size={2}>
+                                            <TextField
+                                                fullWidth
+                                                label={t('combatSim.luck')}
+                                                type="tel"
+                                                value={editedToken?.stats?.luck ?? 0}
+                                                onChange={(e) =>
+                                                    handleFieldChange('stats.luck', Number(e.target.value) || 0)
+                                                }
+                                                variant="outlined"
+                                                sx={textFieldOutlinedStyle}
+                                                disabled={!(editedToken?.stats?.isPC ?? false)}
+                                            />
+                                        </Grid>
+                                    )}
                                 </Grid>
 
                                 {/* Color Picker */}
-                                <Grid size={2}>
+                                <Grid size={editedToken?.stats?.isPC ? 2 : 2.4}>
                                     <CyberpunkFormControl
                                         readerMode={readerMode}
                                         label={t('combatSim.color')}
@@ -898,7 +1021,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                 border: `2px solid ${
                                                     readerMode ? colors.grays.gray800 : 'rgba(0, 255, 255, 0.65)'
                                                 }`,
-                                                cursor: editedToken.imageId ? 'pointer' : 'default',
+                                                cursor: editedToken?.imageId ? 'pointer' : 'default',
                                                 transition: 'all 0.3s ease',
                                                 '&:hover': {
                                                     boxShadow: readerMode
@@ -923,8 +1046,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                     height: '100%',
                                                     width: '100%',
                                                     bgcolor: `${
-                                                        editedToken.color
-                                                            ? `#${editedToken.color.toString(16).padStart(6, '0')}`
+                                                        editedToken?.color
+                                                            ? `#${editedToken?.color.toString(16).padStart(6, '0')}`
                                                             : '#ffffff'
                                                     }`,
                                                     borderRadius: '3px',
@@ -934,9 +1057,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                         </Box>
                                     </CyberpunkFormControl>
                                 </Grid>
-
                                 {/* Image Dropdown */}
-                                <Grid size={4}>
+                                <Grid size={editedToken?.stats?.isPC ? 10 : 9.6}>
                                     {/* Image Selection */}
                                     <CyberpunkFormControl readerMode={readerMode} label={t('combatSim.selectImage')}>
                                         <Select
@@ -975,16 +1097,35 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                         </Select>
                                     </CyberpunkFormControl>
                                 </Grid>
+                                {/* Ignore Seriously Wounded Penalty */}
+                                <Grid size={12} sx={{ pl: 0.5 }}>
+                                    <CyberpunkFormControlLabel
+                                        readerMode={readerMode}
+                                        control={
+                                            <CyberpunkCheckbox
+                                                readerMode={readerMode}
+                                                checked={editedToken?.stats?.ignoreSeriouslyWoundedPenalty ?? false}
+                                                onChange={(e) =>
+                                                    handleFieldChange(
+                                                        'stats.ignoreSeriouslyWoundedPenalty',
+                                                        e.target.checked
+                                                    )
+                                                }
+                                            />
+                                        }
+                                        label={t('combatSim.ignoreSeriouslyWoundedPenalty')}
+                                    />
+                                </Grid>
                                 {/* Size */}
-                                <Grid size={4}>
+                                {/* <Grid size={5}>
                                     <CyberpunkFormControl readerMode={readerMode} label={t('combatSim.size')}>
                                         <Select
                                             value={(() => {
-                                                const map = maps.find((m) => m.id === editedToken.mapId)
+                                                const map = maps.find((m) => m.id === editedToken?.mapId)
                                                 const mapGridSize = map?.gridSize ?? gridSize
                                                 // Convert pixel radius back to multiplier for display
                                                 const half = mapGridSize / 2
-                                                const radius = editedToken.radius ?? Math.max(1, Math.floor(half))
+                                                const radius = editedToken?.radius ?? Math.max(1, Math.floor(half))
                                                 // Find closest multiplier
                                                 const multiplier = radius / half
                                                 // Round to nearest 0.1 and clamp to valid values
@@ -1001,28 +1142,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                             <MenuItem value={4}>{t('combatSim.gargantuan')}</MenuItem>
                                         </Select>
                                     </CyberpunkFormControl>
-                                </Grid>
-                                {/* Ignore Seriously Wounded Penalty */}
-                                <Grid size={4}>
-                                    <CyberpunkFormControlLabel
-                                        readerMode={readerMode}
-                                        control={
-                                            <CyberpunkCheckbox
-                                                readerMode={readerMode}
-                                                checked={editedToken.stats?.ignoreSeriouslyWoundedPenalty ?? false}
-                                                onChange={(e) =>
-                                                    handleFieldChange(
-                                                        'stats.ignoreSeriouslyWoundedPenalty',
-                                                        e.target.checked
-                                                    )
-                                                }
-                                            />
-                                        }
-                                        label={t('combatSim.ignoreSeriouslyWoundedPenalty')}
-                                    />
-                                </Grid>
+                                </Grid> */}
                             </Grid>
-
                             {/* Right Column - Image */}
                             <Grid size={{ xs: 12, md: 3 }}>
                                 <CyberpunkFormControl
@@ -1049,7 +1170,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                             border: `2px solid ${
                                                 readerMode ? colors.grays.gray800 : 'rgba(0, 255, 255, 0.65)'
                                             }`,
-                                            cursor: editedToken.imageId ? 'pointer' : 'default',
+                                            cursor: editedToken?.imageId ? 'pointer' : 'default',
                                             transition: 'all 0.3s ease',
                                             '&:hover': {
                                                 boxShadow: readerMode
@@ -1067,8 +1188,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                         onClick={handleImageClick}
                                     >
                                         <Avatar
-                                            src={resolveImageUrl(editedToken.imageId)}
-                                            alt={t('common.itemImageAlt', { name: editedToken.name || 'token' })}
+                                            src={resolveImageUrl(editedToken?.imageId)}
+                                            alt={t('common.itemImageAlt', { name: editedToken?.name || 'token' })}
                                             variant="rounded"
                                             slotProps={{
                                                 img: {
@@ -1087,7 +1208,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                 height: '100%',
                                             }}
                                         />
-                                        {!editedToken.imageId && (
+                                        {!editedToken?.imageId && (
                                             <Typography
                                                 variant={'caption'}
                                                 sx={{
@@ -1256,7 +1377,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                     handleFieldChange('imageId', undefined)
                                                 }}
                                                 title={t('common.removeImage')}
-                                                disabled={!editedToken.imageId}
+                                                disabled={!editedToken?.imageId}
                                                 sx={{
                                                     minWidth: '30px',
                                                     width: '30px',
@@ -1328,12 +1449,12 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                 <CloseIcon
                                                     className="icon-content"
                                                     sx={{
-                                                        color: !editedToken.imageId
+                                                        color: !editedToken?.imageId
                                                             ? 'grey'
                                                             : readerMode
                                                             ? '#d32f2f'
                                                             : colors.neons.red.default,
-                                                        textShadow: !editedToken.imageId
+                                                        textShadow: !editedToken?.imageId
                                                             ? 'none'
                                                             : readerMode
                                                             ? 'none'
@@ -1351,7 +1472,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                     handleDownloadClick()
                                                 }}
                                                 title={t('common.downloadImage')}
-                                                disabled={!editedToken.imageId}
+                                                disabled={!editedToken?.imageId}
                                                 sx={{
                                                     minWidth: '30px',
                                                     width: '30px',
@@ -1423,12 +1544,12 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                 <Save
                                                     className="icon-content"
                                                     sx={{
-                                                        color: !editedToken.imageId
+                                                        color: !editedToken?.imageId
                                                             ? 'grey'
                                                             : readerMode
                                                             ? '#1976d2'
                                                             : colors.neons.blue.default,
-                                                        textShadow: !editedToken.imageId
+                                                        textShadow: !editedToken?.imageId
                                                             ? 'none'
                                                             : readerMode
                                                             ? 'none'
@@ -1446,13 +1567,19 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             {/* Currents */}
                             <Grid container spacing={2}>
                                 {/* Current Health */}
-                                {editedToken.mapId !== '' && (
-                                    <Grid size={2.4} sx={{ border: '2px solid red', borderRadius: '4px', mt: '-2px' }}>
+                                {editedToken?.mapId !== '' && (
+                                    <Grid
+                                        size={editedToken?.stats?.isPC ? 2.4 : 3}
+                                        sx={{
+                                            border: `2px solid ${colors.neons.red.default}`,
+                                            borderRadius: '4px',
+                                        }}
+                                    >
                                         <TextField
                                             fullWidth
                                             label={t('combatSim.currentHealth')}
                                             type="tel"
-                                            value={editedToken.stats?.currentHealth ?? 0}
+                                            value={editedToken?.stats?.currentHealth ?? 0}
                                             onChange={(e) =>
                                                 handleFieldChange('stats.currentHealth', Number(e.target.value) || 0)
                                             }
@@ -1471,20 +1598,19 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     </Grid>
                                 )}
                                 {/* Current Movement */}
-                                {editedToken.mapId !== '' && (
+                                {editedToken?.mapId !== '' && (
                                     <Grid
-                                        size={2.4}
+                                        size={editedToken?.stats?.isPC ? 2.4 : 3}
                                         sx={{
                                             border: `2px solid ${colors.neons.purple.default}`,
                                             borderRadius: '4px',
-                                            mt: '-2px',
                                         }}
                                     >
                                         <TextField
                                             fullWidth
                                             label={t('combatSim.currentMovement')}
                                             type="tel"
-                                            value={editedToken.stats?.currentMovement ?? 0}
+                                            value={editedToken?.stats?.currentMovement ?? 0}
                                             onChange={(e) =>
                                                 handleFieldChange('stats.currentMovement', Number(e.target.value) || 0)
                                             }
@@ -1503,20 +1629,19 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     </Grid>
                                 )}
                                 {/* Current SPB */}
-                                {editedToken.mapId !== '' && (
+                                {editedToken?.mapId !== '' && (
                                     <Grid
-                                        size={2.4}
+                                        size={editedToken?.stats?.isPC ? 2.4 : 3}
                                         sx={{
                                             border: `2px solid ${colors.neons.green.default}`,
                                             borderRadius: '4px',
-                                            mt: '-2px',
                                         }}
                                     >
                                         <TextField
                                             fullWidth
                                             label={t('combatSim.currentSpb')}
                                             type="tel"
-                                            value={editedToken.stats?.armor?.currentSpb ?? 0}
+                                            value={editedToken?.stats?.armor?.currentSpb ?? 0}
                                             onChange={(e) =>
                                                 handleFieldChange('stats.armor.currentSpb', Number(e.target.value) || 0)
                                             }
@@ -1535,20 +1660,19 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     </Grid>
                                 )}
                                 {/* Current SPH */}
-                                {editedToken.mapId !== '' && (
+                                {editedToken?.mapId !== '' && (
                                     <Grid
-                                        size={2.4}
+                                        size={editedToken?.stats?.isPC ? 2.4 : 3}
                                         sx={{
                                             border: `2px solid ${colors.neons.green.default}`,
                                             borderRadius: '4px',
-                                            mt: '-2px',
                                         }}
                                     >
                                         <TextField
                                             fullWidth
                                             label={t('combatSim.currentSph')}
                                             type="tel"
-                                            value={editedToken.stats?.armor?.currentSph ?? 0}
+                                            value={editedToken?.stats?.armor?.currentSph ?? 0}
                                             onChange={(e) =>
                                                 handleFieldChange('stats.armor.currentSph', Number(e.target.value) || 0)
                                             }
@@ -1566,26 +1690,22 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                         />
                                     </Grid>
                                 )}
-                                {/* Current Grenades/Special Ammo */}
-                                {editedToken.mapId !== '' && (
+                                {/* Current Luck */}
+                                {editedToken?.stats?.isPC && editedToken?.mapId !== '' && (
                                     <Grid
                                         size={2.4}
                                         sx={{
-                                            border: `2px solid ${colors.oranges.default}`,
+                                            border: `2px solid ${colors.neons.yellow.default}`,
                                             borderRadius: '4px',
-                                            mt: '-2px',
                                         }}
                                     >
                                         <TextField
                                             fullWidth
-                                            label={t('combatSim.currentGrenadesOrSpecialAmmo')}
+                                            label={t('combatSim.currentLuck')}
                                             type="tel"
-                                            value={editedToken.stats?.weapons?.currentGrenadesOrSpecialAmmo ?? 0}
+                                            value={editedToken?.stats?.currentLuck ?? 0}
                                             onChange={(e) =>
-                                                handleFieldChange(
-                                                    'stats.weapons.currentGrenadesOrSpecialAmmo',
-                                                    Number(e.target.value) || 0
-                                                )
+                                                handleFieldChange('stats.currentLuck', Number(e.target.value) || 0)
                                             }
                                             variant="outlined"
                                             slotProps={{
@@ -1593,19 +1713,68 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                     sx: {
                                                         color: readerMode
                                                             ? colors.grays.gray900
-                                                            : colors.oranges.default + ' !important',
+                                                            : colors.neons.yellow.default + ' !important',
                                                     },
                                                 },
                                             }}
                                             sx={textFieldOutlinedStyle}
+                                            disabled={!(editedToken?.stats?.isPC ?? false)}
                                         />
                                     </Grid>
                                 )}
                             </Grid>
+                            {/* Actions */}
+                            <Grid size={12}>
+                                <Grid size={12}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <Typography
+                                            variant="h6"
+                                            sx={{
+                                                mb: 2,
+                                                color: readerMode ? colors.blues.default : colors.neons.cyan.default,
+                                            }}
+                                        >
+                                            {t('combatSim.actions')}
+                                        </Typography>
+                                        {/* Add Action Button */}
+                                        <IconButton
+                                            onClick={handleAddAction}
+                                            sx={{
+                                                color: readerMode ? colors.greens.default : colors.neons.green.default,
+                                                '&:hover': {
+                                                    bgcolor: readerMode
+                                                        ? 'rgba(0, 128, 0, 0.1)'
+                                                        : 'rgba(0, 255, 0, 0.1)',
+                                                },
+                                            }}
+                                        >
+                                            <Add />
+                                        </IconButton>
+                                    </Box>
+                                </Grid>
+                                {/* Action Rows */}
+                                {editedToken?.stats?.actions?.map((action) => (
+                                    <ActionRow
+                                        key={action.id}
+                                        action={action}
+                                        handleActionChange={handleActionChange}
+                                        handleRemoveAction={handleRemoveAction}
+                                        selectStyle={selectStyle}
+                                        textFieldOutlinedStyle={textFieldOutlinedStyle}
+                                        readerMode={readerMode}
+                                    />
+                                ))}
+                            </Grid>
                         </Grid>
-                    </Box>
+                    </CustomScrollbar>
 
-                    {/* Actions */}
+                    {/* Dialog Footer */}
                     <Box
                         sx={{ px: 3, pb: 3, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}
                     >
@@ -1615,7 +1784,9 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             </Button>
                         )}
                         <Button
-                            onClick={() => onCloseTokenDialog()}
+                            onClick={() => {
+                                onCloseTokenDialog()
+                            }}
                             sx={
                                 readerMode
                                     ? {
@@ -1678,7 +1849,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                     }}
                 >
                     <Colorful
-                        color={editedToken.color ? `#${editedToken.color.toString(16).padStart(6, '0')}` : '#ffffff'}
+                        color={editedToken?.color ? `#${editedToken?.color.toString(16).padStart(6, '0')}` : '#ffffff'}
                         onChange={handleColorSelected}
                     />
                 </Box>

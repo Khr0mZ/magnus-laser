@@ -11,7 +11,7 @@ import GenerateButton from '../../../components/GenerateButton'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import colors from '../../../utils/colors'
 import { ModuleTypes } from '../../../utils/constants'
-import { BoardMap, Map as MapType } from '../types'
+import { BoardMap, Map as MapType } from '../utils/types'
 
 // debounce function
 function debounce(func: (size: number) => void, wait = 500) {

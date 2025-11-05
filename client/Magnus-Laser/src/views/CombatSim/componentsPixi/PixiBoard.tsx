@@ -1,39 +1,41 @@
 import { Viewport } from 'pixi-viewport'
 import type { FederatedPointerEvent } from 'pixi.js'
-import { Application, Graphics, Sprite, Text, Texture } from 'pixi.js'
+import { Application, Circle, Graphics, Sprite, Text, Texture } from 'pixi.js'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useUserPreferences } from '../../contexts/userPreferencesHooks'
-import { useSession } from '../../state/sessionStore'
-import colors from '../../utils/colors'
-import { BlastContextMenu } from './components/contextMenus/BlastContextMenu'
-import { MapContextMenu } from './components/contextMenus/MapContextMenu'
-import { TokenContextMenu } from './components/contextMenus/TokenContextMenu'
+import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
+import { useSession } from '../../../state/sessionStore'
+import colors from '../../../utils/colors'
+import { BlastContextMenu } from '../components/contextMenus/BlastContextMenu'
+import { MapContextMenu } from '../components/contextMenus/MapContextMenu'
+import { TokenContextMenu } from '../components/contextMenus/TokenContextMenu'
+import { schedulePathAnimation } from '../utils/animationUtils'
+import {
+    getTargetSize,
+    segmentHitsCircleBoundary,
+    segmentIntersectsRectangle,
+    segmentsIntersect,
+} from '../utils/geometryUtils'
+import { drawGrid, endpointFromAngleLength, snapToNinePoints } from '../utils/gridUtils'
+import { applyBackgroundTexture } from '../utils/pixiUtils'
+import type { Blast, BlastType, Image as ImageData, PixiDisplayObject, Token, Wall, WallShape } from '../utils/types'
 import {
     calculateConePoints,
     clearBlastRendererCaches,
     drawBlastPreview,
     preloadBlastTextures,
     renderBlasts,
-} from './componentsPixi/blastRenderer'
-import { PixiPendingIndicator } from './componentsPixi/PixiPendingIndicator'
-import { PixiTooltip, createPixiTooltip } from './componentsPixi/PixiTooltip'
+} from './blastRenderer'
+import { PixiPendingIndicator } from './PixiPendingIndicator'
+import { PixiTooltip, createPixiTooltip } from './PixiTooltip'
 import {
     clearTokenRendererCaches,
+    ghostSpriteCache,
     preloadTextures,
     renderTokens,
     renderTokensWithPending,
     setTexturesReadyCallback,
-} from './componentsPixi/tokenRenderer'
-import type { Blast, BlastType, Image as ImageData, PixiDisplayObject, Token, Wall, WallShape } from './types'
-import { schedulePathAnimation } from './utils/animationUtils'
-import {
-    getTargetSize,
-    segmentHitsCircleBoundary,
-    segmentIntersectsRectangle,
-    segmentsIntersect,
-} from './utils/geometryUtils'
-import { drawGrid, endpointFromAngleLength, snapToNinePoints } from './utils/gridUtils'
-import { applyBackgroundTexture } from './utils/pixiUtils'
+    spriteCache,
+} from './tokenRenderer'
 
 const DEFAULT_WALL_COLOR = 0xff3b81
 const DEFAULT_WALL_ALPHA = 0.95
@@ -67,6 +69,7 @@ type PixiBoardProps = {
     pixiOnTokenDuplicate: (id: string) => void
     pixiOnTokenCut: (id: string) => void
     pixiOnTokenCopy: (id: string) => void
+    pixiOnTokenUpdate?: (id: string, updates: Partial<Token>) => void
     onMapDeleteAllTokens: () => void
     onMapDeleteAllWalls: () => void
     onMapDeleteAllBlasts: () => void
@@ -137,6 +140,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         pixiOnTokenDuplicate,
         pixiOnTokenCut,
         pixiOnTokenCopy,
+        pixiOnTokenUpdate,
         onMapDeleteAllTokens,
         onMapDeleteAllWalls,
         onMapDeleteAllBlasts,
@@ -175,14 +179,16 @@ const PixiBoard = (props: PixiBoardProps) => {
         isPlayerConnected,
     } = props
     const { readerMode } = useUserPreferences()
-    const { sendAction, role, session } = useSession()
+    const { sendAction, role, session, displayName, connected } = useSession()
 
     // Force re-render when textures are ready
-    const [renderTrigger, forceRender] = useState(0)
 
+    const [renderTrigger, forceRender] = useState(0)
+    const hasImmediateUpdatesRef = useRef<boolean>(false)
     const hostRef = useRef<HTMLDivElement | null>(null)
     const appRef = useRef<Application | null>(null)
     const viewportRef = useRef<Viewport | null>(null)
+    const cleanupRef = useRef<(() => void) | null>(null)
     const gridRef = useRef<Graphics | null>(null)
     const wallLayerRef = useRef<Graphics | null>(null)
 
@@ -269,6 +275,9 @@ const PixiBoard = (props: PixiBoardProps) => {
                 schedulePathAnimation(id, pts, gridSizeRef.current, animationsRef.current)
 
                 // Update token position after animation is scheduled
+                // First update tokensRef immediately to preserve customRadius
+                tokensRef.current = tokensRef.current.map((t) => (t.id === id ? { ...t, x: ind.endX, y: ind.endY } : t))
+                hasImmediateUpdatesRef.current = true
                 onTokenMove(id, ind.endX, ind.endY, isCombatActiveRef.current ? totalDistance : undefined)
 
                 pixiPendingIndicatorsRef.current.delete(id)
@@ -283,6 +292,11 @@ const PixiBoard = (props: PixiBoardProps) => {
                 if (ind.points.length < 2) {
                     // Cancel entire movement for 1 point
                     // Move token back to start position
+                    // First update tokensRef immediately to preserve customRadius
+                    tokensRef.current = tokensRef.current.map((t) =>
+                        t.id === id ? { ...t, x: ind.props.startX, y: ind.props.startY } : t
+                    )
+                    hasImmediateUpdatesRef.current = true
                     onTokenMove(id, ind.props.startX, ind.props.startY)
 
                     // Remove indicator
@@ -330,9 +344,6 @@ const PixiBoard = (props: PixiBoardProps) => {
                                     mapId: mapKeyRef.current || '',
                                 })
                             }
-
-                            // Trigger re-render to update token positions
-                            forceRender((prev) => prev + 1)
                         }
                     }
                 }
@@ -409,7 +420,7 @@ const PixiBoard = (props: PixiBoardProps) => {
 
     // PixiJS tooltip and pending indicator refs
     const pixiTooltipRef = useRef<PixiTooltip | null>(null)
-    const pixiTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const pixiTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const pixiPendingIndicatorsRef = useRef<Map<string, PixiPendingIndicator>>(new Map())
 
     const isMeasuringRef = useRef<boolean>(isMeasuring)
@@ -510,12 +521,27 @@ const PixiBoard = (props: PixiBoardProps) => {
     }
 
     const cancelAllPending = () => {
-        // Clear overlays and redraw tokens at original positions
-        pixiPendingIndicatorsRef.current.forEach((indicator) => {
+        // Cancel all pending moves by sending REJECT_MOVEMENT messages
+        const inSession = !!session
+        pixiPendingIndicatorsRef.current.forEach((indicator, id) => {
+            // Send rejection message to synchronize with other players
+            if (inSession) {
+                sendAction({
+                    kind: 'REJECT_MOVEMENT',
+                    tokenId: id,
+                })
+            }
+
+            // Move token back to start position locally
+            onTokenMove(id, indicator.startX, indicator.startY)
+
+            // Destroy indicator
             indicator.destroy()
         })
         pixiPendingIndicatorsRef.current.clear()
-        renderTokens(tokenLayerRef.current, tokensRef.current)
+
+        // Redraw tokens at their updated positions
+        renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current)
         onPendingCountChange(pixiPendingIndicatorsRef.current.size)
     }
 
@@ -526,6 +552,18 @@ const PixiBoard = (props: PixiBoardProps) => {
             const last = pts[pts.length - 1]
             if (!last || last.x !== indicator.endX || last.y !== indicator.endY) {
                 pts.push({ x: indicator.endX, y: indicator.endY })
+            }
+
+            // Send movement acceptance to synchronize with other players
+            // DM always sends when in session
+            const inSession = !!session
+            if (inSession) {
+                sendAction({
+                    kind: 'PENDING_MOVEMENT',
+                    tokenId: id,
+                    points: pts,
+                    mapId: mapKeyRef.current || '',
+                })
             }
 
             // Calculate total distance traveled
@@ -567,7 +605,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         })
         pixiPendingIndicatorsRef.current.clear()
         // After committing, redraw tokens (parent will also update tokens prop shortly)
-        renderTokens(tokenLayerRef.current, tokensRef.current)
+        renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current)
         onPendingCountChange(pixiPendingIndicatorsRef.current.size)
     }
 
@@ -588,7 +626,7 @@ const PixiBoard = (props: PixiBoardProps) => {
     // Set up texture ready callback
     useEffect(() => {
         setTexturesReadyCallback(() => {
-            forceRender((prev) => prev + 1)
+            // Textures are ready, the component will re-render naturally when needed
         })
     }, [])
 
@@ -614,10 +652,6 @@ const PixiBoard = (props: PixiBoardProps) => {
             ) {
                 // Token moved recently, and we now have the movement points - re-trigger animation
                 // This handles the case where DM accepts movement and sends PENDING_MOVEMENT after token position update
-                setTimeout(() => {
-                    // Force a re-render to trigger animation logic with stored points
-                    forceRender((prev) => prev + 1)
-                }, 50) // Small delay to ensure state is updated
             }
 
             // Create or update the overlay with appropriate accept button visibility
@@ -647,9 +681,6 @@ const PixiBoard = (props: PixiBoardProps) => {
                 if (role === 'player') {
                     schedulePathAnimation(tokenId, points, gridSizeRef.current, animationsRef.current)
                 }
-
-                // Trigger re-render to update token positions
-                forceRender((prev) => prev + 1)
             }
         }
 
@@ -726,9 +757,6 @@ const PixiBoard = (props: PixiBoardProps) => {
 
                 // Update stored movement points for animation
                 pendingMovementPointsRef.current.set(tokenId, points)
-
-                // Trigger re-render to update token positions
-                forceRender((prev) => prev + 1)
             }
         }
 
@@ -795,9 +823,6 @@ const PixiBoard = (props: PixiBoardProps) => {
                                 mapId: mapKeyRef.current || '',
                             })
                         }
-
-                        // Trigger re-render to update token positions
-                        forceRender((prev) => prev + 1)
                     }
                 }
             }
@@ -831,7 +856,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                 // Create a pulsing effect based on time
                 const time = Date.now() / 1000
                 const pulse = Math.sin(time * 3) * 0.2 + 0.8
-                const ringRadius = token.radius * 1.5
+                const ringRadius = (gridSizeRef.current / 2) * 1.5
 
                 crosshair.clear()
 
@@ -847,7 +872,7 @@ const PixiBoard = (props: PixiBoardProps) => {
 
                 // Draw crosshair lines
                 crosshair.setStrokeStyle({ width: 3, color: 0x00ffff, alpha: 0.7 })
-                const lineLength = token.radius * 2.5
+                const lineLength = (gridSizeRef.current / 2) * 2.5
                 crosshair.moveTo(x - lineLength, y)
                 crosshair.lineTo(x + lineLength, y)
                 crosshair.moveTo(x, y - lineLength)
@@ -1010,6 +1035,92 @@ const PixiBoard = (props: PixiBoardProps) => {
             app.stage.addChild(viewport)
             viewportRef.current = viewport
 
+            // Prevent browser zoom and handle token resizing when Shift+wheel
+            const handleShiftWheel = (e: globalThis.WheelEvent) => {
+                if (e.shiftKey) {
+                    e.preventDefault()
+                    e.stopImmediatePropagation()
+
+                    // Handle token resizing directly
+                    const rect = hostRef.current?.getBoundingClientRect()
+                    if (!rect) return
+
+                    // Convert screen coordinates to viewport coordinates
+                    const x = e.clientX - rect.left
+                    const y = e.clientY - rect.top
+
+                    // Convert to world coordinates
+                    const worldPoint = viewport.toWorld({ x, y })
+
+                    // Find token under mouse
+                    let hitToken: Token | null = null
+                    let minDist = Number.POSITIVE_INFINITY
+                    for (const t of tokensRef.current) {
+                        const pending = pixiPendingIndicatorsRef.current.get(t.id)
+                        const tx = pending ? pending.endX : t.x
+                        const ty = pending ? pending.endY : t.y
+                        const currentRadius = t.customRadius ?? gridSizeRef.current / 2
+                        const d = Math.hypot(tx - worldPoint.x, ty - worldPoint.y)
+                        if (d <= currentRadius && d < minDist) {
+                            hitToken = { ...t, x: tx, y: ty }
+                            minDist = d
+                        }
+                    }
+
+                    if (hitToken) {
+                        const delta = e.deltaY < 0 ? 1 : -1 // Negative deltaY means wheel up (increase size)
+                        const gridSize = gridSizeRef.current
+                        const sizeIncrement = gridSize / 2
+                        const currentRadius = hitToken.customRadius ?? gridSize / 2
+                        const newRadius = Math.max(0, currentRadius + delta * sizeIncrement)
+
+                        // Update token immediately for instant visual feedback
+                        const updatedToken = { ...hitToken, customRadius: newRadius > 0 ? newRadius : undefined }
+                        tokensRef.current = tokensRef.current.map((t) => (t.id === hitToken!.id ? updatedToken : t))
+                        hasImmediateUpdatesRef.current = true
+
+                        // Update sprites directly to avoid ghost effect and ensure hit area is correct
+                        const sprite = spriteCache.get(hitToken.id)
+                        if (sprite) {
+                            const scale = (newRadius * 2) / Math.max(sprite.texture.width, sprite.texture.height)
+                            sprite.scale.set(scale)
+                            sprite.hitArea = new Circle(0, 0, newRadius)
+                        }
+
+                        // Also update ghost sprite if it exists
+                        const ghostKey = `${hitToken.id}_ghost`
+                        const ghostSprite = ghostSpriteCache.get(ghostKey)
+                        if (ghostSprite) {
+                            const scale =
+                                (newRadius * 2) / Math.max(ghostSprite.texture.width, ghostSprite.texture.height)
+                            ghostSprite.scale.set(scale)
+                            ghostSprite.hitArea = new Circle(0, 0, newRadius)
+                        }
+
+                        // Update the main state and database
+                        pixiOnTokenUpdate?.(hitToken.id, {
+                            customRadius: newRadius > 0 ? newRadius : undefined,
+                        })
+
+                        // Force immediate re-render to show the size change
+                        forceRender((prev) => prev + 1)
+                    }
+                }
+            }
+            // Add to host element for wheel event handling
+            if (hostRef.current) {
+                hostRef.current.addEventListener('wheel', handleShiftWheel, { passive: false, capture: true })
+
+                // Store cleanup function
+                const cleanup = () => {
+                    hostRef.current?.removeEventListener('wheel', handleShiftWheel)
+                }
+                cleanupRef.current = cleanup
+            } else {
+                // Fallback cleanup function
+                cleanupRef.current = () => {}
+            }
+
             // Create a white texture for the background
             const canvas = document.createElement('canvas')
             canvas.width = 1
@@ -1152,7 +1263,15 @@ const PixiBoard = (props: PixiBoardProps) => {
                 }
                 // Include live drag override if present
                 const live = dragPreviewRef.current
-                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, merged, live?.id, live?.x, live?.y)
+                renderTokensWithPending(
+                    tokenLayerRef.current,
+                    tokensRef.current,
+                    gridSizeRef.current,
+                    merged,
+                    live?.id,
+                    live?.x,
+                    live?.y
+                )
 
                 // Draw crosshair for active token - using a pulsing ring for visibility
                 const crosshair = crosshairLayerRef.current
@@ -1166,7 +1285,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                         // Create a pulsing effect based on time
                         const time = Date.now() / 1000
                         const pulse = Math.sin(time * 3) * 0.2 + 0.8 // Oscillates between 0.6 and 1.0
-                        const ringRadius = token.radius * 1.5
+                        const ringRadius = (gridSizeRef.current / 2) * 1.5
 
                         crosshair.clear()
 
@@ -1182,7 +1301,7 @@ const PixiBoard = (props: PixiBoardProps) => {
 
                         // Draw crosshair lines
                         crosshair.setStrokeStyle({ width: 3, color: 0x00ffff, alpha: 0.7 })
-                        const lineLength = token.radius * 2.5
+                        const lineLength = (gridSizeRef.current / 2) * 2.5
                         crosshair.moveTo(x - lineLength, y)
                         crosshair.lineTo(x + lineLength, y)
                         crosshair.moveTo(x, y - lineLength)
@@ -1372,7 +1491,12 @@ const PixiBoard = (props: PixiBoardProps) => {
                                     { endX: ind.endX, endY: ind.endY },
                                 ])
                             )
-                            renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMapAfter)
+                            renderTokensWithPending(
+                                tokenLayerRef.current,
+                                tokensRef.current,
+                                gridSizeRef.current,
+                                pendingMapAfter
+                            )
                         },
                         onCancel: () => {
                             const ind = pixiPendingIndicatorsRef.current.get(id)
@@ -1400,7 +1524,12 @@ const PixiBoard = (props: PixiBoardProps) => {
                                             { endX: ind.endX, endY: ind.endY },
                                         ])
                                     )
-                                    renderTokensWithPending(tokenLayerRef.current, tokensRef.current, pendingMap)
+                                    renderTokensWithPending(
+                                        tokenLayerRef.current,
+                                        tokensRef.current,
+                                        gridSizeRef.current,
+                                        pendingMap
+                                    )
                                 }
                             }
                         },
@@ -1558,13 +1687,31 @@ const PixiBoard = (props: PixiBoardProps) => {
                         const tx = pending ? pending.endX : t.x
                         const ty = pending ? pending.endY : t.y
                         const d = Math.hypot(tx - x, ty - y)
-                        if (d <= t.radius && d < minDist) {
+                        const radius = t.customRadius ?? gridSizeRef.current / 2
+                        if (d <= radius && d < minDist) {
                             hit = { ...t, x: tx, y: ty }
                             minDist = d
                         }
                     }
 
                     if (hit) {
+                        // In measure mode, start measurement from token position instead of selecting the token
+                        if (isMeasuringRef.current) {
+                            if (btn === 0) {
+                                // Only for left clicks
+                                const step = gridSizeRef.current
+                                const startSnapped = snapToNinePoints(hit.x, hit.y, step, snapToGridRef.current)
+                                measureStartRef.current = { x: startSnapped.x, y: startSnapped.y }
+                            }
+                            return
+                        }
+
+                        // In a session, players can only interact with tokens they own
+                        const inSession = !!session && connected
+                        if (inSession && role === 'player' && hit.owner !== displayName) {
+                            return // Don't allow interaction with tokens owned by other players
+                        }
+
                         if (btn === 2) {
                             // Right click on token: open token context menu
                             const anchorEl = document.createElement('div')
@@ -2083,6 +2230,24 @@ const PixiBoard = (props: PixiBoardProps) => {
                     if (dragPreviewRef.current && dragPreviewRef.current.id === endedId) {
                         const indicator = pixiPendingIndicatorsRef.current.get(endedId)
                         if (indicator) {
+                            // If the user dragged back to the start position AND total path distance is 0, remove the indicator
+                            const distance = Math.sqrt(
+                                (indicator.endX - indicator.startX) ** 2 + (indicator.endY - indicator.startY) ** 2
+                            )
+                            // Calculate total path distance (sum of all segments)
+                            let totalPathDistance = 0
+                            for (let i = 1; i < indicator.points.length; i++) {
+                                const dx = indicator.points[i].x - indicator.points[i - 1].x
+                                const dy = indicator.points[i].y - indicator.points[i - 1].y
+                                totalPathDistance += Math.sqrt(dx * dx + dy * dy)
+                            }
+                            if (distance === 0 && totalPathDistance === 0) {
+                                indicator.destroy()
+                                pixiPendingIndicatorsRef.current.delete(endedId)
+                                onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+                                clickCandidateRef.current = null
+                                return
+                            }
                             // Check if adding this waypoint would exceed movement (only if combat active)
                             let canAddWaypoint = true
 
@@ -2245,14 +2410,22 @@ const PixiBoard = (props: PixiBoardProps) => {
                         const tx = pending ? pending.endX : t.x
                         const ty = pending ? pending.endY : t.y
                         const d = Math.hypot(tx - global.x, ty - global.y)
-                        if (d <= t.radius) {
+                        const radius = t.customRadius ?? gridSizeRef.current / 2
+                        if (d <= radius) {
                             over = true
                             hoveredTokenData = t
                             break
                         }
                     }
 
-                    viewport.cursor = over ? 'pointer' : 'default'
+                    // Set cursor based on whether player can interact with the hovered token
+                    if (over && hoveredTokenData) {
+                        const inSession = !!session && connected
+                        const canInteract = !inSession || role !== 'player' || hoveredTokenData.owner === displayName
+                        viewport.cursor = canInteract ? 'pointer' : 'not-allowed'
+                    } else {
+                        viewport.cursor = 'default'
+                    }
 
                     // Update PixiTooltip
                     if (hoveredTokenData && hoveredTokenData.stats) {
@@ -2583,6 +2756,16 @@ const PixiBoard = (props: PixiBoardProps) => {
                     return
                 }
                 if (!draggingRef.current || !draggingRef.current.id) return
+
+                // In a session, players can only drag tokens they own
+                const inSession = !!session && connected
+                if (inSession && role === 'player') {
+                    const token = tokensRef.current.find((t) => t.id === draggingRef.current!.id)
+                    if (token && token.owner !== displayName) {
+                        return // Don't allow dragging tokens owned by other players
+                    }
+                }
+
                 let nx = global.x - draggingRef.current.offsetX
                 let ny = global.y - draggingRef.current.offsetY
                 // movement threshold cancels click candidate
@@ -2600,6 +2783,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                 renderTokensWithPending(
                     tokenLayerRef.current,
                     tokensRef.current,
+                    gridSizeRef.current,
                     new Map(
                         Array.from(pixiPendingIndicatorsRef.current.entries()).map(([id, ind]) => [
                             id,
@@ -2745,7 +2929,7 @@ const PixiBoard = (props: PixiBoardProps) => {
             drawGrid(gridRef.current, gw, gh, gridSizeRef.current, gridColorRef.current, gridAlphaRef.current)
         }
         // redraw tokens after resize
-        renderTokens(tokenLayerRef.current, tokens)
+        renderTokens(tokenLayerRef.current, tokens, gridSize)
     }, [width, height, worldDims, gridSize])
     // Keep measuring ref in sync so event handlers see latest value
     useEffect(() => {
@@ -2858,7 +3042,13 @@ const PixiBoard = (props: PixiBoardProps) => {
         // Guard: Don't render if board isn't ready yet
         if (!pixiReady) return
 
-        tokensRef.current = tokens
+        // Don't overwrite tokensRef if we just did an immediate update
+        if (!hasImmediateUpdatesRef.current) {
+            tokensRef.current = tokens
+        } else {
+            // We had immediate updates, reset the flag for next time
+            hasImmediateUpdatesRef.current = false
+        }
         const prev = prevTokensRef.current
         const prevById = new Map<string, Token>(prev.map((t) => [t.id, t]))
         let anyAnimated = false
@@ -2924,7 +3114,15 @@ const PixiBoard = (props: PixiBoardProps) => {
                 override.set(id, { endX: indicator.endX, endY: indicator.endY })
             }
             const live = dragPreviewRef.current
-            renderTokensWithPending(tokenLayerRef.current, tokensRef.current, override, live?.id, live?.x, live?.y)
+            renderTokensWithPending(
+                tokenLayerRef.current,
+                tokensRef.current,
+                gridSizeRef.current,
+                override,
+                live?.id,
+                live?.x,
+                live?.y
+            )
         } else {
             // No animations; check if there are pending moves
             if (pixiPendingIndicatorsRef.current.size > 0) {
@@ -2934,10 +3132,12 @@ const PixiBoard = (props: PixiBoardProps) => {
                         { endX: ind.endX, endY: ind.endY },
                     ])
                 )
-                renderTokensWithPending(tokenLayerRef.current, tokens, pendingMap)
+                // Always use tokensRef.current for immediate updates
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
             } else {
                 // No pending moves, just render tokens normally
-                renderTokens(tokenLayerRef.current, tokens)
+                // Always use tokensRef.current for immediate updates
+                renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current)
             }
         }
     }, [tokens, images, pixiReady, renderTrigger])
@@ -3030,6 +3230,13 @@ const PixiBoard = (props: PixiBoardProps) => {
             }
         }
     }, [isErasingWalls])
+
+    // Cleanup event listeners on unmount
+    useEffect(() => {
+        return () => {
+            cleanupRef.current?.()
+        }
+    }, [])
 
     return (
         <>
