@@ -14,7 +14,9 @@ export interface SendOptions {
     suppressQueue?: boolean
 }
 
-const PING_INTERVAL = 25_000
+const PING_INTERVAL = 10_000 // More frequent pings for browser stability
+const RECONNECT_DELAY = 3_000 // 3 seconds
+const MAX_RECONNECT_ATTEMPTS = 5
 
 type BrowserWebSocket = typeof globalThis.WebSocket
 
@@ -29,13 +31,47 @@ export class SignalingClient {
     private resolveOpen?: () => void
     private rejectOpen?: (reason?: unknown) => void
 
+    // Reconnection state
+    private reconnectAttempts = 0
+    private reconnectTimer: number | null = null
+    private shouldReconnect = true
+    private lastConnectOptions?: SignalingOptions
+
     constructor(url: string) {
         this.url = url
+
+        // Handle browser tab visibility changes to maintain connection stability
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    // Tab lost focus - browsers may suspend localhost connections
+                } else {
+                    // Tab regained focus - check connection
+                    if (
+                        this.ws &&
+                        this.ws.readyState !== globalThis.WebSocket.OPEN &&
+                        this.shouldReconnect &&
+                        this.lastConnectOptions
+                    ) {
+                        this.scheduleReconnect()
+                    }
+                }
+            })
+        }
     }
 
     async connect(opts: SignalingOptions) {
         if (this.ws) return
 
+        // Save connection options for reconnection
+        this.lastConnectOptions = opts
+        this.shouldReconnect = true
+        this.reconnectAttempts = 0
+
+        await this.performConnect(opts)
+    }
+
+    private async performConnect(opts: SignalingOptions) {
         this.openPromise = new Promise<void>((resolve, reject) => {
             this.resolveOpen = resolve
             this.rejectOpen = reject
@@ -45,14 +81,17 @@ export class SignalingClient {
         if (!SocketCtor) {
             throw new Error('WebSocket API is unavailable')
         }
+
         // Convert HTTP/HTTPS URL to WS/WSS and ensure /signal path
         let wsUrl = this.url.replace(/^http/, 'ws')
         if (!wsUrl.includes('/signal')) {
             wsUrl = wsUrl.replace(/\/$/, '') + '/signal'
         }
+
         this.ws = new SocketCtor(wsUrl)
 
         this.ws.addEventListener('open', () => {
+            this.reconnectAttempts = 0 // Reset on successful connection
             this.resolveOpen?.()
             this.resolveOpen = undefined
             this.rejectOpen = undefined
@@ -75,17 +114,45 @@ export class SignalingClient {
 
         this.ws.addEventListener('close', (ev) => {
             this.stopHeartbeat()
-            this.closeListeners.forEach((cb) => cb(ev))
             this.cleanupSocket()
+
+            // Attempt reconnection if enabled and not a normal closure
+            if (this.shouldReconnect && ev.code !== 1000 && this.lastConnectOptions) {
+                this.scheduleReconnect()
+            } else {
+                this.closeListeners.forEach((cb) => cb(ev))
+            }
         })
 
         this.ws.addEventListener('error', (err) => {
+            console.warn('[SignalingClient] WebSocket error:', err)
             this.rejectOpen?.(err)
             this.rejectOpen = undefined
         })
 
         await this.openPromise
         this.startHeartbeat()
+    }
+
+    private scheduleReconnect() {
+        if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            this.closeListeners.forEach((cb) => cb(new Event('close')))
+            return
+        }
+
+        this.reconnectAttempts++
+        const delay = RECONNECT_DELAY * this.reconnectAttempts // Exponential backoff
+
+        this.reconnectTimer = window.setTimeout(async () => {
+            if (this.shouldReconnect && this.lastConnectOptions) {
+                try {
+                    await this.performConnect(this.lastConnectOptions)
+                } catch (error) {
+                    console.warn('[SignalingClient] Reconnection failed:', error)
+                    this.scheduleReconnect() // Try again
+                }
+            }
+        }, delay)
     }
 
     async ensureOpen() {
@@ -116,6 +183,13 @@ export class SignalingClient {
     }
 
     close() {
+        this.shouldReconnect = false
+
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer)
+            this.reconnectTimer = null
+        }
+
         if (this.ws) {
             this.ws.close()
         }
@@ -150,6 +224,12 @@ export class SignalingClient {
         this.openPromise = null
         this.resolveOpen = undefined
         this.rejectOpen = undefined
+
+        // Clean up reconnection timer
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer)
+            this.reconnectTimer = null
+        }
     }
 }
 

@@ -207,7 +207,9 @@ const SettingsView = () => {
     }
 
     const handleCreate = async () => {
-        if (busy) return
+        if (busy) {
+            return
+        }
         setBusy(true)
         setError(undefined)
         try {

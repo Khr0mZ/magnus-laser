@@ -51,15 +51,43 @@ const SessionLobby = ({
     const { readerMode } = useUserPreferences()
     const [code, setCode] = useState(defaults?.code ?? '')
     const [localError, setLocalError] = useState<string>()
+    const [serverAvailable, setServerAvailable] = useState(false)
 
     useEffect(() => {
         setCode(defaults?.code ?? '')
     }, [defaults?.code])
 
+    // Check if companion server is available - poll every 3 seconds
+    useEffect(() => {
+        const checkServer = async () => {
+            try {
+                const response = await fetch('http://localhost:8080/health', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: globalThis.AbortSignal.timeout(2000), // 2 second timeout
+                })
+                const isAvailable = response.ok
+                setServerAvailable(isAvailable)
+            } catch {
+                setServerAvailable(false)
+            }
+        }
+
+        // Initial check
+        checkServer()
+
+        // Set up polling every 3 seconds
+        const interval = setInterval(checkServer, 3000)
+
+        // Cleanup on unmount
+        return () => clearInterval(interval)
+    }, [])
+
     const canHost =
-        typeof window !== 'undefined' &&
-        typeof (window as typeof window & { __TAURI__?: { core?: { invoke?: (...args: unknown[]) => unknown } } })
-            .__TAURI__?.core?.invoke === 'function'
+        (typeof window !== 'undefined' &&
+            typeof (window as typeof window & { __TAURI__?: { core?: { invoke?: (...args: unknown[]) => unknown } } })
+                .__TAURI__?.core?.invoke === 'function') ||
+        serverAvailable
     const disabledCreate = busy || !displayName || role !== 'dm' || !canHost
     const disabledJoin = busy || !displayName || role !== 'player' || !code
 
@@ -316,6 +344,7 @@ const SessionLobby = ({
                             <ToggleButton
                                 value="dm"
                                 disabled={!canHost}
+                                title={!canHost ? 'Game Master role requires server connection' : undefined}
                                 sx={{
                                     color: colors.neons.blue.dark,
                                     bgcolor: 'transparent',
@@ -489,7 +518,13 @@ const SessionLobby = ({
                             onClick={handleCreate}
                             disabled={disabledCreate}
                             fullWidth
-                            title={!canHost ? 'Session hosting requires the Magnus Laser desktop app' : undefined}
+                            title={
+                                !canHost
+                                    ? serverAvailable
+                                        ? 'Session hosting requires the Magnus Laser desktop app'
+                                        : 'Session hosting requires the Magnus Laser desktop app or companion server'
+                                    : undefined
+                            }
                             sx={
                                 readerMode
                                     ? {

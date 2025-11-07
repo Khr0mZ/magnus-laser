@@ -172,6 +172,44 @@ type TauriWindow = typeof window & {
 const hasTauriInvoke = () =>
     typeof window !== 'undefined' && typeof (window as TauriWindow).__TAURI__?.core?.invoke === 'function'
 
+const SERVER_BASE_URL = 'http://localhost:8080'
+
+async function checkServerAvailable(): Promise<boolean> {
+    try {
+        const response = await fetch(`${SERVER_BASE_URL}/health`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        })
+        const available = response.ok
+        return available
+    } catch (error) {
+        console.warn('[ServerCheck] Companion server not available:', error)
+        return false
+    }
+}
+
+async function callServerAPI<T>(endpoint: string, method: 'GET' | 'POST' = 'GET', body?: unknown): Promise<T> {
+    try {
+        const response = await fetch(`${SERVER_BASE_URL}${endpoint}`, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined,
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+            console.error(`[ServerAPI] Request failed:`, errorData)
+            throw new Error(errorData.error || `HTTP ${response.status}`)
+        }
+
+        const data = await response.json()
+        return data
+    } catch (error) {
+        console.error(`[ServerAPI] Request error:`, error)
+        throw error
+    }
+}
+
 // Track if auto-reconnect has been attempted to prevent multiple calls
 let autoReconnectAttempted = false
 
@@ -230,11 +268,22 @@ function clearRuntime(set: (partial: Partial<SessionState>) => void) {
 }
 
 async function ensureStopHost() {
-    if (!hasTauriInvoke()) return
-    try {
-        await invoke('stop_host')
-    } catch (err) {
-        console.warn('stop_host failed', err)
+    const serverAvailable = await checkServerAvailable()
+
+    if (serverAvailable) {
+        // Stop hosting on companion server
+        try {
+            await callServerAPI('/api/host/stop', 'POST')
+        } catch (err) {
+            console.warn('Failed to stop hosting on companion server:', err)
+        }
+    } else if (hasTauriInvoke()) {
+        // Stop hosting in Tauri app
+        try {
+            await invoke('stop_host')
+        } catch (err) {
+            console.warn('stop_host failed in Tauri:', err)
+        }
     }
 }
 
@@ -495,19 +544,18 @@ async function handleInboundMessage(
                             },
                         })
                         window.dispatchEvent(event)
-                    }
 
-                    // DM broadcasts to all connected players (except the sender if they're connected)
-                    if (state.role === 'dm') {
-                        for (const peer of runtime.rtcConnectedPeers) {
-                            // Don't send back to the sender to avoid duplicates
-                            if (peer !== actorId) {
-                                runtime.webrtc?.sendToPeer(peer, {
-                                    t: 'ACTION',
-                                    id: `${msg.id}-broadcast`,
-                                    actor: runtime.selfId ?? 'dm',
-                                    action: payload,
-                                } as WireMsg)
+                        // DM broadcasts to all connected players (except the sender if they're connected)
+                        if (state.role === 'dm') {
+                            for (const peer of runtime.rtcConnectedPeers) {
+                                if (peer !== actorId) {
+                                    runtime.webrtc?.sendToPeer(peer, {
+                                        t: 'ACTION',
+                                        id: `${msg.id}-broadcast`,
+                                        actor: runtime.selfId ?? 'dm',
+                                        action: payload,
+                                    } as WireMsg)
+                                }
                             }
                         }
                     }
@@ -1219,13 +1267,34 @@ export const useSession = create<SessionStore>()(
 
             createSession: async () => {
                 const { role, displayName } = get()
-                if (role !== 'dm') throw new Error('Only the DM can create a session')
-                if (!hasTauriInvoke()) {
-                    throw new Error('Session hosting is only available in the Magnus Laser desktop app.')
+
+                if (role !== 'dm') {
+                    console.error('[CreateSession] Error: Only DM can create session')
+                    throw new Error('Only the DM can create a session')
                 }
+
+                const serverAvailable = await checkServerAvailable()
+                const tauriAvailable = hasTauriInvoke()
+
+                if (!serverAvailable && !tauriAvailable) {
+                    console.error('[CreateSession] Error: No hosting method available')
+                    throw new Error(
+                        'Session hosting requires either the Magnus Laser desktop app or the companion server running on localhost:8080.'
+                    )
+                }
+
                 const name = displayName || 'Game Master'
                 clearRuntime(set)
-                const hostInfo = await invoke<StartHostResponse>('start_host', { provider: null })
+
+                let hostInfo: StartHostResponse
+                if (serverAvailable) {
+                    // Use companion server
+                    hostInfo = await callServerAPI<StartHostResponse>('/api/host/start', 'POST', {})
+                } else {
+                    // Use Tauri
+                    hostInfo = await invoke<StartHostResponse>('start_host', { provider: null })
+                }
+
                 await startHost(name, hostInfo, set, get)
             },
 
@@ -1323,7 +1392,13 @@ export const useSession = create<SessionStore>()(
                 if (role !== 'dm') {
                     throw new Error('Only DMs can kick players')
                 }
-                await invoke('kick_player', { peerId })
+
+                const serverAvailable = await checkServerAvailable()
+                if (serverAvailable) {
+                    await callServerAPI('/api/host/kick', 'POST', { peerId })
+                } else {
+                    await invoke('kick_player', { peerId })
+                }
             },
 
             setTransport: (t) => set({ transport: t }),
