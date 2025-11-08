@@ -232,23 +232,11 @@ const PixiBoard = (props: PixiBoardProps) => {
             token,
             viewport,
             isPlayerConnected: !isPlayerConnected,
-            fromRemotePlayer: true,
+            fromRemotePlayer: fromRemotePlayer ?? false,
             onAccept: () => {
                 const ind = pixiPendingIndicatorsRef.current.get(id)
                 if (!ind) {
                     return
-                }
-
-                // Send movement acceptance to synchronize with other players
-                // DM always sends when in session, players only send for their own actions
-                const inSession = !!session
-                if (inSession) {
-                    sendAction({
-                        kind: 'PENDING_MOVEMENT',
-                        tokenId: id,
-                        points: ind.points,
-                        mapId: mapKeyRef.current || '',
-                    })
                 }
 
                 // Calculate total distance traveled
@@ -267,6 +255,18 @@ const PixiBoard = (props: PixiBoardProps) => {
 
                 // Round distance to integer
                 totalDistance = Math.round(totalDistance)
+
+                // Send movement acceptance to synchronize with other players
+                // DM always sends when in session, players only send for their own actions
+                const inSession = !!session
+                if (inSession) {
+                    sendAction({
+                        kind: 'PENDING_MOVEMENT',
+                        tokenId: id,
+                        points: pts,
+                        mapId: mapKeyRef.current || '',
+                    })
+                }
 
                 // Destroy indicator first so animation can take effect
                 indicator.destroy()
@@ -331,6 +331,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                         // Update to the new points
                         const newLastPoint = newPoints[newPoints.length - 1]
                         if (newLastPoint) {
+                            // Only update the indicator's end position (ghost position), not the actual token position
                             ind.updatePosition(newLastPoint.x, newLastPoint.y)
 
                             // Send update to synchronize with other players
@@ -344,6 +345,23 @@ const PixiBoard = (props: PixiBoardProps) => {
                                     mapId: mapKeyRef.current || '',
                                 })
                             }
+
+                            // Update stored movement points
+                            pendingMovementPointsRef.current.set(id, newPoints)
+
+                            // Redraw to show updated ghost position (token stays at original position, ghost moves to new end)
+                            const pendingMap = new Map(
+                                Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                                    pid,
+                                    { endX: ind.endX, endY: ind.endY },
+                                ])
+                            )
+                            renderTokensWithPending(
+                                tokenLayerRef.current,
+                                tokensRef.current,
+                                gridSizeRef.current,
+                                pendingMap
+                            )
                         }
                     }
                 }
@@ -656,15 +674,102 @@ const PixiBoard = (props: PixiBoardProps) => {
 
             // Create or update the overlay with appropriate accept button visibility
             if (points.length >= 2) {
-                // Always destroy existing and create new to ensure correct onCancel callback
+                // Check if there's an existing indicator - if so, check if this is an acceptance or update
                 const existingIndicator = pixiPendingIndicatorsRef.current.get(tokenId)
-                if (existingIndicator) {
-                    existingIndicator.destroy()
-                    pixiPendingIndicatorsRef.current.delete(tokenId)
-                }
-
                 const startPoint = points[0]
                 const endPoint = points[points.length - 1]
+
+                // Calculate total distance traveled along all segments
+                const step = gridSizeRef.current
+                let totalDistance = 0
+                for (let i = 1; i < points.length; i++) {
+                    const dxs = Math.abs(points[i].x - points[i - 1].x)
+                    const dys = Math.abs(points[i].y - points[i - 1].y)
+                    totalDistance += Math.hypot(dxs, dys) / step
+                }
+                totalDistance = Math.round(totalDistance)
+
+                if (existingIndicator) {
+                    // Check if this is DM acceptance:
+                    // 1. Points match the indicator's end point (DM sent final accepted points)
+                    // 2. Token is already at the end point (start=end case, or token already moved)
+                    const pointsMatchIndicatorEnd =
+                        existingIndicator.endX === endPoint.x && existingIndicator.endY === endPoint.y
+
+                    // Check token position from both tokensRef and tokens prop (in case one is more up-to-date)
+                    const tokenFromRef = tokensRef.current.find((t) => t.id === tokenId)
+                    const tokenFromProp = tokens.find((t) => t.id === tokenId)
+                    const token = tokenFromProp || tokenFromRef
+                    const tokenAtEnd = token && token.x === endPoint.x && token.y === endPoint.y
+
+                    // For start=end movements, check if start equals end
+                    const startEqualsEnd = startPoint.x === endPoint.x && startPoint.y === endPoint.y
+
+                    // Also check if the received points array matches the indicator's points array
+                    // This handles the case where DM self-accepts and sends the exact same points
+                    const indicatorPoints = existingIndicator.points
+                    const pointsMatchIndicatorPoints =
+                        indicatorPoints.length === points.length &&
+                        indicatorPoints.every((p, i) => p.x === points[i].x && p.y === points[i].y)
+
+                    // Also check if the last point matches the indicator's end point
+                    const lastPointMatchesIndicatorEnd =
+                        points.length > 0 &&
+                        points[points.length - 1].x === existingIndicator.endX &&
+                        points[points.length - 1].y === existingIndicator.endY
+
+                    // If points match indicator end AND (token is at end OR it's a start=end movement), this is DM acceptance
+                    // For start=end movements, we accept if points match even if token position isn't synced yet
+                    // Also accept if the points array exactly matches (DM self-acceptance case)
+                    // OR if it's start=end and the last point matches the indicator's end point
+                    if (
+                        (pointsMatchIndicatorEnd && (tokenAtEnd || startEqualsEnd)) ||
+                        (startEqualsEnd && pointsMatchIndicatorPoints) ||
+                        (startEqualsEnd && lastPointMatchesIndicatorEnd)
+                    ) {
+                        // DM accepted the movement - store points and trigger animation
+                        // Keep indicator visible during animation, it will be removed when animation completes
+                        pendingMovementPointsRef.current.set(tokenId, points)
+
+                        // Trigger animation (even if start=end with distance > 0, we should play animation)
+                        schedulePathAnimation(tokenId, points, gridSizeRef.current, animationsRef.current)
+
+                        // Redraw with indicator still visible (will be removed when animation completes)
+                        const pendingMap = new Map(
+                            Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                                pid,
+                                { endX: ind.endX, endY: ind.endY },
+                            ])
+                        )
+                        renderTokensWithPending(
+                            tokenLayerRef.current,
+                            tokensRef.current,
+                            gridSizeRef.current,
+                            pendingMap
+                        )
+                        return
+                    }
+
+                    // This is an update, not an acceptance - update the existing indicator
+                    existingIndicator.updatePoints(points)
+                    // Update stored movement points
+                    pendingMovementPointsRef.current.set(tokenId, points)
+                    // Redraw to show updated indicator and ghost position
+                    const pendingMap = new Map(
+                        Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                            pid,
+                            { endX: ind.endX, endY: ind.endY },
+                        ])
+                    )
+                    renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
+                    return
+                }
+
+                // No existing indicator, create a new one
+                // For circular movements (start=end with distance > 0), create indicator and trigger animation immediately
+                // The indicator will be removed when the animation completes
+                const startEqualsEnd = startPoint.x === endPoint.x && startPoint.y === endPoint.y
+
                 // Store the movement points for animation
                 pendingMovementPointsRef.current.set(tokenId, points)
                 createPendingOverlayWithOptions(
@@ -677,8 +782,19 @@ const PixiBoard = (props: PixiBoardProps) => {
                     true
                 )
 
+                // Redraw to show the indicator and ghost position
+                const pendingMap = new Map(
+                    Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                        pid,
+                        { endX: ind.endX, endY: ind.endY },
+                    ])
+                )
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
+
                 // If player receives PENDING_MOVEMENT from DM, start the animation
-                if (role === 'player') {
+                // For circular movements (start=end with distance > 0), trigger animation immediately
+                // since token position won't change
+                if (role === 'player' || (startEqualsEnd && totalDistance > 0)) {
                     schedulePathAnimation(tokenId, points, gridSizeRef.current, animationsRef.current)
                 }
             }
@@ -688,7 +804,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         return () => {
             window.removeEventListener('pendingMovementReceived', handlePendingMovement as EventListener)
         }
-    }, [mapKey])
+    }, [mapKey, tokens])
 
     // Listen for pending movement cleanup events
     useEffect(() => {
@@ -757,6 +873,15 @@ const PixiBoard = (props: PixiBoardProps) => {
 
                 // Update stored movement points for animation
                 pendingMovementPointsRef.current.set(tokenId, points)
+
+                // Redraw to show updated ghost position (token stays at original position, ghost moves to new end)
+                const pendingMap = new Map(
+                    Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                        pid,
+                        { endX: ind.endX, endY: ind.endY },
+                    ])
+                )
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
             }
         }
 
@@ -811,6 +936,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                     // Update to the new points
                     const newLastPoint = newPoints[newPoints.length - 1]
                     if (newLastPoint) {
+                        // Only update the indicator's end position (ghost position), not the actual token position
                         ind.updatePosition(newLastPoint.x, newLastPoint.y)
 
                         // Send update to synchronize with other players
@@ -823,6 +949,23 @@ const PixiBoard = (props: PixiBoardProps) => {
                                 mapId: mapKeyRef.current || '',
                             })
                         }
+
+                        // Update stored movement points
+                        pendingMovementPointsRef.current.set(tokenId, newPoints)
+
+                        // Redraw to show updated ghost position (token stays at original position, ghost moves to new end)
+                        const pendingMap = new Map(
+                            Array.from(pixiPendingIndicatorsRef.current.entries()).map(([pid, ind]) => [
+                                pid,
+                                { endX: ind.endX, endY: ind.endY },
+                            ])
+                        )
+                        renderTokensWithPending(
+                            tokenLayerRef.current,
+                            tokensRef.current,
+                            gridSizeRef.current,
+                            pendingMap
+                        )
                     }
                 }
             }
@@ -1232,6 +1375,17 @@ const PixiBoard = (props: PixiBoardProps) => {
                         const last = a.segments[a.segments.length - 1]
                         if (last) override.set(id, { endX: last.ex, endY: last.ey })
                         anims.delete(id)
+
+                        // Remove pending indicator when animation completes
+                        const indicator = pixiPendingIndicatorsRef.current.get(id)
+                        if (indicator) {
+                            indicator.destroy()
+                            pixiPendingIndicatorsRef.current.delete(id)
+                            onPendingCountChange(pixiPendingIndicatorsRef.current.size)
+                            // Clear stored points when animation completes
+                            pendingMovementPointsRef.current.delete(id)
+                        }
+
                         continue
                     }
                     const t = Math.max(0, Math.min(1, elapsed / Math.max(1, a.totalMs)))
@@ -1250,16 +1404,15 @@ const PixiBoard = (props: PixiBoardProps) => {
                     const cy = seg.sy + (seg.ey - seg.sy) * segProgress
                     override.set(id, { endX: cx, endY: cy })
                 }
-                // Begin with current pending endpoints so those keep priority
+                // Begin with current pending endpoints, but animations take priority
                 const merged = new Map(
-                    Array.from(pixiPendingIndicatorsRef.current.entries()).map(([id, ind]) => [
-                        id,
-                        { endX: ind.endX, endY: ind.endY },
-                    ])
+                    Array.from(pixiPendingIndicatorsRef.current.entries())
+                        .filter(([id]) => !override.has(id)) // Only include pendings without active animations
+                        .map(([id, ind]) => [id, { endX: ind.endX, endY: ind.endY }])
                 )
-                // Apply animation overrides for any ids without active pendings
+                // Apply animation overrides (these take priority over pending indicators)
                 for (const [id, pos] of override) {
-                    if (!merged.has(id)) merged.set(id, pos)
+                    merged.set(id, pos)
                 }
                 // Include live drag override if present
                 const live = dragPreviewRef.current
@@ -1426,18 +1579,6 @@ const PixiBoard = (props: PixiBoardProps) => {
                                 return
                             }
 
-                            // Send movement acceptance to synchronize with other players
-                            // DM always sends when in session, players only send for their own actions
-                            const inSession = !!session
-                            if (inSession) {
-                                sendAction({
-                                    kind: 'PENDING_MOVEMENT',
-                                    tokenId: id,
-                                    points: ind.points,
-                                    mapId: mapKeyRef.current || '',
-                                })
-                            }
-
                             // Calculate total distance traveled
                             const step = gridSizeRef.current
                             let totalDistance = 0
@@ -1445,6 +1586,19 @@ const PixiBoard = (props: PixiBoardProps) => {
                             const last = pts[pts.length - 1]
                             if (!last || last.x !== ind.endX || last.y !== ind.endY) {
                                 pts.push({ x: ind.endX, y: ind.endY })
+                            }
+
+                            // Send movement acceptance to synchronize with other players
+                            // DM always sends when in session, players only send for their own actions
+                            // Send pts (with end point included) so player can detect acceptance
+                            const inSession = !!session
+                            if (inSession) {
+                                sendAction({
+                                    kind: 'PENDING_MOVEMENT',
+                                    tokenId: id,
+                                    points: pts,
+                                    mapId: mapKeyRef.current || '',
+                                })
                             }
                             for (let i = 1; i < pts.length; i++) {
                                 const dxs = Math.abs(pts[i].x - pts[i - 1].x)
@@ -3072,6 +3226,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                 continue
             }
 
+            // Skip if there's a pending indicator but no stored points (waiting for points to be stored)
             if (pixiPendingIndicatorsRef.current.has(t.id) && !hasStoredPoints) continue
             if (p.x !== t.x || p.y !== t.y) {
                 // Use stored movement points if available (for waypoint animations), otherwise use simple start/end

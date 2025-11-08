@@ -37,6 +37,9 @@ This is the companion server for Magnus Laser that handles cloudflared tunneling
 ### Manual Commands
 
 ```bash
+# Run the server with one command
+./run.sh
+
 # Build and run in one step
 cargo run -- --port 8080
 

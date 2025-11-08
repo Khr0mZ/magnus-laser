@@ -544,18 +544,19 @@ async function handleInboundMessage(
                             },
                         })
                         window.dispatchEvent(event)
+                    }
 
-                        // DM broadcasts to all connected players (except the sender if they're connected)
-                        if (state.role === 'dm') {
-                            for (const peer of runtime.rtcConnectedPeers) {
-                                if (peer !== actorId) {
-                                    runtime.webrtc?.sendToPeer(peer, {
-                                        t: 'ACTION',
-                                        id: `${msg.id}-broadcast`,
-                                        actor: runtime.selfId ?? 'dm',
-                                        action: payload,
-                                    } as WireMsg)
-                                }
+                    // DM broadcasts to all connected players (except the sender if they're connected)
+                    // This needs to happen even when DM sends their own actions
+                    if (state.role === 'dm') {
+                        for (const peer of runtime.rtcConnectedPeers) {
+                            if (peer !== actorId) {
+                                runtime.webrtc?.sendToPeer(peer, {
+                                    t: 'ACTION',
+                                    id: `${msg.id}-broadcast`,
+                                    actor: runtime.selfId ?? 'dm',
+                                    action: payload,
+                                } as WireMsg)
                             }
                         }
                     }
