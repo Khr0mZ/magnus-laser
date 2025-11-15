@@ -176,9 +176,6 @@ const CombatSimView = () => {
         pixiBlastContextMenuAnchor,
         pixiSetSelectedBlastId,
         pixiSelectedBlastId,
-        pixiOnTokenDuplicate,
-        pixiOnTokenCut,
-        pixiOnTokenCopy,
         pixiOnTokenDrop,
         pixiOnWallDraw,
         pixiOnBindPendingControls,
@@ -245,7 +242,20 @@ const CombatSimView = () => {
     }, [tokens])
 
     return (
-        <Container maxWidth={false} sx={{ pt: 0.5 }}>
+        <Container
+            maxWidth={false}
+            sx={{
+                pt: 0.5,
+                // Disable text selection for all text except inputs
+                '& *': {
+                    userSelect: 'none',
+                },
+                // Re-enable text selection for inputs and form elements
+                '& input, & textarea, & [role="textbox"], & [contenteditable="true"]': {
+                    userSelect: 'auto',
+                },
+            }}
+        >
             <CombatSimHeader
                 isPlayerConnected={isPlayerConnected}
                 maps={maps}
@@ -336,9 +346,9 @@ const CombatSimView = () => {
                         pixiOnBindPendingControls={pixiOnBindPendingControls}
                         pixiOnWallDraw={pixiOnWallDraw}
                         pixiOnBindFit={pixiOnBindFit}
-                        pixiOnTokenDuplicate={pixiOnTokenDuplicate}
-                        pixiOnTokenCut={pixiOnTokenCut}
-                        pixiOnTokenCopy={pixiOnTokenCopy}
+                        panelTokenOnDuplicate={panelTokenOnDuplicate}
+                        panelTokenOnCut={panelTokenOnCut}
+                        panelTokenOnCopy={panelTokenOnCopy}
                         pixiOnTokenUpdate={pixiOnTokenUpdate}
                         pixiOnCutAllTokens={pixiOnCutAllTokens}
                         pixiOnPasteToken={pixiOnPasteToken}

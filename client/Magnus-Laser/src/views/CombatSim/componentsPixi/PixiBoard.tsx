@@ -5,9 +5,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import { useSession } from '../../../state/sessionStore'
 import colors from '../../../utils/colors'
-import { BlastContextMenu } from '../components/contextMenus/BlastContextMenu'
-import { MapContextMenu } from '../components/contextMenus/MapContextMenu'
-import { TokenContextMenu } from '../components/contextMenus/TokenContextMenu'
 import { schedulePathAnimation } from '../utils/animationUtils'
 import {
     getTargetSize,
@@ -25,6 +22,9 @@ import {
     preloadBlastTextures,
     renderBlasts,
 } from './blastRenderer'
+import { usePixiCallbackRefs } from './hooks/usePixiCallbackRefs'
+import { usePixiClipboard } from './hooks/usePixiClipboard'
+import { usePixiContextMenus } from './hooks/usePixiContextMenus'
 import { PixiPendingIndicator } from './PixiPendingIndicator'
 import { PixiTooltip, createPixiTooltip } from './PixiTooltip'
 import {
@@ -36,6 +36,7 @@ import {
     setTexturesReadyCallback,
     spriteCache,
 } from './tokenRenderer'
+import { findBlastHit, findTokenHit } from './utils/hitTesting'
 
 const DEFAULT_WALL_COLOR = 0xff3b81
 const DEFAULT_WALL_ALPHA = 0.95
@@ -66,9 +67,9 @@ type PixiBoardProps = {
     isCombatActive: boolean
     onOpenTokenDialog: (id: string) => void
     setDeleteTokenDialogOpen: (id: string) => void
-    pixiOnTokenDuplicate: (id: string) => void
-    pixiOnTokenCut: (id: string) => void
-    pixiOnTokenCopy: (id: string) => void
+    panelTokenOnDuplicate: (id: string) => void
+    panelTokenOnCut: (id: string) => void
+    panelTokenOnCopy: (id: string) => void
     pixiOnTokenUpdate?: (id: string, updates: Partial<Token>) => void
     onMapDeleteAllTokens: () => void
     onMapDeleteAllWalls: () => void
@@ -137,9 +138,9 @@ const PixiBoard = (props: PixiBoardProps) => {
         isCombatActive = false,
         onOpenTokenDialog,
         setDeleteTokenDialogOpen,
-        pixiOnTokenDuplicate,
-        pixiOnTokenCut,
-        pixiOnTokenCopy,
+        panelTokenOnDuplicate,
+        panelTokenOnCut,
+        panelTokenOnCopy,
         pixiOnTokenUpdate,
         onMapDeleteAllTokens,
         onMapDeleteAllWalls,
@@ -166,15 +167,10 @@ const PixiBoard = (props: PixiBoardProps) => {
         pixiSetReady,
         pixiHostReady,
         pixiSetHostReady,
-        pixiTokenContextMenuAnchor,
         pixiSetTokenContextMenuAnchor,
-        pixiMapContextMenuAnchor,
         pixiSetMapContextMenuAnchor,
-        pixiSelectedTokenId,
         pixiSetSelectedTokenId,
-        pixiBlastContextMenuAnchor,
         pixiSetBlastContextMenuAnchor,
-        pixiSelectedBlastId,
         pixiSetSelectedBlastId,
         isPlayerConnected,
     } = props
@@ -394,6 +390,48 @@ const PixiBoard = (props: PixiBoardProps) => {
     const draggedBlastStartRef = useRef<Blast | null>(null)
     const blastDrawModeRef = useRef<BlastType | null>(null)
     const blastLabelRef = useRef<Text | null>(null)
+    // Use hooks for context menus, clipboard, and callback refs
+    const clipboard = usePixiClipboard({
+        tokenClipboard,
+        blastClipboard,
+        mapKey,
+        onMapPasteToken,
+        onMapPasteBlast,
+    })
+
+    const callbackRefs = usePixiCallbackRefs({
+        panelTokenOnDuplicate,
+        panelTokenOnCopy,
+        panelTokenOnCut,
+        pixiOnCutAllTokens: onMapCutAllTokens,
+        onBlastCopy,
+        onBlastCut,
+    })
+
+    const contextMenus = usePixiContextMenus({
+        viewportRef,
+        setDeleteTokenDialogOpen,
+        panelTokenOnDuplicateRef: callbackRefs.panelTokenOnDuplicateRef,
+        panelTokenOnCutRef: callbackRefs.panelTokenOnCutRef,
+        panelTokenOnCopyRef: callbackRefs.panelTokenOnCopyRef,
+        pixiSetTokenContextMenuAnchor,
+        pixiSetSelectedTokenId,
+        onMapDeleteAllTokens,
+        onMapDeleteAllWalls,
+        onMapDeleteAllBlasts,
+        pixiOnCutAllTokensRef: callbackRefs.pixiOnCutAllTokensRef,
+        handleMapPasteToken: clipboard.handleMapPasteToken,
+        handleMapPasteBlast: clipboard.handleMapPasteBlast,
+        canPasteTokenRef: clipboard.canPasteTokenRef,
+        canPasteBlastRef: clipboard.canPasteBlastRef,
+        pixiSetMapContextMenuAnchor,
+        onBlastDelete,
+        onBlastCopyRef: callbackRefs.onBlastCopyRef,
+        onBlastCutRef: callbackRefs.onBlastCutRef,
+        onBlastLock,
+        pixiSetBlastContextMenuAnchor,
+        pixiSetSelectedBlastId,
+    })
     // Guard to prevent immediate tap-confirm right after drag release
     const rotationReadyAtRef = useRef<number>(0)
     // Keep latest onBlastMove in a ref to avoid stale closures in pointer handlers
@@ -476,67 +514,6 @@ const PixiBoard = (props: PixiBoardProps) => {
             }
         >
     >(new Map())
-
-    const handleMapPasteToken = (pasteX?: number, pasteY?: number) => {
-        if (!tokenClipboard || tokenClipboard.length === 0 || !pasteX || !pasteY) return
-
-        // Create new tokens with new IDs and positions
-        const newTokens = tokenClipboard.map((token) => ({
-            ...token,
-            id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now() + Math.random()),
-            x: pasteX,
-            y: pasteY,
-        }))
-
-        onMapPasteToken(newTokens)
-        // Keep clipboard intact for multiple pastes
-    }
-
-    const handleMapPasteBlast = (pasteX?: number, pasteY?: number) => {
-        if (!blastClipboard || blastClipboard.length === 0 || !pasteX || !pasteY) return
-
-        // Calculate center of blasts
-        const xs = blastClipboard.map((b) => b.x)
-        const ys = blastClipboard.map((b) => b.y)
-        const minX = Math.min(...xs)
-        const maxX = Math.max(...xs)
-        const minY = Math.min(...ys)
-        const maxY = Math.max(...ys)
-        const centerX = (minX + maxX) / 2
-        const centerY = (minY + maxY) / 2
-
-        // Create new blasts with new IDs and adjusted positions
-        const newBlasts = blastClipboard.map((b) => ({
-            ...b,
-            id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now() + Math.random()),
-            x: pasteX + (b.x - centerX),
-            y: pasteY + (b.y - centerY),
-            x2: b.x2 !== undefined ? pasteX + (b.x2 - centerX) : undefined,
-            y2: b.y2 !== undefined ? pasteY + (b.y2 - centerY) : undefined,
-        }))
-
-        onMapPasteBlast(newBlasts)
-        // Keep clipboard intact for multiple pastes
-    }
-
-    const closeContextMenus = () => {
-        // Clean up anchor elements
-        if (pixiTokenContextMenuAnchor && pixiTokenContextMenuAnchor.parentNode) {
-            pixiTokenContextMenuAnchor.parentNode.removeChild(pixiTokenContextMenuAnchor)
-        }
-        if (pixiMapContextMenuAnchor && pixiMapContextMenuAnchor.parentNode) {
-            pixiMapContextMenuAnchor.parentNode.removeChild(pixiMapContextMenuAnchor)
-        }
-        if (pixiBlastContextMenuAnchor && pixiBlastContextMenuAnchor.parentNode) {
-            pixiBlastContextMenuAnchor.parentNode.removeChild(pixiBlastContextMenuAnchor)
-        }
-
-        pixiSetTokenContextMenuAnchor(null)
-        pixiSetMapContextMenuAnchor(null)
-        pixiSetBlastContextMenuAnchor(null)
-        pixiSetSelectedTokenId(null)
-        pixiSetSelectedBlastId(null)
-    }
 
     const cancelAllPending = () => {
         // Cancel all pending moves by sending REJECT_MOVEMENT messages
@@ -1175,6 +1152,9 @@ const PixiBoard = (props: PixiBoardProps) => {
             })
             viewport.drag({ mouseButtons: 'middle' }).pinch().wheel({ trackpadPinch: true }).decelerate()
             viewport.sortableChildren = true
+            // Ensure viewport is interactive to receive pointer events
+            viewport.interactive = true
+            viewport.eventMode = 'static'
             app.stage.addChild(viewport)
             viewportRef.current = viewport
 
@@ -1834,19 +1814,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                     }
 
                     // Hit test using displayed positions (respect pending endpoints)
-                    hit = null
-                    let minDist = Number.POSITIVE_INFINITY
-                    for (const t of tokensRef.current) {
-                        const pending = pixiPendingIndicatorsRef.current.get(t.id)
-                        const tx = pending ? pending.endX : t.x
-                        const ty = pending ? pending.endY : t.y
-                        const d = Math.hypot(tx - x, ty - y)
-                        const radius = t.customRadius ?? gridSizeRef.current / 2
-                        if (d <= radius && d < minDist) {
-                            hit = { ...t, x: tx, y: ty }
-                            minDist = d
-                        }
-                    }
+                    hit = findTokenHit(x, y, tokensRef.current, gridSizeRef.current, pixiPendingIndicatorsRef.current)
 
                     if (hit) {
                         // In measure mode, start measurement from token position instead of selecting the token
@@ -1868,23 +1836,7 @@ const PixiBoard = (props: PixiBoardProps) => {
 
                         if (btn === 2) {
                             // Right click on token: open token context menu
-                            const anchorEl = document.createElement('div')
-                            anchorEl.style.position = 'fixed'
-                            const screenPos = viewport.toScreen(x, y)
-                            const rect = hostRef.current?.getBoundingClientRect()
-                            if (rect) {
-                                anchorEl.style.left = `${rect.left + screenPos.x}px`
-                                anchorEl.style.top = `${rect.top + screenPos.y}px`
-                            } else {
-                                anchorEl.style.left = `${screenPos.x}px`
-                                anchorEl.style.top = `${screenPos.y}px`
-                            }
-                            anchorEl.style.width = '1px'
-                            anchorEl.style.height = '1px'
-                            anchorEl.style.pointerEvents = 'auto'
-                            document.body.appendChild(anchorEl)
-                            pixiSetTokenContextMenuAnchor(anchorEl)
-                            pixiSetSelectedTokenId(hit.id)
+                            contextMenus.openTokenContextMenu(x, y, hit.id)
                             return
                         } else {
                             // Left click on token: start drag
@@ -1904,74 +1856,12 @@ const PixiBoard = (props: PixiBoardProps) => {
                     // Only check for blast hits if no token was hit
                     if (!blastDrawModeRef.current && !isWallModeRef.current && !isMeasuringRef.current) {
                         // Check if clicking on a blast
-                        clickedBlast =
-                            blastsRef.current.find((blast) => {
-                                const dx = x - blast.x
-                                const dy = y - blast.y
-
-                                if (blast.type === 'grenade') {
-                                    const radius = (gridSizeRef.current * 5) / 2
-                                    return Math.sqrt(dx * dx + dy * dy) <= radius
-                                } else if (blast.type === 'circle') {
-                                    const radius = gridSizeRef.current * (blast.size || 0)
-                                    return Math.sqrt(dx * dx + dy * dy) <= radius
-                                } else if (blast.type === 'square') {
-                                    const width = gridSizeRef.current * (blast.size || 0)
-                                    const height = gridSizeRef.current * (blast.sizeY || blast.size || 0)
-                                    return Math.abs(dx) <= width / 2 && Math.abs(dy) <= height / 2
-                                } else if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                                    // Point-in-triangle for cone using barycentric technique
-                                    const points = calculateConePoints(blast.x, blast.y, blast.x2, blast.y2, 28)
-                                    const ax = points[0].x
-                                    const ay = points[0].y
-                                    const bx = points[1].x // left base point
-                                    const by = points[1].y
-                                    const cx = points[2].x // right base point
-                                    const cy = points[2].y
-
-                                    // Barycentric coordinate check
-                                    const v0x = cx - ax
-                                    const v0y = cy - ay
-                                    const v1x = bx - ax
-                                    const v1y = by - ay
-                                    const v2x = x - ax
-                                    const v2y = y - ay
-
-                                    const dot00 = v0x * v0x + v0y * v0y
-                                    const dot01 = v0x * v1x + v0y * v1y
-                                    const dot02 = v0x * v2x + v0y * v2y
-                                    const dot11 = v1x * v1x + v1y * v1y
-                                    const dot12 = v1x * v2x + v1y * v2y
-
-                                    const invDen = 1 / (dot00 * dot11 - dot01 * dot01)
-                                    const u = (dot11 * dot02 - dot01 * dot12) * invDen
-                                    const v = (dot00 * dot12 - dot01 * dot02) * invDen
-
-                                    return u >= 0 && v >= 0 && u + v <= 1
-                                }
-                                return false
-                            }) || null
+                        clickedBlast = findBlastHit(x, y, blastsRef.current, gridSizeRef.current)
 
                         if (clickedBlast) {
                             if (btn === 2) {
                                 // Right click on blast: open blast context menu
-                                const anchorEl = document.createElement('div')
-                                anchorEl.style.position = 'fixed'
-                                const screenPos = viewport.toScreen(x, y)
-                                const rect = hostRef.current?.getBoundingClientRect()
-                                if (rect) {
-                                    anchorEl.style.left = `${rect.left + screenPos.x}px`
-                                    anchorEl.style.top = `${rect.top + screenPos.y}px`
-                                } else {
-                                    anchorEl.style.left = `${screenPos.x}px`
-                                    anchorEl.style.top = `${screenPos.y}px`
-                                }
-                                anchorEl.style.width = '1px'
-                                anchorEl.style.height = '1px'
-                                anchorEl.style.pointerEvents = 'auto'
-                                document.body.appendChild(anchorEl)
-                                pixiSetBlastContextMenuAnchor(anchorEl)
-                                pixiSetSelectedBlastId(clickedBlast.id)
+                                contextMenus.openBlastContextMenu(x, y, clickedBlast)
                                 return
                             } else {
                                 // Left click: allow drag only if not locked
@@ -1987,22 +1877,12 @@ const PixiBoard = (props: PixiBoardProps) => {
                 }
 
                 // Handle right-click on empty space to open map context menu
+                // This needs to be OUTSIDE the btn === 0 || btn === 2 block to catch all right-clicks
                 if (btn === 2 && !hit && !clickedBlast) {
-                    // Right click on empty map: open map context menu
-                    const anchorEl = document.createElement('div')
-                    anchorEl.style.position = 'fixed'
-                    const screenPos = viewport.toScreen(x, y)
-                    const rect = hostRef.current?.getBoundingClientRect()
-                    if (rect) {
-                        anchorEl.style.left = `${rect.left + screenPos.x}px`
-                        anchorEl.style.top = `${rect.top + screenPos.y}px`
-                        anchorEl.dataset.pasteX = x.toString()
-                        anchorEl.dataset.pasteY = y.toString()
-                        anchorEl.style.width = '1px'
-                        anchorEl.style.height = '1px'
-                        anchorEl.style.pointerEvents = 'auto'
-                        document.body.appendChild(anchorEl)
-                        pixiSetMapContextMenuAnchor(anchorEl)
+                    // Check if we're in a special mode that should prevent map menu
+                    if (!blastDrawModeRef.current && !isWallModeRef.current && !isMeasuringRef.current) {
+                        // Right click on empty map: open map context menu
+                        contextMenus.openMapContextMenu(x, y)
                         return
                     }
                 }
@@ -3041,6 +2921,9 @@ const PixiBoard = (props: PixiBoardProps) => {
             clearTokenRendererCaches()
             // Clear blast renderer caches to release Sprite/Mask references
             clearBlastRendererCaches()
+            // Close context menus
+            contextMenus.closeAllContextMenus()
+
             // Clear PixiTooltip
             if (pixiTooltipTimeoutRef.current) {
                 clearTimeout(pixiTooltipTimeoutRef.current)
@@ -3587,49 +3470,6 @@ const PixiBoard = (props: PixiBoardProps) => {
                     </div>
                 )}
             </div>
-            <BlastContextMenu
-                anchorEl={pixiBlastContextMenuAnchor}
-                blastId={pixiSelectedBlastId}
-                isLocked={Boolean(blastsRef.current.find?.((b) => b.id === pixiSelectedBlastId)?.locked)}
-                onDelete={(id) => onBlastDelete?.(id)}
-                onCopy={(id) => onBlastCopy?.(id)}
-                onCut={(id) => onBlastCut?.(id)}
-                onLock={(id, locked) => onBlastLock?.(id, locked)}
-                onClose={closeContextMenus}
-            />
-            <TokenContextMenu
-                anchorEl={pixiTokenContextMenuAnchor}
-                tokenId={pixiSelectedTokenId}
-                onDelete={setDeleteTokenDialogOpen}
-                onDuplicate={pixiOnTokenDuplicate}
-                onCopy={pixiOnTokenCopy}
-                onCut={pixiOnTokenCut}
-                onClose={closeContextMenus}
-            />
-            <MapContextMenu
-                anchorEl={pixiMapContextMenuAnchor}
-                onDeleteAllTokens={onMapDeleteAllTokens}
-                onDeleteAllWalls={onMapDeleteAllWalls}
-                onDeleteAllBlasts={onMapDeleteAllBlasts}
-                onPasteToken={() => {
-                    if (pixiMapContextMenuAnchor) {
-                        const pasteX = parseFloat(pixiMapContextMenuAnchor.dataset.pasteX || '0')
-                        const pasteY = parseFloat(pixiMapContextMenuAnchor.dataset.pasteY || '0')
-                        handleMapPasteToken(pasteX, pasteY)
-                    }
-                }}
-                onPasteBlast={() => {
-                    if (pixiMapContextMenuAnchor) {
-                        const pasteX = parseFloat(pixiMapContextMenuAnchor.dataset.pasteX || '0')
-                        const pasteY = parseFloat(pixiMapContextMenuAnchor.dataset.pasteY || '0')
-                        handleMapPasteBlast(pasteX, pasteY)
-                    }
-                }}
-                canPasteToken={tokenClipboard !== null && tokenClipboard.length > 0}
-                canPasteBlast={blastClipboard !== null && blastClipboard.length > 0}
-                onCutAllTokens={onMapCutAllTokens}
-                onClose={closeContextMenus}
-            />
         </>
     )
 }

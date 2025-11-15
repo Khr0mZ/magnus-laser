@@ -1,8 +1,3 @@
-import ContentCopy from '@mui/icons-material/ContentCopy'
-import ContentCut from '@mui/icons-material/ContentCut'
-import Delete from '@mui/icons-material/Delete'
-import Lock from '@mui/icons-material/Lock'
-import LockOpen from '@mui/icons-material/LockOpen'
 import Divider from '@mui/material/Divider'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
@@ -91,31 +86,23 @@ export const BlastContextMenu: React.FC<BlastContextMenuProps> = ({
             }}
         >
             <MenuItem onClick={handleLock}>
-                <ListItemIcon sx={{ color: '#fff' }}>
-                    {isLocked ? <LockOpen fontSize="small" /> : <Lock fontSize="small" />}
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#fff' }}>{isLocked ? '🔓' : '🔒'}</ListItemIcon>
                 <ListItemText>
                     {isLocked ? t('combatSim.blastContextMenu.unlock') : t('combatSim.blastContextMenu.lock')}
                 </ListItemText>
             </MenuItem>
             <Divider sx={{ bgcolor: '#333' }} />
             <MenuItem onClick={handleCopy}>
-                <ListItemIcon sx={{ color: '#fff' }}>
-                    <ContentCopy fontSize="small" />
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#fff' }}>📄</ListItemIcon>
                 <ListItemText>{t('combatSim.blastContextMenu.copy')}</ListItemText>
             </MenuItem>
             <MenuItem onClick={handleCut}>
-                <ListItemIcon sx={{ color: '#fff' }}>
-                    <ContentCut fontSize="small" />
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#fff' }}>✂️</ListItemIcon>
                 <ListItemText>{t('combatSim.blastContextMenu.cut')}</ListItemText>
             </MenuItem>
             <Divider sx={{ bgcolor: '#333' }} />
             <MenuItem onClick={handleDelete} sx={{ color: '#ff4444 !important' }}>
-                <ListItemIcon sx={{ color: '#ff4444' }}>
-                    <Delete fontSize="small" />
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#ff4444' }}>🗑️</ListItemIcon>
                 <ListItemText>{t('combatSim.blastContextMenu.delete')}</ListItemText>
             </MenuItem>
         </Menu>

@@ -86,7 +86,6 @@ const SettingsView = () => {
     const [openAIApiKey, setOpenAIApiKey] = useState('')
     const [geminiApiKey, setGeminiApiKey] = useState('')
     const [isSaving, setIsSaving] = useState(false)
-    console.log('test log')
     const {
         displayName,
         role,

@@ -4,30 +4,29 @@ import { Viewport } from 'pixi-viewport'
 import { Container, Graphics, Text, TextStyle } from 'pixi.js'
 import type { StatsActions, Token } from '../utils/types'
 
-// Helper functions to extract display values from actions
-const getActionDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
-    const action = actions.find((a) => a.type === type)
-    return action ? `${action.value}` : '0'
-}
-
-const getWeaponDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
-    const action = actions.find((a) => a.type === type)
-    if (!action || !action.damage) return '0D6'
-    const dice = action.damage.d6 || 1
-    return `${dice}D6`
-}
-
-const getGrenadeDisplayInfo = (actions: StatsActions[]) => {
-    const grenadeAction = actions.find((a) => a.type === 'grenade')
-    if (!grenadeAction || !grenadeAction.damage) return null
-
+// Helper function to format damage dice
+const formatDamageDice = (damage?: { d4?: number | null; d6?: number | null; d8?: number | null }): string => {
+    if (!damage) return ''
     const diceParts = []
-    if (grenadeAction.damage.d4) diceParts.push(`${grenadeAction.damage.d4}D4`)
-    if (grenadeAction.damage.d6) diceParts.push(`${grenadeAction.damage.d6}D6`)
-    if (grenadeAction.damage.d8) diceParts.push(`${grenadeAction.damage.d8}D8`)
+    if (damage.d4) diceParts.push(`${damage.d4}D4`)
+    if (damage.d6) diceParts.push(`${damage.d6}D6`)
+    if (damage.d8) diceParts.push(`${damage.d8}D8`)
+    return diceParts.join(' ')
+}
 
-    return {
-        dice: diceParts.join(' '),
+// Helper function to get color for action type
+const getActionTypeColor = (type: StatsActions['type']): number => {
+    switch (type) {
+        case 'melee':
+            return 0xff0055 // colors.neons.red.default
+        case 'ranged':
+            return 0xffff00 // colors.neons.yellow.default
+        case 'grenade':
+            return 0xff5e00 // colors.neons.orange.default
+        case 'skill':
+            return 0x00ffff // colors.neons.cyan.default
+        default:
+            return 0x00ffff // colors.neons.cyan.default
     }
 }
 
@@ -50,8 +49,6 @@ export class PixiTooltip extends Container {
     private isVisible = false
     private currentToken: Token | null = null
     private viewport: Viewport
-    private screenWidth: number
-    private screenHeight: number
     private lastZoom: number
     private currentX: number
     private currentY: number
@@ -61,8 +58,6 @@ export class PixiTooltip extends Container {
 
         // Store props for zoom updates
         this.viewport = props.viewport
-        this.screenWidth = props.screenWidth
-        this.screenHeight = props.screenHeight
         this.lastZoom = props.zoom
         this.currentX = props.x
         this.currentY = props.y
@@ -129,7 +124,14 @@ export class PixiTooltip extends Container {
         // Clear existing content
         this.content.removeChildren()
 
-        let yOffset = 10 // padding
+        // Grid layout constants - matching TokenTooltip structure
+        const padding = 12 // matches p: 1.5 (12px)
+        const rowHeight = 24
+        const columnWidth = 140 // half width for 2-column layout
+        const labelValueSpacing = 4 // spacing between label and value
+        const nameBottomMargin = 12 // margin after name
+
+        let yOffset = padding
 
         // Token name (uppercase, bold, cyan light)
         const nameStyle = new TextStyle({
@@ -140,168 +142,164 @@ export class PixiTooltip extends Container {
             letterSpacing: 0.5,
         })
         const nameText = new Text({ text: token.name.toUpperCase(), style: nameStyle })
-        nameText.x = 15
+        nameText.x = padding
         nameText.y = yOffset
         this.content.addChild(nameText)
-        yOffset += 25
+        yOffset += 25 + nameBottomMargin
 
-        yOffset += 10 // margin bottom
-
-        // Health row
-        const healthLabelStyle = new TextStyle({
+        // Common text styles
+        const valueStyle = new TextStyle({
             fontSize: 16,
-            fill: 0xff0055, // colors.neons.red.default
-            fontWeight: 'bold',
-            fontFamily: '"Orbitron", monospace',
-        })
-        const healthValueStyle = new TextStyle({
-            fontSize: 16,
-            fill: 0x00ffff, // cyan
+            fill: 0x00ffff, // colors.neons.cyan.default
             fontFamily: '"Orbitron", monospace',
         })
 
-        const healthLabel = new Text({ text: 'HP:', style: healthLabelStyle })
-        healthLabel.x = 15
-        healthLabel.y = yOffset
-        this.content.addChild(healthLabel)
-
-        const healthValue = new Text({ text: `${stats.currentHealth}/${stats.health}`, style: healthValueStyle })
-        healthValue.x = 55
-        healthValue.y = yOffset
-        this.content.addChild(healthValue)
-        yOffset += 24
-
-        // Movement row
-        const movementLabelStyle = new TextStyle({
-            fontSize: 16,
-            fill: 0x9900ff, // colors.neons.purple.default
-            fontWeight: 'bold',
-            fontFamily: '"Orbitron", monospace',
-        })
-
-        const movementLabel = new Text({ text: 'Move:', style: movementLabelStyle })
-        movementLabel.x = 15
-        movementLabel.y = yOffset
-        this.content.addChild(movementLabel)
-
-        const movementValue = new Text({ text: `${stats.currentMovement}/${stats.movement}`, style: healthValueStyle })
-        movementValue.x = 80
-        movementValue.y = yOffset
-        this.content.addChild(movementValue)
-        yOffset += 24
-
-        // Armor row (SPH and SPB side by side)
-        const armorLabelStyle = new TextStyle({
-            fontSize: 16,
-            fill: 0x00ff8b, // colors.neons.green.default
-            fontWeight: 'bold',
-            fontFamily: '"Orbitron", monospace',
-        })
-
-        const sphLabel = new Text({ text: 'SPH:', style: armorLabelStyle })
-        sphLabel.x = 15
-        sphLabel.y = yOffset
-        this.content.addChild(sphLabel)
-
-        const sphValue = new Text({ text: `${stats.armor.currentSph}/${stats.armor.sph}`, style: healthValueStyle })
-        sphValue.x = 65
-        sphValue.y = yOffset
-        this.content.addChild(sphValue)
-
-        const spbLabel = new Text({ text: 'SPB:', style: armorLabelStyle })
-        spbLabel.x = 140
-        spbLabel.y = yOffset
-        this.content.addChild(spbLabel)
-
-        const spbValue = new Text({ text: `${stats.armor.currentSpb}/${stats.armor.spb}`, style: healthValueStyle })
-        spbValue.x = 190
-        spbValue.y = yOffset
-        this.content.addChild(spbValue)
-        yOffset += 24
-
-        // Combat and Skills row
-        const combatLabelStyle = new TextStyle({
-            fontSize: 16,
-            fill: 0xffff00, // colors.neons.yellow.default
-            fontWeight: 'bold',
-            fontFamily: '"Orbitron", monospace',
-        })
-
-        const combatLabel = new Text({ text: 'Combat:', style: combatLabelStyle })
-        combatLabel.x = 15
-        combatLabel.y = yOffset
-        this.content.addChild(combatLabel)
-
-        const combatValue = new Text({ text: getActionDisplayValue(actions, 'melee'), style: healthValueStyle })
-        combatValue.x = 95
-        combatValue.y = yOffset
-        this.content.addChild(combatValue)
-
-        const skillsLabel = new Text({ text: 'Skills:', style: combatLabelStyle })
-        skillsLabel.x = 140
-        skillsLabel.y = yOffset
-        this.content.addChild(skillsLabel)
-
-        const skillsValue = new Text({ text: getActionDisplayValue(actions, 'skill'), style: healthValueStyle })
-        skillsValue.x = 200
-        skillsValue.y = yOffset
-        this.content.addChild(skillsValue)
-        yOffset += 24
-
-        // Weapons row (Melee and Ranged side by side)
-        const weaponsLabelStyle = new TextStyle({
-            fontSize: 16,
-            fill: 0x0099ff, // colors.neons.blue.default
-            fontWeight: 'bold',
-            fontFamily: '"Orbitron", monospace',
-        })
-
-        const meleeLabel = new Text({ text: 'Melee:', style: weaponsLabelStyle })
-        meleeLabel.x = 15
-        meleeLabel.y = yOffset
-        this.content.addChild(meleeLabel)
-
-        const meleeValue = new Text({ text: getWeaponDisplayValue(actions, 'melee'), style: healthValueStyle })
-        meleeValue.x = 80
-        meleeValue.y = yOffset
-        this.content.addChild(meleeValue)
-
-        const rangedLabel = new Text({ text: 'Ranged:', style: weaponsLabelStyle })
-        rangedLabel.x = 140
-        rangedLabel.y = yOffset
-        this.content.addChild(rangedLabel)
-
-        const rangedValue = new Text({ text: getWeaponDisplayValue(actions, 'ranged'), style: healthValueStyle })
-        rangedValue.x = 220
-        rangedValue.y = yOffset
-        this.content.addChild(rangedValue)
-        yOffset += 24
-
-        // Grenades/Special Ammo if available
-        const grenadeInfo = getGrenadeDisplayInfo(actions)
-        if (grenadeInfo) {
-            const grenadesLabelStyle = new TextStyle({
+        // Helper function to create a grid item (label + value)
+        const createGridItem = (
+            labelText: string,
+            valueText: string,
+            labelColor: number,
+            x: number,
+            y: number,
+            maxWidth?: number
+        ): { width: number; height: number } => {
+            // Create label style with the specific color
+            const labelStyle = new TextStyle({
                 fontSize: 16,
-                fill: 0x0099ff, // colors.neons.blue.default
+                fill: labelColor,
                 fontWeight: 'bold',
                 fontFamily: '"Orbitron", monospace',
             })
+            const label = new Text({ text: labelText, style: labelStyle })
+            label.x = x
+            label.y = y
+            this.content.addChild(label)
 
-            const grenadesLabel = new Text({ text: t('combatSim.grenade'), style: grenadesLabelStyle })
-            grenadesLabel.x = 15
-            grenadesLabel.y = yOffset
-            this.content.addChild(grenadesLabel)
+            const labelWidth = label.width
 
-            const grenadesValue = new Text({
-                text: grenadeInfo.dice,
-                style: healthValueStyle,
-            })
-            grenadesValue.x = 115
-            grenadesValue.y = yOffset
-            this.content.addChild(grenadesValue)
-            yOffset += 24
-            yOffset += 6 // margin bottom
+            const value = new Text({ text: valueText, style: valueStyle })
+            value.x = x + labelWidth + labelValueSpacing
+            value.y = y
+            if (maxWidth) {
+                value.style.wordWrap = true
+                value.style.wordWrapWidth = maxWidth - labelWidth - labelValueSpacing
+            }
+            this.content.addChild(value)
+
+            return {
+                width: Math.max(labelWidth + labelValueSpacing + value.width, maxWidth || 0),
+                height: rowHeight,
+            }
         }
+
+        // Row 1: Health (left) and Movement (right) - xs: 6 each
+        const healthValue = `${stats.currentHealth} / ${stats.health}`
+
+        // Check if token is seriously wounded (current HP < half of max HP)
+        const isSeriouslyWounded = (stats.currentHealth ?? stats.health) < Math.ceil(stats.health / 2)
+        const showSeriouslyWoundedIndicator = isSeriouslyWounded && !stats.ignoreSeriouslyWoundedPenalty
+
+        // Create health label
+        const healthLabelStyle = new TextStyle({
+            fontSize: 16,
+            fill: 0xffffff, // White
+            fontWeight: 'bold',
+            fontFamily: '"Orbitron", monospace',
+        })
+        const healthLabel = new Text({ text: `${t('combatSim.health')}:`, style: healthLabelStyle })
+        healthLabel.x = padding
+        healthLabel.y = yOffset
+        this.content.addChild(healthLabel)
+
+        const healthValueStyle = new TextStyle({
+            fontSize: 16,
+            fill: 0x00ffff, // colors.neons.cyan.default
+            fontFamily: '"Orbitron", monospace',
+        })
+        const healthValueText = new Text({ text: healthValue, style: healthValueStyle })
+        healthValueText.x = padding + healthLabel.width + labelValueSpacing
+        healthValueText.y = yOffset
+        this.content.addChild(healthValueText)
+
+        // Add seriously wounded indicator if needed
+        if (showSeriouslyWoundedIndicator) {
+            const woundedIndicator = new Text({ text: '🩸', style: healthValueStyle })
+            woundedIndicator.x = padding + healthLabel.width + labelValueSpacing + healthValueText.width + 4
+            woundedIndicator.y = yOffset
+            this.content.addChild(woundedIndicator)
+        }
+
+        // Movement (right column)
+        createGridItem(
+            `${t('combatSim.movement')}:`,
+            `${stats.currentMovement} / ${stats.movement}`,
+            0x9900ff, // colors.neons.purple.default
+            padding + columnWidth,
+            yOffset
+        )
+        yOffset += rowHeight
+
+        // Row 2: SPH (left) and SPB (right) - xs: 12, md: 6 each
+        createGridItem(
+            `${t('combatSim.sph')}:`,
+            `${stats.armor.currentSph} / ${stats.armor.sph}`,
+            0x00ff8b, // colors.neons.green.default
+            padding,
+            yOffset
+        )
+        createGridItem(
+            `${t('combatSim.spb')}:`,
+            `${stats.armor.currentSpb} / ${stats.armor.spb}`,
+            0x00ff8b, // colors.neons.green.default
+            padding + columnWidth,
+            yOffset
+        )
+        yOffset += rowHeight
+
+        // Row 2.5: Luck (PC only) - xs: 12, md: 6, if PC
+        if (stats.isPC && stats.luck !== undefined) {
+            createGridItem(
+                `${t('combatSim.luck')}:`,
+                `${stats.currentLuck ?? 0} / ${stats.luck}`,
+                0xff00ff, // colors.neons.pink.default (neon pink/magenta)
+                padding,
+                yOffset
+            )
+            yOffset += rowHeight
+        }
+
+        // Actions List - display all actions
+        actions.forEach((action) => {
+            const actionName = action.name || t(`combatSim.${action.type}`)
+            const hasDamage = action.damage && (action.damage.d4 || action.damage.d6 || action.damage.d8)
+
+            if (hasDamage) {
+                // 6-6 grid layout for actions with damage
+                // Left column: Action name and value
+                createGridItem(`${actionName}:`, `${action.value}`, getActionTypeColor(action.type), padding, yOffset)
+                // Right column: Damage label and dice
+                createGridItem(
+                    'Dmg:',
+                    formatDamageDice(action.damage),
+                    getActionTypeColor(action.type),
+                    padding + columnWidth,
+                    yOffset
+                )
+            } else {
+                // Full width for actions without damage
+                createGridItem(
+                    `${actionName}:`,
+                    `${action.value}`,
+                    getActionTypeColor(action.type),
+                    padding,
+                    yOffset,
+                    280 // max width for full-width item
+                )
+            }
+            yOffset += rowHeight
+        })
+
+        yOffset += padding // bottom padding (same as top padding)
 
         // Update layout for content
         if (this.content._layout) {
@@ -316,10 +314,7 @@ export class PixiTooltip extends Container {
         this.background.clear()
         this.background.setFillStyle({ color: 0x001428, alpha: 0.8 }) // rgba(0, 20, 40, 0.8)
         this.background.setStrokeStyle({ width: 1, color: 0x00ffff, alpha: 1.0 }) // colors.neons.cyan.default
-        this.background
-            .roundRect(0, 0, 300, yOffset + 5, 4)
-            .fill()
-            .stroke()
+        this.background.roundRect(0, 0, 300, yOffset, 4).fill().stroke()
     }
 
     private updatePositionFromStoredProps(): void {
@@ -327,87 +322,93 @@ export class PixiTooltip extends Container {
             token: this.currentToken!,
             x: this.currentX,
             y: this.currentY,
-            screenWidth: this.screenWidth,
-            screenHeight: this.screenHeight,
+            screenWidth: this.viewport.screenWidth,
+            screenHeight: this.viewport.screenHeight,
             zoom: this.viewport.scale.x,
             viewport: this.viewport,
         })
     }
 
     public updatePosition(props: PixiTooltipProps): void {
-        const { x, y, screenWidth, screenHeight, zoom, viewport } = props
+        const { x, y, zoom, viewport } = props
 
         // Update stored properties
         this.viewport = viewport
-        this.screenWidth = screenWidth
-        this.screenHeight = screenHeight
         this.lastZoom = zoom
         this.currentX = x
         this.currentY = y
 
-        // Use viewport.toGlobal() to properly convert viewport coordinates to screen coordinates
-        const cursorScreenPos = viewport.toGlobal({ x, y })
-
-        // Scale factor for UI elements (inverse zoom)
+        // Scale factor for UI elements (inverse zoom) - keeps tooltip at consistent screen size
         const scaleFactor = Math.max(0.5, 1 / zoom)
 
-        // Get exact tooltip dimensions (unscaled, then apply scale factor)
+        // Get base tooltip dimensions (in pixels, unscaled)
         const baseDimensions = this.getTooltipDimensions()
-        const tooltipWidth = baseDimensions.width * scaleFactor
-        const tooltipHeight = baseDimensions.height * scaleFactor
+        const baseWidth = baseDimensions.width
+        const baseHeight = baseDimensions.height
 
-        // Intelligent positioning based on cursor location relative to screen center
-        const padding = 20 * scaleFactor
+        // Calculate tooltip dimensions in world space (accounting for scale)
+        // When we scale the tooltip by scaleFactor, its visual size in world space is baseSize * scaleFactor
+        const tooltipWorldWidth = baseWidth * scaleFactor
+        const tooltipWorldHeight = baseHeight * scaleFactor
 
-        // Use the actual screen coordinates from viewport.toGlobal()
-        const screenX = cursorScreenPos.x
-        const screenY = cursorScreenPos.y
+        // Offsets in world space (convert screen-space offsets to world space)
+        // Screen-space offsets need to be divided by zoom to get world-space offsets
+        const tokenOffsetWorld = 30 * scaleFactor // Offset from token center in world space
+        const paddingWorld = 10 * scaleFactor // Padding from viewport edges in world space
 
-        // Determine cursor position relative to screen center
-        const isCursorInTopHalf = screenY < screenHeight / 2
-        const isCursorInLeftHalf = screenX < screenWidth / 2
+        // Position tooltip centered over the token in world coordinates
+        // Start with tooltip above the token, centered horizontally
+        let tooltipX = x - tooltipWorldWidth / 2
+        let tooltipY = y - tooltipWorldHeight - tokenOffsetWorld
 
-        // Position tooltip in screen coordinates first
-        let tooltipScreenX: number
-        let tooltipScreenY: number
+        // Get viewport bounds in world coordinates for overflow checking
+        const viewportTopLeft = viewport.toWorld({ x: 0, y: 0 })
+        const viewportBottomRight = viewport.toWorld({
+            x: viewport.screenWidth,
+            y: viewport.screenHeight,
+        })
 
-        if (isCursorInTopHalf && isCursorInLeftHalf) {
-            // Top-left quadrant: position tooltip below and right of cursor
-            tooltipScreenX = screenX + padding
-            tooltipScreenY = screenY + padding
-        } else if (isCursorInTopHalf && !isCursorInLeftHalf) {
-            // Top-right quadrant: position tooltip below and left of cursor
-            tooltipScreenX = screenX - tooltipWidth - padding
-            tooltipScreenY = screenY + padding
-        } else if (!isCursorInTopHalf && isCursorInLeftHalf) {
-            // Bottom-left quadrant: position tooltip above and right of cursor
-            tooltipScreenX = screenX + padding
-            tooltipScreenY = screenY - tooltipHeight - padding
-        } else {
-            // Bottom-right quadrant: position tooltip above and left of cursor
-            tooltipScreenX = screenX - tooltipWidth - padding
-            tooltipScreenY = screenY - tooltipHeight - padding
+        const viewportLeft = viewportTopLeft.x
+        const viewportRight = viewportBottomRight.x
+        const viewportTop = viewportTopLeft.y
+        const viewportBottom = viewportBottomRight.y
+
+        // Check if tooltip would overflow top of viewport, if so position below token
+        if (tooltipY < viewportTop + paddingWorld) {
+            tooltipY = y + tokenOffsetWorld
         }
 
-        // Boundary checks in screen coordinates
-        tooltipScreenX = Math.max(padding, Math.min(tooltipScreenX, screenWidth - tooltipWidth - padding))
-        tooltipScreenY = Math.max(padding, Math.min(tooltipScreenY, screenHeight - tooltipHeight - padding))
+        // Ensure tooltip doesn't overflow left edge
+        if (tooltipX < viewportLeft + paddingWorld) {
+            tooltipX = viewportLeft + paddingWorld
+        }
 
-        // Convert screen coordinates back to viewport coordinates using toLocal
-        const tooltipViewportPos = viewport.toLocal({ x: tooltipScreenX, y: tooltipScreenY })
-        let tooltipX = tooltipViewportPos.x
-        let tooltipY = tooltipViewportPos.y
+        // Ensure tooltip doesn't overflow right edge
+        if (tooltipX + tooltipWorldWidth > viewportRight - paddingWorld) {
+            tooltipX = viewportRight - tooltipWorldWidth - paddingWorld
+        }
+
+        // Ensure tooltip doesn't overflow bottom edge
+        if (tooltipY + tooltipWorldHeight > viewportBottom - paddingWorld) {
+            tooltipY = viewportBottom - tooltipWorldHeight - paddingWorld
+        }
+
+        // Ensure tooltip doesn't overflow top edge (final check)
+        if (tooltipY < viewportTop + paddingWorld) {
+            tooltipY = viewportTop + paddingWorld
+        }
 
         // Update layout
         if (this._layout) {
             this._layout.setStyle({
-                width: tooltipWidth,
-                height: tooltipHeight,
+                width: baseWidth,
+                height: baseHeight,
                 position: 'absolute',
             })
         }
 
-        // Set position and scale
+        // Set position in world coordinates and scale
+        // Position is in world space, scale keeps it at consistent screen size
         this.x = tooltipX
         this.y = tooltipY
         this.scale.set(scaleFactor)
@@ -440,38 +441,37 @@ export class PixiTooltip extends Container {
         if (!stats) return { width: 300, height: 200 }
         const actions = stats.actions || []
 
-        let yOffset = 10 // initial padding
+        const padding = 12
+        const rowHeight = 24
+        const nameBottomMargin = 12
+
+        let yOffset = padding
 
         // Token name
         yOffset += 25 // name height
-        yOffset += 10 // margin bottom
+        yOffset += nameBottomMargin
 
-        // Health row
-        yOffset += 24
+        // Row 1: Health and Movement
+        yOffset += rowHeight
 
-        // Movement row
-        yOffset += 24
+        // Row 2: SPH and SPB
+        yOffset += rowHeight
 
-        // Armor rows
-        yOffset += 24
-
-        // Combat and Skills row
-        yOffset += 24
-
-        // Weapons rows
-        yOffset += 24
-
-        // Grenades row (if present)
-        const grenadeInfo = getGrenadeDisplayInfo(actions)
-        if (grenadeInfo) {
-            yOffset += 24
+        // Row 2.5: Luck (if PC)
+        if (stats.isPC && stats.luck !== undefined) {
+            yOffset += rowHeight
         }
 
-        yOffset += 6 // final margin
+        // Actions rows (variable number)
+        yOffset += rowHeight * actions.length
+
+        // Row 4: Melee and Ranged (removed - now using actions list)
+
+        yOffset += padding // bottom padding (same as top padding)
 
         return {
             width: 300,
-            height: yOffset + 5, // background padding
+            height: yOffset,
         }
     }
 

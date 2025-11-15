@@ -427,9 +427,12 @@ const useCombatSim = () => {
                 mapId: getActiveMapKey(),
                 // Keep same position as original token
             }
-            await db.tokens.add(newToken)
+            const tokensTable = getTokensTable()
+            await tokensTable.add(newToken)
             // Always add the duplicate to the current map
             setTokens((prev) => [...prev, newToken])
+            // Send mutation for sync
+            sendMutation('tokens', 'insert', newToken, useSessionTables, session)
         }
     }
     const pixiOnTokenUpdate = (id: string, updates: Partial<Token>) => {
@@ -466,7 +469,10 @@ const useCombatSim = () => {
             setTokenClipboard([newToken])
             // Cut removes the token but stores it in clipboard
             setTargetTokens((prev) => prev.filter((t) => t.id !== id))
-            await db.tokens.delete(id)
+            const tokensTable = getTokensTable()
+            await tokensTable.delete(id)
+            // Send mutation for sync
+            sendMutation('tokens', 'delete', { id }, useSessionTables, session)
         }
     }
     const panelTokenOnCopy = async (id: string) => {
@@ -634,7 +640,7 @@ const useCombatSim = () => {
     }
     const panelInitOnUpdateTokenCurrent = async (
         tokenId: string,
-        field: 'health' | 'sph' | 'spb' | 'movement',
+        field: 'health' | 'sph' | 'spb' | 'movement' | 'luck',
         value: number
     ) => {
         setTokens((prev) =>
@@ -652,6 +658,8 @@ const useCombatSim = () => {
                         ...t,
                         stats: { ...t.stats, armor: { ...t.stats.armor, currentSpb: value } },
                     }
+                } else if (field === 'luck') {
+                    return { ...t, stats: { ...t.stats, currentLuck: value } }
                 } else {
                     return { ...t, stats: { ...t.stats, currentMovement: value } }
                 }
@@ -678,6 +686,11 @@ const useCombatSim = () => {
                 const updateData = {
                     stats: { ...token.stats, armor: { ...token.stats.armor, currentSpb: value } },
                 }
+                await tokensTable.update(tokenId, updateData)
+                // Send mutation for sync
+                sendMutation('tokens', 'update', { id: tokenId, ...updateData }, useSessionTables, session)
+            } else if (field === 'luck') {
+                const updateData = { stats: { ...token.stats, currentLuck: value } }
                 await tokensTable.update(tokenId, updateData)
                 // Send mutation for sync
                 sendMutation('tokens', 'update', { id: tokenId, ...updateData }, useSessionTables, session)
@@ -950,9 +963,12 @@ const useCombatSim = () => {
         await onBlastDelete(blastId)
     }
     const onBlastLock = async (blastId: string, locked: boolean) => {
-        await db.blasts.update(blastId, { locked })
+        const blastsTable = getBlastsTable()
+        await blastsTable.update(blastId, { locked })
         setBlasts((prev) => prev.map((b) => (b.id === blastId ? { ...b, locked } : b)))
         setBlastsNotInMap((prev) => prev.map((b) => (b.id === blastId ? { ...b, locked } : b)))
+        // Send mutation for sync
+        sendMutation('blasts', 'update', { id: blastId, locked }, useSessionTables, session)
     }
     const onOpenTokenDialog = (id: string | undefined) => {
         if (id) {

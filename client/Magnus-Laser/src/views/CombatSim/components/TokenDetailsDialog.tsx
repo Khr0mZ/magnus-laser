@@ -268,27 +268,35 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
     // Pre-calculate viewport bounds to avoid recalculation on every mouse move
     const viewportBoundsRef = useRef({
         width: 0,
-        height: 0,
+        height: 0, // Full viewport height
+        availableHeight: 0, // Viewport height minus header/padding
         dialogWidth: 0,
         dialogHeight: 0,
     })
 
-    // Update viewport bounds when minimized state changes
+    // Update viewport bounds when minimized state changes or window resizes
     useEffect(() => {
-        const availableHeight = isMinimized
-            ? document.documentElement.clientHeight - 118
-            : document.documentElement.clientHeight - 2
-        const dialogWidth = isMinimized
-            ? Math.min(300, document.documentElement.clientWidth - 40)
-            : Math.min(800, document.documentElement.clientWidth - 40)
-        const dialogHeight = isMinimized ? Math.min(200, availableHeight - 20) : Math.min(600, availableHeight - 40)
+        const updateBounds = () => {
+            const availableHeight = isMinimized
+                ? document.documentElement.clientHeight - 118
+                : document.documentElement.clientHeight - 2
+            const dialogWidth = isMinimized
+                ? Math.min(300, document.documentElement.clientWidth - 40)
+                : Math.min(800, document.documentElement.clientWidth - 40)
+            const dialogHeight = isMinimized ? Math.min(200, availableHeight - 20) : Math.min(600, availableHeight - 40)
 
-        viewportBoundsRef.current = {
-            width: document.documentElement.clientWidth,
-            height: availableHeight,
-            dialogWidth,
-            dialogHeight,
+            viewportBoundsRef.current = {
+                width: document.documentElement.clientWidth,
+                height: document.documentElement.clientHeight, // Full viewport height
+                availableHeight, // Viewport height minus header/padding
+                dialogWidth,
+                dialogHeight,
+            }
         }
+
+        updateBounds()
+        window.addEventListener('resize', updateBounds)
+        return () => window.removeEventListener('resize', updateBounds)
     }, [isMinimized])
 
     const currentToken = tokens.find((t) => t.id === tokenDialogOpen)
@@ -357,6 +365,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                 x: e.clientX - position.x,
                 y: e.clientY - position.y,
             }
+            // Prevent text selection during drag
+            document.body.style.userSelect = 'none'
         },
         [position.x, position.y]
     )
@@ -384,7 +394,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
             // Use pre-calculated viewport bounds for better performance
             const bounds = viewportBoundsRef.current
             const constrainedX = Math.max(0, Math.min(newX, bounds.width - bounds.dialogWidth))
-            const constrainedY = Math.max(0, Math.min(newY, bounds.height - bounds.dialogHeight))
+            // Use availableHeight to account for header/padding when constraining Y position
+            const constrainedY = Math.max(0, Math.min(newY, bounds.availableHeight - bounds.dialogHeight))
 
             setPosition({
                 x: constrainedX,
@@ -400,6 +411,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
             cancelAnimationFrame(animationFrameRef.current)
             animationFrameRef.current = null
         }
+        // Re-enable text selection after drag
+        document.body.style.userSelect = ''
     }, [])
 
     // Add global mouse event listeners
@@ -413,6 +426,13 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
             }
         }
     }, [isDragging, handleMouseMove, handleMouseUp])
+
+    // Cleanup: ensure text selection is re-enabled when component unmounts
+    useEffect(() => {
+        return () => {
+            document.body.style.userSelect = ''
+        }
+    }, [])
 
     // Reposition dialog when minimization state changes
     useEffect(() => {
@@ -668,6 +688,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                             cursor: isDragging ? 'grabbing' : 'grab',
                             position: 'relative',
                             borderRadius: '8px',
+                            userSelect: 'none',
                             '&:hover': {
                                 boxShadow: readerMode
                                     ? `0 0 15px ${colors.neons.blue.default}80`
@@ -752,6 +773,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                 ? '1px solid rgba(0, 0, 0, 0.1)'
                                 : `1px solid ${colors.neons.cyan.default}40`,
                             position: 'relative',
+                            userSelect: 'none',
                             '&::after': !readerMode
                                 ? {
                                       content: '""',

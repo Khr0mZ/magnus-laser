@@ -30,7 +30,7 @@ interface InitiativePanelProps {
     onSetAutoReroll: (value: boolean) => void
     onTokenClick: (tokenId: string) => void
     onNextTurn: () => void
-    onUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => void
+    onUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb' | 'luck', value: number) => void
     onUpdateInitiative: (tokenId: string, value: number) => void
     onMeleeAttack: (token: Token, actionId: string) => Promise<void>
     onRangedAttack: (token: Token, actionId: string) => Promise<void>
@@ -525,6 +525,53 @@ const InitiativePanel = ({
                                                 / {stats.armor.spb}
                                             </Typography>
                                         </Grid>
+
+                                        {/* Luck (PC only) */}
+                                        {stats.isPC && stats.luck !== undefined && (
+                                            <Grid size={6}>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: readerMode ? colors.grays.gray700 : colors.grays.gray900,
+                                                        mr: 0.5,
+                                                    }}
+                                                >
+                                                    {t('combatSim.luck')}:
+                                                </Typography>
+                                                <TextField
+                                                    size="small"
+                                                    type="tel"
+                                                    value={stats.currentLuck ?? 0}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value) || 0
+                                                        onUpdateTokenCurrent(token.id, 'luck', val)
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{
+                                                        width: 35,
+                                                        '& input': {
+                                                            padding: '2px 4px',
+                                                            fontSize: '0.70rem',
+                                                            color: readerMode
+                                                                ? colors.grays.gray900
+                                                                : colors.neons.pink.default,
+                                                            textAlign: 'center',
+                                                        },
+                                                        mr: 0.5,
+                                                    }}
+                                                />
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: readerMode
+                                                            ? colors.grays.gray700
+                                                            : colors.neons.pink.default,
+                                                    }}
+                                                >
+                                                    / {stats.luck}
+                                                </Typography>
+                                            </Grid>
+                                        )}
 
                                         {/* Action buttons */}
                                         <Grid container size={12} spacing={1}>

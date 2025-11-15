@@ -8,30 +8,31 @@ interface TokenTooltipProps {
     token: Token
 }
 
-// Helper functions to extract display values from actions
-const getActionDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
-    const action = actions.find((a) => a.type === type)
-    return action ? `${action.value}` : '0'
-}
-
-const getWeaponDisplayValue = (actions: StatsActions[], type: StatsActions['type']): string => {
-    const action = actions.find((a) => a.type === type)
-    if (!action || !action.damage) return '0D6'
-    const dice = action.damage.d6 || 1
-    return `${dice}D6`
-}
-
-const getGrenadeDisplayInfo = (actions: StatsActions[]) => {
-    const grenadeAction = actions.find((a) => a.type === 'grenade')
-    if (!grenadeAction || !grenadeAction.damage) return null
-
+// Helper function to format damage dice
+const formatDamageDice = (damage?: { d4?: number | null; d6?: number | null; d8?: number | null }): string => {
+    if (!damage) return ''
     const diceParts = []
-    if (grenadeAction.damage.d4) diceParts.push(`${grenadeAction.damage.d4}D4`)
-    if (grenadeAction.damage.d6) diceParts.push(`${grenadeAction.damage.d6}D6`)
-    if (grenadeAction.damage.d8) diceParts.push(`${grenadeAction.damage.d8}D8`)
+    if (damage.d4) diceParts.push(`${damage.d4}D4`)
+    if (damage.d6) diceParts.push(`${damage.d6}D6`)
+    if (damage.d8) diceParts.push(`${damage.d8}D8`)
+    return diceParts.join(' ')
+}
 
-    return {
-        dice: diceParts.join(' '),
+// Helper function to get color for action type
+const getActionTypeColor = (type: StatsActions['type'], readerMode: boolean): string => {
+    if (readerMode) return colors.blues.default
+
+    switch (type) {
+        case 'melee':
+            return colors.neons.red.default
+        case 'ranged':
+            return colors.neons.yellow.default
+        case 'grenade':
+            return colors.neons.orange.default
+        case 'skill':
+            return colors.neons.cyan.default
+        default:
+            return colors.neons.cyan.default
     }
 }
 
@@ -41,6 +42,10 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
 
     const stats = token.stats
     const actions = stats?.actions || []
+
+    // Check if token is seriously wounded (current HP < half of max HP)
+    const isSeriouslyWounded = stats ? (stats.currentHealth ?? stats.health) < Math.ceil(stats.health / 2) : false
+    const showSeriouslyWoundedIndicator = isSeriouslyWounded && !stats?.ignoreSeriouslyWoundedPenalty
 
     return (
         <Box
@@ -68,10 +73,10 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
 
             {stats && (
                 <Grid container>
-                    <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
+                    <Grid container size={{ xs: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
                         <Typography
                             sx={{
-                                color: readerMode ? colors.blues.default : colors.neons.red.default,
+                                color: readerMode ? colors.blues.default : '#FFFFFF',
                                 fontWeight: 700,
                             }}
                         >
@@ -84,8 +89,20 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                         >
                             {stats.currentHealth}/ {stats.health}
                         </Typography>
+                        {showSeriouslyWoundedIndicator && (
+                            <Typography
+                                sx={{
+                                    fontSize: '14px',
+                                    lineHeight: 1,
+                                    ml: 0.5,
+                                }}
+                                title="Seriously Wounded (-2 to hit/skill rolls)"
+                            >
+                                🩸
+                            </Typography>
+                        )}
                     </Grid>
-                    <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
+                    <Grid container size={{ xs: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
                         <Typography
                             sx={{
                                 color: readerMode ? colors.blues.default : colors.neons.purple.default,
@@ -136,99 +153,116 @@ export const TokenTooltip: React.FC<TokenTooltipProps> = ({ token }) => {
                             {stats.armor.currentSpb} / {stats.armor.spb}
                         </Typography>
                     </Grid>
-                    <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.blues.default : colors.neons.yellow.default,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {t('combatSim.combat')}:
-                        </Typography>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
-                            }}
-                        >
-                            {getActionDisplayValue(actions, 'melee')}
-                        </Typography>
-                    </Grid>
-                    <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.blues.default : colors.neons.yellow.default,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {t('combatSim.skills')}:
-                        </Typography>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
-                            }}
-                        >
-                            {getActionDisplayValue(actions, 'skill')}
-                        </Typography>
-                    </Grid>
-                    <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.blues.default : colors.neons.blue.default,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {t('combatSim.melee')}:
-                        </Typography>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
-                            }}
-                        >
-                            {getWeaponDisplayValue(actions, 'melee')}
-                        </Typography>
-                    </Grid>
-                    <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.blues.default : colors.neons.blue.default,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {t('combatSim.ranged')}:
-                        </Typography>
-                        <Typography
-                            sx={{
-                                color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
-                            }}
-                        >
-                            {getWeaponDisplayValue(actions, 'ranged')}
-                        </Typography>
-                    </Grid>
-                    {(() => {
-                        const grenadeInfo = getGrenadeDisplayInfo(actions)
-                        return grenadeInfo ? (
-                            <Grid container size={{ xs: 12 }} spacing={1} sx={{ alignItems: 'baseline' }}>
-                                <Typography
-                                    sx={{
-                                        color: readerMode ? colors.blues.default : colors.neons.blue.default,
-                                        fontWeight: 700,
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                    }}
-                                >
-                                    {t('combatSim.grenade')}:
-                                </Typography>
-                                <Typography
-                                    sx={{
-                                        color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
-                                    }}
-                                >
-                                    {grenadeInfo.dice}
-                                </Typography>
-                            </Grid>
-                        ) : null
-                    })()}
+                    {stats.isPC && stats.luck !== undefined && (
+                        <Grid container size={{ xs: 12, md: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
+                            <Typography
+                                sx={{
+                                    color: readerMode ? colors.blues.default : colors.neons.pink.default,
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {t('combatSim.luck')}:
+                            </Typography>
+                            <Typography
+                                sx={{
+                                    color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
+                                }}
+                            >
+                                {stats.currentLuck ?? 0} / {stats.luck}
+                            </Typography>
+                        </Grid>
+                    )}
+                    {/* Actions List */}
+                    {actions.length > 0 &&
+                        actions.map((action) => {
+                            const hasDamage =
+                                action.damage && (action.damage.d4 || action.damage.d6 || action.damage.d8)
+
+                            if (hasDamage) {
+                                // 6-6 grid layout for actions with damage
+                                return (
+                                    <Grid
+                                        key={action.id}
+                                        container
+                                        size={{ xs: 12 }}
+                                        spacing={1}
+                                        sx={{ alignItems: 'baseline' }}
+                                    >
+                                        <Grid container size={{ xs: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
+                                            <Typography
+                                                sx={{
+                                                    color: getActionTypeColor(action.type, readerMode),
+                                                    fontWeight: 700,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                }}
+                                            >
+                                                {action.name || t(`combatSim.${action.type}`)}:
+                                            </Typography>
+                                            <Typography
+                                                sx={{
+                                                    color: readerMode
+                                                        ? colors.grays.gray600
+                                                        : colors.neons.cyan.default,
+                                                }}
+                                            >
+                                                {action.value}
+                                            </Typography>
+                                        </Grid>
+                                        <Grid container size={{ xs: 6 }} spacing={1} sx={{ alignItems: 'baseline' }}>
+                                            <Typography
+                                                sx={{
+                                                    color: getActionTypeColor(action.type, readerMode),
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                Dmg:
+                                            </Typography>
+                                            <Typography
+                                                sx={{
+                                                    color: readerMode
+                                                        ? colors.grays.gray600
+                                                        : colors.neons.cyan.default,
+                                                }}
+                                            >
+                                                {formatDamageDice(action.damage)}
+                                            </Typography>
+                                        </Grid>
+                                    </Grid>
+                                )
+                            } else {
+                                // Full width for actions without damage
+                                return (
+                                    <Grid
+                                        key={action.id}
+                                        container
+                                        size={{ xs: 12 }}
+                                        spacing={1}
+                                        sx={{ alignItems: 'baseline' }}
+                                    >
+                                        <Typography
+                                            sx={{
+                                                color: getActionTypeColor(action.type, readerMode),
+                                                fontWeight: 700,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {action.name || t(`combatSim.${action.type}`)}:
+                                        </Typography>
+                                        <Typography
+                                            sx={{
+                                                color: readerMode ? colors.grays.gray600 : colors.neons.cyan.default,
+                                            }}
+                                        >
+                                            {action.value}
+                                        </Typography>
+                                    </Grid>
+                                )
+                            }
+                        })}
                 </Grid>
             )}
         </Box>

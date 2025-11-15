@@ -26,7 +26,7 @@ interface CombatPanelsProps {
     panelInitOnSetAutoReroll: (value: boolean) => void
     panelInitOnSetActiveToken: (tokenId: string) => void
     handleNextTurn: () => void
-    handleUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb', value: number) => void
+    handleUpdateTokenCurrent: (tokenId: string, field: 'health' | 'sph' | 'spb' | 'luck', value: number) => void
     handleUpdateInitiative: (tokenId: string, value: number) => void
     handleMeleeAttack: (token: Token, actionId: string) => Promise<void>
     handleRangedAttack: (token: Token, actionId: string) => Promise<void>

@@ -278,29 +278,42 @@ const usePixi = (props: UsePixiProps) => {
         }))
         setTokenClipboard(tokensWithUpdatedRadius)
         // Delete all tokens from map
+        const tokensTable = getTokensTable()
         for (const token of tokens) {
-            await db.tokens.delete(token.id)
+            await tokensTable.delete(token.id)
+            // Send mutation for sync
+            sendMutation('tokens', 'delete', { id: token.id }, useSessionTables, session)
         }
         setTokens([])
     }
     const pixiOnPasteToken = async (tokens: Token[]) => {
+        const tokensTable = getTokensTable()
+        const activeMapKey = getActiveMapKey()
         for (const token of tokens) {
             const newToken: Token = {
                 ...token,
-                mapId: getActiveMapKey(),
+                // Preserve mapId if already set and not empty, otherwise use active map key
+                mapId: (token.mapId && token.mapId.trim() !== '') ? token.mapId : activeMapKey,
             }
-            await db.tokens.add(newToken)
+            await tokensTable.add(newToken)
             setTokens((prev) => [...prev, newToken])
+            // Send mutation for sync
+            sendMutation('tokens', 'insert', newToken, useSessionTables, session)
         }
     }
     const pixiOnPasteBlast = async (newBlasts: Blast[]) => {
+        const blastsTable = getBlastsTable()
+        const activeMapKey = getActiveMapKey()
         for (const blast of newBlasts) {
             const blastToAdd: Blast = {
                 ...blast,
-                mapId: getActiveMapKey(),
+                // Preserve mapId if already set and not empty, otherwise use active map key
+                mapId: (blast.mapId && blast.mapId.trim() !== '') ? blast.mapId : activeMapKey,
             }
-            await db.blasts.add(blastToAdd)
+            await blastsTable.add(blastToAdd)
             setBlasts((prev) => [...prev, blastToAdd])
+            // Send mutation for sync
+            sendMutation('blasts', 'insert', blastToAdd, useSessionTables, session)
         }
     }
     const pixiOnTokenDuplicate = async (
@@ -339,8 +352,11 @@ const usePixi = (props: UsePixiProps) => {
                 mapId: actualGetActiveMapKey(),
                 // Keep same position as original token
             }
-            await db.tokens.add(newToken)
+            const tokensTable = getTokensTable()
+            await tokensTable.add(newToken)
             setTargetTokens((prev) => [...prev, newToken])
+            // Send mutation for sync
+            sendMutation('tokens', 'insert', newToken, useSessionTables, session)
         }
     }
     const pixiOnTokenCut = async (
@@ -362,7 +378,10 @@ const usePixi = (props: UsePixiProps) => {
             setTokenClipboard([newToken])
             // Cut removes the token but stores it in clipboard
             setTargetTokens((prev) => prev.filter((t) => t.id !== id))
-            await db.tokens.delete(id)
+            const tokensTable = getTokensTable()
+            await tokensTable.delete(id)
+            // Send mutation for sync
+            sendMutation('tokens', 'delete', { id }, useSessionTables, session)
         }
     }
     const pixiOnTokenCopy = (

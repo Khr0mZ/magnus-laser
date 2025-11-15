@@ -1,7 +1,3 @@
-import ContentCopy from '@mui/icons-material/ContentCopy'
-import ContentCut from '@mui/icons-material/ContentCut'
-import Delete from '@mui/icons-material/Delete'
-import LibraryAdd from '@mui/icons-material/LibraryAdd'
 import Divider from '@mui/material/Divider'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
@@ -88,28 +84,20 @@ export const TokenContextMenu: React.FC<TokenContextMenuProps> = ({
             }}
         >
             <MenuItem onClick={handleDuplicate}>
-                <ListItemIcon sx={{ color: '#fff' }}>
-                    <LibraryAdd fontSize="small" />
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#fff' }}>📋</ListItemIcon>
                 <ListItemText>{t('combatSim.tokenContextMenu.duplicate')}</ListItemText>
             </MenuItem>
             <MenuItem onClick={handleCopy}>
-                <ListItemIcon sx={{ color: '#fff' }}>
-                    <ContentCopy fontSize="small" />
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#fff' }}>📄</ListItemIcon>
                 <ListItemText>{t('combatSim.tokenContextMenu.copy')}</ListItemText>
             </MenuItem>
             <MenuItem onClick={handleCut}>
-                <ListItemIcon sx={{ color: '#fff' }}>
-                    <ContentCut fontSize="small" />
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#fff' }}>✂️</ListItemIcon>
                 <ListItemText>{t('combatSim.tokenContextMenu.cut')}</ListItemText>
             </MenuItem>
             <Divider sx={{ bgcolor: '#333' }} />
             <MenuItem onClick={handleDelete}>
-                <ListItemIcon sx={{ color: '#ff6b6b' }}>
-                    <Delete fontSize="small" />
-                </ListItemIcon>
+                <ListItemIcon sx={{ color: '#ff6b6b' }}>🗑️</ListItemIcon>
                 <ListItemText sx={{ color: '#ff6b6b' }}>{t('combatSim.tokenContextMenu.delete')}</ListItemText>
             </MenuItem>
         </Menu>
