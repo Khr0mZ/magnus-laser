@@ -7,7 +7,6 @@ use tokio::{
     time,
 };
 
-#[cfg(windows)]
 use crate::embedded_cloudflared::{CLOUDFLARED_BINARY, CLOUDFLARED_BINARY_NAME};
 
 
