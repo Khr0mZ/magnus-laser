@@ -52,7 +52,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: ./client/Magnus-Laser
-        run: npm ci
+        run: npm install
 
       - name: Build frontend
         working-directory: ./client/Magnus-Laser
