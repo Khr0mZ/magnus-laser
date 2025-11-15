@@ -32,10 +32,11 @@
     "bundle": {
         "active": true,
         "targets": "all",
-        "icon": ["../public/magnusLaserLogoFav.png", "../public/magnusLaserLogoFav.ico"],
-        "linux": {
-            "icon": "../public/magnusLaserLogo.png"
-        },
+        "icon": [
+            "../public/magnusLaserLogo.png",
+            "../public/magnusLaserLogoFav.png",
+            "../public/magnusLaserLogoFav.ico"
+        ],
         "externalBin": []
     },
     "plugins": {
