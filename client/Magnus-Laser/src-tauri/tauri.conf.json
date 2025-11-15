@@ -33,6 +33,9 @@
         "active": true,
         "targets": "all",
         "icon": ["../public/magnusLaserLogoFav.png", "../public/magnusLaserLogoFav.ico"],
+        "linux": {
+            "icon": "../public/magnusLaserLogo.png"
+        },
         "externalBin": []
     },
     "plugins": {
