@@ -12,6 +12,10 @@
         "ts:lint": "tsc --noEmit && eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "preview": "vite preview",
         "tauri": "tauri",
+        "tauri:build": "tauri build",
+        "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
+        "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+        "tauri:build:macos": "tauri build --target x86_64-apple-darwin",
         "test": "vitest",
         "test:run": "vitest run"
     },

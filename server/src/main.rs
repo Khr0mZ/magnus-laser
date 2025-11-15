@@ -21,9 +21,9 @@ pub struct UnifiedAppState {
 }
 
 impl UnifiedAppState {
-    pub fn new() -> Self {
+    pub fn new(port: u16) -> Self {
         Self {
-            host_state: Arc::new(HostState::default()),
+            host_state: Arc::new(HostState::new(port)),
             room_manager: Arc::new(RwLock::new(RoomManager::default())),
         }
     }
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Starting Magnus Laser server on {}", addr);
 
     // Create the combined router with both API and WebSocket routes
-    let app = create_combined_router();
+    let app = create_combined_router(args.port);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     println!("Server listening on http://{}", addr);
@@ -62,9 +62,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn create_combined_router() -> Router {
+fn create_combined_router(port: u16) -> Router {
     // Create a single shared UnifiedAppState
-    let shared_state = UnifiedAppState::new();
+    let shared_state = UnifiedAppState::new(port);
 
     // Create API AppState wrapper
     let api_state = ApiAppState {

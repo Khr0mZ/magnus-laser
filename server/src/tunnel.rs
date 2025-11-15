@@ -45,8 +45,6 @@ impl Drop for TunnelHandle {
 }
 
 fn find_cloudflared_binary() -> Result<PathBuf, TunnelError> {
-    let bin_dir = PathBuf::from("bin");
-
     // Determine the expected filename based on platform
     let target_triple = if cfg!(target_os = "windows") {
         "x86_64-pc-windows-msvc.exe"
@@ -59,13 +57,49 @@ fn find_cloudflared_binary() -> Result<PathBuf, TunnelError> {
     };
 
     let binary_name = format!("cloudflared-{}", target_triple);
-    let binary_path = bin_dir.join(binary_name);
 
-    if binary_path.exists() {
-        Ok(binary_path)
-    } else {
-        Err(TunnelError::CloudflaredMissing)
+    // Try multiple locations:
+    // 1. Relative to executable (for installed binaries)
+    // 2. Relative to current working directory (for development)
+    // 3. Using CARGO_MANIFEST_DIR environment variable (for cargo builds)
+    
+    let mut possible_paths = Vec::new();
+    
+    // Try relative to executable
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            possible_paths.push(exe_dir.join("bin").join(&binary_name));
+            // Also try same directory as executable
+            possible_paths.push(exe_dir.join(&binary_name));
+        }
     }
+    
+    // Try relative to current working directory
+    if let Ok(cwd) = std::env::current_dir() {
+        possible_paths.push(cwd.join("bin").join(&binary_name));
+        possible_paths.push(cwd.join(&binary_name));
+    }
+    
+    // Try using CARGO_MANIFEST_DIR (set during cargo build)
+    if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        let manifest_path = PathBuf::from(manifest_dir);
+        possible_paths.push(manifest_path.join("bin").join(&binary_name));
+    }
+    
+    // Try using env!("CARGO_MANIFEST_DIR") at compile time
+    let compile_time_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    possible_paths.push(compile_time_manifest.join("bin").join(&binary_name));
+
+    // Check each possible path
+    for path in possible_paths {
+        if path.exists() {
+            println!("Found cloudflared binary at: {}", path.display());
+            return Ok(path);
+        }
+    }
+
+    println!("Cloudflared binary not found. Searched for: {}", binary_name);
+    Err(TunnelError::CloudflaredMissing)
 }
 
 pub async fn spawn_tunnel(_provider: TunnelProvider, target: &str) -> Result<TunnelHandle, TunnelError> {

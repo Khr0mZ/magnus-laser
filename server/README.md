@@ -30,6 +30,17 @@ This is the companion server for Magnus Laser that handles cloudflared tunneling
 
 ### Quick Start (Recommended)
 
+**Linux/macOS:**
+```bash
+./run.sh
+```
+
+**Windows:**
+```cmd
+run.bat
+```
+
+Or if using Git Bash on Windows:
 ```bash
 ./run.sh
 ```
@@ -37,9 +48,6 @@ This is the companion server for Magnus Laser that handles cloudflared tunneling
 ### Manual Commands
 
 ```bash
-# Run the server with one command
-./run.sh
-
 # Build and run in one step
 cargo run -- --port 8080
 
@@ -50,6 +58,21 @@ cargo build --release
 # Custom options
 ./target/release/magnus-laser-server --host 0.0.0.0 --port 8080
 ```
+
+**Windows:**
+```cmd
+cargo run -- --port 8080
+target\release\magnus-laser-server.exe --port 8080
+```
+
+## Cross-Platform Support
+
+The server is designed to work on Windows, Linux, and macOS:
+
+- **Cloudflared binary**: Automatically downloaded for your platform during build
+- **Path resolution**: Works regardless of the directory you run the server from
+- **Port configuration**: Configurable via command-line arguments (default: 3030)
+- **Build system**: Uses Rust's cross-platform build tools (no external dependencies like curl required)
 
 ## Architecture
 

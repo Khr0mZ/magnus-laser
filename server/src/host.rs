@@ -14,9 +14,18 @@ fn extract_subdomain_from_url(url: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
-#[derive(Default)]
 pub struct HostState {
     inner: Mutex<HostManager>,
+    port: u16,
+}
+
+impl Default for HostState {
+    fn default() -> Self {
+        Self {
+            inner: Mutex::new(HostManager::default()),
+            port: 3030, // Default port matching main.rs
+        }
+    }
 }
 
 struct HostManager {
@@ -42,12 +51,19 @@ impl Default for HostManager {
 }
 
 impl HostState {
-    pub async fn start(&self, provider: TunnelProvider) -> Result<HostInfo, HostError> {
-        let mut manager = self.inner.lock().await;
-        manager.start(provider).await
+    pub fn new(port: u16) -> Self {
+        Self {
+            inner: Mutex::new(HostManager::default()),
+            port,
+        }
     }
 
-    pub     async fn stop(&self, room_manager: &RwLock<RoomManager>) -> Result<(), HostError> {
+    pub async fn start(&self, provider: TunnelProvider) -> Result<HostInfo, HostError> {
+        let mut manager = self.inner.lock().await;
+        manager.start(provider, self.port).await
+    }
+
+    pub async fn stop(&self, room_manager: &RwLock<RoomManager>) -> Result<(), HostError> {
         let mut manager = self.inner.lock().await;
         manager.stop(room_manager).await
     }
@@ -64,13 +80,11 @@ impl HostState {
 }
 
 impl HostManager {
-    async fn start(&mut self, provider: TunnelProvider) -> Result<HostInfo, HostError> {
+    async fn start(&mut self, provider: TunnelProvider, port: u16) -> Result<HostInfo, HostError> {
         // Clean up any existing session
         self.tunnel = None;
         self.active = None;
 
-        // Use the main server port (same as API server)
-        let port = 8080;
         let host_id = Uuid::new_v4().to_string();
 
         let target = format!("http://127.0.0.1:{port}");

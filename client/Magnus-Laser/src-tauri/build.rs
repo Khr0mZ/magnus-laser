@@ -1,6 +1,8 @@
 use std::fs;
+use std::io::Write;
 use std::path::Path;
-use std::process::Command;
+use flate2::read::GzDecoder;
+use tar::Archive;
 
 fn main() {
     // Generate embedded cloudflared binary
@@ -49,47 +51,54 @@ fn generate_embedded_cloudflared() {
 
         println!("cargo:warning=Downloading {} to {}", url, target_path.display());
 
-        // Download the file
+        // Download the file using reqwest (blocking)
+        let response = reqwest::blocking::get(&url)
+            .expect(&format!("Failed to download cloudflared from {}", url));
+        
+        if !response.status().is_success() {
+            panic!("Failed to download {}: HTTP {}", download_name, response.status());
+        }
+
+        // Download and process the file
         if is_tgz {
+            // For macOS, download and extract the tar.gz
             let temp_path = bin_dir.join("temp.tgz");
-            let status = Command::new("curl")
-                .args(["-L", "-o", &temp_path.to_string_lossy(), &url])
-                .status()
-                .expect("Failed to download cloudflared binary");
+            let mut file = fs::File::create(&temp_path)
+                .expect("Failed to create temp file");
+            let content = response.bytes().expect("Failed to read response body");
+            file.write_all(&content)
+                .expect("Failed to write downloaded file");
 
-            if !status.success() {
-                panic!("Failed to download {}", download_name);
-            }
-
-            // Extract the tar.gz
+            // Extract the tar.gz using flate2 and tar crates
+            let tar_gz = fs::File::open(&temp_path)
+                .expect("Failed to open downloaded tar.gz");
+            let tar = GzDecoder::new(tar_gz);
+            let mut archive = Archive::new(tar);
+            
             let temp_dir = bin_dir.join("temp");
             fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
-
-            let status = Command::new("tar")
-                .args(["-xzf", &temp_path.to_string_lossy(), "-C", &temp_dir.to_string_lossy()])
-                .status()
+            
+            archive.unpack(&temp_dir)
                 .expect("Failed to extract tar.gz");
-
-            if !status.success() {
-                panic!("Failed to extract {}", download_name);
-            }
 
             // Move the extracted binary
             let extracted_path = temp_dir.join("cloudflared");
-            fs::rename(&extracted_path, &target_path).expect("Failed to move extracted binary");
+            if !extracted_path.exists() {
+                panic!("Extracted binary not found at {}", extracted_path.display());
+            }
+            fs::rename(&extracted_path, &target_path)
+                .expect("Failed to move extracted binary");
 
             // Clean up
             fs::remove_file(&temp_path).ok();
             fs::remove_dir_all(&temp_dir).ok();
         } else {
-            let status = Command::new("curl")
-                .args(["-L", "-o", &target_path.to_string_lossy(), &url])
-                .status()
-                .expect("Failed to download cloudflared binary");
-
-            if !status.success() {
-                panic!("Failed to download {}", download_name);
-            }
+            // For Windows and Linux, download directly
+            let mut file = fs::File::create(&target_path)
+                .expect("Failed to create target file");
+            let content = response.bytes().expect("Failed to read response body");
+            file.write_all(&content)
+                .expect("Failed to write downloaded file");
         };
 
         // Make executable on Unix systems
@@ -171,47 +180,54 @@ fn download_cloudflared_binaries() {
 
     println!("cargo:warning=Downloading {} to {}", url, target_path.display());
 
-    // Download the file
+    // Download the file using reqwest (blocking)
+    let response = reqwest::blocking::get(&url)
+        .expect(&format!("Failed to download cloudflared from {}", url));
+    
+    if !response.status().is_success() {
+        panic!("Failed to download {}: HTTP {}", download_name, response.status());
+    }
+
+    // Download and process the file
     if is_tgz {
+        // For macOS, download and extract the tar.gz
         let temp_path = bin_dir.join("temp.tgz");
-        let status = Command::new("curl")
-            .args(["-L", "-o", &temp_path.to_string_lossy(), &url])
-            .status()
-            .expect("Failed to download cloudflared binary");
+        let mut file = fs::File::create(&temp_path)
+            .expect("Failed to create temp file");
+        let content = response.bytes().expect("Failed to read response body");
+        file.write_all(&content)
+            .expect("Failed to write downloaded file");
 
-        if !status.success() {
-            panic!("Failed to download {}", download_name);
-        }
-
-        // Extract the tar.gz
+        // Extract the tar.gz using flate2 and tar crates
+        let tar_gz = fs::File::open(&temp_path)
+            .expect("Failed to open downloaded tar.gz");
+        let tar = GzDecoder::new(tar_gz);
+        let mut archive = Archive::new(tar);
+        
         let temp_dir = bin_dir.join("temp");
         fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
-
-        let status = Command::new("tar")
-            .args(["-xzf", &temp_path.to_string_lossy(), "-C", &temp_dir.to_string_lossy()])
-            .status()
+        
+        archive.unpack(&temp_dir)
             .expect("Failed to extract tar.gz");
-
-        if !status.success() {
-            panic!("Failed to extract {}", download_name);
-        }
 
         // Move the extracted binary
         let extracted_path = temp_dir.join("cloudflared");
-        fs::rename(&extracted_path, &target_path).expect("Failed to move extracted binary");
+        if !extracted_path.exists() {
+            panic!("Extracted binary not found at {}", extracted_path.display());
+        }
+        fs::rename(&extracted_path, &target_path)
+            .expect("Failed to move extracted binary");
 
         // Clean up
         fs::remove_file(&temp_path).ok();
         fs::remove_dir_all(&temp_dir).ok();
     } else {
-        let status = Command::new("curl")
-            .args(["-L", "-o", &target_path.to_string_lossy(), &url])
-            .status()
-            .expect("Failed to download cloudflared binary");
-
-        if !status.success() {
-            panic!("Failed to download {}", download_name);
-        }
+        // For Windows and Linux, download directly
+        let mut file = fs::File::create(&target_path)
+            .expect("Failed to create target file");
+        let content = response.bytes().expect("Failed to read response body");
+        file.write_all(&content)
+            .expect("Failed to write downloaded file");
     };
 
     // Make executable on Unix systems
