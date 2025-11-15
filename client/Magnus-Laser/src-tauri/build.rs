@@ -18,25 +18,19 @@ fn generate_embedded_cloudflared() {
     let bin_dir = Path::new("../bin");
     fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
 
-    // Determine the current target platform
-    let (download_name, is_tgz, binary_name) = if cfg!(target_os = "windows") {
-        ("cloudflared-windows-amd64.exe", false, "cloudflared.exe")
-    } else if cfg!(target_os = "macos") {
-        ("cloudflared-darwin-amd64.tgz", true, "cloudflared")
-    } else if cfg!(target_os = "linux") {
-        ("cloudflared-linux-amd64", false, "cloudflared")
+    // Get the target triple from Cargo's TARGET environment variable
+    // This is the actual target we're building for, not the host OS
+    let target = std::env::var("TARGET").expect("TARGET environment variable not set");
+    
+    // Determine the platform based on the target triple
+    let (download_name, is_tgz, binary_name, target_triple) = if target.contains("windows") {
+        ("cloudflared-windows-amd64.exe", false, "cloudflared.exe", "x86_64-pc-windows-msvc.exe")
+    } else if target.contains("apple-darwin") || target.contains("macos") {
+        ("cloudflared-darwin-amd64.tgz", true, "cloudflared", "x86_64-apple-darwin")
+    } else if target.contains("linux") {
+        ("cloudflared-linux-amd64", false, "cloudflared", "x86_64-unknown-linux-gnu")
     } else {
-        panic!("Unsupported target platform");
-    };
-
-    let target_triple = if cfg!(target_os = "windows") {
-        "x86_64-pc-windows-msvc.exe"
-    } else if cfg!(target_os = "macos") {
-        "x86_64-apple-darwin"
-    } else if cfg!(target_os = "linux") {
-        "x86_64-unknown-linux-gnu"
-    } else {
-        panic!("Unsupported target platform");
+        panic!("Unsupported target platform: {}", target);
     };
 
     let target_path = bin_dir.join(format!("cloudflared-{}", target_triple));
@@ -144,25 +138,18 @@ fn download_cloudflared_binaries() {
     let bin_dir = Path::new("../bin");
     fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
 
-    // Determine the current target platform and download the appropriate binary
-    let (download_name, is_tgz, _binary_name) = if cfg!(target_os = "windows") {
-        ("cloudflared-windows-amd64.exe", false, "cloudflared.exe")
-    } else if cfg!(target_os = "macos") {
-        ("cloudflared-darwin-amd64.tgz", true, "cloudflared")
-    } else if cfg!(target_os = "linux") {
-        ("cloudflared-linux-amd64", false, "cloudflared")
+    // Get the target triple from Cargo's TARGET environment variable
+    let target = std::env::var("TARGET").expect("TARGET environment variable not set");
+    
+    // Determine the platform based on the target triple
+    let (download_name, is_tgz, target_triple) = if target.contains("windows") {
+        ("cloudflared-windows-amd64.exe", false, "x86_64-pc-windows-msvc.exe")
+    } else if target.contains("apple-darwin") || target.contains("macos") {
+        ("cloudflared-darwin-amd64.tgz", true, "x86_64-apple-darwin")
+    } else if target.contains("linux") {
+        ("cloudflared-linux-amd64", false, "x86_64-unknown-linux-gnu")
     } else {
-        panic!("Unsupported target platform");
-    };
-
-    let target_triple = if cfg!(target_os = "windows") {
-        "x86_64-pc-windows-msvc.exe"
-    } else if cfg!(target_os = "macos") {
-        "x86_64-apple-darwin"
-    } else if cfg!(target_os = "linux") {
-        "x86_64-unknown-linux-gnu"
-    } else {
-        panic!("Unsupported target platform");
+        panic!("Unsupported target platform: {}", target);
     };
 
     let target_path = bin_dir.join(format!("cloudflared-{}", target_triple));

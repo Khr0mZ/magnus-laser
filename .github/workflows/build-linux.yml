@@ -43,7 +43,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dir: ./client/Magnus-Laser/.npm
+          cache-dependency-path: client/Magnus-Laser/package-lock.json
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
