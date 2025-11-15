@@ -29,3 +29,4 @@ dist-ssr
 
 # Tauri generated files
 src-tauri/src/embedded_cloudflared.rs
+src-tauri/bin/*
