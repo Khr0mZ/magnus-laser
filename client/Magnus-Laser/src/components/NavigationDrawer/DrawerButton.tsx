@@ -41,7 +41,7 @@ const DrawerButton = ({ module }: DrawerButtonProps) => {
             size={'large'}
             onClick={active ? undefined : () => navigate(navigationPath)}
             sx={{
-                width: '50px',
+                width: '60px',
                 height: { xs: '23px', xl: '62px' },
                 boxSizing: 'content-box',
                 color: pickColor(navigationPath),

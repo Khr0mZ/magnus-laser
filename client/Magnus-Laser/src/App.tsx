@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import CustomScrollbar from './components/CustomScrollbar'
 import CyberpunkLoader from './components/CyberpunkLoader'
+import { GMToolsDrawer } from './components/GMTools'
 import NavigationDrawer from './components/NavigationDrawer/NavigationDrawer'
 import { DataProvider } from './contexts/DataContext'
 import { useData } from './contexts/dataHooks'
@@ -20,14 +21,17 @@ import { getDesignTokens } from './utils/theme'
 import BountyView from './views/Bounty/BountyView.tsx'
 import BuildingView from './views/Building/BuildingView'
 import CharacterView from './views/Character/CharacterView.tsx'
+import CharacterCreatorView from './views/CharacterCreator/CharacterCreatorView'
 import ClubView from './views/Club/ClubView.tsx'
 import CombatSimView from './views/CombatSim/CombatSimView.tsx'
 import Dashboard from './views/Dashboard/Dashboard'
+import EdgerunnersView from './views/Edgerunners/EdgerunnersView'
 import FixerJob from './views/FixerJob/FixerJobView'
 import GangView from './views/Gang/GangView'
 import ItemView from './views/Item/ItemView.tsx'
 import MapView from './views/Map/MapView.tsx'
 import SettingsView from './views/Settings/SettingsView'
+import SoloPlayView from './views/SoloPlay/SoloPlayView'
 
 const AppContent = () => {
     const { readerMode, loaderEnabled, isLoadingPreferences } = useUserPreferences()
@@ -139,6 +143,7 @@ const AppContent = () => {
             <SnackbarProvider maxSnack={5}>
                 <BrowserRouter>
                     <NavigationDrawer />
+                    <GMToolsDrawer />
                     <CustomScrollbar scrollDirection="vertical">
                         <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
                             <Routes>
@@ -152,6 +157,9 @@ const AppContent = () => {
                                 <Route path={NavigationPaths.CHARACTER} element={<CharacterView />} />
                                 <Route path={NavigationPaths.ITEM} element={<ItemView />} />
                                 <Route path={NavigationPaths.BUILDING} element={<BuildingView />} />
+                                <Route path={NavigationPaths.SOLO_PLAY} element={<SoloPlayView />} />
+                                <Route path={NavigationPaths.CHARACTER_CREATOR} element={<CharacterCreatorView />} />
+                                <Route path={NavigationPaths.EDGERUNNERS} element={<EdgerunnersView />} />
                                 <Route path={NavigationPaths.SETTINGS} element={<SettingsView />} />
                             </Routes>
                         </Suspense>

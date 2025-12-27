@@ -9,9 +9,12 @@ export enum ModuleTypes {
     CLUB = 'CLUB',
     ITEM = 'ITEM',
     CHARACTER = 'CHARACTER',
+    CHARACTER_CREATOR = 'CHARACTER_CREATOR',
+    EDGERUNNERS = 'EDGERUNNERS',
     MAP = 'MAP',
     SETTINGS = 'SETTINGS',
     COMBAT_SIM = 'COMBAT_SIM',
+    SOLO_PLAY = 'SOLO_PLAY',
 }
 
 // Bounty columns used in the bounty table view

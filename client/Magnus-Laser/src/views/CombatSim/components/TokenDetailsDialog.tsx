@@ -32,7 +32,30 @@ import { flicker, glitch, pulseGlowBlue, pulseGlowCyan } from '../../../componen
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import colors from '../../../utils/colors'
 import { TokenTooltip } from '../components/TokenTooltip'
+import { loadTokenModelPaths } from '../utils/modelAssets'
 import type { Image, StatsActions, Token } from '../utils/types'
+
+/* eslint-disable @typescript-eslint/no-namespace */
+declare global {
+    namespace JSX {
+        interface IntrinsicElements {
+            'model-viewer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+                src?: string
+                'camera-controls'?: boolean | ''
+                'disable-zoom'?: boolean | ''
+                'interaction-prompt'?: string
+                autoplay?: boolean | ''
+                exposure?: string
+                environmentImage?: string
+                poster?: string
+                'shadow-intensity'?: string
+                'camera-orbit'?: string
+                'auto-rotate'?: boolean | ''
+            }
+        }
+    }
+}
+/* eslint-enable @typescript-eslint/no-namespace */
 
 // Window button styles similar to WindowButtons component
 const windowButtonBaseStyle = {
@@ -248,6 +271,10 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
     const { readerMode } = useUserPreferences()
     const [editedToken, setEditedToken] = useState<Partial<Token>>()
     const [selectedImage, setSelectedImage] = useState<Image>()
+    const [modelOptions, setModelOptions] = useState<Array<{ value: string; label: string }>>([
+        { value: '', label: 'Aleatorio (por ID)' },
+    ])
+    const [modelViewerReady, setModelViewerReady] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [tokenColorAnchor, setTokenColorAnchor] = useState<HTMLElement | null>(null)
     const prevImagesLengthRef = useRef<number>(images.length)
@@ -352,6 +379,48 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
         }
         prevImagesLengthRef.current = images.length
     }, [images.length])
+
+    // Load model-viewer web component once for preview
+    useEffect(() => {
+        let mounted = true
+        const hasWindow = typeof window !== 'undefined'
+        const hasCustomElements = hasWindow && typeof window.customElements !== 'undefined'
+
+        if (hasWindow && hasCustomElements && !window.customElements.get('model-viewer')) {
+            const script = document.createElement('script')
+            script.type = 'module'
+            script.src = 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js'
+            script.onload = () => mounted && setModelViewerReady(true)
+            script.onerror = (err) => console.warn('TokenDetailsDialog: failed to load model-viewer', err)
+            document.head.appendChild(script)
+        } else if (hasWindow) {
+            setModelViewerReady(true)
+        }
+        return () => {
+            mounted = false
+        }
+    }, [])
+
+    useEffect(() => {
+        let mounted = true
+        loadTokenModelPaths()
+            .then((paths) => {
+                if (!mounted) return
+                const mapped = paths.map((f) => {
+                    const name = f.split('/').pop() || f
+                    const base = name.replace(/\.(glb|gltf)$/i, '')
+                    return { value: f, label: base }
+                })
+                setModelOptions([{ value: '', label: 'Aleatorio (por ID)' }, ...mapped])
+            })
+            .catch((err) => {
+                console.warn('TokenDetailsDialog: no token models loaded', err)
+                setModelOptions([{ value: '', label: 'Aleatorio (por ID)' }])
+            })
+        return () => {
+            mounted = false
+        }
+    }, [])
 
     // Optimized drag functionality with useCallback and requestAnimationFrame
     const handleMouseDown = useCallback(
@@ -1583,6 +1652,85 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                 />
                                             </IconButton>
                                         </Box>
+                                    </Box>
+                                </CyberpunkFormControl>
+                                <CyberpunkFormControl
+                                    readerMode={readerMode}
+                                    label={t('combatSim.tokenModel') ?? 'Modelo 3D'}
+                                    labelId="item-model-label"
+                                    labelSx={{
+                                        top: -25,
+                                        lineHeight: '1 !important',
+                                        py: '0 !important',
+                                    }}
+                                    sx={{ mt: 2 }}
+                                >
+                                    <Select
+                                        value={editedToken?.modelId ?? ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value as string
+                                            handleFieldChange('modelId', val === '' ? undefined : val)
+                                        }}
+                                        displayEmpty
+                                        sx={{
+                                            color: readerMode ? colors.grays.gray900 : colors.neons.cyan.default,
+                                            borderColor: readerMode ? undefined : colors.neons.cyan.default,
+                                            mb: 1,
+                                        }}
+                                    >
+                                        {modelOptions.map((opt) => (
+                                            <MenuItem key={opt.value || 'random'} value={opt.value}>
+                                                {opt.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    <Box
+                                        sx={{
+                                            mt: 1,
+                                            width: '100%',
+                                            aspectRatio: '1 / 1',
+                                            borderRadius: '4px',
+                                            border: `2px solid ${
+                                                readerMode ? colors.grays.gray800 : colors.neons.cyan.default + '80'
+                                            }`,
+                                            bgcolor: readerMode ? colors.grays.gray900 : 'rgba(0,0,0,0.6)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        {editedToken?.modelId && modelViewerReady ? (
+                                            <model-viewer
+                                                src={editedToken.modelId}
+                                                style={{ width: '100%', height: '100%' }}
+                                                camera-controls
+                                                disable-zoom
+                                                interaction-prompt="none"
+                                                autoplay
+                                                exposure="1"
+                                                shadow-intensity="0.5"
+                                                camera-orbit="0deg 65deg auto"
+                                                auto-rotate
+                                            />
+                                        ) : (
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: readerMode
+                                                        ? colors.grays.gray200
+                                                        : colors.neons.cyan.default,
+                                                    textTransform: 'uppercase',
+                                                    fontWeight: 600,
+                                                    fontSize: '14px',
+                                                    textAlign: 'center',
+                                                    px: 1,
+                                                }}
+                                            >
+                                                {modelOptions[0]?.label ?? 'Aleatorio'}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 </CyberpunkFormControl>
                             </Grid>

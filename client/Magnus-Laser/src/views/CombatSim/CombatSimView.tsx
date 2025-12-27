@@ -7,7 +7,7 @@ import useCombatSim from '@/views/CombatSim/useCombatSim'
 import usePixi from '@/views/CombatSim/usePixi'
 import { hexToPixi } from '@/views/CombatSim/utils/pixiUtils'
 import { Box, Container, Paper, Typography } from '@mui/material'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
@@ -16,11 +16,13 @@ import { ModuleTypes } from '../../utils/constants'
 import { db } from '../../utils/db'
 import TokenDetailsDialog from './components/TokenDetailsDialog'
 import PixiBoard from './componentsPixi/PixiBoard'
+import ThreeBoard from './componentsThree/ThreeBoard'
 import { Token } from './utils/types'
 
 const CombatSimView = () => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
+    const [view3D, setView3D] = useState(false)
     const {
         // MAP
         dimensions,
@@ -272,6 +274,8 @@ const CombatSimView = () => {
                 snapToGrid={snapToGrid}
                 onSnapToGridChange={onSnapToGridChange}
                 setDeleteMapDialogOpen={setDeleteMapDialogOpen}
+                view3D={view3D}
+                onView3DToggle={setView3D}
             />
             <Paper
                 sx={{
@@ -337,8 +341,77 @@ const CombatSimView = () => {
                     onBlastLock={onBlastLock}
                 />
 
-                {/* Pixi board */}
+                {/* Board - PixiJS (2D) or Three.js (3D) */}
                 <Box sx={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                    {view3D ? (
+                        <ThreeBoard
+                            width={dimensions.width}
+                            height={dimensions.height}
+                            gridSize={gridSize}
+                            snapToGrid={snapToGrid}
+                            isMeasuring={isMeasuring}
+                            isWallMode={isWallMode}
+                            wallDrawingShape={wallDrawingShape}
+                            mapKey={getActiveMapKey()}
+                            mapTexture={mapTexture}
+                            tokens={tokens}
+                            images={images}
+                            pixiOnTokenMove={pixiOnTokenMove}
+                            gridColor={hexToPixi(gridColorHex)}
+                            gridAlpha={gridAlpha}
+                            wallColor={hexToPixi(wallColorHex)}
+                            wallAlpha={wallAlpha}
+                            walls={walls}
+                            pixiOnWallDraw={pixiOnWallDraw}
+                            isErasingWalls={isErasingWalls}
+                            isCombatActive={isCombatActive}
+                            activeTokenId={activeTokenId}
+                            blasts={blasts}
+                            blastsNotInMap={blastsNotInMap}
+                            blastDrawMode={blastDrawMode}
+                            pixiOnBlastDrop={pixiOnBlastDrop}
+                            pixiOnBlastMove={pixiOnBlastMove}
+                            pixiOnBlastComplete={pixiOnBlastComplete}
+                            onBlastDelete={onBlastDelete}
+                            pixiReady={pixiReady}
+                            pixiSetReady={pixiSetReady}
+                            pixiHostReady={pixiHostReady}
+                            pixiSetHostReady={pixiSetHostReady}
+                            onOpenTokenDialog={onOpenTokenDialog}
+                            setDeleteTokenDialogOpen={setDeleteTokenDialogOpen}
+                            panelTokenOnDuplicate={panelTokenOnDuplicate}
+                            panelTokenOnCut={panelTokenOnCut}
+                            panelTokenOnCopy={panelTokenOnCopy}
+                            pixiOnTokenUpdate={pixiOnTokenUpdate}
+                            pixiOnTokenDrop={pixiOnTokenDrop}
+                            onMapDeleteAllTokens={() => setDeleteAllTokensDialogOpen(true)}
+                            onMapDeleteAllWalls={() => setDeleteAllWallsDialogOpen(true)}
+                            onMapDeleteAllBlasts={() => setDeleteAllBlastsDialogOpen(true)}
+                            pixiOnCutAllTokens={pixiOnCutAllTokens}
+                            pixiOnPasteToken={pixiOnPasteToken}
+                            pixiOnPasteBlast={pixiOnPasteBlast}
+                            tokenClipboard={tokenClipboard}
+                            blastClipboard={blastClipboard}
+                            pixiTokenContextMenuAnchor={pixiTokenContextMenuAnchor}
+                            pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
+                            pixiMapContextMenuAnchor={pixiMapContextMenuAnchor}
+                            pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
+                            pixiBlastContextMenuAnchor={pixiBlastContextMenuAnchor}
+                            pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
+                            pixiSelectedTokenId={pixiSelectedTokenId}
+                            pixiSetSelectedTokenId={pixiSetSelectedTokenId}
+                            pixiSelectedBlastId={pixiSelectedBlastId}
+                            pixiSetSelectedBlastId={pixiSetSelectedBlastId}
+                            onBlastCopy={onBlastCopy}
+                            onBlastCut={onBlastCut}
+                            onBlastLock={onBlastLock}
+                            onBlastpixiOnBlastUpdateConepdateCone={pixiOnBlastUpdateCone}
+                            onPendingCountChange={setPendingCount}
+                            pixiOnBindPendingControls={pixiOnBindPendingControls}
+                            pixiOnBindFit={pixiOnBindFit}
+                            isPlayerConnected={isPlayerConnected}
+                        />
+                    ) : (
                     <PixiBoard
                         pixiReady={pixiReady}
                         pixiSetReady={pixiSetReady}
@@ -407,6 +480,7 @@ const CombatSimView = () => {
                         onBlastLock={onBlastLock}
                         isPlayerConnected={isPlayerConnected}
                     />
+                    )}
                     {/* Debug info */}
                     {mapTexture && (
                         <Typography

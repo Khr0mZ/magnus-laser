@@ -17,6 +17,8 @@ export type Token = {
     imageId?: string
     owner?: string
     customRadius?: number
+    modelId?: string
+    orientationDeg?: number
 }
 
 export type Stats = {

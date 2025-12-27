@@ -1,5 +1,5 @@
 import { toAlphaHex } from '@/views/CombatSim/utils/pixiUtils'
-import { FindReplace, Upload } from '@mui/icons-material'
+import { FindReplace, Upload, ViewInAr, ViewModule } from '@mui/icons-material'
 import Close from '@mui/icons-material/Close'
 import { Box, Button, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
 import React, { Dispatch, SetStateAction, useMemo, useState } from 'react'
@@ -47,6 +47,8 @@ interface CombatSimHeaderProps {
     onSnapToGridChange: (value: boolean) => void
     setDeleteMapDialogOpen: Dispatch<SetStateAction<boolean>>
     isPlayerConnected: boolean
+    view3D: boolean
+    onView3DToggle: (value: boolean) => void
 }
 
 const CombatSimHeader = (props: CombatSimHeaderProps) => {
@@ -66,6 +68,8 @@ const CombatSimHeader = (props: CombatSimHeaderProps) => {
         onSnapToGridChange,
         setDeleteMapDialogOpen,
         isPlayerConnected,
+        view3D,
+        onView3DToggle,
     } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
@@ -270,6 +274,41 @@ const CombatSimHeader = (props: CombatSimHeaderProps) => {
                                 }
                                 label={t('combatSim.snapToGrid')}
                             />
+                            <Button
+                                onClick={() => onView3DToggle(!view3D)}
+                                sx={{
+                                    minWidth: '30px',
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '2px',
+                                    p: 0,
+                                    bgcolor: readerMode ? '#f5f5f5' : 'rgba(0, 40, 0, 0.4)',
+                                    color: readerMode ? '#2e7d32' : colors.neons.green.default,
+                                    border: readerMode
+                                        ? '1px solid #2e7d32'
+                                        : `1px solid ${colors.neons.green.default}60`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s',
+                                    position: 'relative',
+                                    fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                    fontWeight: 'bold',
+                                    '&:hover': readerMode
+                                        ? {
+                                              bgcolor: '#f0f0f0',
+                                              color: '#1b5e20',
+                                          }
+                                        : {
+                                              bgcolor: 'rgba(0, 60, 0, 0.6)',
+                                              color: colors.neons.green.light,
+                                              boxShadow: `0 0 8px ${colors.neons.green.default}80`,
+                                          },
+                                }}
+                                title={view3D ? t('combatSim.view2D') : t('combatSim.view3D')}
+                            >
+                                {view3D ? <ViewModule /> : <ViewInAr />}
+                            </Button>
                         </Stack>
                         <Button
                             onClick={() => {

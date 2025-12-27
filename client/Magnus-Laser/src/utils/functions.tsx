@@ -4,9 +4,12 @@ import {
     Check,
     Close,
     GpsFixed,
+    Groups,
     Groups3,
     Hub,
     Nightlife,
+    PersonAdd,
+    Psychology,
     SatelliteAlt,
     Settings,
     SportsMma,
@@ -69,6 +72,12 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
         return <SatelliteAlt sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.COMBAT_SIM)
         return <SportsMma sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
+    if (module === ModuleTypes.SOLO_PLAY)
+        return <Psychology sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
+    if (module === ModuleTypes.CHARACTER_CREATOR)
+        return <PersonAdd sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
+    if (module === ModuleTypes.EDGERUNNERS)
+        return <Groups sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     return <Badge sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
 }
 

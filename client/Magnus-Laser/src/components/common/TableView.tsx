@@ -42,10 +42,11 @@ type TableViewProps = {
     onEdit: (ID: string) => void
     filterDead?: boolean
     filterCaptured?: boolean
+    excludeColumns?: string[]
 }
 
 const TableView = (props: TableViewProps) => {
-    const { targetArray, onDelete, moduleType, onEdit, filterDead, filterCaptured } = props
+    const { targetArray, onDelete, moduleType, onEdit, filterDead, filterCaptured, excludeColumns = [] } = props
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
     const { buildings, gangs, characters, items } = useData()
@@ -220,7 +221,11 @@ const TableView = (props: TableViewProps) => {
                 break
         }
 
-        // For table view, show all columns without filtering
+        // Filter out excluded columns if specified
+        if (excludeColumns.length > 0) {
+            return baseColumns.filter((col) => !excludeColumns.includes(col.key))
+        }
+
         return baseColumns
     }
 
