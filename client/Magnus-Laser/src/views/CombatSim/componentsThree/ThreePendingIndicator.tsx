@@ -110,9 +110,9 @@ export function createThreePendingIndicator(props: ThreePendingIndicatorProps) {
         })
     }
 
-    // Always show buttons (matches request and Pixi default when local)
-    const showButtons = true
-    const showAcceptButton = true
+    // Match Pixi's logic: hide buttons for DM-triggered movements on players
+    const showButtons = !(props.fromRemotePlayer && props.isPlayerConnected === false)
+    const showAcceptButton = showButtons && props.isPlayerConnected !== false
 
     // Create label container
     const labelContainer = document.createElement('div')

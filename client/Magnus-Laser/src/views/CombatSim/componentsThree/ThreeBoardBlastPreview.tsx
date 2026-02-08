@@ -121,32 +121,29 @@ export function useBlastPreview(
             }
 
             case 'cone': {
-                // Calculate cone direction and fixed length
+                // Use the actual start→end direction and length
+                // (during rotation mode, previewEnd is already at the correct distance)
                 const dx = snappedEndX - startX
                 const dz = snappedEndZ - startZ
                 const distance = Math.sqrt(dx * dx + dz * dz)
                 const directionX = distance > 0 ? dx / distance : 1
                 const directionZ = distance > 0 ? dz / distance : 0
-                const fixedLength = 6 * gridSize
 
-                let previewEndX = startX + directionX * fixedLength
-                let previewEndZ = startZ + directionZ * fixedLength
-
-                // Snap endpoint to grid if enabled
-                if (snapToGrid) {
-                    previewEndX = Math.round(previewEndX / gridSize) * gridSize
-                    previewEndZ = Math.round(previewEndZ / gridSize) * gridSize
-                }
+                // Use actual distance between start and end as the cone length
+                const previewEndX = snappedEndX
+                const previewEndZ = snappedEndZ
 
                 const actualLength = Math.sqrt(
                     (previewEndX - startX) ** 2 + (previewEndZ - startZ) ** 2
                 )
 
                 previewMesh = createFallbackBlastModel('cone', actualLength, actualLength)
-                previewMesh.position.set(startX, 0.1, startZ)
+                // Match actual cone rendering: group positioned at endpoint (base/wide end),
+                // cone extends backward toward apex (narrow end)
+                previewMesh.position.set(previewEndX, 0.1, previewEndZ)
 
-                // Rotate cone to face direction
-                const angle = Math.atan2(directionZ, directionX)
+                // Rotation uses atan2(dx, dz) — matching ThreeBoard line 2209
+                const angle = Math.atan2(directionX, directionZ)
                 previewMesh.rotation.y = angle
 
                 // Make preview semi-transparent
@@ -178,7 +175,7 @@ export function useBlastPreview(
                 })
 
                 const lengthInGrids = (actualLength / gridSize).toFixed(1)
-                sizeText = `L=${lengthInGrids} (30ft)`
+                sizeText = `L=${lengthInGrids} (28°)`
                 labelPosition.set((startX + previewEndX) / 2, actualLength / 2 + 0.5, (startZ + previewEndZ) / 2)
                 break
             }

@@ -36,3 +36,6 @@ client/Magnus-Laser/bin/
 client/Magnus-Laser/public/models3d/tokens/
 
 referenceImages/
+
+# Claude
+.claude/
