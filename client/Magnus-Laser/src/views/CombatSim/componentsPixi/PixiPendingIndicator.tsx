@@ -36,6 +36,7 @@ export class PixiPendingIndicator extends Container {
     public startY: number
     public fromRemotePlayer: boolean
     private lastZoom: number = 1
+    private _rafId: number | null = null
 
     constructor(props: PixiPendingIndicatorProps) {
         super()
@@ -113,7 +114,7 @@ export class PixiPendingIndicator extends Container {
                 this.update()
             }
             if (!this.destroyed) {
-                requestAnimationFrame(checkZoom)
+                this._rafId = requestAnimationFrame(checkZoom)
             }
         }
         checkZoom()
@@ -346,6 +347,10 @@ export class PixiPendingIndicator extends Container {
         }
         if (this.parent) {
             this.parent.removeChild(this)
+        }
+        if (this._rafId !== null) {
+            cancelAnimationFrame(this._rafId)
+            this._rafId = null
         }
         super.destroy(options)
     }

@@ -52,6 +52,7 @@ export class PixiTooltip extends Container {
     private lastZoom: number
     private currentX: number
     private currentY: number
+    private _rafId: number | null = null
 
     constructor(props: PixiTooltipProps) {
         super()
@@ -110,7 +111,7 @@ export class PixiTooltip extends Container {
                 this.updatePositionFromStoredProps()
             }
             if (!this.destroyed) {
-                requestAnimationFrame(checkZoom)
+                this._rafId = requestAnimationFrame(checkZoom)
             }
         }
         checkZoom()
@@ -479,6 +480,11 @@ export class PixiTooltip extends Container {
         // Remove from viewport display list
         if (this.parent) {
             this.parent.removeChild(this)
+        }
+        // Cancel RAF polling
+        if (this._rafId !== null) {
+            cancelAnimationFrame(this._rafId)
+            this._rafId = null
         }
         // Remove zoom event listeners
         this.viewport.off('zoomed')

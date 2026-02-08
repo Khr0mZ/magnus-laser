@@ -24,6 +24,285 @@ export const ROLES: { value: Role; label: string; description: string }[] = [
     { value: 'NOMAD', label: 'Nomad', description: 'Road warriors and clan members who roam the highways in armored convoys.' },
 ]
 
+// === ROLE ABILITIES ===
+export const ROLE_ABILITIES: Record<Role, { name: string; description: string }> = {
+    ROCKERBOY: { name: 'Charismatic Impact', description: 'Influence others through sheer personality; affect larger groups and make greater requests as rank increases' },
+    SOLO: { name: 'Combat Awareness', description: 'Divide points among combat abilities when combat begins or as an Action' },
+    NETRUNNER: { name: 'Interface', description: 'Allows Netrunning with cyberdecks and access to hacking/system control abilities' },
+    TECH: { name: 'Maker', description: 'Fix, improve, modify, make, and invent items. Gain ranks in repairing, upgrading, fabricating, inventing' },
+    MEDTECH: { name: 'Medicine', description: 'Keep people alive with knowledge, tools, and training. Specialties: surgery, pharmaceuticals, cryosystems' },
+    MEDIA: { name: 'Credibility', description: 'Convince audiences of truth, reach larger audiences, access sources and information' },
+    LAWMAN: { name: 'Backup', description: 'Call upon fellow officers based on Rank and conditions' },
+    EXEC: { name: 'Teamwork', description: 'Build teams with visible and covert specialists' },
+    FIXER: { name: 'Operator', description: 'Navigate black markets, maintain contacts/clients, source goods/favors/information' },
+    NOMAD: { name: 'Moto', description: 'Vehicle combat and pack-related abilities' },
+}
+
+// === ROLE ABILITY RANK DETAILS (from Corebook) ===
+export const ROLE_ABILITY_RANK_DETAILS: Record<Role, {
+    mechanic: string
+    ranks: { range: string; minRank: number; maxRank: number; details: string[] }[]
+}> = {
+    ROCKERBOY: {
+        mechanic: 'Roll Charismatic Impact + 1d10. DV8: single fan, DV10: small group (up to 6), DV12: huge group.',
+        ranks: [
+            { range: '1-2', minRank: 1, maxRank: 2, details: [
+                'Venues: Small local clubs',
+                'Single fan: Small favor (buy drink, give lift)',
+                'Small group: Ask for autographs, fans stop you in streets',
+            ]},
+            { range: '3-4', minRank: 3, maxRank: 4, details: [
+                'Venues: Well-known clubs',
+                'Single fan: Major favor (go to bed, put in good word)',
+                'Small group: Hang out regularly, provide booze/drugs/party favors',
+                'Huge group: Strong local following, fans buy merch',
+            ]},
+            { range: '5-6', minRank: 5, maxRank: 6, details: [
+                'Venues: Large, important clubs',
+                'Single fan: Commit minor crime (shoplift, help in fight)',
+                'Small group: Act as personal "posse", do favors',
+                'Huge group: Fans all over City, strongly loyal',
+            ]},
+            { range: '7-8', minRank: 7, maxRank: 8, details: [
+                'Venues: Small concert halls, local video feed',
+                'Single fan: Risk their life without question',
+                'Small group: Commit minor crime',
+                'Huge group: Rabidly loyal, fight rival fans, support info networks',
+            ]},
+            { range: '9', minRank: 9, maxRank: 9, details: [
+                'Venues: Large concert halls, national video feed',
+                'Single fan: Commit major crime (steal, beat someone up)',
+                'Small group: Commit major crime',
+                'Huge group: Cult-like following, will riot/destroy/kill',
+            ]},
+            { range: '10', minRank: 10, maxRank: 10, details: [
+                'Venues: Huge stadiums, international video',
+                'Single fan: Sacrifice self without question',
+                'Small group: Risk their lives, act as personal protection',
+                'Huge group: Worldwide cult following, private army',
+            ]},
+        ],
+    },
+    SOLO: {
+        mechanic: 'Distribute Rank points among combat abilities. Reassign before combat, outside combat, or as an Action.',
+        ranks: [
+            { range: '1-10', minRank: 1, maxRank: 10, details: [
+                'Total points = Rank (distribute among abilities below)',
+                'Damage Deflection: 2/4/6/8/10 pts → reduce first damage by 1/2/3/4/5',
+                'Fumble Recovery: 4 pts → ignore critical failures on attacks',
+                'Initiative Reaction: 1 pt each → +1 to Initiative per point',
+                'Precision Attack: 3/6/9 pts → +1/+2/+3 to attacks',
+                'Spot Weakness: 1 pt each → +1 damage per point on first hit/round',
+                'Threat Detection: 1 pt each → +1 Perception per point',
+            ]},
+        ],
+    },
+    NETRUNNER: {
+        mechanic: 'NET Actions per turn scale with rank. Use Interface abilities to hack Architecture.',
+        ranks: [
+            { range: '1-3', minRank: 1, maxRank: 3, details: ['2 NET Actions per turn'] },
+            { range: '4-6', minRank: 4, maxRank: 6, details: ['3 NET Actions per turn'] },
+            { range: '7-9', minRank: 7, maxRank: 9, details: ['4 NET Actions per turn'] },
+            { range: '10', minRank: 10, maxRank: 10, details: ['5 NET Actions per turn'] },
+        ],
+    },
+    TECH: {
+        mechanic: 'Each rank grants 2 points in any two Maker Specialties. Roll: TECH + Skill + Rank + 1d10.',
+        ranks: [
+            { range: '1-10', minRank: 1, maxRank: 10, details: [
+                'Total specialty points = Rank × 2 (across 4 specialties)',
+                'Field Expertise: Add Rank to Tech Skill checks. Jury-rig repairs (10 min/Rank)',
+                'Upgrade Expertise: Improve items (lower HL, add slots, conceal, upgrade quality, +SP)',
+                'Fabrication Expertise: Create items for 1 price category less in materials',
+                'Invention Expertise: Invent new items/upgrades (GM assigns price, min Expensive)',
+                'DV: Cheap 9, Costly 13, Premium 17, Expensive 21, V.Expensive 24, Luxury+ 29',
+            ]},
+        ],
+    },
+    MEDTECH: {
+        mechanic: 'Each rank allocates 1 point to a specialty: Surgery, Pharmaceuticals (max 5), or Cryosystems (max 5).',
+        ranks: [
+            { range: '1-10', minRank: 1, maxRank: 10, details: [
+                'Surgery: Each point → +2 to Surgery Skill (exclusive to Medtechs)',
+                'Pharma (max 5): Each point → +1 Medical Tech & unlock 1 drug type',
+                '  Drugs: Antibiotic (+2 HP/day), Rapidetox, Speedheal (BODY+WILL HP), Stim (ignore wounds 1h), Surge (no sleep 24h)',
+                'Cryo (max 5): Each point → +1 Medical Tech & cryo equipment',
+                '  Lvl 1: Cryopump | Lvl 2: Tank access | Lvl 3: Personal tank | Lvl 4-5: More tanks + charges',
+            ]},
+        ],
+    },
+    MEDIA: {
+        mechanic: 'Passive rumors 2x/week (Rank + 1d10 vs DV). Publish stories to affect change. Believability roll: 1d10.',
+        ranks: [
+            { range: '1-2', minRank: 1, maxRank: 2, details: [
+                'Sources: Local honcho, gang lord, neighborhood leadership',
+                'Audience: Immediate neighborhood',
+                'Believability: 2 in 10 (+ evidence bonuses)',
+                'Impact: Incremental; small-time bad guys may change',
+            ]},
+            { range: '3-4', minRank: 3, maxRank: 4, details: [
+                'Sources: City gang honcho, minor politician, Corp Exec',
+                'Audience: Well-known on local screamsheet/Data Pool',
+                'Believability: 3 in 10',
+                'Impact: Direct; local bad guys arrested, justice served',
+            ]},
+            { range: '5-6', minRank: 5, maxRank: 6, details: [
+                'Sources: Major City player, City politico, local celebrity',
+                'Audience: Citywide; regular media contributor',
+                'Believability: 4 in 10',
+                'Impact: City-wide changes; higher-level criminals jailed, local laws passed',
+            ]},
+            { range: '7-8', minRank: 7, maxRank: 8, details: [
+                'Sources: Local Corp president, mayor, City celebrity',
+                'Audience: Statewide; minor celebrity',
+                'Believability: 5 in 10',
+                'Impact: Multi-city; mid-level corps/govts overthrown',
+            ]},
+            { range: '9', minRank: 9, maxRank: 9, details: [
+                'Sources: Divisional Corp head, State politico, well-known celebrity',
+                'Audience: National newsfeed',
+                'Believability: 6 in 10',
+                'Impact: National; large corps/govts toppled',
+            ]},
+            { range: '10', minRank: 10, maxRank: 10, details: [
+                'Sources: Major world leader, major Corp head, world-famous celebrity',
+                'Audience: Worldwide; people ask for autographs',
+                'Believability: 7 in 10',
+                'Impact: Worldwide; Megacorps fall, international laws, millions affected',
+            ]},
+        ],
+    },
+    LAWMAN: {
+        mechanic: 'As Action, roll d10 ≤ Backup Rank to get response. Roll 1d6 for arrival (rounds). Rolling 6 upgrades tier.',
+        ranks: [
+            { range: '1-2', minRank: 1, maxRank: 2, details: [
+                'Corporate Security: 4 rent-a-cops on foot',
+                'Combat 8 | SP 7 | HP 20 | Heavy Pistols, Kevlar',
+            ]},
+            { range: '3-4', minRank: 3, maxRank: 4, details: [
+                'Local Beat Cops: 4 cops in 2 Groundcars',
+                'Combat 10 | SP 7 | HP 25 | Heavy Pistols, Kevlar',
+            ]},
+            { range: '5-7', minRank: 5, maxRank: 7, details: [
+                "Sheriff's Dept: 2 County Mounties in High-Performance Groundcar",
+                'Combat 14 | SP 13 | HP 35 | Heavy Pistols, Assault Rifles, Heavy Armorjack',
+            ]},
+            { range: '8', minRank: 8, maxRank: 8, details: [
+                'Recovery Zone Marshal: 1 lone Lawman on Superbike',
+                'Combat 16 | SP 15 | HP 50 | V.Heavy Pistol, Assault Rifle, Grenade Launcher, Flak',
+            ]},
+            { range: '9', minRank: 9, maxRank: 9, details: [
+                'C-SWAT (Psycho Squad): 2 heavy hitters via AV-4',
+                'Combat 15 | SP 18 | HP 35 | Assault Rifles, Rocket Launchers, Metalgear',
+            ]},
+            { range: '10', minRank: 10, maxRank: 10, details: [
+                'National Law / Interpol / FBI / Netwatch: 2 agents via AV-4',
+                'Combat 14 | SP 11 | HP 35 | V.Heavy Pistols, Assault Rifles, Light Armorjack',
+                'Same 2 agents follow case. Can use Combat # for investigative skills.',
+            ]},
+        ],
+    },
+    EXEC: {
+        mechanic: 'Build a team of specialists. Track team Loyalty (0-10). Loyalty Save: GM rolls 1d6 < Loyalty.',
+        ranks: [
+            { range: '1', minRank: 1, maxRank: 1, details: [
+                'Signing Bonus: Gifted businesswear suit (jacket, top, bottom, footwear)',
+            ]},
+            { range: '2', minRank: 2, maxRank: 2, details: [
+                'Corporate Housing: Corporate Conapt (free rent/fees)',
+            ]},
+            { range: '3', minRank: 3, maxRank: 3, details: [
+                '1 Team Member (Bodyguard, Covert Op, Driver, Netrunner, or Technician)',
+                'Starting Loyalty: 1d6 + 1',
+            ]},
+            { range: '5', minRank: 5, maxRank: 5, details: [
+                '+1 Team Member (2 total)',
+            ]},
+            { range: '6', minRank: 6, maxRank: 6, details: [
+                'Corporate Health Insurance: Trauma Team Silver',
+            ]},
+            { range: '7', minRank: 7, maxRank: 7, details: [
+                'Housing Upgrade: Beaverville House in Executive Zone',
+            ]},
+            { range: '8', minRank: 8, maxRank: 8, details: [
+                'Insurance Upgrade: Trauma Team Executive',
+            ]},
+            { range: '9', minRank: 9, maxRank: 9, details: [
+                '+1 Team Member (3 total max)',
+            ]},
+            { range: '10', minRank: 10, maxRank: 10, details: [
+                'Housing Upgrade: Beaverville McMansion or Luxury Penthouse',
+            ]},
+        ],
+    },
+    FIXER: {
+        mechanic: 'Navigate black markets. Haggle: COOL + Trading + Rank + 1d10 vs target. Grease: blend into cultures.',
+        ranks: [
+            { range: '1-2', minRank: 1, maxRank: 2, details: [
+                'Contacts: Local honcho, gang lord, neighborhood leadership',
+                'Reach: Cheap & Everyday items (even if unavailable elsewhere)',
+                'Haggle: 10% more/less than market price',
+                'Grease: Know immediate neighborhood & all local gangs',
+            ]},
+            { range: '3-4', minRank: 3, maxRank: 4, details: [
+                'Contacts: City gang honcho, minor politician, Corp Exec',
+                'Reach: Up to Expensive items',
+                'Haggle: Buy 5+ same item = get 1 free',
+                'Grease: +1 culture (1 language at Skill 4)',
+            ]},
+            { range: '5-6', minRank: 5, maxRank: 6, details: [
+                'Contacts: Major City player, City politico, neighborhood celebrity',
+                'Reach: Up to Super Luxury (1x/month via Night Market)',
+                'Haggle: Negotiate job pay +20%',
+                'Grease: +2 cultures (3 total, languages at Skill 4)',
+            ]},
+            { range: '7-8', minRank: 7, maxRank: 8, details: [
+                'Contacts: Local Corp president, mayor, local celebrity',
+                'Reach: Up to Very Expensive items',
+                'Haggle: Luxury/Super Luxury pay half now, half in 1 month',
+                'Grease: +3 cultures (6 total, languages at Skill 4)',
+            ]},
+            { range: '9', minRank: 9, maxRank: 9, details: [
+                'Contacts: Divisional Corp head, state politico, well-known celebrity',
+                'Reach: Up to Luxury items; can set up Midnight Market',
+                'Haggle: 20% more/less than market price',
+                'Grease: Blend with corps/government agencies',
+            ]},
+            { range: '10', minRank: 10, maxRank: 10, details: [
+                'Contacts: Major world leader, major Corp head, world-famous celebrity',
+                'Reach: Up to Super Luxury items',
+                'Haggle: Double pay per person for Dangerous Jobs',
+                'Grease: Blend seamlessly with any group (secret societies, cults, exclusive clubs)',
+            ]},
+        ],
+    },
+    NOMAD: {
+        mechanic: 'Add Moto Rank to Drive/Pilot/Vehicle Tech checks. Each rank: add vehicle OR upgrade existing one.',
+        ranks: [
+            { range: '1-4', minRank: 1, maxRank: 4, details: [
+                'Vehicles: Compact Groundcar, Gyrocopter, Jetski, Roadbike',
+                'Upgrades (Rank 1): Bulletproof Glass, Comms, NOS, Flamethrower, MG, Seating, Smuggling, Heavy Chassis, Melee, Spike Strip, Combat Plow, Housing',
+            ]},
+            { range: '5-6', minRank: 5, maxRank: 6, details: [
+                'Vehicles: +Helicopter, High Performance Groundcar, Speedboat',
+                'Upgrades (Rank 5): Armored Chassis (SP13), Security, Heavy Weapon Mount, Hover, Rocket Pod',
+            ]},
+            { range: '7-8', minRank: 7, maxRank: 8, details: [
+                'Vehicles: +AV-4, Cabin Cruiser, Superbike',
+                'Upgrades (Rank 7): AV-4 Engine (land vehicle gains flight)',
+            ]},
+            { range: '9', minRank: 9, maxRank: 9, details: [
+                'Vehicles: +Aerozep, AV-9, Super Groundcar, Yacht',
+            ]},
+            { range: '10', minRank: 10, maxRank: 10, details: [
+                'Promoted to Family leadership',
+                'All Family vehicles can be out simultaneously',
+                'Future vehicles at market price, upgrades 1,000eb each',
+            ]},
+        ],
+    },
+}
+
 // === STAT TEMPLATES (for Streetrat method) ===
 // Each role has 10 pre-generated stat arrays (roll 1d10)
 
@@ -685,6 +964,19 @@ export const FEELINGS_ABOUT_PEOPLE = [
     { roll: 10, feeling: 'People are wonderful!' },
 ]
 
+export const VALUED_PERSONS = [
+    { roll: 1, person: 'A parent' },
+    { roll: 2, person: 'A brother or sister' },
+    { roll: 3, person: 'A lover' },
+    { roll: 4, person: 'A friend' },
+    { roll: 5, person: 'Yourself' },
+    { roll: 6, person: 'A pet' },
+    { roll: 7, person: 'A teacher or mentor' },
+    { roll: 8, person: 'A public figure' },
+    { roll: 9, person: 'A personal hero' },
+    { roll: 10, person: 'No one' },
+]
+
 export const VALUED_POSSESSIONS = [
     { roll: 1, possession: 'A weapon' },
     { roll: 2, possession: 'A tool' },
@@ -750,6 +1042,86 @@ export const LIFE_GOALS = [
     { roll: 10, goal: 'Acquire the best of the best in everything' },
 ]
 
+// === LIFE EVENTS SUB-TABLES ===
+
+export const FRIEND_TYPES = [
+    { roll: 1, relationship: 'Like an older sibling to you' },
+    { roll: 2, relationship: 'Like a younger sibling to you' },
+    { roll: 3, relationship: 'A teacher or mentor' },
+    { roll: 4, relationship: 'A partner or coworker' },
+    { roll: 5, relationship: 'A former lover' },
+    { roll: 6, relationship: 'An old enemy' },
+    { roll: 7, relationship: 'Like a parent to you' },
+    { roll: 8, relationship: 'An old childhood friend' },
+    { roll: 9, relationship: 'Someone you know from The Street' },
+    { roll: 10, relationship: 'Someone with a common interest or goal' },
+]
+
+export const ENEMY_TYPES = [
+    { roll: 1, who: 'Ex-friend' },
+    { roll: 2, who: 'Ex-lover' },
+    { roll: 3, who: 'Estranged relative' },
+    { roll: 4, who: 'Childhood enemy' },
+    { roll: 5, who: 'Person working for you' },
+    { roll: 6, who: 'Person you work for' },
+    { roll: 7, who: 'Partner or coworker' },
+    { roll: 8, who: 'Corporate exec' },
+    { roll: 9, who: 'Government official' },
+    { roll: 10, who: 'Boosterganger' },
+]
+
+export const ENEMY_CAUSES = [
+    { roll: 1, cause: 'Caused the other to lose face or status' },
+    { roll: 2, cause: 'Caused the loss of a lover, friend, or relative' },
+    { roll: 3, cause: 'Caused a major public humiliation' },
+    { roll: 4, cause: 'Accused the other of cowardice or a major flaw' },
+    { roll: 5, cause: 'Deserted or betrayed the other' },
+    { roll: 6, cause: 'Turned down the other\'s offer of job or romance' },
+    { roll: 7, cause: 'You just don\'t like each other' },
+    { roll: 8, cause: 'One of you was a romantic rival' },
+    { roll: 9, cause: 'One of you was a business rival' },
+    { roll: 10, cause: 'One of you set the other up for a crime' },
+]
+
+export const ENEMY_RESOURCES = [
+    { roll: 1, resources: 'Just themselves and even they won\'t go out of their way' },
+    { roll: 2, resources: 'Just themselves' },
+    { roll: 3, resources: 'Themselves and a close friend' },
+    { roll: 4, resources: 'Themselves and a few friends' },
+    { roll: 5, resources: 'Themselves and a small group' },
+    { roll: 6, resources: 'An entire gang (at least 15 people)' },
+    { roll: 7, resources: 'The local cops or other Lawmen' },
+    { roll: 8, resources: 'A powerful gang lord or small Corporation' },
+    { roll: 9, resources: 'A powerful Corporation' },
+    { roll: 10, resources: 'An entire city, government, or agency' },
+]
+
+export const SWEET_REVENGE = [
+    { roll: 1, action: 'Avoid the scum' },
+    { roll: 2, action: 'Avoid the scum' },
+    { roll: 3, action: 'Go into a murderous rage and try to rip their face off' },
+    { roll: 4, action: 'Go into a murderous rage and try to rip their face off' },
+    { roll: 5, action: 'Backstab them indirectly' },
+    { roll: 6, action: 'Backstab them indirectly' },
+    { roll: 7, action: 'Verbally attack them' },
+    { roll: 8, action: 'Verbally attack them' },
+    { roll: 9, action: 'Set them up for a crime they didn\'t commit' },
+    { roll: 10, action: 'Set out to murder or maim them' },
+]
+
+export const TRAGIC_LOVE_AFFAIRS = [
+    { roll: 1, outcome: 'Your lover died in an accident' },
+    { roll: 2, outcome: 'Your lover mysteriously vanished' },
+    { roll: 3, outcome: 'It just didn\'t work out' },
+    { roll: 4, outcome: 'A personal goal or vendetta came between you' },
+    { roll: 5, outcome: 'Your lover was kidnapped' },
+    { roll: 6, outcome: 'Your lover went insane or cyberpsycho' },
+    { roll: 7, outcome: 'Your lover committed suicide' },
+    { roll: 8, outcome: 'Your lover was killed in a fight' },
+    { roll: 9, outcome: 'A rival cut you out of the action' },
+    { roll: 10, outcome: 'Your lover is imprisoned or exiled' },
+]
+
 // === SHOPPING CATALOGS (for Complete Package) ===
 
 // Price Categories: Cheap (10eb), Everyday (20eb), Costly (50eb), Premium (100eb), 
@@ -786,6 +1158,21 @@ export const SHOP_WEAPONS: ShopWeapon[] = [
     // Heavy Weapons
     { name: 'Grenade Launcher', type: 'Heavy', damage: '6d6', rof: 1, cost: 500, skill: 'Heavy Weapons' },
     { name: 'Rocket Launcher', type: 'Heavy', damage: '8d6', rof: 1, cost: 500, skill: 'Heavy Weapons' },
+    // Exotic Weapons
+    { name: 'Air Pistol', type: 'Exotic Pistol', damage: '0', rof: 2, cost: 100, skill: 'Handgun' },
+    { name: 'Stun Baton', type: 'Exotic Melee', damage: '2d6 (non-lethal)', rof: 2, cost: 100, skill: 'Melee Weapon' },
+    { name: 'Stun Gun', type: 'Exotic Pistol', damage: '3d6 (non-lethal)', rof: 2, cost: 100, skill: 'Handgun' },
+    { name: 'Dartgun', type: 'Exotic Pistol', damage: '0 (poison ammo)', rof: 1, cost: 100, skill: 'Handgun' },
+    { name: 'Microwaver', type: 'Exotic Pistol', damage: '0 (EMP effect)', rof: 1, cost: 500, skill: 'Handgun' },
+    { name: 'Shrieker', type: 'Exotic Pistol', damage: '0 (deafen)', rof: 1, cost: 500, skill: 'Handgun' },
+    { name: 'Flamethrower', type: 'Exotic Shotgun', damage: '5d6 (fire)', rof: 2, cost: 500, skill: 'Heavy Weapons' },
+    { name: 'Battleglove', type: 'Exotic Melee', damage: 'varies', rof: 2, cost: 1000, skill: 'Melee Weapon' },
+    { name: 'Kendachi Mono-Three', type: 'Exotic VH Melee', damage: '4d6', rof: 1, cost: 5000, skill: 'Melee Weapon' },
+    { name: 'Malorian Arms 3516', type: 'Exotic VH Pistol', damage: '5d6', rof: 1, cost: 10000, skill: 'Handgun' },
+    { name: 'Constitution Arms Hurricane', type: 'Exotic Shotgun', damage: '5d6', rof: 2, cost: 5000, skill: 'Shoulder Arms' },
+    { name: 'Militech Cowboy U-56', type: 'Exotic Grenade Launcher', damage: '6d6', rof: 2, cost: 5000, skill: 'Heavy Weapons' },
+    { name: 'Rhinemetall EMG-86 Railgun', type: 'Exotic Rifle', damage: '5d6 (ignores SP<11)', rof: 1, cost: 5000, skill: 'Heavy Weapons' },
+    { name: 'Tsunami Arms Helix', type: 'Exotic Rifle', damage: '2d6 (autofire only)', rof: 1, cost: 5000, skill: 'Autofire' },
 ]
 
 export interface ShopArmor {
@@ -862,6 +1249,56 @@ export const SHOP_GEAR: ShopGear[] = [
     { name: 'Frag Grenade', category: 'Grenades', description: '6d6 damage, 5m radius', cost: 100 },
     { name: 'Incendiary Grenade', category: 'Grenades', description: 'Fire damage, 5m radius', cost: 100 },
     { name: 'EMP Grenade', category: 'Grenades', description: 'Disables electronics', cost: 500 },
+    // Additional Tech Gear
+    { name: 'Techtool', category: 'Tech', description: 'All-in-one multitool with electrical parts, heat torch, prybars', cost: 100 },
+    { name: 'Lock Picking Set', category: 'Tech', description: 'Tools for cracking mechanical locks', cost: 20 },
+    { name: 'Techscanner', category: 'Tech', description: '+2 to all Tech skills (does not stack)', cost: 1000 },
+    { name: 'Medscanner', category: 'Medical', description: '+2 First Aid and Paramedic (does not stack)', cost: 1000 },
+    { name: 'Smart Glasses', category: 'Tech', description: '2 Cybereye option slots, always count as paired', cost: 500 },
+    { name: 'Virtuality Goggles', category: 'Tech', description: 'Projects cyberspace imagery over real world. For Netrunners', cost: 100 },
+    { name: 'Braindance Viewer', category: 'Tech', description: 'View braindance sensory recordings', cost: 1000 },
+    { name: 'Memory Chip', category: 'Tech', description: 'Thin data storage wafer', cost: 10 },
+    { name: 'Video Camera', category: 'Tech', description: 'Records 12 hours video+audio to Memory Chip', cost: 100 },
+    { name: 'Audio Recorder', category: 'Tech', description: 'Records 24 hours audio to Memory Chip', cost: 100 },
+    { name: 'Radio Scanner/Music Player', category: 'Tech', description: 'Scan radio bands 1 mile; play music', cost: 50 },
+    { name: 'Scrambler/Descrambler', category: 'Tech', description: 'Scramble outgoing communications', cost: 500 },
+    { name: 'Bug Detector', category: 'Tech', description: 'Beeps within 2m of listening device', cost: 500 },
+    { name: 'Homing Tracer', category: 'Tech', description: 'Track beacon up to 1 mile; includes button tracer', cost: 500 },
+    { name: 'Radar Detector', category: 'Tech', description: 'Beeps if active radar within 100m', cost: 500 },
+    { name: 'Pocket Amplifier', category: 'Tech', description: 'Sound up to 100m for 6 hours, supports 2 instruments', cost: 50 },
+    // Instruments
+    { name: 'Electric Guitar/Instrument', category: 'Entertainment', description: 'Electric instrument, needs amplification', cost: 500 },
+    { name: 'Drum Synthesizer', category: 'Entertainment', description: 'Flat pads simulating any drum type', cost: 500 },
+    // Survival Gear
+    { name: 'Road Flare', category: 'Survival', description: 'Lights 100m area for 1 hour, one use', cost: 10 },
+    { name: 'Duct Tape', category: 'Survival', description: 'Many colors, glow-in-the-dark available', cost: 20 },
+    { name: 'Glow Paint', category: 'Survival', description: 'Glow-in-the-dark spray paint', cost: 20 },
+    { name: 'Glow Stick', category: 'Survival', description: 'Illuminates 4m for 10 hours, one use', cost: 10 },
+    { name: 'Anti-Smog Breathing Mask', category: 'Survival', description: 'Immune to toxic gasses and inhaled dangers', cost: 20 },
+    { name: 'Radiation Suit', category: 'Survival', description: 'Full body protection from radiation', cost: 1000 },
+    // Food
+    { name: 'Food Stick', category: 'Food', description: 'Grainy dried food bar, one meal', cost: 10 },
+    { name: 'Kibble Pack', category: 'Food', description: 'Dry cereal/wafer pack, one meal', cost: 10 },
+    { name: 'MRE', category: 'Food', description: 'Self-heating meal, add water, 2 min hot meal', cost: 10 },
+    // Defense
+    { name: 'Auto Level Dampening Ear Protectors', category: 'Personal', description: 'Immune to deafness from loud sounds', cost: 1000 },
+    // Chemical
+    { name: 'Vial of Poison', category: 'Chemical', description: 'On Light Melee 30 min: DV13 Resist or 2d6 dmg ignoring armor', cost: 100 },
+    { name: 'Vial of Biotoxin', category: 'Chemical', description: 'On Light Melee 30 min: DV15 Resist or 3d6 dmg ignoring armor', cost: 500 },
+    // Special Ammunition
+    { name: 'Armor-Piercing Ammo (x10)', category: 'Ammo', description: 'Halves armor SP (round down)', cost: 100 },
+    { name: 'Incendiary Ammo (x10)', category: 'Ammo', description: 'Sets target on fire on hit', cost: 100 },
+    { name: 'Rubber Ammo (x10)', category: 'Ammo', description: 'Non-lethal ammunition', cost: 10 },
+    { name: 'Biotoxin Ammo (x10)', category: 'Ammo', description: 'DV15 Resist or 3d6 damage ignoring armor', cost: 500 },
+    { name: 'Poison Ammo (x10)', category: 'Ammo', description: 'DV13 Resist or 2d6 damage ignoring armor', cost: 100 },
+    { name: 'Expansive Ammo (x10)', category: 'Ammo', description: '+1 damage die but does not ablate armor', cost: 100 },
+    { name: 'Smart Ammo (x10)', category: 'Ammo', description: 'For Smartgun Link; user fires around cover', cost: 100 },
+    { name: 'Grenade (Frag)', category: 'Ammo', description: 'For Grenade Launcher, 6d6 damage', cost: 100 },
+    { name: 'Grenade (Smoke)', category: 'Ammo', description: 'For Grenade Launcher, creates smoke cover', cost: 50 },
+    { name: 'Grenade (Flashbang)', category: 'Ammo', description: 'For Grenade Launcher, blinds and deafens', cost: 100 },
+    { name: 'Grenade (Teargas)', category: 'Ammo', description: 'For Grenade Launcher, chemical irritant', cost: 50 },
+    { name: 'Grenade (Incendiary)', category: 'Ammo', description: 'For Grenade Launcher, fire damage', cost: 100 },
+    { name: 'Grenade (EMP)', category: 'Ammo', description: 'For Grenade Launcher, disables electronics', cost: 500 },
 ]
 
 export interface ShopCyberware {
@@ -872,6 +1309,13 @@ export interface ShopCyberware {
     cost: number
     install: 'Mall' | 'Clinic' | 'Hospital'
     prerequisite?: string
+    prerequisiteCount?: number // How many of the prerequisite are needed (default 1)
+    requiresStat?: { stat: 'BODY' | 'REF' | 'INT'; min: number } // Stat requirement
+    unique?: boolean  // Only one allowed per character
+    maxSlots?: number  // For foundations: how many option slots they provide
+    slotsUsed?: number // How many slots this option uses (default 1)
+    bodyBonus?: number     // Added to BODY stat (e.g., Grafted Muscle/Bone Lace +2)
+    bodyOverride?: number  // Sets BODY to this value (e.g., Linear Frames set to 12/14)
 }
 
 export const SHOP_CYBERWARE: ShopCyberware[] = [
@@ -885,7 +1329,7 @@ export const SHOP_CYBERWARE: ShopCyberware[] = [
     { name: 'Techhair', type: 'Fashionware', description: 'Color-changing artificial hair', humanityLoss: 0, cost: 100, install: 'Mall' },
     
     // Neuralware
-    { name: 'Neural Link', type: 'Neuralware', description: 'Foundational: 5 slots, required for neuralware', humanityLoss: 7, cost: 500, install: 'Clinic' },
+    { name: 'Neural Link', type: 'Neuralware', description: 'Foundational: 5 slots, required for neuralware', humanityLoss: 7, cost: 500, install: 'Clinic', maxSlots: 5 },
     { name: 'Braindance Recorder', type: 'Neuralware', description: 'Record experiences to chip', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Neural Link' },
     { name: 'Chipware Socket', type: 'Neuralware', description: 'Required for chipware', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Neural Link' },
     { name: 'Interface Plugs', type: 'Neuralware', description: 'Connect to machines', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Neural Link' },
@@ -893,9 +1337,13 @@ export const SHOP_CYBERWARE: ShopCyberware[] = [
     { name: 'Sandevistan', type: 'Neuralware', description: 'Speedware: +3 Initiative (activated)', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Neural Link' },
     { name: 'Skill Chip', type: 'Neuralware', description: 'Skill at Level 3', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Chipware Socket' },
     { name: 'Pain Editor', type: 'Neuralware', description: 'Ignore Seriously Wounded penalty', humanityLoss: 14, cost: 1000, install: 'Clinic', prerequisite: 'Chipware Socket' },
+    { name: 'Chemical Analyzer', type: 'Neuralware', description: 'Chipware. Identify precise chemical composition of substances as an Action', humanityLoss: 3, cost: 500, install: 'Mall', prerequisite: 'Chipware Socket' },
+    { name: 'Memory Chip', type: 'Neuralware', description: 'Chipware. Data storage for cyberware', humanityLoss: 0, cost: 10, install: 'Mall', prerequisite: 'Chipware Socket' },
+    { name: 'Olfactory Boost', type: 'Neuralware', description: 'Chipware. Enhanced smell; use Tracking to track by scent', humanityLoss: 7, cost: 100, install: 'Mall', prerequisite: 'Chipware Socket' },
+    { name: 'Tactile Boost', type: 'Neuralware', description: 'Chipware. Detect motion within 20m via touch on surface', humanityLoss: 7, cost: 100, install: 'Mall', prerequisite: 'Chipware Socket' },
     
     // Cyberoptics
-    { name: 'Cybereye', type: 'Cyberoptics', description: 'Foundational: 3 slots per eye', humanityLoss: 7, cost: 100, install: 'Clinic' },
+    { name: 'Cybereye', type: 'Cyberoptics', description: 'Foundational: 3 slots per eye', humanityLoss: 7, cost: 100, install: 'Clinic', maxSlots: 3 },
     { name: 'Anti-Dazzle', type: 'Cyberoptics', description: 'Immune to flash effects', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cybereye' },
     { name: 'Chyron', type: 'Cyberoptics', description: 'HUD display', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cybereye' },
     { name: 'Image Enhance', type: 'Cyberoptics', description: '+2 Perception, Lip Reading, Conceal', humanityLoss: 3, cost: 500, install: 'Mall', prerequisite: 'Cybereye' },
@@ -903,9 +1351,14 @@ export const SHOP_CYBERWARE: ShopCyberware[] = [
     { name: 'MicroOptics', type: 'Cyberoptics', description: '400x magnification', humanityLoss: 2, cost: 100, install: 'Clinic', prerequisite: 'Cybereye' },
     { name: 'Targeting Scope', type: 'Cyberoptics', description: '+1 Aimed Shot', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cybereye' },
     { name: 'TeleOptics', type: 'Cyberoptics', description: 'See 800m away', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cybereye' },
+    { name: 'Color Shift', type: 'Cyberoptics', description: 'Unlimited color/pattern changes to eye', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cybereye' },
+    { name: 'Dartgun (Eye)', type: 'Cyberoptics', description: 'Single-shot dartgun in eye. Takes 3 option slots', humanityLoss: 2, cost: 500, install: 'Clinic', prerequisite: 'Cybereye', slotsUsed: 3 },
+    { name: 'MicroVideo', type: 'Cyberoptics', description: 'Camera records video+audio to Memory Chip. Takes 2 slots', humanityLoss: 2, cost: 500, install: 'Clinic', prerequisite: 'Cybereye', slotsUsed: 2 },
+    { name: 'Radiation Detector', type: 'Cyberoptics', description: 'See radiation sources within 100m as blue glow', humanityLoss: 3, cost: 1000, install: 'Clinic', prerequisite: 'Cybereye' },
+    { name: 'Virtuality', type: 'Cyberoptics', description: 'Projects cyberspace imagery over real world. Requires two Cybereyes', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cybereye', prerequisiteCount: 2 },
     
     // Cyberaudio
-    { name: 'Cyberaudio Suite', type: 'Cyberaudio', description: 'Foundational: 3 slots', humanityLoss: 7, cost: 500, install: 'Clinic' },
+    { name: 'Cyberaudio Suite', type: 'Cyberaudio', description: 'Foundational: 3 slots', humanityLoss: 7, cost: 500, install: 'Clinic', maxSlots: 3 },
     { name: 'Amplified Hearing', type: 'Cyberaudio', description: '+2 hearing Perception', humanityLoss: 3, cost: 100, install: 'Mall', prerequisite: 'Cyberaudio Suite' },
     { name: 'Audio Recorder', type: 'Cyberaudio', description: 'Record audio', humanityLoss: 2, cost: 100, install: 'Clinic', prerequisite: 'Cyberaudio Suite' },
     { name: 'Bug Detector', type: 'Cyberaudio', description: 'Detect surveillance', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cyberaudio Suite' },
@@ -915,6 +1368,8 @@ export const SHOP_CYBERWARE: ShopCyberware[] = [
     { name: 'Radio Communicator', type: 'Cyberaudio', description: 'Built-in radio', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cyberaudio Suite' },
     { name: 'Scrambler/Descrambler', type: 'Cyberaudio', description: 'Encrypt/decrypt comms', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cyberaudio Suite' },
     { name: 'Voice Stress Analyzer', type: 'Cyberaudio', description: 'Detect lies', humanityLoss: 3, cost: 100, install: 'Clinic', prerequisite: 'Cyberaudio Suite' },
+    { name: 'Radio Scanner/Music Player', type: 'Cyberaudio', description: 'Scan radio bands within 1 mile; play music from Data Pool', humanityLoss: 2, cost: 50, install: 'Clinic', prerequisite: 'Cyberaudio Suite' },
+    { name: 'Radar Detector', type: 'Cyberaudio', description: 'Beeps if active radar within 100m', humanityLoss: 2, cost: 500, install: 'Clinic', prerequisite: 'Cyberaudio Suite' },
     
     // Internal Body Cyberware
     { name: 'Toxin Binders', type: 'Internal', description: '+2 resist poison/drugs', humanityLoss: 2, cost: 100, install: 'Mall' },
@@ -923,27 +1378,107 @@ export const SHOP_CYBERWARE: ShopCyberware[] = [
     { name: 'Cybersnake', type: 'Internal', description: 'Esophageal compartment', humanityLoss: 14, cost: 1000, install: 'Hospital' },
     { name: 'Vampyres', type: 'Internal', description: 'Fang implants (1d6 damage)', humanityLoss: 14, cost: 500, install: 'Clinic' },
     { name: 'Gills', type: 'Internal', description: 'Breathe underwater', humanityLoss: 7, cost: 1000, install: 'Hospital' },
-    { name: 'Grafted Muscle/Bone Lace', type: 'Internal', description: '+2 BODY for HP only', humanityLoss: 14, cost: 1000, install: 'Hospital' },
+    { name: 'Grafted Muscle/Bone Lace', type: 'Internal', description: '+2 BODY for HP only', humanityLoss: 14, cost: 1000, install: 'Hospital', bodyBonus: 2 },
+    { name: 'AudioVox', type: 'Internal', description: 'Vocal synthesizer: +2 Acting and +2 Play Instrument (singing)', humanityLoss: 3, cost: 500, install: 'Clinic' },
+    { name: 'Contraceptive Implant', type: 'Internal', description: 'Prevents undesired pregnancy', humanityLoss: 0, cost: 10, install: 'Mall' },
+    { name: 'Enhanced Antibodies', type: 'Internal', description: 'Heal 2x BODY per rest day instead of normal rate', humanityLoss: 2, cost: 500, install: 'Mall' },
+    { name: 'Midnight Lady Sexual Implant', type: 'Internal', description: 'Be a Venus, be the fire, be desire', humanityLoss: 7, cost: 100, install: 'Clinic' },
+    { name: 'Mr. Studd Sexual Implant', type: 'Internal', description: 'All night, every night', humanityLoss: 7, cost: 100, install: 'Clinic' },
+    { name: 'Radar/Sonar Implant', type: 'Internal', description: 'Scan terrain 50m for new moving threats; beeps with direction', humanityLoss: 7, cost: 1000, install: 'Clinic' },
     
     // External Body Cyberware
     { name: 'Subdermal Armor', type: 'External', description: '+2 Body SP (no head)', humanityLoss: 7, cost: 1000, install: 'Hospital' },
     { name: 'Subdermal Pocket', type: 'External', description: 'Hidden storage', humanityLoss: 3, cost: 100, install: 'Clinic' },
     { name: 'Hidden Holster', type: 'External', description: 'Concealed weapon slot', humanityLoss: 2, cost: 500, install: 'Clinic' },
+    { name: 'Skin Weave', type: 'External', description: 'Body and head armored at SP7. Repairs 1 SP/day via nanomachines', humanityLoss: 7, cost: 500, install: 'Hospital' },
     
     // Cyberlimbs
-    { name: 'Cyberarm', type: 'Cyberlimbs', description: 'Foundational: 4 slots', humanityLoss: 7, cost: 500, install: 'Hospital' },
-    { name: 'Cyberleg', type: 'Cyberlimbs', description: 'Foundational: 3 slots', humanityLoss: 7, cost: 500, install: 'Hospital' },
+    { name: 'Cyberarm', type: 'Cyberlimbs', description: 'Foundational: 4 slots', humanityLoss: 7, cost: 500, install: 'Hospital', maxSlots: 4 },
+    { name: 'Cyberleg', type: 'Cyberlimbs', description: 'Foundational: 3 slots', humanityLoss: 7, cost: 500, install: 'Hospital', maxSlots: 3 },
     { name: 'Big Knucks', type: 'Cyberlimbs', description: 'Brawling +2d6 damage', humanityLoss: 3, cost: 100, install: 'Mall', prerequisite: 'Cyberarm' },
     { name: 'Scratchers', type: 'Cyberlimbs', description: 'Carbo-glass claws (2d6)', humanityLoss: 2, cost: 100, install: 'Mall', prerequisite: 'Cyberarm' },
     { name: 'Rippers', type: 'Cyberlimbs', description: 'Carbo-glass claws (3d6)', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm' },
     { name: 'Wolvers', type: 'Cyberlimbs', description: 'Carbo-glass claws (3d6)', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm' },
     { name: 'Tool Hand', type: 'Cyberlimbs', description: 'Built-in tools', humanityLoss: 3, cost: 100, install: 'Clinic', prerequisite: 'Cyberarm' },
-    { name: 'Popup Weapon', type: 'Cyberlimbs', description: 'Concealed weapon in arm (Light/Medium)', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm' },
+    { name: 'Popup Melee Weapon', type: 'Cyberlimbs', description: 'Concealed melee weapon (Light/Medium/Heavy). Takes 2 slots', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 2 },
+    { name: 'Popup Ranged Weapon', type: 'Cyberlimbs', description: 'Concealed one-handed ranged weapon. Takes 2 slots', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 2 },
+    { name: 'Popup Grenade Launcher', type: 'Cyberlimbs', description: 'Concealed single-shot grenade launcher. Takes 2 slots', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 2 },
+    { name: 'Popup Shield', type: 'Cyberlimbs', description: 'Concealed Bulletproof Shield in arm. Takes 3 slots', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 3 },
     { name: 'Subdermal Grip', type: 'Cyberlimbs', description: 'Smartgun link', humanityLoss: 3, cost: 100, install: 'Clinic', prerequisite: 'Neural Link' },
+    { name: 'Standard Hand', type: 'Cyberlimbs', description: 'Normal-looking hand replacement. No option slot used', humanityLoss: 2, cost: 100, install: 'Clinic', slotsUsed: 0 },
+    { name: 'Grapple Hand', type: 'Cyberlimbs', description: 'Fire grapple 30m, holds 2x body weight, 10 HP line', humanityLoss: 3, cost: 100, install: 'Clinic', prerequisite: 'Cyberarm' },
+    { name: 'Medscanner (Arm)', type: 'Cyberlimbs', description: '+2 First Aid and Paramedic. Takes 2 slots', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 2 },
+    { name: 'Techscanner (Arm)', type: 'Cyberlimbs', description: '+2 all Tech skills. Takes 2 slots', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 2 },
+    { name: 'Shoulder Cam', type: 'Cyberlimbs', description: 'Popup shoulder camera, records video+audio. Takes 2 slots', humanityLoss: 7, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 2 },
+    { name: 'Cyberdeck (Arm)', type: 'Cyberlimbs', description: 'Installed cyberdeck with +1 slot. Takes 3 slots. Uninstalling destroys deck', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm', slotsUsed: 3 },
+    { name: 'Quick Change Mount', type: 'Cyberlimbs', description: 'Install/uninstall cyberarm as an Action', humanityLoss: 7, cost: 100, install: 'Clinic', prerequisite: 'Cyberarm' },
+    { name: 'Slice \'N Dice', type: 'Cyberlimbs', description: 'Monofilament whip in thumb (2d6, ROF 2). Concealable', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberarm' },
     { name: 'Jump Boosters', type: 'Cyberlimbs', description: 'Jump 6m high', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberleg' },
     { name: 'Skate Foot', type: 'Cyberlimbs', description: 'Inline skates in feet', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberleg' },
     { name: 'Talon Foot', type: 'Cyberlimbs', description: 'Climbing claws', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberleg' },
+    { name: 'Standard Foot', type: 'Cyberlimbs', description: 'Normal-looking foot replacement. No option slot used', humanityLoss: 2, cost: 100, install: 'Clinic', slotsUsed: 0 },
+    { name: 'Grip Foot', type: 'Cyberlimbs', description: 'Negate climbing movement penalty. Requires two Cyberlegs', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberleg', prerequisiteCount: 2 },
+    { name: 'Web Foot', type: 'Cyberlimbs', description: 'Negate swimming movement penalty. Requires two Cyberlegs', humanityLoss: 3, cost: 500, install: 'Clinic', prerequisite: 'Cyberleg', prerequisiteCount: 2 },
+    // Cyberlimb Coverings (no option slot)
+    { name: 'Plastic Covering', type: 'Cyberlimbs', description: 'Plastic coating, various colors/patterns. No slot used', humanityLoss: 0, cost: 100, install: 'Mall', prerequisite: 'Cyberarm', slotsUsed: 0 },
+    { name: 'Realskinn Covering', type: 'Cyberlimbs', description: 'Artificial skin coating. No slot used', humanityLoss: 0, cost: 500, install: 'Mall', prerequisite: 'Cyberarm', slotsUsed: 0 },
+    { name: 'Superchrome Covering', type: 'Cyberlimbs', description: 'Shiny metallic coating, +2 Wardrobe & Style. No slot used', humanityLoss: 0, cost: 1000, install: 'Mall', prerequisite: 'Cyberarm', slotsUsed: 0 },
+    { name: 'Hardened Shielding', type: 'Cyberlimbs', description: 'Cyberlimb immune to EMP and Non-Black ICE effects', humanityLoss: 3, cost: 1000, install: 'Clinic', prerequisite: 'Cyberarm' },
 ]
+
+// === FASHION SHOP (for Complete Package - separate 800eb budget) ===
+export interface ShopFashion {
+    name: string
+    type: 'clothing' | 'fashionware'
+    description: string
+    cost: number
+    humanityLoss: number
+}
+
+export const SHOP_FASHION: ShopFashion[] = [
+    // Clothing Styles
+    { name: 'Generic Chic Outfit', type: 'clothing', description: 'Standard, colorful, modular', cost: 20, humanityLoss: 0 },
+    { name: 'Leisurewear Outfit', type: 'clothing', description: 'Comfort, agility, athleticism', cost: 20, humanityLoss: 0 },
+    { name: 'Urban Flash Outfit', type: 'clothing', description: 'Flashy, technological, streetwear', cost: 20, humanityLoss: 0 },
+    { name: 'Businesswear Outfit', type: 'clothing', description: 'Leadership, presence, authority', cost: 20, humanityLoss: 0 },
+    { name: 'High Fashion Outfit', type: 'clothing', description: 'Exclusive, designer, couture', cost: 100, humanityLoss: 0 },
+    { name: 'Bohemian Outfit', type: 'clothing', description: 'Folksy, retro, free-spirited', cost: 20, humanityLoss: 0 },
+    { name: 'Bag Lady Chic Outfit', type: 'clothing', description: 'Homeless, ragged, vagrant', cost: 20, humanityLoss: 0 },
+    { name: 'Gang Colors Outfit', type: 'clothing', description: 'Dangerous, violent, rebellious', cost: 20, humanityLoss: 0 },
+    { name: 'Nomad Leathers Outfit', type: 'clothing', description: 'Western, rugged, tribal', cost: 100, humanityLoss: 0 },
+    { name: 'Asia Pop Outfit', type: 'clothing', description: 'Bright, costume-like, youthful', cost: 20, humanityLoss: 0 },
+    // Fashionware (0 HL — also available in main cyberware catalog for gear budget)
+    { name: 'Biomonitor', type: 'fashionware', description: 'Vital signs readout', cost: 100, humanityLoss: 0 },
+    { name: 'Chemskin', type: 'fashionware', description: 'Permanent skin color change', cost: 100, humanityLoss: 0 },
+    { name: 'EMP Threading', type: 'fashionware', description: 'Circuit pattern body lines', cost: 10, humanityLoss: 0 },
+    { name: 'Light Tattoo', type: 'fashionware', description: 'Subdermal LED tattoo', cost: 100, humanityLoss: 0 },
+    { name: 'Shift Tacts', type: 'fashionware', description: 'Color-changing eye lenses', cost: 100, humanityLoss: 0 },
+    { name: 'Skinwatch', type: 'fashionware', description: 'Subdermal LED watch', cost: 100, humanityLoss: 0 },
+    { name: 'Techhair', type: 'fashionware', description: 'Color-changing artificial hair', cost: 100, humanityLoss: 0 },
+]
+
+// === BORGWARE (for Complete Package shop) ===
+export const SHOP_BORGWARE: ShopCyberware[] = [
+    { name: 'Implanted Linear Frame Sigma', type: 'Borgware', description: 'BODY increases to 12 (changes HP & Death Save). Requires BODY 6 and Grafted Muscle and Bone Lace', humanityLoss: 14, cost: 1000, install: 'Hospital', prerequisite: 'Grafted Muscle/Bone Lace', requiresStat: { stat: 'BODY', min: 6 }, unique: true, bodyOverride: 12 },
+    { name: 'Implanted Linear Frame Beta', type: 'Borgware', description: 'BODY increases to 14 (changes HP & Death Save). Requires BODY 8 and two Grafted Muscle and Bone Lace', humanityLoss: 14, cost: 5000, install: 'Hospital', prerequisite: 'Grafted Muscle/Bone Lace', prerequisiteCount: 2, requiresStat: { stat: 'BODY', min: 8 }, unique: true, bodyOverride: 14 },
+    { name: 'Artificial Shoulder Mount', type: 'Borgware', description: 'Mount 2 Cyberarms under first set of arms. Only one allowed', humanityLoss: 14, cost: 1000, install: 'Hospital', unique: true },
+    { name: 'MultiOptic Mount', type: 'Borgware', description: 'Mount up to 5 additional Cybereyes. Only one allowed', humanityLoss: 14, cost: 1000, install: 'Hospital', unique: true },
+    { name: 'Sensor Array', type: 'Borgware', description: '5 additional Cyberaudio Option slots. Requires Cyberaudio Suite. Only one allowed', humanityLoss: 14, cost: 1000, install: 'Clinic', prerequisite: 'Cyberaudio Suite', unique: true },
+]
+
+// === STARTING FASHION (by role for Streetrat/Edgerunner) ===
+export const STARTING_FASHION: Record<Role, string[]> = {
+    ROCKERBOY: ['Urban Flash Outfit', 'Techhair'],
+    SOLO: ['Nomad Leathers Outfit'],
+    NETRUNNER: ['Urban Flash Outfit'],
+    TECH: ['Bag Lady Chic Outfit', 'Skinwatch'],
+    MEDTECH: ['Generic Chic Outfit'],
+    MEDIA: ['Businesswear Outfit'],
+    LAWMAN: ['Generic Chic Outfit'],
+    EXEC: ['Businesswear Outfit', 'High Fashion Outfit'],
+    FIXER: ['Urban Flash Outfit'],
+    NOMAD: ['Nomad Leathers Outfit'],
+}
 
 // === HELPER FUNCTIONS ===
 

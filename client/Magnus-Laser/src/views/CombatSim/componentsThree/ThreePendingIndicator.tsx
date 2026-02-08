@@ -110,9 +110,9 @@ export function createThreePendingIndicator(props: ThreePendingIndicatorProps) {
         })
     }
 
-    // Always show buttons (matches request and Pixi default when local)
-    const showButtons = true
-    const showAcceptButton = true
+    // Match Pixi's logic: hide buttons for DM-triggered movements on players
+    const showButtons = !(props.fromRemotePlayer && props.isPlayerConnected === false)
+    const showAcceptButton = showButtons && props.isPlayerConnected !== false
 
     // Create label container
     const labelContainer = document.createElement('div')
@@ -294,13 +294,23 @@ export function createThreePendingIndicator(props: ThreePendingIndicatorProps) {
 
         // End handle (draggable target) - use real model when available, otherwise fallback
         if (props.endModelTemplate) {
-            const tpl = props.endModelTemplate
+            const tpl = props.endModelTemplate.clone(true)
             tpl.userData = { ...(tpl.userData ?? {}), tokenId: token.id, pendingHandle: true }
             tpl.position.set(labelX, tpl.position.y, labelZ)
+            scene.add(tpl)
             endHandle = tpl
-            // Do NOT restore position on cleanup; the animation / state update will drive the real token
             disposers.push(() => {
-                // no-op restore to avoid fighting animation/state
+                scene.remove(tpl)
+                tpl.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        if (child.geometry) child.geometry.dispose()
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach((m) => m.dispose?.())
+                        } else if (child.material instanceof THREE.Material) {
+                            child.material.dispose()
+                        }
+                    }
+                })
             })
         } else {
             const fallback = createFallbackTokenModel(token.color, radius, radius * 2)

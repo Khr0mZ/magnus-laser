@@ -5,6 +5,11 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import type { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { useSession } from '../../../state/sessionStore'
+import {
+    segmentHitsCircleBoundary,
+    segmentIntersectsRectangle,
+    segmentsIntersect,
+} from '../utils/geometryUtils'
 import { snapToNinePoints } from '../utils/gridUtils'
 import type { Blast, BlastType, Image as ImageData, Token, Wall, WallShape } from '../utils/types'
 import { useThreeCallbackRefs } from './hooks/useThreeCallbackRefs'
@@ -22,6 +27,7 @@ import { createTokenLabel, useCSS2DRenderer } from './ThreeBoardLabel'
 import { useMeasureTool } from './ThreeBoardMeasure'
 import { useWallPreview } from './ThreeBoardWallPreview'
 import { createThreePendingIndicator } from './ThreePendingIndicator'
+import { useThreeTooltip } from './ThreeTooltip'
 
 type ThreeBoardProps = {
     width: number
@@ -90,7 +96,7 @@ type ThreeBoardProps = {
     onBlastCopy?: (id: string) => void
     onBlastCut?: (id: string) => void
     onBlastLock?: (id: string, locked: boolean) => void
-    onBlastpixiOnBlastUpdateConepdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
+    onBlastUpdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
     // Pending movements
     onPendingCountChange?: (count: number) => void
     pixiOnBindPendingControls?: (acceptAll: () => void, cancelAll: () => void) => void
@@ -174,9 +180,6 @@ const createRectangleWallGeometry = (
     return group
 }
 
-/**
- * Create a hollow circle wall geometry (only circumference)
- */
 /**
  * Create a hollow circle wall geometry (only circumference)
  * Walls start at Y=0 and extend upward
@@ -326,12 +329,14 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         blastDrawMode,
         pixiOnBlastDrop,
         pixiOnBlastMove: pixiOnBlastMoveProp,
+        pixiOnBlastComplete,
         pixiSetReady,
         pixiSetHostReady,
         isMeasuring,
         isWallMode,
         wallDrawingShape,
         pixiOnWallDraw,
+        isErasingWalls,
         snapToGrid,
         pixiOnTokenMove,
         // Token operations
@@ -365,7 +370,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         onBlastCopy,
         onBlastCut,
         onBlastLock,
-        onBlastpixiOnBlastUpdateConepdateCone,
+        onBlastUpdateCone,
         onBlastDelete: onBlastDeleteProp = () => {},
         // Pending movements
         onPendingCountChange,
@@ -423,6 +428,12 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     const isStartingNewSegmentRef = useRef<boolean>(false)
     const newSegmentPreviewAddedRef = useRef<boolean>(false)
     const clockRef = useRef<THREE.Clock | null>(null)
+
+    // Wall eraser refs
+    const eraseStartRef = useRef<{ x: number; z: number } | null>(null)
+    const erasePreviewRef = useRef<{ x: number; z: number } | null>(null)
+    const eraseLineRef = useRef<THREE.Line | null>(null)
+    const highlightedWallIdsRef = useRef<Set<string>>(new Set())
 
     // Pending movements state - use state to trigger re-renders
     const [pendingMovements, setPendingMovements] = useState<
@@ -799,7 +810,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 }
             }
             if (!template) {
-                const modelIndex = Math.abs(hashStringToIndex(token.id, tokenModelTemplatesRef.current.length))
+                const modelIndex = hashStringToIndex(token.id, tokenModelTemplatesRef.current.length)
                 template =
                     modelIndex >= 0 && modelIndex < tokenModelTemplatesRef.current.length
                         ? tokenModelTemplatesRef.current[modelIndex]
@@ -1737,13 +1748,45 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         })
     }, [tokens, activeTokenId, gridSize, assetVersion])
 
-    // Debug: Log scene children count periodically
+    // Crosshair ring on active token
     useEffect(() => {
-        if (sceneRef.current) {
-            const interval = setInterval(() => {}, 1000)
-            return () => clearInterval(interval)
+        const scene = sceneRef.current
+        if (!scene || !activeTokenId) return
+
+        const token = tokens.find((t) => t.id === activeTokenId)
+        if (!token) return
+
+        const radius = token.customRadius ?? gridSize / 2
+        const innerRadius = radius * 1.15
+        const outerRadius = radius * 1.3
+
+        const ringGeo = new THREE.RingGeometry(innerRadius, outerRadius, 64)
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide,
+        })
+        const ring = new THREE.Mesh(ringGeo, ringMat)
+        ring.rotation.x = -Math.PI / 2 // Lay flat on ground
+        ring.position.set(token.x, 0.15, token.y)
+        scene.add(ring)
+
+        let animId: number
+        const animateRing = () => {
+            ring.rotation.z += 0.02
+            animId = requestAnimationFrame(animateRing)
         }
-    }, [])
+        animateRing()
+
+        return () => {
+            cancelAnimationFrame(animId)
+            scene.remove(ring)
+            ringGeo.dispose()
+            ringMat.dispose()
+        }
+    }, [activeTokenId, tokens, gridSize])
+
 
     // Render walls
     useEffect(() => {
@@ -1883,7 +1926,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 scene.add(newGroup)
                 wallMeshes.set(wall.id, newGroup)
             } else if (wall.shape === 'circle') {
-                const radius = Math.sqrt(Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2)) / 2
+                const radius = Math.min(Math.abs(wall.x2 - wall.x1), Math.abs(wall.y2 - wall.y1)) / 2
                 const wallThickness = gridSize / 4
 
                 // Create hollow circle wall group (64 segments for smooth appearance)
@@ -2331,7 +2374,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         }
 
         pixiOnBindFit(fitFn)
-    }, [pixiOnBindFit, mapTexture, mapPlaneRef.current])
+    }, [pixiOnBindFit, mapTexture])
 
     // Pending movements: acceptAll and cancelAll functions
     useEffect(() => {
@@ -2666,7 +2709,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     setPendingMovements(new Map(pendingMovementsRef.current))
                 },
                 endModelTemplate: tokenMeshesRef.current.get(tokenId) ?? undefined,
-                isPlayerConnected,
+                isPlayerConnected: !isPlayerConnected,
                 fromRemotePlayer: pending.fromRemotePlayer ?? false,
             })
 
@@ -2709,9 +2752,10 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     // Measuring tool
     useMeasureTool(measureStart, measureEnd, sceneRef.current, gridSize)
 
-    // Blast preview
+    // Blast preview — use 'cone' during rotation mode even if blastDrawMode is null
+    const effectiveBlastPreviewMode: BlastType | null = rotatingConeRef.current ? 'cone' : (blastDrawMode || null)
     useBlastPreview(
-        blastDrawMode || null,
+        effectiveBlastPreviewMode,
         blastPreviewStart,
         blastPreviewEnd,
         sceneRef.current,
@@ -2733,8 +2777,20 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         snapToGrid
     )
 
-    // Pending movements (placeholder for future implementation)
-    // usePendingMovements(pendingMovementsRef.current, tokens, sceneRef.current, gridSize)
+    // Token tooltip on hover
+    useThreeTooltip(
+        containerRef.current,
+        sceneRef.current,
+        cameraRef.current,
+        tokens,
+        tokenMeshesRef.current,
+        width,
+        height,
+        isWallMode,
+        isMeasuring,
+        blastDrawMode
+    )
+
 
     // Mouse interaction for measuring and token dragging
     useEffect(() => {
@@ -2883,7 +2939,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             }
         }
 
-        // Handle drop events for tokens
+        // Handle drop events for tokens and blasts
         const handleDrop = (e: globalThis.DragEvent) => {
             e.preventDefault()
             e.stopPropagation()
@@ -2897,36 +2953,34 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             }
 
             const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
-            if (!intersectionPoint || !pixiOnTokenDrop) return
+            if (!intersectionPoint) return
 
-            const data = e.dataTransfer?.getData('text/plain')
-            if (data) {
-                try {
-                    const droppedData = JSON.parse(data)
-                    if (droppedData.type === 'token' && droppedData.id) {
-                        let finalX = intersectionPoint.x
-                        let finalZ = intersectionPoint.z
+            // Try application/json first (Pixi format), fall back to text/plain
+            const data =
+                e.dataTransfer?.getData('application/json') || e.dataTransfer?.getData('text/plain')
+            if (!data) return
 
-                        // Apply snap to grid if enabled
-                        if (snapToGrid) {
-                            const snapped = snapToNinePoints(finalX, finalZ, gridSize, snapToGrid)
-                            finalX = snapped.x
-                            finalZ = snapped.y
-                        }
+            try {
+                const droppedData = JSON.parse(data)
 
-                        pixiOnTokenDrop(droppedData.id, finalX, finalZ)
-                    } else if (droppedData.type === 'blast' && droppedData.id && droppedData.blastType === 'cone') {
-                        // Handle cone drop - enter rotation mode
-                        let finalX = intersectionPoint.x
-                        let finalZ = intersectionPoint.z
-                        if (snapToGrid) {
-                            const snapped = snapToNinePoints(finalX, finalZ, gridSize, snapToGrid)
-                            finalX = snapped.x
-                            finalZ = snapped.y
-                        }
+                let finalX = intersectionPoint.x
+                let finalZ = intersectionPoint.z
+                if (snapToGrid) {
+                    const snapped = snapToNinePoints(finalX, finalZ, gridSize, snapToGrid)
+                    finalX = snapped.x
+                    finalZ = snapped.y
+                }
+
+                // Check if it's a blast type (grenade, circle, square, cone)
+                if (
+                    droppedData?.type &&
+                    ['grenade', 'circle', 'square', 'cone'].includes(droppedData.type)
+                ) {
+                    if (droppedData.type === 'cone') {
+                        // Cone: enter rotation mode
                         const coneLength = droppedData.size ?? 6
                         rotatingConeRef.current = {
-                            id: droppedData.id,
+                            id: droppedData.id || globalThis.crypto?.randomUUID?.() || String(Date.now()),
                             apexX: finalX,
                             apexZ: finalZ,
                             lengthInGrids: coneLength,
@@ -2934,11 +2988,19 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                         rotationReadyAtRef.current = Date.now() + 180
                         setBlastPreviewStart(new THREE.Vector3(finalX, 0, finalZ))
-                        setBlastPreviewEnd(new THREE.Vector3(finalX + gridSize * coneLength, 0, finalZ))
+                        setBlastPreviewEnd(
+                            new THREE.Vector3(finalX + gridSize * coneLength, 0, finalZ)
+                        )
+                    } else if (pixiOnBlastDrop) {
+                        // Non-cone blasts: drop directly
+                        pixiOnBlastDrop(droppedData, finalX, finalZ)
                     }
-                } catch (error) {
-                    console.error('Error handling drop:', error)
+                } else if (droppedData?.id && pixiOnTokenDrop) {
+                    // Token drop
+                    pixiOnTokenDrop(droppedData.id, finalX, finalZ)
                 }
+            } catch (error) {
+                console.error('Error handling drop:', error)
             }
         }
 
@@ -2978,11 +3040,34 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
             // Left click handling
             if (isMeasuring) {
-                // Measuring mode
+                // Measuring mode - check for token hit to start from token position (like Pixi)
                 if (!measureStart) {
-                    setMeasureStart(intersectionPoint)
+                    const raycaster = new THREE.Raycaster()
+                    const mouseVector = new THREE.Vector2()
+                    mouseVector.x = (mouse.x / width) * 2 - 1
+                    mouseVector.y = -(mouse.y / height) * 2 + 1
+                    raycaster.setFromCamera(mouseVector, cameraRef.current)
+                    const tokenIntersects = raycaster.intersectObjects(
+                        Array.from(tokenMeshesRef.current.values()),
+                        true
+                    )
+                    if (tokenIntersects.length > 0) {
+                        const hitObject = tokenIntersects[0].object
+                        const tokenHit = findTokenFromObject(hitObject)
+                        if (tokenHit) {
+                            const tokenData = tokens.find((t) => t.id === tokenHit.id)
+                            if (tokenData) {
+                                const snapped = snapToNinePoints(tokenData.x, tokenData.y, gridSize, snapToGrid)
+                                setMeasureStart(new THREE.Vector3(snapped.x, 0, snapped.y))
+                                return
+                            }
+                        }
+                    }
+                    const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                    setMeasureStart(new THREE.Vector3(snapped.x, 0, snapped.y))
                 } else {
-                    setMeasureEnd(intersectionPoint)
+                    const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                    setMeasureEnd(new THREE.Vector3(snapped.x, 0, snapped.y))
                 }
             } else if (blastDrawMode) {
                 // Blast drawing mode
@@ -2991,12 +3076,19 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 } else {
                     setBlastPreviewEnd(intersectionPoint)
                 }
-            } else if (isWallMode && wallDrawingShape) {
-                // Wall drawing mode
+            } else if (isWallMode && isErasingWalls) {
+                // Wall eraser mode — store start point
+                const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                eraseStartRef.current = { x: snapped.x, z: snapped.y }
+                erasePreviewRef.current = null
+            } else if (isWallMode && wallDrawingShape && !isErasingWalls) {
+                // Wall drawing mode - snap start point to 9-point grid like Pixi
                 if (!wallDrawingStart) {
-                    setWallDrawingStart(intersectionPoint)
+                    const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                    setWallDrawingStart(new THREE.Vector3(snapped.x, 0, snapped.y))
                 } else {
-                    setWallDrawingEnd(intersectionPoint)
+                    const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                    setWallDrawingEnd(new THREE.Vector3(snapped.x, 0, snapped.y))
                 }
             } else {
                 // Token drag/select mode
@@ -3048,26 +3140,13 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         for (const [id, group] of blastMeshesRef.current.entries()) {
                             if (group === hitObject || group.children.includes(hitObject)) {
                                 pixiSetSelectedBlastId(id)
-                                // Start dragging blast
+                                // Start dragging blast (skip if locked)
                                 const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === id)
+                                if (blast && blast.locked) break
                                 if (blast && pixiOnBlastMoveProp) {
-                                    // For cones, enter rotation mode after drag
-                                    if (blast.type === 'cone') {
-                                        const baseX2 = blast.x2 ?? blast.x
-                                        const baseZ2 = blast.y2 ?? blast.y
-                                        const lengthInGrids = Math.max(
-                                            0.1,
-                                            Math.hypot(baseX2 - blast.x, baseZ2 - blast.y) / gridSize
-                                        )
-                                        rotatingConeRef.current = {
-                                            id: blast.id,
-                                            apexX: blast.x,
-                                            apexZ: blast.y,
-                                            lengthInGrids,
-                                            angleRad: Math.atan2(baseZ2 - blast.y, baseX2 - blast.x),
-                                        }
-                                        rotationReadyAtRef.current = Date.now() + 180
-                                    }
+                                    // Clear selection highlight during drag
+                                    pixiSetSelectedBlastId(null)
+                                    // Rotation mode for cones is set AFTER drag in mouseup
                                     setDraggedBlastId(id)
                                     dragBlastStartRef.current = { x: blast.x, z: blast.y }
                                 }
@@ -3119,15 +3198,137 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
             if (!intersectionPoint) return
 
+            // Cone rotation preview — update live as cursor moves
+            if (rotatingConeRef.current) {
+                const { apexX, apexZ, lengthInGrids } = rotatingConeRef.current
+                const cdx = intersectionPoint.x - apexX
+                const cdz = intersectionPoint.z - apexZ
+                const angle = Math.atan2(cdz, cdx)
+                const lenPx = lengthInGrids * gridSize
+                // Snap endpoint to 9-point grid (like Pixi's endpointFromAngleLength)
+                const rawEndX = apexX + Math.cos(angle) * lenPx
+                const rawEndZ = apexZ + Math.sin(angle) * lenPx
+                const snappedEnd = snapToNinePoints(rawEndX, rawEndZ, gridSize, snapToGrid)
+                setBlastPreviewStart(new THREE.Vector3(apexX, 0, apexZ))
+                setBlastPreviewEnd(new THREE.Vector3(snappedEnd.x, 0, snappedEnd.y))
+                return
+            }
+
             if (isMeasuring && measureStart) {
-                // Update measure end point
-                setMeasureEnd(intersectionPoint)
+                // Update measure end point (snapped to grid)
+                const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                setMeasureEnd(new THREE.Vector3(snapped.x, 0, snapped.y))
             } else if (blastDrawMode && blastPreviewStart) {
                 // Update blast preview end point
                 setBlastPreviewEnd(intersectionPoint)
-            } else if (isWallMode && wallDrawingShape && wallDrawingStart) {
-                // Update wall preview end point
-                setWallDrawingEnd(intersectionPoint)
+            } else if (isWallMode && isErasingWalls && eraseStartRef.current) {
+                // Update eraser preview line
+                const scene = sceneRef.current
+                if (scene) {
+                    // Remove old preview line
+                    if (eraseLineRef.current) {
+                        scene.remove(eraseLineRef.current)
+                        eraseLineRef.current.geometry.dispose()
+                        ;(eraseLineRef.current.material as THREE.Material).dispose()
+                        eraseLineRef.current = null
+                    }
+                    const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                    erasePreviewRef.current = { x: snapped.x, z: snapped.y }
+                    const pts = [
+                        new THREE.Vector3(eraseStartRef.current.x, 1, eraseStartRef.current.z),
+                        new THREE.Vector3(snapped.x, 1, snapped.y),
+                    ]
+                    const geo = new THREE.BufferGeometry().setFromPoints(pts)
+                    const mat = new THREE.LineBasicMaterial({ color: 0xff4444, linewidth: 2 })
+                    const line = new THREE.Line(geo, mat)
+                    scene.add(line)
+                    eraseLineRef.current = line
+
+                    // Highlight intersected walls (like Pixi's red highlight)
+                    const sx = eraseStartRef.current.x
+                    const sz = eraseStartRef.current.z
+                    const ex = snapped.x
+                    const ez = snapped.y
+                    const s1 = { x: sx, y: sz }
+                    const s2 = { x: ex, y: ez }
+
+                    const newHighlighted = new Set<string>()
+                    for (const w of walls) {
+                        const wallShape = w.shape || 'line'
+                        let hit = false
+                        if (wallShape === 'line') {
+                            hit = segmentsIntersect(s1, s2, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })
+                        } else if (wallShape === 'rectangle') {
+                            hit = segmentIntersectsRectangle(s1, s2, w.x1, w.y1, w.x2, w.y2)
+                        } else if (wallShape === 'circle') {
+                            const cdx = w.x2 - w.x1
+                            const cdy = w.y2 - w.y1
+                            const centerX = w.x1 + cdx / 2
+                            const centerY = w.y1 + cdy / 2
+                            const radius = Math.min(Math.abs(cdx), Math.abs(cdy)) / 2
+                            hit = segmentHitsCircleBoundary(s1, s2, centerX, centerY, radius)
+                        }
+                        if (hit) newHighlighted.add(w.id)
+                    }
+
+                    // Apply/remove highlight on wall meshes
+                    const wallMeshes = wallMeshesRef.current
+                    for (const [id, mesh] of wallMeshes.entries()) {
+                        const shouldHighlight = newHighlighted.has(id)
+                        const wasHighlighted = highlightedWallIdsRef.current.has(id)
+                        if (shouldHighlight && !wasHighlighted) {
+                            // Add red emissive highlight
+                            mesh.traverse((child) => {
+                                if (child instanceof THREE.Mesh && child.material) {
+                                    const m = child.material as THREE.MeshStandardMaterial
+                                    if (m.emissive) {
+                                        child.userData._origEmissive = m.emissive.getHex()
+                                        child.userData._origEmissiveIntensity = m.emissiveIntensity
+                                        m.emissive.setHex(0xff0000)
+                                        m.emissiveIntensity = 2.0
+                                    }
+                                }
+                            })
+                        } else if (!shouldHighlight && wasHighlighted) {
+                            // Restore original emissive
+                            mesh.traverse((child) => {
+                                if (child instanceof THREE.Mesh && child.material) {
+                                    const m = child.material as THREE.MeshStandardMaterial
+                                    if (m.emissive && child.userData._origEmissive !== undefined) {
+                                        m.emissive.setHex(child.userData._origEmissive)
+                                        m.emissiveIntensity = child.userData._origEmissiveIntensity ?? 1.0
+                                        delete child.userData._origEmissive
+                                        delete child.userData._origEmissiveIntensity
+                                    }
+                                }
+                            })
+                        }
+                    }
+                    highlightedWallIdsRef.current = newHighlighted
+                }
+            } else if (isWallMode && wallDrawingShape && !isErasingWalls && wallDrawingStart) {
+                // Update wall preview end point (snapped to grid)
+                const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                setWallDrawingEnd(new THREE.Vector3(snapped.x, 0, snapped.y))
+            } else if (draggedBlastId && dragBlastStartRef.current) {
+                // Blast dragging — move the blast mesh visually
+                const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
+                const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === draggedBlastId)
+                if (blast) {
+                    const dx = snapped.x - dragBlastStartRef.current.x
+                    const dz = snapped.y - dragBlastStartRef.current.z
+                    const group = blastMeshesRef.current.get(draggedBlastId)
+                    if (group) {
+                        if (blast.type === 'cone') {
+                            // Cone group is at endpoint (base/wide end), not apex
+                            const x2 = blast.x2 ?? blast.x
+                            const y2 = blast.y2 ?? blast.y
+                            group.position.set(x2 + dx, group.position.y, y2 + dz)
+                        } else {
+                            group.position.set(blast.x + dx, group.position.y, blast.y + dz)
+                        }
+                    }
+                }
             } else if (draggedTokenId && dragStartRef.current) {
                 const token = tokens.find((t) => t.id === draggedTokenId)
                 if (!token) return
@@ -3324,21 +3525,40 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             // Handle cone rotation confirmation
             if (rotatingConeRef.current && event.button === 0 && Date.now() >= rotationReadyAtRef.current) {
                 const apex = rotatingConeRef.current
-                const rect = containerRef.current?.getBoundingClientRect()
-                if (rect) {
-                    const intersectionPoint = getGroundIntersection(event.clientX - rect.left, event.clientY - rect.top)
-                    if (intersectionPoint) {
-                        const angle = Math.atan2(intersectionPoint.z - apex.apexZ, intersectionPoint.x - apex.apexX)
-                        const lenPx = apex.lengthInGrids * gridSize
-                        const endX = apex.apexX + Math.cos(angle) * lenPx
-                        const endZ = apex.apexZ + Math.sin(angle) * lenPx
+                // Use the already-snapped preview end position so confirm matches preview exactly
+                if (blastPreviewEnd) {
+                    const endX = blastPreviewEnd.x
+                    const endZ = blastPreviewEnd.z
 
-                        // Update cone endpoint
-                        if (onBlastpixiOnBlastUpdateConepdateCone) {
-                            onBlastpixiOnBlastUpdateConepdateCone(apex.id, endX, endZ, apex.apexX, apex.apexZ)
+                    // Check if this is a new cone (from drawer drop) or existing cone (after move)
+                    const existingBlast = [...blasts, ...blastsNotInMap].find((b) => b.id === apex.id)
+                    if (!existingBlast) {
+                        // New cone from template — create it with pixiOnBlastComplete
+                        if (pixiOnBlastComplete) {
+                            const newBlast: Blast = {
+                                id: apex.id,
+                                mapId: mapKey,
+                                type: 'cone',
+                                x: apex.apexX,
+                                y: apex.apexZ,
+                                x2: endX,
+                                y2: endZ,
+                                size: apex.lengthInGrids,
+                                alpha: 0.7,
+                                locked: false,
+                            }
+                            pixiOnBlastComplete(newBlast)
+                        }
+                    } else {
+                        // Existing cone — update endpoint
+                        if (onBlastUpdateCone) {
+                            onBlastUpdateCone(apex.id, endX, endZ, apex.apexX, apex.apexZ)
                         }
                     }
                 }
+                // Restore visibility of the cone mesh after rotation
+                const coneGroup = blastMeshesRef.current.get(apex.id)
+                if (coneGroup) coneGroup.visible = true
                 rotatingConeRef.current = null
                 setBlastPreviewStart(null)
                 setBlastPreviewEnd(null)
@@ -3404,47 +3624,200 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 isLeftClickDraggingRef.current = false
             }
 
+            // Wall eraser completion
+            if (isWallMode && isErasingWalls && eraseStartRef.current) {
+                const scene = sceneRef.current
+                // Clean up preview line
+                if (eraseLineRef.current && scene) {
+                    scene.remove(eraseLineRef.current)
+                    eraseLineRef.current.geometry.dispose()
+                    ;(eraseLineRef.current.material as THREE.Material).dispose()
+                    eraseLineRef.current = null
+                }
+                const end = erasePreviewRef.current
+                if (end && pixiOnWallDraw) {
+                    const s1 = { x: eraseStartRef.current.x, y: eraseStartRef.current.z }
+                    const s2 = { x: end.x, y: end.z }
+                    const keep: Wall[] = []
+                    for (const w of walls) {
+                        const wallShape = w.shape || 'line'
+                        let intersects = false
+                        if (wallShape === 'line') {
+                            intersects = segmentsIntersect(s1, s2, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })
+                        } else if (wallShape === 'rectangle') {
+                            intersects = segmentIntersectsRectangle(s1, s2, w.x1, w.y1, w.x2, w.y2)
+                        } else if (wallShape === 'circle') {
+                            const dx = w.x2 - w.x1
+                            const dy = w.y2 - w.y1
+                            const centerX = w.x1 + dx / 2
+                            const centerY = w.y1 + dy / 2
+                            const radius = Math.min(Math.abs(dx), Math.abs(dy)) / 2
+                            intersects = segmentHitsCircleBoundary(s1, s2, centerX, centerY, radius)
+                        }
+                        if (!intersects) {
+                            keep.push(w)
+                        }
+                    }
+                    pixiOnWallDraw(keep, mapKey)
+                }
+                // Restore all highlighted wall materials
+                const wallMeshes = wallMeshesRef.current
+                for (const id of highlightedWallIdsRef.current) {
+                    const mesh = wallMeshes.get(id)
+                    if (mesh) {
+                        mesh.traverse((child) => {
+                            if (child instanceof THREE.Mesh && child.material) {
+                                const m = child.material as THREE.MeshStandardMaterial
+                                if (m.emissive && child.userData._origEmissive !== undefined) {
+                                    m.emissive.setHex(child.userData._origEmissive)
+                                    m.emissiveIntensity = child.userData._origEmissiveIntensity ?? 1.0
+                                    delete child.userData._origEmissive
+                                    delete child.userData._origEmissiveIntensity
+                                }
+                            }
+                        })
+                    }
+                }
+                highlightedWallIdsRef.current = new Set()
+
+                eraseStartRef.current = null
+                erasePreviewRef.current = null
+            }
+
             if (draggedBlastId) {
+                // Persist blast position on drag end
+                const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === draggedBlastId)
+                if (blast && dragBlastStartRef.current && pixiOnBlastMoveProp) {
+                    const rect = containerRef.current?.getBoundingClientRect()
+                    if (rect) {
+                        const mx = event.clientX - rect.left
+                        const my = event.clientY - rect.top
+                        const dropPoint = getGroundIntersection(mx, my)
+                        if (dropPoint) {
+                            const snapped = snapToNinePoints(dropPoint.x, dropPoint.z, gridSize, snapToGrid)
+                            pixiOnBlastMoveProp(draggedBlastId, snapped.x, snapped.y)
+
+                            // For cones, enter rotation mode after move
+                            if (blast.type === 'cone') {
+                                const baseX2 = blast.x2 ?? blast.x
+                                const baseZ2 = blast.y2 ?? blast.y
+                                const lengthInGrids = Math.max(
+                                    0.1,
+                                    Math.hypot(baseX2 - blast.x, baseZ2 - blast.y) / gridSize
+                                )
+                                rotatingConeRef.current = {
+                                    id: blast.id,
+                                    apexX: snapped.x,
+                                    apexZ: snapped.y,
+                                    lengthInGrids,
+                                    angleRad: Math.atan2(baseZ2 - blast.y, baseX2 - blast.x),
+                                }
+                                rotationReadyAtRef.current = Date.now() + 180
+                                // Hide the actual cone mesh during rotation (prevent ghost)
+                                const coneGroup = blastMeshesRef.current.get(blast.id)
+                                if (coneGroup) coneGroup.visible = false
+                                // Set initial preview so rotation is visible
+                                const lenPx = lengthInGrids * gridSize
+                                const initAngle = Math.atan2(baseZ2 - blast.y, baseX2 - blast.x)
+                                setBlastPreviewStart(new THREE.Vector3(snapped.x, 0, snapped.y))
+                                setBlastPreviewEnd(
+                                    new THREE.Vector3(
+                                        snapped.x + Math.cos(initAngle) * lenPx,
+                                        0,
+                                        snapped.y + Math.sin(initAngle) * lenPx
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
                 setDraggedBlastId(null)
                 dragBlastStartRef.current = null
-                // Clear rotation preview if not confirming
-                if (rotatingConeRef.current) {
-                    rotatingConeRef.current = null
-                    setBlastPreviewStart(null)
-                    setBlastPreviewEnd(null)
-                }
             } else if (blastDrawMode && blastPreviewStart && blastPreviewEnd) {
-                // Complete blast drawing
-                if (pixiOnBlastDrop) {
-                    const x = blastPreviewEnd.x
-                    const y = blastPreviewEnd.z
-                    pixiOnBlastDrop({ type: blastDrawMode }, x, y)
+                // Complete blast drawing — match Pixi's onBlastComplete logic
+                const startX = blastPreviewStart.x
+                const startZ = blastPreviewStart.z
+                const endX = blastPreviewEnd.x
+                const endZ = blastPreviewEnd.z
+                const dx = endX - startX
+                const dz = endZ - startZ
+
+                if (dx !== 0 || dz !== 0) {
+                    const newBlast: Blast = {
+                        id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
+                        mapId: mapKey,
+                        type: blastDrawMode,
+                        x: 0,
+                        y: 0,
+                        alpha: 0.7,
+                        locked: false,
+                    }
+
+                    if (blastDrawMode === 'circle') {
+                        const widthInGrids = Math.abs(dx) / gridSize
+                        const heightInGrids = Math.abs(dz) / gridSize
+                        newBlast.x = startX + dx / 2
+                        newBlast.y = startZ + dz / 2
+                        newBlast.size = Math.min(widthInGrids, heightInGrids) / 2
+                    } else if (blastDrawMode === 'square') {
+                        const widthInGrids = Math.abs(dx) / gridSize
+                        const heightInGrids = Math.abs(dz) / gridSize
+                        newBlast.x = startX + dx / 2
+                        newBlast.y = startZ + dz / 2
+                        newBlast.size = widthInGrids
+                        newBlast.sizeY = heightInGrids
+                    } else if (blastDrawMode === 'cone') {
+                        const distance = Math.sqrt(dx * dx + dz * dz)
+                        const dirX = dx / distance
+                        const dirZ = dz / distance
+                        const fixedLength = 6 * gridSize
+                        newBlast.x = startX
+                        newBlast.y = startZ
+                        let coneEndX = startX + dirX * fixedLength
+                        let coneEndZ = startZ + dirZ * fixedLength
+                        if (snapToGrid) {
+                            const snappedEnd = snapToNinePoints(coneEndX, coneEndZ, gridSize, true)
+                            coneEndX = snappedEnd.x
+                            coneEndZ = snappedEnd.y
+                        }
+                        newBlast.x2 = coneEndX
+                        newBlast.y2 = coneEndZ
+                        const actualLength = Math.sqrt((coneEndX - startX) ** 2 + (coneEndZ - startZ) ** 2)
+                        newBlast.size = actualLength / gridSize
+                    }
+
+                    if (pixiOnBlastComplete) {
+                        pixiOnBlastComplete(newBlast)
+                    }
                 }
+
                 setBlastPreviewStart(null)
                 setBlastPreviewEnd(null)
             } else if (isWallMode && wallDrawingShape && wallDrawingStart && wallDrawingEnd) {
-                const snapValue = (value: number) => (snapToGrid ? Math.round(value / gridSize) * gridSize : value)
+                // Values are already snapped from mousedown/mousemove — use directly
+                const startX = wallDrawingStart.x
+                const startZ = wallDrawingStart.z
+                const endX = wallDrawingEnd.x
+                const endZ = wallDrawingEnd.z
 
-                const startX = snapValue(wallDrawingStart.x)
-                const startZ = snapValue(wallDrawingStart.z)
-                const endX = snapValue(wallDrawingEnd.x)
-                const endZ = snapValue(wallDrawingEnd.z)
+                // Prevent zero-length walls
+                if (startX !== endX || startZ !== endZ) {
+                    const newWall: Wall = {
+                        id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
+                        mapId: mapKey,
+                        x1: startX,
+                        y1: startZ,
+                        x2: endX,
+                        y2: endZ,
+                        shape: wallDrawingShape,
+                        color: wallColor,
+                        alpha: wallAlpha,
+                    }
 
-                const newWall: Wall = {
-                    id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
-                    mapId: mapKey,
-                    x1: startX,
-                    y1: startZ,
-                    x2: endX,
-                    y2: endZ,
-                    shape: wallDrawingShape,
-                    color: wallColor,
-                    alpha: wallAlpha,
-                }
-
-                if (pixiOnWallDraw) {
-                    const updatedWalls = [...walls, newWall]
-                    pixiOnWallDraw(updatedWalls, mapKey)
+                    if (pixiOnWallDraw) {
+                        const updatedWalls = [...walls, newWall]
+                        pixiOnWallDraw(updatedWalls, mapKey)
+                    }
                 }
 
                 setWallDrawingStart(null)
@@ -3504,7 +3877,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         pixiOnBlastDrop,
         pixiOnBlastMoveProp,
         pixiOnWallDraw,
-        onBlastpixiOnBlastUpdateConepdateCone,
+        onBlastUpdateCone,
         blasts,
         blastsNotInMap,
         pixiSetSelectedTokenId,

@@ -32,7 +32,7 @@ export const useThreeClipboard = (props: UseThreeClipboardProps) => {
 
     const handleMapPasteToken = (pasteX?: number, pasteY?: number) => {
         const currentClipboard = tokenClipboardRef.current
-        if (!currentClipboard || currentClipboard.length === 0 || !pasteX || !pasteY) return
+        if (!currentClipboard || currentClipboard.length === 0 || pasteX == null || pasteY == null) return
 
         const activeMapKey = mapKeyRef.current
         if (!activeMapKey) return
@@ -52,7 +52,7 @@ export const useThreeClipboard = (props: UseThreeClipboardProps) => {
 
     const handleMapPasteBlast = (pasteX?: number, pasteY?: number) => {
         const currentClipboard = blastClipboardRef.current
-        if (!currentClipboard || currentClipboard.length === 0 || !pasteX || !pasteY) return
+        if (!currentClipboard || currentClipboard.length === 0 || pasteX == null || pasteY == null) return
 
         const activeMapKey = mapKeyRef.current
         if (!activeMapKey) return

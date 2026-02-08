@@ -434,7 +434,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                             borderRadius: '6px',
                             cursor: 'pointer',
                             border: `1px solid ${
-                                wallDrawingShape === 'line' ? colors.neons.blue.default : colors.neons.blue.default
+                                wallDrawingShape === 'line' ? colors.neons.pink.default : colors.neons.blue.default
                             }60`,
                             transition: 'all 0.2s',
                             '&:hover': {
@@ -449,7 +449,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                             sx={{
                                 fontSize: wallDrawingShape === 'line' ? '30px' : '20px',
                                 color:
-                                    wallDrawingShape === 'line' ? colors.neons.blue.default : colors.neons.blue.default,
+                                    wallDrawingShape === 'line' ? colors.neons.pink.default : colors.neons.blue.default,
                                 transition: 'all 0.2s',
                                 '&:hover': {
                                     fontSize: '30px',
