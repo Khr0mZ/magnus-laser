@@ -91,6 +91,7 @@ export interface Motivation {
     roll: number
     valueMost: string
     feelAboutPeople: string
+    valuedPerson: string
     valuedPossession: string
 }
 
@@ -181,6 +182,8 @@ export interface Cyberware {
     description: string
     humanityLoss: number | string // Can be "2d6" for example
     cost: number
+    bodyBonus?: number     // Added to BODY stat (e.g., Grafted Muscle/Bone Lace +2)
+    bodyOverride?: number  // Sets BODY to this value (e.g., Linear Frames set to 12/14)
 }
 
 // === CHARACTER ===
@@ -191,6 +194,8 @@ export interface Character {
     name: string
     handle: string // Street name
     role: Role
+    roleAbility: string // e.g., "Charismatic Impact"
+    roleAbilityDescription: string
     roleRank: number // 1-10
     creationMethod: CreationMethod
     stats: CharacterStats
@@ -201,7 +206,10 @@ export interface Character {
     armor: Armor[]
     gear: GearItem[]
     cyberware: Cyberware[]
+    fashionItems: GearItem[]
     eurobucks: number
+    fashionBudget: number // 800eb for Complete Package fashion/fashionware only
+    ip: number // Improvement Points available to spend
     notes: string
     createdAt: number
     updatedAt: number

@@ -84,12 +84,6 @@ export interface ClockRollResult {
     multipleOnesBonus: boolean // True if 2+ dice showed 1 (for Degrees of Consequence)
 }
 
-// Legacy type for backwards compatibility (will be migrated)
-export type ClockType =
-    | 'COUNTDOWN' // Something bad happens when full
-    | 'PROGRESS' // Goal achieved when full
-    | 'RANDOM' // Random event trigger
-
 // === QUICK AND DIRTY COMBAT TYPES ===
 
 // NPC Levels according to PDF

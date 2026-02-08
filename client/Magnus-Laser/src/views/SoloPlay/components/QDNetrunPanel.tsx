@@ -31,29 +31,13 @@ import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import type {
-    NetArchitectureSize,
     NetrunCheckType,
     QDNetrunCheck,
     QDNetrunSession,
 } from '../../../types/soloPlay'
 import colors from '../../../utils/colors'
-
-// Helper to determine number of checks based on floors
-const getChecksForFloors = (floors: number): number => {
-    if (floors <= 6) return 3
-    if (floors <= 12) return 5
-    return 7
-}
-
-// Helper to get size category
-const getSizeFromFloors = (floors: number): NetArchitectureSize => {
-    if (floors <= 6) return 'SMALL'
-    if (floors <= 12) return 'MEDIUM'
-    return 'LARGE'
-}
-
-// Roll d10
-const rollD10 = () => Math.floor(Math.random() * 10) + 1
+import { getArchitectureSize, getChecksForFloors } from '../../../utils/generators/soloPlayUtils'
+import { rollD10 } from '../../../utils/generators/soloPlayTables'
 
 const QDNetrunPanel = () => {
     const { t } = useTranslation()
@@ -85,7 +69,7 @@ const QDNetrunPanel = () => {
             name: sessionName,
             location,
             goal,
-            architectureSize: getSizeFromFloors(floors),
+            architectureSize: getArchitectureSize(floors),
             floors,
             numberOfChecks: numChecks,
             checks: [],

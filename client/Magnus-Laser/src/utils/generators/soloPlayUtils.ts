@@ -12,7 +12,6 @@ import type {
     MoraleMentality,
     MoraleConfig,
     NetArchitectureSize,
-    NetrunCheckType,
     OpenQuestionCategory,
     OpenQuestionResult,
     OracleAnswer,
@@ -23,13 +22,7 @@ import type {
     QDCombatSession,
     QDEdgerunner,
     QDEnemy,
-    QDNetrunCheck,
-    QDNetrunSession,
-    SceneCheck,
-    SceneEntry,
     SoloMission,
-    SoloPlayClock,
-    SoloPlaySession,
 } from '../../types/soloPlay'
 import {
     actionFocusTable,
@@ -115,20 +108,6 @@ export const rollOracle = (
 }
 
 /**
- * Get human-readable Oracle answer description
- */
-export const getOracleAnswerDescription = (answer: OracleAnswer): string => {
-    const descriptions: Record<OracleAnswer, string> = {
-        NO: 'No.',
-        NO_WITH_COMPLICATION: 'No, but there\'s an unexpected twist or complication.',
-        COMPLICATED: 'It\'s complicated. The answer is conditional or ambiguous.',
-        YES_WITH_COMPLICATION: 'Yes, but there\'s an unexpected twist or complication.',
-        YES: 'Yes.',
-    }
-    return descriptions[answer]
-}
-
-/**
  * Roll for an Open Question
  * Generates action + detail focus for narrative prompts
  */
@@ -182,73 +161,6 @@ export const rollOpenQuestion = (
         category,
         focus,
         detail,
-    }
-}
-
-// ============================================
-// SOLO PLAY CLOCKS
-// Based on PDF page 25 - Dice Pool system
-// ============================================
-
-/**
- * Create a new Solo Play Clock with dice pool
- * @param name - Clock name
- * @param dicePool - Number of d6s in the pool (typically 3-8)
- * @param trigger - When to roll the pool
- * @param event - What happens when pool empties
- * @param scaleUp - If true, remove dice on 1 OR 6 (harder)
- */
-export const createClock = (
-    name: string,
-    dicePool: number,
-    trigger: string,
-    event: string,
-    scaleUp: boolean = false
-): SoloPlayClock => {
-    return {
-        id: uuidv4(),
-        name,
-        description: '',
-        initialDicePool: dicePool,
-        remainingDice: dicePool,
-        trigger,
-        event,
-        scaleUp,
-        rollHistory: [],
-        isComplete: false,
-        createdAt: Date.now(),
-    }
-}
-
-/**
- * Roll the dice pool for a clock
- * Returns the dice rolled and how many were removed
- */
-export const rollClockDicePool = (
-    remainingDice: number,
-    scaleUp: boolean
-): { diceRolled: number[]; diceRemoved: number; remainingAfter: number; multipleOnes: boolean } => {
-    const diceRolled: number[] = []
-    for (let i = 0; i < remainingDice; i++) {
-        diceRolled.push(rollD6())
-    }
-
-    let diceRemoved = 0
-    let onesCount = 0
-    for (const die of diceRolled) {
-        if (die === 1) {
-            diceRemoved++
-            onesCount++
-        } else if (scaleUp && die === 6) {
-            diceRemoved++
-        }
-    }
-
-    return {
-        diceRolled,
-        diceRemoved,
-        remainingAfter: Math.max(0, remainingDice - diceRemoved),
-        multipleOnes: onesCount >= 2, // Degrees of Consequence
     }
 }
 
@@ -593,25 +505,6 @@ export const rollMoraleCheck = (mentality: MoraleMentality): { roll: number; res
 }
 
 /**
- * Parse a damage string like "3d6" and roll it
- */
-export const rollDamage = (damageString: string): number => {
-    const match = damageString.match(/(\d+)d(\d+)(?:\s*\+\s*(\d+))?/i)
-    if (!match) return 0
-    
-    const numDice = parseInt(match[1])
-    const dieSize = parseInt(match[2])
-    const bonus = match[3] ? parseInt(match[3]) : 0
-    
-    let total = bonus
-    for (let i = 0; i < numDice; i++) {
-        total += Math.floor(Math.random() * dieSize) + 1
-    }
-    
-    return total
-}
-
-/**
  * Create initial combat session
  */
 export const createQDCombatSession = (
@@ -660,98 +553,6 @@ export const getChecksForFloors = (floors: number): number => {
     if (floors <= 6) return 3
     if (floors <= 12) return 5
     return 7
-}
-
-/**
- * Create a new QD Netrun session
- */
-export const createQDNetrunSession = (
-    name: string,
-    location: string,
-    goal: string,
-    floors: number
-): QDNetrunSession => {
-    const architectureSize = getArchitectureSize(floors)
-    const numberOfChecks = getChecksForFloors(floors)
-
-    return {
-        id: uuidv4(),
-        name,
-        location,
-        goal,
-        architectureSize,
-        floors,
-        numberOfChecks,
-        checks: [],
-        currentCheck: 0,
-        isComplete: false,
-        success: false,
-        successCount: 0,
-        failureCount: 0,
-        blackIceHits: 0,
-        unsafeJackout: false,
-        programsLost: [],
-        createdAt: Date.now(),
-    }
-}
-
-/**
- * Roll a QD Netrun check
- * @param checkNumber - The current check number
- * @param checkType - Type of check (PASSWORD, FILE, CONTROL_NODE, BLACK_ICE)
- * @param description - Description of the check
- * @param skillTotal - Player's skill total (INT + Interface typically)
- * @param dv - Difficulty Value for DV-based checks
- * @param opposedStat - Enemy stat for opposed checks (Black ICE)
- */
-export const rollQDNetrunCheck = (
-    checkNumber: number,
-    checkType: NetrunCheckType,
-    description: string,
-    skillTotal: number,
-    dv?: number,
-    opposedStat?: number
-): QDNetrunCheck => {
-    const roll = rollD10()
-    const total = roll + skillTotal
-
-    let success: boolean
-    let blackIceHit = false
-
-    if (checkType === 'BLACK_ICE' && opposedStat !== undefined) {
-        // Opposed check - need to beat enemy's roll
-        const enemyRoll = rollD10() + opposedStat
-        success = total > enemyRoll
-        blackIceHit = !success
-    } else if (dv !== undefined) {
-        // DV check
-        success = total >= dv
-    } else {
-        // Default: success on 5+ on the roll itself
-        success = roll >= 5
-    }
-
-    return {
-        checkNumber,
-        checkType,
-        description,
-        dv,
-        opposedStat,
-        roll,
-        skillTotal,
-        total,
-        success,
-        blackIceHit,
-    }
-}
-
-/**
- * Evaluate QD Netrun session outcome
- * Need majority of checks to succeed
- */
-export const evaluateQDNetrunOutcome = (session: QDNetrunSession): boolean => {
-    const successCount = session.checks.filter((c) => c.success).length
-    return successCount > session.numberOfChecks / 2
 }
 
 // ============================================
@@ -948,70 +749,6 @@ export const generateBeatDescription = (beatType: BeatType): string => {
                 `Complication: ${getRandomFromArray(complicationTable).toLowerCase()}`,
                 `Discovery: ${getRandomFromArray(clueTypeTable).toLowerCase()}`,
             ])
-    }
-}
-
-// ============================================
-// SCENE TRACKER
-// ============================================
-
-/**
- * Create a new scene
- */
-export const createScene = (
-    sceneNumber: number,
-    location: string,
-    participants: string[],
-    goal: string
-): SceneEntry => {
-    return {
-        id: uuidv4(),
-        sceneNumber,
-        location,
-        participants,
-        goal,
-        checks: [],
-        createdAt: Date.now(),
-    }
-}
-
-/**
- * Add a check to a scene
- */
-export const addSceneCheck = (
-    description: string,
-    success: boolean,
-    checkNumber: number
-): SceneCheck => {
-    return {
-        checkNumber,
-        description,
-        success,
-    }
-}
-
-// ============================================
-// SESSION MANAGEMENT
-// ============================================
-
-/**
- * Create a new Solo Play session
- */
-export const createSoloPlaySession = (name: string): SoloPlaySession => {
-    return {
-        id: uuidv4(),
-        name,
-        createdAt: Date.now(),
-        lastModified: Date.now(),
-        oracleHistory: [],
-        openQuestionHistory: [],
-        clocks: [],
-        missions: [],
-        combatSessions: [],
-        netrunSessions: [],
-        scenes: [],
-        ipTrackers: [],
-        notes: '',
     }
 }
 

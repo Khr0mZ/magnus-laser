@@ -10,12 +10,14 @@ import type {
     CharacterStats,
     CreationMethod,
     DerivedStats,
+    GearItem,
     Lifepath,
     Role,
 } from '../../types/characterCreator'
 import {
     AFFECTATIONS,
     ALL_SKILLS,
+    BASIC_SKILLS,
     CHILDHOOD_ENVIRONMENTS,
     CLOTHING_STYLES,
     CULTURAL_ORIGINS,
@@ -25,13 +27,22 @@ import {
     HAIRSTYLES,
     LIFE_GOALS,
     PERSONALITIES,
+    ROLE_ABILITIES,
     ROLE_SKILLS,
     STAT_TEMPLATES,
     STREETRAT_SKILL_TEMPLATES,
     STARTING_GEAR,
     STARTING_CYBERWARE,
+    STARTING_FASHION,
+    VALUED_PERSONS,
     VALUED_POSSESSIONS,
     VALUES,
+    FRIEND_TYPES,
+    ENEMY_TYPES,
+    ENEMY_CAUSES,
+    ENEMY_RESOURCES,
+    SWEET_REVENGE,
+    TRAGIC_LOVE_AFFAIRS,
     calculateDerivedStats,
 } from './characterCreatorData'
 import type { Weapon, Armor, Cyberware } from '../../types/characterCreator'
@@ -60,11 +71,27 @@ export const generateStreetratStats = (role: Role): { stats: CharacterStats; rol
 }
 
 /**
- * Generate starting stats for Edgerunner method (same as Streetrat but can rearrange)
+ * Generate starting stats for Edgerunner method.
+ * Corebook: roll 1d10 for EACH stat individually on the Role's template table.
  */
 export const generateEdgerunnerStats = (role: Role): CharacterStats => {
-    const { stats } = generateStreetratStats(role)
-    return stats
+    const roleTemplates = STAT_TEMPLATES.find((rt) => rt.role === role)
+    if (!roleTemplates) {
+        throw new Error(`No templates found for role: ${role}`)
+    }
+    const templates = roleTemplates.templates
+    return {
+        INT: templates[Math.floor(Math.random() * templates.length)].stats.INT,
+        REF: templates[Math.floor(Math.random() * templates.length)].stats.REF,
+        DEX: templates[Math.floor(Math.random() * templates.length)].stats.DEX,
+        TECH: templates[Math.floor(Math.random() * templates.length)].stats.TECH,
+        COOL: templates[Math.floor(Math.random() * templates.length)].stats.COOL,
+        WILL: templates[Math.floor(Math.random() * templates.length)].stats.WILL,
+        LUCK: templates[Math.floor(Math.random() * templates.length)].stats.LUCK,
+        MOVE: templates[Math.floor(Math.random() * templates.length)].stats.MOVE,
+        BODY: templates[Math.floor(Math.random() * templates.length)].stats.BODY,
+        EMP: templates[Math.floor(Math.random() * templates.length)].stats.EMP,
+    }
 }
 
 /**
@@ -213,25 +240,25 @@ export const initializeEdgerunnerSkills = (role: Role): CharacterSkill[] => {
 }
 
 /**
- * Initialize skills for Complete Package method (all skills at 0)
- * Player has 86 points to distribute, skills can go from 0 to 6
+ * Initialize skills for Complete Package method.
+ * Basic Skills start at level 2 (corebook rule), all others at 0.
+ * Player has 86 points to distribute, skills can go from 0 to 6 (basic: 2-6).
  */
 export const initializeCompletePackageSkills = (): CharacterSkill[] => {
     const skills: CharacterSkill[] = []
 
     for (const skillDef of ALL_SKILLS) {
-        // Skip skills that require specialization - we'll add specific ones
+        const isBasic = BASIC_SKILLS.some((bs) => skillDef.name.startsWith(bs))
+        const startLevel = isBasic ? 2 : 0
         if (skillDef.requiresSpecialization) {
-            // Add one instance of each specializable skill with no specialization
-            // Player can add specific ones later or use the generic version
             skills.push({
                 skill: { ...skillDef, specialization: undefined },
-                level: 0,
+                level: startLevel,
             })
         } else {
             skills.push({
                 skill: { ...skillDef },
-                level: 0,
+                level: startLevel,
             })
         }
     }
@@ -314,11 +341,13 @@ export const generateLifepath = (): Lifepath => {
     // Motivation
     const valueRoll = rollD10()
     const feelingRoll = rollD10()
+    const personRoll = rollD10()
     const possessionRoll = rollD10()
     const motivation = {
         roll: valueRoll,
         valueMost: VALUES[valueRoll - 1].value,
         feelAboutPeople: FEELINGS_ABOUT_PEOPLE[feelingRoll - 1].feeling,
+        valuedPerson: VALUED_PERSONS[personRoll - 1].person,
         valuedPossession: VALUED_POSSESSIONS[possessionRoll - 1].possession,
     }
 
@@ -385,6 +414,7 @@ const generateLifeEvents = (count: number) => {
         const eventRoll = rollD10()
         let eventType: 'GOOD' | 'BAD' | 'FRIEND' | 'ENEMY' | 'LOVE'
         let description: string
+        let details: string | undefined
 
         if (eventRoll <= 3) {
             eventType = 'GOOD'
@@ -394,19 +424,34 @@ const generateLifeEvents = (count: number) => {
             description = getBadEvent()
         } else if (eventRoll === 7) {
             eventType = 'FRIEND'
-            description = 'You made a friend. Someone who has your back.'
+            const friendType = FRIEND_TYPES[rollD10() - 1]
+            description = `You made a friend: ${friendType.relationship}`
         } else if (eventRoll <= 9) {
             eventType = 'ENEMY'
-            description = 'You made an enemy. Someone who wants to see you hurt.'
+            const enemyType = ENEMY_TYPES[rollD10() - 1]
+            const enemyCause = ENEMY_CAUSES[rollD10() - 1]
+            const enemyResources = ENEMY_RESOURCES[rollD10() - 1]
+            const sweetRevenge = SWEET_REVENGE[rollD10() - 1]
+            description = `You made an enemy: ${enemyType.who}`
+            details = `Cause: ${enemyCause.cause}. They can throw: ${enemyResources.resources}. Your revenge: ${sweetRevenge.action}`
         } else {
             eventType = 'LOVE'
-            description = getLoveEvent()
+            const loveRoll = rollD10()
+            if (loveRoll <= 4) {
+                description = 'Happy love affair'
+                details = 'Your lover is still around and you\'re still together.'
+            } else {
+                const tragedy = TRAGIC_LOVE_AFFAIRS[rollD10() - 1]
+                description = 'Tragic love affair'
+                details = tragedy.outcome
+            }
         }
 
         events.push({
             roll: eventRoll,
             eventType,
             description,
+            details,
         })
     }
     return events
@@ -444,21 +489,6 @@ const getBadEvent = (): string => {
     return events[Math.floor(Math.random() * events.length)]
 }
 
-const getLoveEvent = (): string => {
-    const events = [
-        'A happy love affair that still warms your heart.',
-        'A tragic romance that ended in death.',
-        'A lover you had to leave behind.',
-        'A love that was stolen from you.',
-        'A secret affair that could destroy you if revealed.',
-        'An unrequited love that still burns.',
-        'A love that turned to hate.',
-        'A partnership that transcended romance.',
-        'A whirlwind romance that burned bright and fast.',
-        'A love found in the most unexpected place.',
-    ]
-    return events[Math.floor(Math.random() * events.length)]
-}
 
 // === CHARACTER CREATION ===
 
@@ -509,19 +539,58 @@ export const createCharacter = (
 
     const lifepath = generateLifepath()
 
+    // Role ability (Gap 6+7)
+    const roleAbilityData = ROLE_ABILITIES[role]
+
     // Get starting gear for non-Complete Package methods
     let weapons: Weapon[] = []
     let armor: Armor[] = []
+    let gear: GearItem[] = []
     let cyberware: Cyberware[] = []
+    let fashionItems: GearItem[] = []
     let eurobucks = method === 'COMPLETE_PACKAGE' ? 2550 : 500
+    let fashionBudget = method === 'COMPLETE_PACKAGE' ? 800 : 0
 
     if (method !== 'COMPLETE_PACKAGE') {
         weapons = getStartingWeapons(role)
         armor = getStartingArmor(role)
         const cyberData = getStartingCyberware(role)
         cyberware = cyberData.cyberware
-        // Adjust humanity for cyberware
+        // Adjust humanity for cyberware and recalculate EMP
         derivedStats.HumanityCurrent = derivedStats.HumanityMax - cyberData.totalHumanityLoss
+        const baseEMP = Math.ceil(derivedStats.HumanityMax / 10)
+        stats.EMP = Math.min(baseEMP, calculateCurrentEMP(derivedStats.HumanityCurrent))
+
+        // Starting ammunition as gear items (Gap 11)
+        const startingGear = STARTING_GEAR[role]
+        for (const ammo of startingGear.ammunition) {
+            gear.push({ name: ammo, description: 'Starting ammunition', cost: 0 })
+        }
+        for (const other of startingGear.other) {
+            gear.push({ name: other, description: 'Starting gear', cost: 0 })
+        }
+
+        // Starting fashion (Gap 13)
+        const startingFashion = STARTING_FASHION[role]
+        for (const item of startingFashion) {
+            fashionItems.push({ name: item, description: 'Starting fashion', cost: 0 })
+        }
+    }
+
+    // Free language skill for Complete Package (Gap 10)
+    // Corebook: cultural origin language at level 4, free (not counted in 86 skill points)
+    if (method === 'COMPLETE_PACKAGE') {
+        const langIndex = skills.findIndex((s) => s.skill.name === 'Language')
+        if (langIndex >= 0) {
+            skills[langIndex] = {
+                ...skills[langIndex],
+                skill: {
+                    ...skills[langIndex].skill,
+                    specialization: lifepath.language,
+                },
+                level: 4,
+            }
+        }
     }
 
     return {
@@ -529,6 +598,8 @@ export const createCharacter = (
         name,
         handle,
         role,
+        roleAbility: roleAbilityData.name,
+        roleAbilityDescription: roleAbilityData.description,
         roleRank: 4, // Starting role ability rank
         creationMethod: method,
         stats,
@@ -537,9 +608,12 @@ export const createCharacter = (
         lifepath,
         weapons,
         armor,
-        gear: [], // General gear would be added here
+        gear,
         cyberware,
+        fashionItems,
         eurobucks,
+        fashionBudget,
+        ip: 0,
         notes: '',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -554,20 +628,63 @@ const extractSpecialization = (skillName: string): string | undefined => {
 }
 
 /**
- * Recalculate derived stats when stats change
+ * Compute effective stats considering cyberware bonuses.
+ * - bodyBonus: summed bonus added to BODY (e.g., Grafted Muscle/Bone Lace +2)
+ * - bodyOverride: highest override that replaces BODY entirely (e.g., Linear Frame Sigma sets to 12)
+ * bodyOverride takes precedence over base BODY + bodyBonus.
+ */
+export const getEffectiveStats = (stats: CharacterStats, cyberware: Cyberware[]): CharacterStats => {
+    let bodyBonus = 0
+    let bodyOverride: number | undefined
+
+    for (const c of cyberware) {
+        if (c.bodyBonus) bodyBonus += c.bodyBonus
+        if (c.bodyOverride && (!bodyOverride || c.bodyOverride > bodyOverride)) {
+            bodyOverride = c.bodyOverride
+        }
+    }
+
+    return {
+        ...stats,
+        BODY: bodyOverride ?? (stats.BODY + bodyBonus),
+    }
+}
+
+/**
+ * Recalculate derived stats when stats or cyberware change
  */
 export const recalculateDerivedStats = (character: Character): Character => {
-    const derivedStatsCalc = calculateDerivedStats(character.stats)
+    const effectiveStats = getEffectiveStats(character.stats, character.cyberware)
+    const derivedStatsCalc = calculateDerivedStats(effectiveStats)
+    // Preserve humanity loss when HumanityMax changes (e.g. EMP stat changed)
+    const humanityLoss = character.derivedStats.HumanityMax - character.derivedStats.HumanityCurrent
+    const newHumanityCurrent = Math.max(0, derivedStatsCalc.HumanityMax - humanityLoss)
     return {
         ...character,
         derivedStats: {
             ...character.derivedStats,
             HP: derivedStatsCalc.HP,
             HumanityMax: derivedStatsCalc.HumanityMax,
+            HumanityCurrent: newHumanityCurrent,
             SeriouslyWoundedThreshold: derivedStatsCalc.SeriouslyWoundedThreshold,
             DeathSave: derivedStatsCalc.DeathSave,
         },
         updatedAt: Date.now(),
     }
+}
+
+/**
+ * Calculate current EMP based on Humanity (Gap 3).
+ * Corebook: EMP drops when Humanity's tens place lowers (e.g., 44→39 = EMP 4→3).
+ */
+export const calculateCurrentEMP = (humanityCurrent: number): number => {
+    return Math.max(0, Math.ceil(humanityCurrent / 10))
+}
+
+/**
+ * Check if a character has a specific cyberware installed (for foundation requirements).
+ */
+export const hasCyberware = (character: Character, cyberwareName: string): boolean => {
+    return character.cyberware.some((c) => c.name === cyberwareName)
 }
 

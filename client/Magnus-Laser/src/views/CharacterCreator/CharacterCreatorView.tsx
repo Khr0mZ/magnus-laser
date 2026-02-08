@@ -1,4 +1,15 @@
+import ArrowBack from '@mui/icons-material/ArrowBack'
+import ArrowForward from '@mui/icons-material/ArrowForward'
+import Casino from '@mui/icons-material/Casino'
+import Check from '@mui/icons-material/Check'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import Person from '@mui/icons-material/Person'
+import RestartAlt from '@mui/icons-material/RestartAlt'
+import SaveAlt from '@mui/icons-material/SaveAlt'
 import {
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
     Box,
     Button,
     Card,
@@ -19,16 +30,12 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import ArrowBack from '@mui/icons-material/ArrowBack'
-import ArrowForward from '@mui/icons-material/ArrowForward'
-import Casino from '@mui/icons-material/Casino'
-import Check from '@mui/icons-material/Check'
-import Person from '@mui/icons-material/Person'
-import RestartAlt from '@mui/icons-material/RestartAlt'
-import SaveAlt from '@mui/icons-material/SaveAlt'
+import { useDocumentTitle } from '@uidotdev/usehooks'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { neonPulse, pulseGlowCyan } from '../../components/common/Animations'
+import CustomScrollbar from '../../components/CustomScrollbar'
 import { useGMToolsDataStore } from '../../components/GMTools/GMToolsDataStore'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import NavigationPaths from '../../navigation'
@@ -44,33 +51,85 @@ import type {
     Weapon,
 } from '../../types/characterCreator'
 import colors from '../../utils/colors'
-import { 
-    ROLES, 
+import {
+    BASIC_SKILLS,
     calculateDerivedStats,
-    SHOP_WEAPONS,
+    ROLE_ABILITIES,
+    ROLE_ABILITY_RANK_DETAILS,
+    ROLES,
     SHOP_ARMOR,
-    SHOP_GEAR,
+    SHOP_BORGWARE,
     SHOP_CYBERWARE,
-    type ShopWeapon,
+    SHOP_FASHION,
+    SHOP_GEAR,
+    SHOP_WEAPONS,
     type ShopArmor,
-    type ShopGear,
     type ShopCyberware,
+    type ShopFashion,
+    type ShopGear,
+    type ShopWeapon,
 } from '../../utils/generators/characterCreatorData'
 import {
+    calculateCurrentEMP,
     createCharacter,
     generateLifepath,
     generateStreetratStats,
+    getEffectiveStats,
     recalculateDerivedStats,
 } from '../../utils/generators/characterCreatorUtils'
 
-const BASE_STEPS: CreationStep[] = [
-    'METHOD_SELECTION',
-    'ROLE_SELECTION',
-    'STATS',
-    'SKILLS',
-    'LIFEPATH',
-    'FINISHING',
+const CYBERWARE_CATEGORIES: { type: string; label: string; description: string; color: string }[] = [
+    {
+        type: 'Fashionware',
+        label: 'Fashionware',
+        description: 'Personal adornment cyberware — 0 HL, Mall install',
+        color: colors.neons.pink.default,
+    },
+    {
+        type: 'Neuralware',
+        label: 'Neuralware',
+        description: 'Reflexes and mental augmentation',
+        color: colors.neons.cyan.default,
+    },
+    {
+        type: 'Cyberoptics',
+        label: 'Cyberoptics',
+        description: 'Visual enhancement implants',
+        color: colors.neons.blue.default,
+    },
+    {
+        type: 'Cyberaudio',
+        label: 'Cyberaudio',
+        description: 'Hearing and auditory implants',
+        color: colors.neons.green.default,
+    },
+    {
+        type: 'Internal',
+        label: 'Internal Body Cyberware',
+        description: 'Implanted organs and systemic improvements',
+        color: colors.neons.orange.default,
+    },
+    {
+        type: 'External',
+        label: 'External Body Cyberware',
+        description: 'Installed on or through the skin',
+        color: colors.neons.yellow.default,
+    },
+    {
+        type: 'Cyberlimbs',
+        label: 'Cyberlimbs',
+        description: 'Cybernetic arms and legs with options',
+        color: colors.neons.red.default,
+    },
+    {
+        type: 'Borgware',
+        label: 'Borgware',
+        description: 'Full body replacement cyberware',
+        color: colors.neons.purple.default,
+    },
 ]
+
+const BASE_STEPS: CreationStep[] = ['METHOD_SELECTION', 'ROLE_SELECTION', 'STATS', 'SKILLS', 'LIFEPATH', 'FINISHING']
 
 const COMPLETE_PACKAGE_STEPS: CreationStep[] = [
     'METHOD_SELECTION',
@@ -82,29 +141,15 @@ const COMPLETE_PACKAGE_STEPS: CreationStep[] = [
     'FINISHING',
 ]
 
-const BASE_STEP_LABELS = [
-    'Method',
-    'Role',
-    'Stats',
-    'Skills',
-    'Lifepath',
-    'Finish',
-]
+const BASE_STEP_LABELS = ['Method', 'Role', 'Stats', 'Skills', 'Lifepath', 'Finish']
 
-const COMPLETE_PACKAGE_STEP_LABELS = [
-    'Method',
-    'Role',
-    'Stats',
-    'Skills',
-    'Shopping',
-    'Lifepath',
-    'Finish',
-]
+const COMPLETE_PACKAGE_STEP_LABELS = ['Method', 'Role', 'Stats', 'Skills', 'Shopping', 'Lifepath', 'Finish']
 
 const CharacterCreatorView = () => {
     const { t } = useTranslation()
     const navigate = useNavigate()
     const { readerMode } = useUserPreferences()
+    useDocumentTitle('Magnus Laser - Character Creator')
     const { addEdgerunner } = useGMToolsDataStore()
 
     // Creation state
@@ -117,10 +162,10 @@ const CharacterCreatorView = () => {
 
     // Dialog state
     const [showSaveDialog, setShowSaveDialog] = useState(false)
-    
+
     // Shopping tab state
-    const [shoppingTab, setShoppingTab] = useState<'weapons' | 'armor' | 'gear' | 'cyberware'>('weapons')
-    
+    const [shoppingTab, setShoppingTab] = useState<'weapons' | 'armor' | 'gear' | 'cyberware' | 'fashion'>('weapons')
+
     // Dynamic steps based on method
     const STEPS = method === 'COMPLETE_PACKAGE' ? COMPLETE_PACKAGE_STEPS : BASE_STEPS
     const STEP_LABELS = method === 'COMPLETE_PACKAGE' ? COMPLETE_PACKAGE_STEP_LABELS : BASE_STEP_LABELS
@@ -274,22 +319,96 @@ const CharacterCreatorView = () => {
         })
     }
 
+    // Slot limit checking helper (Gap 14)
+    const getFoundationSlotUsage = (foundationName: string): { used: number; max: number } => {
+        if (!character) return { used: 0, max: 0 }
+        const allCyber = [...SHOP_CYBERWARE, ...SHOP_BORGWARE]
+        const foundation = allCyber.find((c) => c.name === foundationName)
+        const max = foundation?.maxSlots ?? 0
+        let used = 0
+        for (const owned of character.cyberware) {
+            const shopItem = allCyber.find((c) => c.name === owned.name && c.prerequisite === foundationName)
+            if (shopItem) {
+                used += shopItem.slotsUsed ?? 1
+            }
+        }
+        return { used, max }
+    }
+
+    const isSlotsFull = (shopCyber: ShopCyberware): boolean => {
+        if (!shopCyber.prerequisite) return false
+        const allCyber = [...SHOP_CYBERWARE, ...SHOP_BORGWARE]
+        const foundation = allCyber.find((c) => c.name === shopCyber.prerequisite && c.maxSlots !== undefined)
+        if (!foundation) return false
+        const { used, max } = getFoundationSlotUsage(shopCyber.prerequisite)
+        return used + (shopCyber.slotsUsed ?? 1) > max
+    }
+
+    // Comprehensive cyberware requirement validation
+    const getCyberwareBlockReason = (shopCyber: ShopCyberware): string | null => {
+        if (!character) return null
+        // Prerequisite check (with count)
+        if (shopCyber.prerequisite) {
+            const count = character.cyberware.filter((c) => c.name === shopCyber.prerequisite).length
+            const needed = shopCyber.prerequisiteCount ?? 1
+            if (count < needed) {
+                return needed > 1
+                    ? `Requires ${needed}x ${shopCyber.prerequisite} (have ${count})`
+                    : `Requires ${shopCyber.prerequisite}`
+            }
+        }
+        // Stat requirement check (use effective stats with cyberware bonuses)
+        if (shopCyber.requiresStat) {
+            const { stat, min } = shopCyber.requiresStat
+            const effective = getEffectiveStats(character.stats, character.cyberware)
+            if (effective[stat] < min) {
+                return `Requires ${stat} ${min}+ (current: ${effective[stat]})`
+            }
+        }
+        // Unique check
+        if (shopCyber.unique && character.cyberware.some((c) => c.name === shopCyber.name)) {
+            return 'Already installed (only one allowed)'
+        }
+        // Slot limit check
+        if (isSlotsFull(shopCyber)) {
+            return `No slots available in ${shopCyber.prerequisite}`
+        }
+        return null
+    }
+
     const handleBuyCyberware = (shopCyber: ShopCyberware) => {
         if (!character || character.eurobucks < shopCyber.cost) return
+        // Comprehensive requirement check
+        if (getCyberwareBlockReason(shopCyber)) return
         const newCyberware: Cyberware = {
             name: shopCyber.name,
             type: shopCyber.type,
             description: shopCyber.description,
             humanityLoss: shopCyber.humanityLoss,
             cost: shopCyber.cost,
+            ...(shopCyber.bodyBonus && { bodyBonus: shopCyber.bodyBonus }),
+            ...(shopCyber.bodyOverride && { bodyOverride: shopCyber.bodyOverride }),
         }
+        const newHumanity = character.derivedStats.HumanityCurrent - shopCyber.humanityLoss
+        // EMP = min(baseEMP, ceil(currentHumanity / 10)) — base EMP derived from HumanityMax
+        const baseEMP = Math.ceil(character.derivedStats.HumanityMax / 10)
+        const newEMP = Math.min(baseEMP, calculateCurrentEMP(newHumanity))
+        const newCyberwareList = [...character.cyberware, newCyberware]
+        // Recalculate HP/DeathSave using effective stats (base + cyberware bonuses)
+        const newStats = { ...character.stats, EMP: newEMP }
+        const effectiveStats = getEffectiveStats(newStats, newCyberwareList)
+        const derivedStatsCalc = calculateDerivedStats(effectiveStats)
         setCharacter({
             ...character,
-            cyberware: [...character.cyberware, newCyberware],
+            cyberware: newCyberwareList,
             eurobucks: character.eurobucks - shopCyber.cost,
+            stats: newStats,
             derivedStats: {
                 ...character.derivedStats,
-                HumanityCurrent: character.derivedStats.HumanityCurrent - shopCyber.humanityLoss,
+                HP: derivedStatsCalc.HP,
+                SeriouslyWoundedThreshold: derivedStatsCalc.SeriouslyWoundedThreshold,
+                DeathSave: derivedStatsCalc.DeathSave,
+                HumanityCurrent: newHumanity,
             },
             updatedAt: Date.now(),
         })
@@ -300,17 +419,57 @@ const CharacterCreatorView = () => {
         const cyber = character.cyberware[index]
         const refund = Math.floor(cyber.cost / 2)
         const hlRefund = typeof cyber.humanityLoss === 'number' ? cyber.humanityLoss : 0
+        const newHumanity = Math.min(
+            character.derivedStats.HumanityCurrent + hlRefund,
+            character.derivedStats.HumanityMax
+        )
+        const baseEMP = Math.ceil(character.derivedStats.HumanityMax / 10)
+        const newEMP = Math.min(baseEMP, calculateCurrentEMP(newHumanity))
+        const newCyberwareList = character.cyberware.filter((_, i) => i !== index)
+        // Recalculate HP/DeathSave using effective stats (base + remaining cyberware bonuses)
+        const newStats = { ...character.stats, EMP: newEMP }
+        const effectiveStats = getEffectiveStats(newStats, newCyberwareList)
+        const derivedStatsCalc = calculateDerivedStats(effectiveStats)
         setCharacter({
             ...character,
-            cyberware: character.cyberware.filter((_, i) => i !== index),
+            cyberware: newCyberwareList,
             eurobucks: character.eurobucks + refund,
+            stats: newStats,
             derivedStats: {
                 ...character.derivedStats,
-                HumanityCurrent: Math.min(
-                    character.derivedStats.HumanityCurrent + hlRefund,
-                    character.derivedStats.HumanityMax
-                ),
+                HP: derivedStatsCalc.HP,
+                SeriouslyWoundedThreshold: derivedStatsCalc.SeriouslyWoundedThreshold,
+                DeathSave: derivedStatsCalc.DeathSave,
+                HumanityCurrent: newHumanity,
             },
+            updatedAt: Date.now(),
+        })
+    }
+
+    // Fashion shopping handlers (Gap 2 - separate 800eb budget)
+    const handleBuyFashion = (shopFashion: ShopFashion) => {
+        if (!character || character.fashionBudget < shopFashion.cost) return
+        const newItem: GearItem = {
+            name: shopFashion.name,
+            description: shopFashion.description,
+            cost: shopFashion.cost,
+        }
+        setCharacter({
+            ...character,
+            fashionItems: [...character.fashionItems, newItem],
+            fashionBudget: character.fashionBudget - shopFashion.cost,
+            updatedAt: Date.now(),
+        })
+    }
+
+    const handleSellFashion = (index: number) => {
+        if (!character) return
+        const item = character.fashionItems[index]
+        const refund = Math.floor(item.cost / 2)
+        setCharacter({
+            ...character,
+            fashionItems: character.fashionItems.filter((_, i) => i !== index),
+            fashionBudget: character.fashionBudget + refund,
             updatedAt: Date.now(),
         })
     }
@@ -357,7 +516,7 @@ const CharacterCreatorView = () => {
         if (!character) return { used: 0, total: 86 }
         let used = 0
         const isCompletePackage = method === 'COMPLETE_PACKAGE'
-        
+
         for (const skill of character.skills) {
             const multiplier = skill.skill.isX2 ? 2 : 1
             if (isCompletePackage) {
@@ -370,21 +529,40 @@ const CharacterCreatorView = () => {
                 }
             }
         }
-        
+
         // Edgerunner starts with skills at 2, so base cost is 2 * num_skills
         if (!isCompletePackage) {
             const baseCost = character.skills.reduce((acc, s) => acc + 2 * (s.skill.isX2 ? 2 : 1), 0)
             used += baseCost
         }
-        
+
+        // Complete Package: subtract free cultural origin language bonus (Gap 10)
+        // Corebook gives Language at level 4 for free; basic skill min is 2, so 2 levels are free
+        if (isCompletePackage) {
+            const langSkill = character.skills.find((s) => s.skill.name === 'Language' && s.skill.specialization)
+            if (langSkill) {
+                const freeLevels = Math.max(0, Math.min(langSkill.level, 4) - 2)
+                used -= freeLevels * (langSkill.skill.isX2 ? 2 : 1)
+            }
+        }
+
         return { used, total: 86 }
     }
 
     const calculateStatPoints = (): { used: number; total: number } => {
         if (!character) return { used: 0, total: 62 }
         const stats = character.stats
-        const used = stats.INT + stats.REF + stats.DEX + stats.TECH + stats.COOL +
-                    stats.WILL + stats.LUCK + stats.MOVE + stats.BODY + stats.EMP
+        const used =
+            stats.INT +
+            stats.REF +
+            stats.DEX +
+            stats.TECH +
+            stats.COOL +
+            stats.WILL +
+            stats.LUCK +
+            stats.MOVE +
+            stats.BODY +
+            stats.EMP
         return { used, total: 62 }
     }
 
@@ -393,12 +571,14 @@ const CharacterCreatorView = () => {
         backgroundColor: readerMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(10, 15, 25, 0.95)',
         border: `1px solid ${colors.neons.cyan.default}30`,
         borderRadius: 2,
-        transition: 'all 0.3s ease',
+        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
         cursor: 'pointer',
+        backdropFilter: 'blur(5px)',
         '&:hover': {
             borderColor: colors.neons.cyan.default,
             boxShadow: `0 0 20px ${colors.neons.cyan.default}30`,
-            transform: 'translateY(-2px)',
+            transform: 'translateY(-4px) scale(1.01)',
+            animation: readerMode ? 'none' : `${neonPulse} 2s infinite`,
         },
     }
 
@@ -406,6 +586,7 @@ const CharacterCreatorView = () => {
         ...cardStyle,
         borderColor: colors.neons.cyan.default,
         boxShadow: `0 0 20px ${colors.neons.cyan.default}50`,
+        animation: readerMode ? 'none' : `${pulseGlowCyan} 2s infinite`,
     }
 
     const renderMethodSelection = () => (
@@ -441,9 +622,12 @@ const CharacterCreatorView = () => {
                             <Typography variant="body2" sx={{ color: colors.grays.gray500, mb: 2 }}>
                                 Template-based
                             </Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
-                                The fastest way to create a character. Roll 1d10 and get a pre-generated 
-                                stat array and skill set. Perfect for new players or quick sessions.
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                The fastest way to create a character. Roll 1d10 and get a pre-generated stat array and
+                                skill set. Perfect for new players or quick sessions.
                             </Typography>
                             <Chip
                                 label="Beginner Friendly"
@@ -472,9 +656,12 @@ const CharacterCreatorView = () => {
                             <Typography variant="body2" sx={{ color: colors.grays.gray500, mb: 2 }}>
                                 Fast and Dirty
                             </Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
-                                Get a stat template but distribute 86 skill points yourself. 
-                                A balance between speed and customization.
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Get a stat template but distribute 86 skill points yourself. A balance between speed and
+                                customization.
                             </Typography>
                             <Chip
                                 label="Recommended"
@@ -507,9 +694,12 @@ const CharacterCreatorView = () => {
                             <Typography variant="body2" sx={{ color: colors.grays.gray500, mb: 2 }}>
                                 Calculated
                             </Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
-                                Full control: 62 points for stats, 86 for skills, 2,550eb for gear. 
-                                Build exactly the character you want.
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Full control: 62 points for stats, 86 for skills, 2,550eb for gear. Build exactly the
+                                character you want.
                             </Typography>
                             <Chip
                                 label="Advanced"
@@ -568,6 +758,141 @@ const CharacterCreatorView = () => {
                                 >
                                     {r.description}
                                 </Typography>
+
+                                {/* Role Ability Details */}
+                                {ROLE_ABILITIES[r.value] && (
+                                    <Box
+                                        sx={{
+                                            mt: 1.5,
+                                            pt: 1,
+                                            borderTop: `1px solid ${colors.neons.green.default}25`,
+                                        }}
+                                    >
+                                        <Stack direction="row" alignItems="center" spacing={0.5} mb={0.5}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: colors.neons.green.default,
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.7rem',
+                                                }}
+                                            >
+                                                {ROLE_ABILITIES[r.value].name}
+                                            </Typography>
+                                            <Chip
+                                                label="Role Ability"
+                                                size="small"
+                                                sx={{
+                                                    height: 16,
+                                                    fontSize: '0.55rem',
+                                                    backgroundColor: `${colors.neons.green.default}20`,
+                                                    color: colors.neons.green.default,
+                                                }}
+                                            />
+                                        </Stack>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: colors.grays.gray500,
+                                                fontSize: '0.68rem',
+                                                display: 'block',
+                                                fontStyle: 'italic',
+                                                mb: 0.5,
+                                            }}
+                                        >
+                                            {ROLE_ABILITY_RANK_DETAILS[r.value]?.mechanic}
+                                        </Typography>
+                                        {ROLE_ABILITY_RANK_DETAILS[r.value] && (
+                                            <Accordion
+                                                sx={{
+                                                    backgroundColor: 'transparent',
+                                                    boxShadow: 'none',
+                                                    '&::before': { display: 'none' },
+                                                    border: `1px solid ${colors.grays.gray300}`,
+                                                    borderRadius: '4px !important',
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <AccordionSummary
+                                                    expandIcon={
+                                                        <ExpandMore
+                                                            sx={{
+                                                                color: colors.grays.gray500,
+                                                                fontSize: 14,
+                                                            }}
+                                                        />
+                                                    }
+                                                    sx={{
+                                                        minHeight: 24,
+                                                        '& .MuiAccordionSummary-content': {
+                                                            my: 0.2,
+                                                        },
+                                                    }}
+                                                >
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            color: colors.grays.gray500,
+                                                            fontSize: '0.65rem',
+                                                        }}
+                                                    >
+                                                        Rank Details
+                                                    </Typography>
+                                                </AccordionSummary>
+                                                <AccordionDetails sx={{ p: 1, pt: 0 }}>
+                                                    {ROLE_ABILITY_RANK_DETAILS[r.value].ranks.map(
+                                                        (rankInfo) => (
+                                                            <Box
+                                                                key={rankInfo.range}
+                                                                sx={{
+                                                                    mb: 0.8,
+                                                                    pb: 0.5,
+                                                                    borderBottom: `1px solid ${colors.grays.gray300}`,
+                                                                    '&:last-child': {
+                                                                        borderBottom: 'none',
+                                                                        mb: 0,
+                                                                    },
+                                                                }}
+                                                            >
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    sx={{
+                                                                        color: colors.neons.green.default,
+                                                                        fontWeight: 'bold',
+                                                                        display: 'block',
+                                                                        fontSize: '0.65rem',
+                                                                        mb: 0.2,
+                                                                    }}
+                                                                >
+                                                                    Rank {rankInfo.range}
+                                                                </Typography>
+                                                                {rankInfo.details.map((detail, i) => (
+                                                                    <Typography
+                                                                        key={i}
+                                                                        variant="caption"
+                                                                        sx={{
+                                                                            color: colors.grays.gray600,
+                                                                            display: 'block',
+                                                                            fontSize: '0.63rem',
+                                                                            pl: detail.startsWith('  ')
+                                                                                ? 1.5
+                                                                                : 0.5,
+                                                                            lineHeight: 1.4,
+                                                                        }}
+                                                                    >
+                                                                        {detail.startsWith('  ')
+                                                                            ? detail
+                                                                            : `• ${detail}`}
+                                                                    </Typography>
+                                                                ))}
+                                                            </Box>
+                                                        )
+                                                    )}
+                                                </AccordionDetails>
+                                            </Accordion>
+                                        )}
+                                    </Box>
+                                )}
                             </CardContent>
                         </Card>
                     </Grid>
@@ -578,7 +903,8 @@ const CharacterCreatorView = () => {
 
     const renderStats = () => {
         if (!character) return null
-        const derived = calculateDerivedStats(character.stats)
+        const effectiveStats = getEffectiveStats(character.stats, character.cyberware)
+        const derived = calculateDerivedStats(effectiveStats)
         const statPoints = calculateStatPoints()
         const isCompletePackage = method === 'COMPLETE_PACKAGE'
 
@@ -602,6 +928,10 @@ const CharacterCreatorView = () => {
                             sx={{
                                 borderColor: colors.neons.yellow.default,
                                 color: colors.neons.yellow.default,
+                                '&:hover': {
+                                    bgcolor: 'rgba(40, 40, 0, 0.6)',
+                                    boxShadow: `0 0 10px ${colors.neons.yellow.default}40`,
+                                },
                             }}
                         >
                             Reroll Stats
@@ -622,7 +952,8 @@ const CharacterCreatorView = () => {
                             Points: {statPoints.used} / {statPoints.total}
                             {statPoints.used !== statPoints.total && (
                                 <span style={{ color: colors.neons.red.default }}>
-                                    {' '}({statPoints.total - statPoints.used} remaining)
+                                    {' '}
+                                    ({statPoints.total - statPoints.used} remaining)
                                 </span>
                             )}
                         </Typography>
@@ -641,6 +972,7 @@ const CharacterCreatorView = () => {
                                             ? 'rgba(255,255,255,0.9)'
                                             : 'rgba(10, 15, 25, 0.95)',
                                         border: `1px solid ${colors.neons.cyan.default}30`,
+                                        backdropFilter: 'blur(5px)',
                                     }}
                                 >
                                     <Typography
@@ -657,7 +989,9 @@ const CharacterCreatorView = () => {
                                         <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleStatChange(stat, Math.max(2, character.stats[stat] - 1))}
+                                                onClick={() =>
+                                                    handleStatChange(stat, Math.max(2, character.stats[stat] - 1))
+                                                }
                                                 disabled={character.stats[stat] <= 2}
                                             >
                                                 -
@@ -674,7 +1008,9 @@ const CharacterCreatorView = () => {
                                             </Typography>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleStatChange(stat, Math.min(8, character.stats[stat] + 1))}
+                                                onClick={() =>
+                                                    handleStatChange(stat, Math.min(8, character.stats[stat] + 1))
+                                                }
                                                 disabled={character.stats[stat] >= 8}
                                             >
                                                 +
@@ -711,33 +1047,81 @@ const CharacterCreatorView = () => {
                 </Typography>
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: `${colors.neons.red.default}10`, border: `1px solid ${colors.neons.red.default}40` }}>
-                            <Typography variant="caption" sx={{ color: colors.neons.red.default }}>HP</Typography>
-                            <Typography variant="h5" sx={{ color: colors.neons.red.default, fontFamily: '"Orbitron", sans-serif' }}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                textAlign: 'center',
+                                backgroundColor: `${colors.neons.red.default}10`,
+                                border: `1px solid ${colors.neons.red.default}40`,
+                            }}
+                        >
+                            <Typography variant="caption" sx={{ color: colors.neons.red.default }}>
+                                HP
+                            </Typography>
+                            <Typography
+                                variant="h5"
+                                sx={{ color: colors.neons.red.default, fontFamily: '"Orbitron", sans-serif' }}
+                            >
                                 {derived.HP}
                             </Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: `${colors.neons.yellow.default}10`, border: `1px solid ${colors.neons.yellow.default}40` }}>
-                            <Typography variant="caption" sx={{ color: colors.neons.yellow.default }}>Seriously Wounded</Typography>
-                            <Typography variant="h5" sx={{ color: colors.neons.yellow.default, fontFamily: '"Orbitron", sans-serif' }}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                textAlign: 'center',
+                                backgroundColor: `${colors.neons.yellow.default}10`,
+                                border: `1px solid ${colors.neons.yellow.default}40`,
+                            }}
+                        >
+                            <Typography variant="caption" sx={{ color: colors.neons.yellow.default }}>
+                                Seriously Wounded
+                            </Typography>
+                            <Typography
+                                variant="h5"
+                                sx={{ color: colors.neons.yellow.default, fontFamily: '"Orbitron", sans-serif' }}
+                            >
                                 {derived.SeriouslyWoundedThreshold}
                             </Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: `${colors.neons.purple.default}10`, border: `1px solid ${colors.neons.purple.default}40` }}>
-                            <Typography variant="caption" sx={{ color: colors.neons.purple.default }}>Humanity</Typography>
-                            <Typography variant="h5" sx={{ color: colors.neons.purple.default, fontFamily: '"Orbitron", sans-serif' }}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                textAlign: 'center',
+                                backgroundColor: `${colors.neons.purple.default}10`,
+                                border: `1px solid ${colors.neons.purple.default}40`,
+                            }}
+                        >
+                            <Typography variant="caption" sx={{ color: colors.neons.purple.default }}>
+                                Humanity
+                            </Typography>
+                            <Typography
+                                variant="h5"
+                                sx={{ color: colors.neons.purple.default, fontFamily: '"Orbitron", sans-serif' }}
+                            >
                                 {derived.HumanityMax}
                             </Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 6, sm: 3 }}>
-                        <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: `${colors.neons.cyan.default}10`, border: `1px solid ${colors.neons.cyan.default}40` }}>
-                            <Typography variant="caption" sx={{ color: colors.neons.cyan.default }}>Death Save</Typography>
-                            <Typography variant="h5" sx={{ color: colors.neons.cyan.default, fontFamily: '"Orbitron", sans-serif' }}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                textAlign: 'center',
+                                backgroundColor: `${colors.neons.cyan.default}10`,
+                                border: `1px solid ${colors.neons.cyan.default}40`,
+                            }}
+                        >
+                            <Typography variant="caption" sx={{ color: colors.neons.cyan.default }}>
+                                Death Save
+                            </Typography>
+                            <Typography
+                                variant="h5"
+                                sx={{ color: colors.neons.cyan.default, fontFamily: '"Orbitron", sans-serif' }}
+                            >
                                 {derived.DeathSave}
                             </Typography>
                         </Paper>
@@ -747,12 +1131,15 @@ const CharacterCreatorView = () => {
         )
     }
 
+    const isBasicSkill = (skillName: string): boolean => {
+        return BASIC_SKILLS.some((bs) => skillName.startsWith(bs))
+    }
+
     const renderSkills = () => {
         if (!character) return null
         const skillPoints = calculateSkillPoints()
         const isStreetrat = method === 'STREETRAT'
         const isCompletePackage = method === 'COMPLETE_PACKAGE'
-        const minLevel = isCompletePackage ? 0 : 2
 
         return (
             <Box>
@@ -774,8 +1161,8 @@ const CharacterCreatorView = () => {
                                     skillPoints.used === skillPoints.total
                                         ? colors.neons.green.default
                                         : skillPoints.used > skillPoints.total
-                                        ? colors.neons.red.default
-                                        : colors.neons.yellow.default,
+                                          ? colors.neons.red.default
+                                          : colors.neons.yellow.default,
                             }}
                         />
                     )}
@@ -792,6 +1179,7 @@ const CharacterCreatorView = () => {
                     >
                         <Typography variant="body2" sx={{ color: colors.grays.gray600 }}>
                             Distribute 86 skill points. Skills marked (x2) cost double. No skill can exceed level 6.
+                            Basic Skills have a minimum of 2.
                             {skillPoints.used !== skillPoints.total && (
                                 <span style={{ color: colors.neons.yellow.default, marginLeft: 8 }}>
                                     ({skillPoints.total - skillPoints.used} points remaining)
@@ -801,80 +1189,116 @@ const CharacterCreatorView = () => {
                     </Paper>
                 )}
 
-                <Grid container spacing={1}>
-                    {character.skills.map((charSkill, index) => (
-                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
-                            <Paper
-                                sx={{
-                                    p: 1.5,
-                                    backgroundColor: readerMode
-                                        ? 'rgba(255,255,255,0.9)'
-                                        : 'rgba(10, 15, 25, 0.95)',
-                                    border: `1px solid ${charSkill.level > 0 ? colors.neons.cyan.default + '40' : colors.grays.gray700}`,
-                                }}
-                            >
-                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                        <Typography 
-                                            variant="body2" 
-                                            sx={{ 
-                                                color: readerMode ? colors.grays.gray100 : colors.grays.gray800,
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                            }}
-                                        >
-                                            {charSkill.skill.name}
-                                            {charSkill.skill.specialization && ` (${charSkill.skill.specialization})`}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
-                                            {charSkill.skill.stat}
-                                            {charSkill.skill.isX2 && ' (x2)'}
-                                        </Typography>
-                                    </Box>
-                                    {isStreetrat ? (
-                                        <Typography
-                                            variant="h6"
-                                            sx={{
-                                                color: colors.neons.cyan.default,
-                                                fontFamily: '"Orbitron", sans-serif',
-                                            }}
-                                        >
-                                            {charSkill.level}
-                                        </Typography>
-                                    ) : (
-                                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleSkillChange(index, Math.max(minLevel, charSkill.level - 1))}
-                                                disabled={charSkill.level <= minLevel}
-                                            >
-                                                -
-                                            </IconButton>
+                <CustomScrollbar height="500px">
+                    <Grid container spacing={1}>
+                        {character.skills.map((charSkill, index) => (
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
+                                <Paper
+                                    sx={{
+                                        p: 1.5,
+                                        backgroundColor: readerMode
+                                            ? 'rgba(255,255,255,0.9)'
+                                            : 'rgba(10, 15, 25, 0.95)',
+                                        border: `1px solid ${charSkill.level > 0 ? colors.neons.cyan.default + '40' : colors.grays.gray700}`,
+                                        backdropFilter: 'blur(5px)',
+                                    }}
+                                >
+                                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
                                             <Typography
+                                                variant="body2"
                                                 sx={{
-                                                    color: charSkill.level > 0 ? colors.neons.cyan.default : colors.grays.gray600,
+                                                    color: readerMode ? colors.grays.gray100 : colors.grays.gray800,
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                }}
+                                            >
+                                                {charSkill.skill.name}
+                                                {charSkill.skill.specialization &&
+                                                    ` (${charSkill.skill.specialization})`}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
+                                                {charSkill.skill.stat}
+                                                {charSkill.skill.isX2 && ' (x2)'}
+                                            </Typography>
+                                        </Box>
+                                        {isStreetrat ? (
+                                            <Typography
+                                                variant="h6"
+                                                sx={{
+                                                    color: colors.neons.cyan.default,
                                                     fontFamily: '"Orbitron", sans-serif',
-                                                    minWidth: 24,
-                                                    textAlign: 'center',
                                                 }}
                                             >
                                                 {charSkill.level}
                                             </Typography>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleSkillChange(index, Math.min(6, charSkill.level + 1))}
-                                                disabled={charSkill.level >= 6}
-                                            >
-                                                +
-                                            </IconButton>
-                                        </Stack>
-                                    )}
-                                </Stack>
-                            </Paper>
-                        </Grid>
-                    ))}
-                </Grid>
+                                        ) : (
+                                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        // Free cultural origin language min 4; basic skills min 2; others min 0
+                                                        const isFreeLanguage =
+                                                            isCompletePackage &&
+                                                            charSkill.skill.name === 'Language' &&
+                                                            !!charSkill.skill.specialization
+                                                        const min = isFreeLanguage
+                                                            ? 4
+                                                            : isCompletePackage
+                                                              ? isBasicSkill(charSkill.skill.name)
+                                                                  ? 2
+                                                                  : 0
+                                                              : 2
+                                                        handleSkillChange(index, Math.max(min, charSkill.level - 1))
+                                                    }}
+                                                    disabled={(() => {
+                                                        const isFreeLanguage =
+                                                            isCompletePackage &&
+                                                            charSkill.skill.name === 'Language' &&
+                                                            !!charSkill.skill.specialization
+                                                        const min = isFreeLanguage
+                                                            ? 4
+                                                            : isCompletePackage
+                                                              ? isBasicSkill(charSkill.skill.name)
+                                                                  ? 2
+                                                                  : 0
+                                                              : 2
+                                                        return charSkill.level <= min
+                                                    })()}
+                                                >
+                                                    -
+                                                </IconButton>
+                                                <Typography
+                                                    sx={{
+                                                        color:
+                                                            charSkill.level > 0
+                                                                ? colors.neons.cyan.default
+                                                                : colors.grays.gray600,
+                                                        fontFamily: '"Orbitron", sans-serif',
+                                                        minWidth: 24,
+                                                        textAlign: 'center',
+                                                    }}
+                                                >
+                                                    {charSkill.level}
+                                                </Typography>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() =>
+                                                        handleSkillChange(index, Math.min(6, charSkill.level + 1))
+                                                    }
+                                                    disabled={charSkill.level >= 6}
+                                                >
+                                                    +
+                                                </IconButton>
+                                            </Stack>
+                                        )}
+                                    </Stack>
+                                </Paper>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </CustomScrollbar>
             </Box>
         )
     }
@@ -882,11 +1306,13 @@ const CharacterCreatorView = () => {
     const renderGearShopping = () => {
         if (!character) return null
 
+        const allCyberware = [...SHOP_CYBERWARE, ...SHOP_BORGWARE]
         const tabs = [
             { key: 'weapons' as const, label: 'Weapons' },
             { key: 'armor' as const, label: 'Armor' },
             { key: 'gear' as const, label: 'Gear' },
             { key: 'cyberware' as const, label: 'Cyberware' },
+            { key: 'fashion' as const, label: 'Fashion' },
         ]
 
         return (
@@ -901,21 +1327,72 @@ const CharacterCreatorView = () => {
                     >
                         Night Market
                     </Typography>
-                    <Chip
-                        label={`${character.eurobucks}eb`}
-                        sx={{
-                            backgroundColor: colors.neons.yellow.default,
-                            color: colors.grays.gray900,
-                            fontFamily: '"Orbitron", sans-serif',
-                            fontSize: '1rem',
-                            px: 2,
-                        }}
-                    />
+                    <Stack direction="row" spacing={1}>
+                        <Chip
+                            label={`${character.eurobucks}eb`}
+                            sx={{
+                                backgroundColor: colors.neons.yellow.default,
+                                color: colors.grays.gray900,
+                                fontFamily: '"Orbitron", sans-serif',
+                                fontSize: '1rem',
+                                px: 2,
+                            }}
+                        />
+                        <Chip
+                            label={`Fashion: ${character.fashionBudget}eb`}
+                            sx={{
+                                backgroundColor: colors.neons.pink.default,
+                                color: colors.grays.gray900,
+                                fontFamily: '"Orbitron", sans-serif',
+                                fontSize: '0.85rem',
+                                px: 1,
+                            }}
+                        />
+                    </Stack>
                 </Stack>
 
                 <Typography variant="body2" sx={{ color: colors.grays.gray600, mb: 2 }}>
-                    Spend your 2,550eb on weapons, armor, gear, and cyberware. Humanity lost from cyberware is deducted automatically.
+                    2,550eb for weapons, armor, gear, and cyberware. 800eb separate budget for fashion/fashionware only
+                    (unspent is lost).
                 </Typography>
+
+                {/* Cyberpsychosis Warning (Gap 19) */}
+                {character.derivedStats.HumanityCurrent <= 0 && (
+                    <Paper
+                        sx={{
+                            p: 2,
+                            mb: 2,
+                            backgroundColor: `${colors.neons.red.default}20`,
+                            border: `2px solid ${colors.neons.red.default}`,
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ color: colors.neons.red.default, fontWeight: 'bold' }}>
+                            CYBERPSYCHOSIS — This character has lost their humanity!
+                        </Typography>
+                    </Paper>
+                )}
+                {character.derivedStats.HumanityCurrent > 0 && character.derivedStats.HumanityCurrent < 20 && (
+                    <Paper
+                        sx={{
+                            p: 1,
+                            mb: 2,
+                            backgroundColor: `${character.derivedStats.HumanityCurrent < 10 ? colors.neons.red.default : colors.neons.yellow.default}15`,
+                            border: `1px solid ${character.derivedStats.HumanityCurrent < 10 ? colors.neons.red.default : colors.neons.yellow.default}60`,
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color:
+                                    character.derivedStats.HumanityCurrent < 10
+                                        ? colors.neons.red.default
+                                        : colors.neons.yellow.default,
+                            }}
+                        >
+                            Warning: Humanity critically low ({character.derivedStats.HumanityCurrent})
+                        </Typography>
+                    </Paper>
+                )}
 
                 {/* Tab Navigation */}
                 <Stack direction="row" spacing={1} mb={3}>
@@ -928,6 +1405,10 @@ const CharacterCreatorView = () => {
                                 backgroundColor: shoppingTab === tab.key ? colors.neons.cyan.default : 'transparent',
                                 borderColor: colors.neons.cyan.default,
                                 color: shoppingTab === tab.key ? colors.grays.gray900 : colors.neons.cyan.default,
+                                '&:hover': {
+                                    bgcolor: shoppingTab === tab.key ? colors.neons.cyan.dark : 'rgba(0, 30, 60, 0.8)',
+                                    boxShadow: `0 0 10px ${colors.neons.cyan.default}40`,
+                                },
                             }}
                         >
                             {tab.label}
@@ -939,162 +1420,748 @@ const CharacterCreatorView = () => {
                 <Grid container spacing={2}>
                     {/* Left: Shop Catalog */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.cyan.default}30`, maxHeight: 400, overflow: 'auto' }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.cyan.default, mb: 2 }}>Available Items</Typography>
-                            <Stack spacing={1}>
-                                {shoppingTab === 'weapons' && SHOP_WEAPONS.map((item, i) => (
-                                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, border: `1px solid ${colors.grays.gray700}`, borderRadius: 1 }}>
-                                        <Box>
-                                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{item.name}</Typography>
-                                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>{item.damage} | ROF {item.rof} | {item.skill}</Typography>
-                                        </Box>
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => handleBuyWeapon(item)}
-                                            disabled={character.eurobucks < item.cost}
-                                            sx={{ borderColor: colors.neons.green.default, color: colors.neons.green.default, minWidth: 80 }}
-                                        >
-                                            {item.cost}eb
-                                        </Button>
-                                    </Box>
-                                ))}
-                                {shoppingTab === 'armor' && SHOP_ARMOR.map((item, i) => (
-                                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, border: `1px solid ${colors.grays.gray700}`, borderRadius: 1 }}>
-                                        <Box>
-                                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{item.name}</Typography>
-                                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>SP {item.sp}{item.penalty !== 0 ? ` | Penalty ${item.penalty}` : ''}</Typography>
-                                        </Box>
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => handleBuyArmor(item)}
-                                            disabled={character.eurobucks < item.cost}
-                                            sx={{ borderColor: colors.neons.green.default, color: colors.neons.green.default, minWidth: 80 }}
-                                        >
-                                            {item.cost}eb
-                                        </Button>
-                                    </Box>
-                                ))}
-                                {shoppingTab === 'gear' && SHOP_GEAR.map((item, i) => (
-                                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, border: `1px solid ${colors.grays.gray700}`, borderRadius: 1 }}>
-                                        <Box>
-                                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{item.name}</Typography>
-                                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>{item.description}</Typography>
-                                        </Box>
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => handleBuyGear(item)}
-                                            disabled={character.eurobucks < item.cost}
-                                            sx={{ borderColor: colors.neons.green.default, color: colors.neons.green.default, minWidth: 80 }}
-                                        >
-                                            {item.cost}eb
-                                        </Button>
-                                    </Box>
-                                ))}
-                                {shoppingTab === 'cyberware' && SHOP_CYBERWARE.map((item, i) => (
-                                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, border: `1px solid ${colors.grays.gray700}`, borderRadius: 1 }}>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{item.name}</Typography>
-                                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>{item.description}</Typography>
-                                            <Typography variant="caption" sx={{ color: colors.neons.pink.default, display: 'block' }}>HL: {item.humanityLoss}</Typography>
-                                        </Box>
-                                        <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => handleBuyCyberware(item)}
-                                            disabled={character.eurobucks < item.cost}
-                                            sx={{ borderColor: colors.neons.green.default, color: colors.neons.green.default, minWidth: 80 }}
-                                        >
-                                            {item.cost}eb
-                                        </Button>
-                                    </Box>
-                                ))}
-                            </Stack>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.cyan.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.cyan.default, mb: 2 }}>
+                                Available Items
+                            </Typography>
+                            <CustomScrollbar height="370px">
+                                <Stack spacing={1}>
+                                    {shoppingTab === 'weapons' &&
+                                        SHOP_WEAPONS.map((item, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    p: 1,
+                                                    border: `1px solid ${colors.grays.gray700}`,
+                                                    borderRadius: 1,
+                                                }}
+                                            >
+                                                <Box>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: readerMode
+                                                                ? colors.grays.gray100
+                                                                : colors.grays.gray800,
+                                                        }}
+                                                    >
+                                                        {item.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
+                                                        {item.damage} | ROF {item.rof} | {item.skill}
+                                                    </Typography>
+                                                </Box>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => handleBuyWeapon(item)}
+                                                    disabled={character.eurobucks < item.cost}
+                                                    sx={{
+                                                        borderColor: colors.neons.green.default,
+                                                        color: colors.neons.green.default,
+                                                        minWidth: 80,
+                                                        '&:hover': {
+                                                            bgcolor: 'rgba(0, 30, 0, 0.6)',
+                                                            boxShadow: `0 0 10px ${colors.neons.green.default}40`,
+                                                        },
+                                                    }}
+                                                >
+                                                    {item.cost}eb
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                    {shoppingTab === 'armor' &&
+                                        SHOP_ARMOR.map((item, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    p: 1,
+                                                    border: `1px solid ${colors.grays.gray700}`,
+                                                    borderRadius: 1,
+                                                }}
+                                            >
+                                                <Box>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: readerMode
+                                                                ? colors.grays.gray100
+                                                                : colors.grays.gray800,
+                                                        }}
+                                                    >
+                                                        {item.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
+                                                        SP {item.sp}
+                                                        {item.penalty !== 0 ? ` | Penalty ${item.penalty}` : ''}
+                                                    </Typography>
+                                                </Box>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => handleBuyArmor(item)}
+                                                    disabled={character.eurobucks < item.cost}
+                                                    sx={{
+                                                        borderColor: colors.neons.green.default,
+                                                        color: colors.neons.green.default,
+                                                        minWidth: 80,
+                                                        '&:hover': {
+                                                            bgcolor: 'rgba(0, 30, 0, 0.6)',
+                                                            boxShadow: `0 0 10px ${colors.neons.green.default}40`,
+                                                        },
+                                                    }}
+                                                >
+                                                    {item.cost}eb
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                    {shoppingTab === 'gear' &&
+                                        SHOP_GEAR.map((item, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    p: 1,
+                                                    border: `1px solid ${colors.grays.gray700}`,
+                                                    borderRadius: 1,
+                                                }}
+                                            >
+                                                <Box>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: readerMode
+                                                                ? colors.grays.gray100
+                                                                : colors.grays.gray800,
+                                                        }}
+                                                    >
+                                                        {item.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
+                                                        {item.description}
+                                                    </Typography>
+                                                </Box>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => handleBuyGear(item)}
+                                                    disabled={character.eurobucks < item.cost}
+                                                    sx={{
+                                                        borderColor: colors.neons.green.default,
+                                                        color: colors.neons.green.default,
+                                                        minWidth: 80,
+                                                        '&:hover': {
+                                                            bgcolor: 'rgba(0, 30, 0, 0.6)',
+                                                            boxShadow: `0 0 10px ${colors.neons.green.default}40`,
+                                                        },
+                                                    }}
+                                                >
+                                                    {item.cost}eb
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                    {shoppingTab === 'cyberware' &&
+                                        CYBERWARE_CATEGORIES.map((cat) => {
+                                            const categoryItems = allCyberware.filter((item) => item.type === cat.type)
+                                            if (categoryItems.length === 0) return null
+                                            return (
+                                                <Accordion
+                                                    key={cat.type}
+                                                    defaultExpanded={false}
+                                                    sx={{
+                                                        backgroundColor: 'transparent',
+                                                        boxShadow: 'none',
+                                                        '&::before': { display: 'none' },
+                                                        border: `1px solid ${cat.color}30`,
+                                                        borderRadius: '4px !important',
+                                                        mb: 1,
+                                                    }}
+                                                >
+                                                    <AccordionSummary
+                                                        expandIcon={<ExpandMore sx={{ color: cat.color }} />}
+                                                        sx={{
+                                                            minHeight: 40,
+                                                            '& .MuiAccordionSummary-content': { my: 0.5 },
+                                                            borderBottom: `1px solid ${cat.color}20`,
+                                                        }}
+                                                    >
+                                                        <Stack
+                                                            direction="row"
+                                                            spacing={1}
+                                                            alignItems="center"
+                                                            sx={{ width: '100%' }}
+                                                        >
+                                                            <Typography
+                                                                variant="subtitle2"
+                                                                sx={{
+                                                                    color: cat.color,
+                                                                    fontWeight: 'bold',
+                                                                    fontFamily: '"Rajdhani", sans-serif',
+                                                                }}
+                                                            >
+                                                                {cat.label}
+                                                            </Typography>
+                                                            <Chip
+                                                                label={`${categoryItems.length}`}
+                                                                size="small"
+                                                                sx={{
+                                                                    height: 18,
+                                                                    fontSize: '0.65rem',
+                                                                    backgroundColor: `${cat.color}20`,
+                                                                    color: cat.color,
+                                                                }}
+                                                            />
+                                                            <Typography
+                                                                variant="caption"
+                                                                sx={{ color: colors.grays.gray500, flex: 1 }}
+                                                            >
+                                                                {cat.description}
+                                                            </Typography>
+                                                        </Stack>
+                                                    </AccordionSummary>
+                                                    <AccordionDetails sx={{ p: 1, pt: 0.5 }}>
+                                                        <Stack spacing={0.5}>
+                                                            {categoryItems.map((item, i) => {
+                                                                const blockReason = getCyberwareBlockReason(item)
+                                                                const isBlocked = !!blockReason
+                                                                const isFoundation = item.maxSlots !== undefined
+                                                                const foundationSlots = isFoundation
+                                                                    ? getFoundationSlotUsage(item.name)
+                                                                    : null
+                                                                const hasPrereq = !!item.prerequisite
+                                                                const prereqInstalled =
+                                                                    hasPrereq &&
+                                                                    character.cyberware.filter(
+                                                                        (c) => c.name === item.prerequisite
+                                                                    ).length >= (item.prerequisiteCount ?? 1)
+                                                                return (
+                                                                    <Box
+                                                                        key={i}
+                                                                        sx={{
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between',
+                                                                            alignItems: 'center',
+                                                                            p: 1,
+                                                                            border: `1px solid ${isBlocked ? colors.grays.gray800 : `${cat.color}30`}`,
+                                                                            borderRadius: 1,
+                                                                            opacity: isBlocked ? 0.5 : 1,
+                                                                        }}
+                                                                    >
+                                                                        <Box sx={{ flex: 1 }}>
+                                                                            <Typography
+                                                                                variant="body2"
+                                                                                sx={{
+                                                                                    color: readerMode
+                                                                                        ? colors.grays.gray100
+                                                                                        : colors.grays.gray800,
+                                                                                }}
+                                                                            >
+                                                                                {item.name}
+                                                                                {isFoundation && (
+                                                                                    <Chip
+                                                                                        label={`Foundation ${foundationSlots ? `${foundationSlots.used}/${item.maxSlots}` : ''}`}
+                                                                                        size="small"
+                                                                                        sx={{
+                                                                                            ml: 1,
+                                                                                            fontSize: '0.6rem',
+                                                                                            height: 18,
+                                                                                            backgroundColor:
+                                                                                                colors.neons.cyan
+                                                                                                    .default + '30',
+                                                                                            color: colors.neons.cyan
+                                                                                                .default,
+                                                                                        }}
+                                                                                    />
+                                                                                )}
+                                                                                {(item.slotsUsed ?? 1) > 1 &&
+                                                                                    item.prerequisite && (
+                                                                                        <Chip
+                                                                                            label={`${item.slotsUsed} slots`}
+                                                                                            size="small"
+                                                                                            sx={{
+                                                                                                ml: 0.5,
+                                                                                                fontSize: '0.55rem',
+                                                                                                height: 16,
+                                                                                                backgroundColor:
+                                                                                                    colors.neons.yellow
+                                                                                                        .default + '20',
+                                                                                                color: colors.neons
+                                                                                                    .yellow.default,
+                                                                                            }}
+                                                                                        />
+                                                                                    )}
+                                                                                {item.slotsUsed === 0 &&
+                                                                                    item.prerequisite && (
+                                                                                        <Chip
+                                                                                            label="0 slots"
+                                                                                            size="small"
+                                                                                            sx={{
+                                                                                                ml: 0.5,
+                                                                                                fontSize: '0.55rem',
+                                                                                                height: 16,
+                                                                                                backgroundColor:
+                                                                                                    colors.grays
+                                                                                                        .gray700,
+                                                                                                color: colors.grays
+                                                                                                    .gray400,
+                                                                                            }}
+                                                                                        />
+                                                                                    )}
+                                                                                {item.unique && (
+                                                                                    <Chip
+                                                                                        label="Unique"
+                                                                                        size="small"
+                                                                                        sx={{
+                                                                                            ml: 0.5,
+                                                                                            fontSize: '0.55rem',
+                                                                                            height: 16,
+                                                                                            backgroundColor:
+                                                                                                colors.neons.purple
+                                                                                                    .default + '20',
+                                                                                            color: colors.neons.purple
+                                                                                                .default,
+                                                                                        }}
+                                                                                    />
+                                                                                )}
+                                                                            </Typography>
+                                                                            <Typography
+                                                                                variant="caption"
+                                                                                sx={{ color: colors.grays.gray600 }}
+                                                                            >
+                                                                                {item.description}
+                                                                            </Typography>
+                                                                            {hasPrereq && (
+                                                                                <Typography
+                                                                                    variant="caption"
+                                                                                    sx={{
+                                                                                        color: prereqInstalled
+                                                                                            ? colors.neons.green.default
+                                                                                            : colors.neons.red.default,
+                                                                                        display: 'block',
+                                                                                    }}
+                                                                                >
+                                                                                    Requires: {item.prerequisite}
+                                                                                    {(item.prerequisiteCount ?? 1) > 1
+                                                                                        ? ` x${item.prerequisiteCount}`
+                                                                                        : ''}{' '}
+                                                                                    {prereqInstalled
+                                                                                        ? '(installed)'
+                                                                                        : '(missing)'}
+                                                                                </Typography>
+                                                                            )}
+                                                                            {item.requiresStat &&
+                                                                                (() => {
+                                                                                    const effective = getEffectiveStats(
+                                                                                        character.stats,
+                                                                                        character.cyberware
+                                                                                    )
+                                                                                    return (
+                                                                                        <Typography
+                                                                                            variant="caption"
+                                                                                            sx={{
+                                                                                                color:
+                                                                                                    effective[
+                                                                                                        item
+                                                                                                            .requiresStat!
+                                                                                                            .stat
+                                                                                                    ] >=
+                                                                                                    item.requiresStat!
+                                                                                                        .min
+                                                                                                        ? colors.neons
+                                                                                                              .green
+                                                                                                              .default
+                                                                                                        : colors.neons
+                                                                                                              .red
+                                                                                                              .default,
+                                                                                                display: 'block',
+                                                                                            }}
+                                                                                        >
+                                                                                            Requires{' '}
+                                                                                            {item.requiresStat!.stat}{' '}
+                                                                                            {item.requiresStat!.min}+
+                                                                                            (current:{' '}
+                                                                                            {
+                                                                                                effective[
+                                                                                                    item.requiresStat!
+                                                                                                        .stat
+                                                                                                ]
+                                                                                            }
+                                                                                            )
+                                                                                        </Typography>
+                                                                                    )
+                                                                                })()}
+                                                                            {blockReason &&
+                                                                                !blockReason.startsWith('Requires') && (
+                                                                                    <Typography
+                                                                                        variant="caption"
+                                                                                        sx={{
+                                                                                            color: colors.neons.orange
+                                                                                                .default,
+                                                                                            display: 'block',
+                                                                                        }}
+                                                                                    >
+                                                                                        {blockReason}
+                                                                                    </Typography>
+                                                                                )}
+                                                                            <Typography
+                                                                                variant="caption"
+                                                                                sx={{
+                                                                                    color: colors.neons.pink.default,
+                                                                                    display: 'block',
+                                                                                }}
+                                                                            >
+                                                                                HL: {item.humanityLoss} | Install:{' '}
+                                                                                {item.install}
+                                                                            </Typography>
+                                                                        </Box>
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            onClick={() => handleBuyCyberware(item)}
+                                                                            disabled={
+                                                                                character.eurobucks < item.cost ||
+                                                                                isBlocked
+                                                                            }
+                                                                            sx={{
+                                                                                borderColor: colors.neons.green.default,
+                                                                                color: colors.neons.green.default,
+                                                                                minWidth: 80,
+                                                                                '&:hover': {
+                                                                                    bgcolor: 'rgba(0, 30, 0, 0.6)',
+                                                                                    boxShadow: `0 0 10px ${colors.neons.green.default}40`,
+                                                                                },
+                                                                            }}
+                                                                        >
+                                                                            {item.cost}eb
+                                                                        </Button>
+                                                                    </Box>
+                                                                )
+                                                            })}
+                                                        </Stack>
+                                                    </AccordionDetails>
+                                                </Accordion>
+                                            )
+                                        })}
+                                    {shoppingTab === 'fashion' &&
+                                        SHOP_FASHION.map((item, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    p: 1,
+                                                    border: `1px solid ${colors.grays.gray700}`,
+                                                    borderRadius: 1,
+                                                }}
+                                            >
+                                                <Box>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: readerMode
+                                                                ? colors.grays.gray100
+                                                                : colors.grays.gray800,
+                                                        }}
+                                                    >
+                                                        {item.name}
+                                                        <Chip
+                                                            label={item.type}
+                                                            size="small"
+                                                            sx={{
+                                                                ml: 1,
+                                                                fontSize: '0.55rem',
+                                                                height: 16,
+                                                                backgroundColor:
+                                                                    item.type === 'fashionware'
+                                                                        ? colors.neons.purple.default + '30'
+                                                                        : colors.neons.pink.default + '30',
+                                                                color:
+                                                                    item.type === 'fashionware'
+                                                                        ? colors.neons.purple.default
+                                                                        : colors.neons.pink.default,
+                                                            }}
+                                                        />
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
+                                                        {item.description}
+                                                    </Typography>
+                                                </Box>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => handleBuyFashion(item)}
+                                                    disabled={character.fashionBudget < item.cost}
+                                                    sx={{
+                                                        borderColor: colors.neons.pink.default,
+                                                        color: colors.neons.pink.default,
+                                                        minWidth: 80,
+                                                        '&:hover': {
+                                                            bgcolor: 'rgba(40, 0, 40, 0.6)',
+                                                            boxShadow: `0 0 10px ${colors.neons.pink.default}40`,
+                                                        },
+                                                    }}
+                                                >
+                                                    {item.cost}eb
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                </Stack>
+                            </CustomScrollbar>
                         </Paper>
                     </Grid>
 
                     {/* Right: Owned Items */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.yellow.default}30`, maxHeight: 400, overflow: 'auto' }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.yellow.default, mb: 2 }}>Your Inventory</Typography>
-                            
-                            {/* Weapons */}
-                            {character.weapons.length > 0 && (
-                                <Box mb={2}>
-                                    <Typography variant="caption" sx={{ color: colors.neons.red.default }}>WEAPONS</Typography>
-                                    {character.weapons.map((w, i) => (
-                                        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{w.name}</Typography>
-                                            <Button size="small" onClick={() => handleSellWeapon(i)} sx={{ color: colors.neons.red.default, minWidth: 60 }}>
-                                                Sell ({Math.floor(w.cost / 2)}eb)
-                                            </Button>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            )}
-
-                            {/* Armor */}
-                            {character.armor.length > 0 && (
-                                <Box mb={2}>
-                                    <Typography variant="caption" sx={{ color: colors.neons.blue.default }}>ARMOR</Typography>
-                                    {character.armor.map((a, i) => (
-                                        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{a.name} (SP{a.sp})</Typography>
-                                            <Button size="small" onClick={() => handleSellArmor(i)} sx={{ color: colors.neons.red.default, minWidth: 60 }}>
-                                                Sell ({Math.floor(a.cost / 2)}eb)
-                                            </Button>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            )}
-
-                            {/* Gear */}
-                            {character.gear.length > 0 && (
-                                <Box mb={2}>
-                                    <Typography variant="caption" sx={{ color: colors.neons.green.default }}>GEAR</Typography>
-                                    {character.gear.map((g, i) => (
-                                        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{g.name}</Typography>
-                                            <Button size="small" onClick={() => handleSellGear(i)} sx={{ color: colors.neons.red.default, minWidth: 60 }}>
-                                                Sell ({Math.floor(g.cost / 2)}eb)
-                                            </Button>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            )}
-
-                            {/* Cyberware */}
-                            {character.cyberware.length > 0 && (
-                                <Box mb={2}>
-                                    <Typography variant="caption" sx={{ color: colors.neons.purple.default }}>CYBERWARE</Typography>
-                                    {character.cyberware.map((c, i) => (
-                                        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                                            <Box>
-                                                <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{c.name}</Typography>
-                                                <Typography variant="caption" sx={{ color: colors.neons.pink.default }}>-{c.humanityLoss} HL</Typography>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.yellow.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.yellow.default, mb: 2 }}>
+                                Your Inventory
+                            </Typography>
+                            <CustomScrollbar height="370px">
+                                {/* Weapons */}
+                                {character.weapons.length > 0 && (
+                                    <Box mb={2}>
+                                        <Typography variant="caption" sx={{ color: colors.neons.red.default }}>
+                                            WEAPONS
+                                        </Typography>
+                                        {character.weapons.map((w, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    py: 0.5,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: readerMode ? colors.grays.gray100 : colors.grays.gray800,
+                                                    }}
+                                                >
+                                                    {w.name}
+                                                </Typography>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => handleSellWeapon(i)}
+                                                    sx={{ color: colors.neons.red.default, minWidth: 60 }}
+                                                >
+                                                    Sell ({Math.floor(w.cost / 2)}eb)
+                                                </Button>
                                             </Box>
-                                            <Button size="small" onClick={() => handleSellCyberware(i)} sx={{ color: colors.neons.red.default, minWidth: 60 }}>
-                                                Sell
-                                            </Button>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            )}
+                                        ))}
+                                    </Box>
+                                )}
 
-                            {character.weapons.length === 0 && character.armor.length === 0 && character.gear.length === 0 && character.cyberware.length === 0 && (
-                                <Typography variant="body2" sx={{ color: colors.grays.gray600, fontStyle: 'italic' }}>
-                                    Your inventory is empty. Browse the catalog to purchase items.
-                                </Typography>
-                            )}
+                                {/* Armor */}
+                                {character.armor.length > 0 && (
+                                    <Box mb={2}>
+                                        <Typography variant="caption" sx={{ color: colors.neons.blue.default }}>
+                                            ARMOR
+                                        </Typography>
+                                        {character.armor.map((a, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    py: 0.5,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: readerMode ? colors.grays.gray100 : colors.grays.gray800,
+                                                    }}
+                                                >
+                                                    {a.name} (SP{a.sp})
+                                                </Typography>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => handleSellArmor(i)}
+                                                    sx={{ color: colors.neons.red.default, minWidth: 60 }}
+                                                >
+                                                    Sell ({Math.floor(a.cost / 2)}eb)
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+
+                                {/* Gear */}
+                                {character.gear.length > 0 && (
+                                    <Box mb={2}>
+                                        <Typography variant="caption" sx={{ color: colors.neons.green.default }}>
+                                            GEAR
+                                        </Typography>
+                                        {character.gear.map((g, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    py: 0.5,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: readerMode ? colors.grays.gray100 : colors.grays.gray800,
+                                                    }}
+                                                >
+                                                    {g.name}
+                                                </Typography>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => handleSellGear(i)}
+                                                    sx={{ color: colors.neons.red.default, minWidth: 60 }}
+                                                >
+                                                    Sell ({Math.floor(g.cost / 2)}eb)
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+
+                                {/* Cyberware */}
+                                {character.cyberware.length > 0 && (
+                                    <Box mb={2}>
+                                        <Typography variant="caption" sx={{ color: colors.neons.purple.default }}>
+                                            CYBERWARE
+                                        </Typography>
+                                        {character.cyberware.map((c, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    py: 0.5,
+                                                }}
+                                            >
+                                                <Box>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            color: readerMode
+                                                                ? colors.grays.gray100
+                                                                : colors.grays.gray800,
+                                                        }}
+                                                    >
+                                                        {c.name}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{ color: colors.neons.pink.default }}
+                                                    >
+                                                        -{c.humanityLoss} HL
+                                                    </Typography>
+                                                </Box>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => handleSellCyberware(i)}
+                                                    sx={{ color: colors.neons.red.default, minWidth: 60 }}
+                                                >
+                                                    Sell
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+
+                                {/* Fashion Items */}
+                                {character.fashionItems.length > 0 && (
+                                    <Box mb={2}>
+                                        <Typography variant="caption" sx={{ color: colors.neons.pink.default }}>
+                                            FASHION
+                                        </Typography>
+                                        {character.fashionItems.map((f, i) => (
+                                            <Box
+                                                key={i}
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    py: 0.5,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: readerMode ? colors.grays.gray100 : colors.grays.gray800,
+                                                    }}
+                                                >
+                                                    {f.name}
+                                                </Typography>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => handleSellFashion(i)}
+                                                    sx={{ color: colors.neons.red.default, minWidth: 60 }}
+                                                >
+                                                    Sell ({Math.floor(f.cost / 2)}eb)
+                                                </Button>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+
+                                {character.weapons.length === 0 &&
+                                    character.armor.length === 0 &&
+                                    character.gear.length === 0 &&
+                                    character.cyberware.length === 0 &&
+                                    character.fashionItems.length === 0 && (
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ color: colors.grays.gray600, fontStyle: 'italic' }}
+                                        >
+                                            Your inventory is empty. Browse the catalog to purchase items.
+                                        </Typography>
+                                    )}
+                            </CustomScrollbar>
                         </Paper>
 
                         {/* Humanity Tracker for Cyberware */}
-                        <Paper sx={{ p: 2, mt: 2, backgroundColor: `${colors.neons.pink.default}10`, border: `1px solid ${colors.neons.pink.default}40` }}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                mt: 2,
+                                backgroundColor: `${colors.neons.pink.default}10`,
+                                border: `1px solid ${colors.neons.pink.default}40`,
+                            }}
+                        >
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                <Typography variant="subtitle2" sx={{ color: colors.neons.pink.default }}>Humanity</Typography>
-                                <Typography variant="h6" sx={{ color: colors.neons.pink.default, fontFamily: '"Orbitron", sans-serif' }}>
+                                <Typography variant="subtitle2" sx={{ color: colors.neons.pink.default }}>
+                                    Humanity
+                                </Typography>
+                                <Typography
+                                    variant="h6"
+                                    sx={{ color: colors.neons.pink.default, fontFamily: '"Orbitron", sans-serif' }}
+                                >
                                     {character.derivedStats.HumanityCurrent} / {character.derivedStats.HumanityMax}
                                 </Typography>
                             </Stack>
@@ -1137,55 +2204,160 @@ const CharacterCreatorView = () => {
                 <Grid container spacing={2}>
                     {/* Cultural Origin */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.cyan.default}30` }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.cyan.default }}>Cultural Origin</Typography>
-                            <Typography variant="body1" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{lp.culturalOrigin.region}</Typography>
-                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>Language: {lp.language}</Typography>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.cyan.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.cyan.default }}>
+                                Cultural Origin
+                            </Typography>
+                            <Typography
+                                variant="body1"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                {lp.culturalOrigin.region}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
+                                Language: {lp.language}
+                            </Typography>
                         </Paper>
                     </Grid>
 
                     {/* Personality */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.yellow.default}30` }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.yellow.default }}>Personality</Typography>
-                            <Typography variant="body1" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>{lp.personality.description}</Typography>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.yellow.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.yellow.default }}>
+                                Personality
+                            </Typography>
+                            <Typography
+                                variant="body1"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                {lp.personality.description}
+                            </Typography>
                         </Paper>
                     </Grid>
 
                     {/* Style */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.purple.default}30` }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.purple.default }}>Style</Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>Clothing: {lp.dressStyle.clothingStyle}</Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>Hairstyle: {lp.dressStyle.hairstyle}</Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>Affectation: {lp.affectation.description}</Typography>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.purple.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.purple.default }}>
+                                Style
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Clothing: {lp.dressStyle.clothingStyle}
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Hairstyle: {lp.dressStyle.hairstyle}
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Affectation: {lp.affectation.description}
+                            </Typography>
                         </Paper>
                     </Grid>
 
                     {/* Motivation */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.green.default}30` }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.green.default }}>Motivation</Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>Values: {lp.motivation.valueMost}</Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>People: {lp.motivation.feelAboutPeople}</Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>Possession: {lp.motivation.valuedPossession}</Typography>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.green.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.green.default }}>
+                                Motivation
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Values: {lp.motivation.valueMost}
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                People: {lp.motivation.feelAboutPeople}
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Valued Person: {lp.motivation.valuedPerson}
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
+                                Possession: {lp.motivation.valuedPossession}
+                            </Typography>
                         </Paper>
                     </Grid>
 
                     {/* Background */}
                     <Grid size={{ xs: 12 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.orange.default}30` }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.orange.default }}>Background</Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800, mb: 1 }}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.orange.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.orange.default }}>
+                                Background
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800, mb: 1 }}
+                            >
                                 <strong>Family:</strong> {lp.familyBackground.description}
                             </Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800, mb: 1 }}>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800, mb: 1 }}
+                            >
                                 <strong>Childhood:</strong> {lp.childhoodEnvironment.description}
                             </Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800, mb: 1 }}>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800, mb: 1 }}
+                            >
                                 <strong>Crisis:</strong> {lp.familyCrisis.description}
                             </Typography>
-                            <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                            >
                                 <strong>Goal:</strong> {lp.lifeGoal.description}
                             </Typography>
                         </Paper>
@@ -1193,8 +2365,17 @@ const CharacterCreatorView = () => {
 
                     {/* Life Events */}
                     <Grid size={{ xs: 12 }}>
-                        <Paper sx={{ p: 2, backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)', border: `1px solid ${colors.neons.red.default}30` }}>
-                            <Typography variant="subtitle2" sx={{ color: colors.neons.red.default, mb: 1 }}>Life Events</Typography>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
+                                border: `1px solid ${colors.neons.red.default}30`,
+                                backdropFilter: 'blur(5px)',
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ color: colors.neons.red.default, mb: 1 }}>
+                                Life Events
+                            </Typography>
                             <Stack spacing={1}>
                                 {lp.lifeEvents.map((event, i) => (
                                     <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1203,16 +2384,23 @@ const CharacterCreatorView = () => {
                                             size="small"
                                             sx={{
                                                 backgroundColor:
-                                                    event.eventType === 'GOOD' ? colors.neons.green.default :
-                                                    event.eventType === 'BAD' ? colors.neons.red.default :
-                                                    event.eventType === 'FRIEND' ? colors.neons.cyan.default :
-                                                    event.eventType === 'ENEMY' ? colors.neons.orange.default :
-                                                    colors.neons.purple.default,
+                                                    event.eventType === 'GOOD'
+                                                        ? colors.neons.green.default
+                                                        : event.eventType === 'BAD'
+                                                          ? colors.neons.red.default
+                                                          : event.eventType === 'FRIEND'
+                                                            ? colors.neons.cyan.default
+                                                            : event.eventType === 'ENEMY'
+                                                              ? colors.neons.orange.default
+                                                              : colors.neons.purple.default,
                                                 color: '#fff',
                                                 fontSize: '0.65rem',
                                             }}
                                         />
-                                        <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                                        >
                                             {event.description}
                                         </Typography>
                                     </Box>
@@ -1251,13 +2439,39 @@ const CharacterCreatorView = () => {
                             label="Character Name"
                             value={characterName}
                             onChange={(e) => setCharacterName(e.target.value)}
-                            sx={{ mb: 2 }}
+                            sx={{
+                                mb: 2,
+                                '& .MuiOutlinedInput-root': {
+                                    color: readerMode ? '#333' : '#fff',
+                                    '& fieldset': {
+                                        borderColor: readerMode ? 'rgba(0,0,0,0.23)' : 'rgba(0,255,255,0.3)',
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: readerMode ? 'rgba(0,0,0,0.5)' : colors.neons.cyan.default,
+                                    },
+                                    '&.Mui-focused fieldset': { borderColor: colors.neons.cyan.default },
+                                },
+                                '& .MuiInputLabel-root': { color: readerMode ? '#666' : 'rgba(255,255,255,0.7)' },
+                            }}
                         />
                         <TextField
                             fullWidth
                             label="Handle (Street Name)"
                             value={characterHandle}
                             onChange={(e) => setCharacterHandle(e.target.value)}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    color: readerMode ? '#333' : '#fff',
+                                    '& fieldset': {
+                                        borderColor: readerMode ? 'rgba(0,0,0,0.23)' : 'rgba(0,255,255,0.3)',
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: readerMode ? 'rgba(0,0,0,0.5)' : colors.neons.cyan.default,
+                                    },
+                                    '&.Mui-focused fieldset': { borderColor: colors.neons.cyan.default },
+                                },
+                                '& .MuiInputLabel-root': { color: readerMode ? '#666' : 'rgba(255,255,255,0.7)' },
+                            }}
                         />
                     </Grid>
 
@@ -1266,10 +2480,9 @@ const CharacterCreatorView = () => {
                         <Paper
                             sx={{
                                 p: 3,
-                                backgroundColor: readerMode
-                                    ? 'rgba(255,255,255,0.9)'
-                                    : 'rgba(10, 15, 25, 0.95)',
+                                backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
                                 border: `1px solid ${colors.neons.cyan.default}40`,
+                                backdropFilter: 'blur(5px)',
                             }}
                         >
                             <Stack direction="row" alignItems="center" spacing={2} mb={2}>
@@ -1287,12 +2500,32 @@ const CharacterCreatorView = () => {
                                     <Typography variant="body2" sx={{ color: colors.grays.gray600 }}>
                                         "{characterHandle || 'Handle'}" - {role} ({method})
                                     </Typography>
+                                    <Typography variant="caption" sx={{ color: colors.neons.green.default }}>
+                                        {character.roleAbility} (Rank {character.roleRank})
+                                    </Typography>
                                 </Box>
                             </Stack>
-                            <Stack direction="row" spacing={2}>
-                                <Chip label={`HP: ${character.derivedStats.HP}`} size="small" sx={{ backgroundColor: colors.neons.red.default }} />
-                                <Chip label={`HUM: ${character.derivedStats.HumanityCurrent}/${character.derivedStats.HumanityMax}`} size="small" sx={{ backgroundColor: colors.neons.pink.default }} />
-                                <Chip label={`${character.eurobucks}eb`} size="small" sx={{ backgroundColor: colors.neons.yellow.default, color: colors.grays.gray900 }} />
+                            <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5}>
+                                <Chip
+                                    label={`HP: ${character.derivedStats.HP}`}
+                                    size="small"
+                                    sx={{ backgroundColor: colors.neons.red.default }}
+                                />
+                                <Chip
+                                    label={`HUM: ${character.derivedStats.HumanityCurrent}/${character.derivedStats.HumanityMax}`}
+                                    size="small"
+                                    sx={{ backgroundColor: colors.neons.pink.default }}
+                                />
+                                <Chip
+                                    label={`EMP: ${character.stats.EMP}`}
+                                    size="small"
+                                    sx={{ backgroundColor: colors.neons.purple.default }}
+                                />
+                                <Chip
+                                    label={`${character.eurobucks}eb`}
+                                    size="small"
+                                    sx={{ backgroundColor: colors.neons.yellow.default, color: colors.grays.gray900 }}
+                                />
                             </Stack>
                         </Paper>
                     </Grid>
@@ -1305,6 +2538,7 @@ const CharacterCreatorView = () => {
                                     p: 2,
                                     backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
                                     border: `1px solid ${colors.neons.red.default}40`,
+                                    backdropFilter: 'blur(5px)',
                                 }}
                             >
                                 <Typography variant="subtitle2" sx={{ color: colors.neons.red.default, mb: 1 }}>
@@ -1312,7 +2546,11 @@ const CharacterCreatorView = () => {
                                 </Typography>
                                 <Stack spacing={0.5}>
                                     {character.weapons.map((weapon, i) => (
-                                        <Typography key={i} variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
+                                        <Typography
+                                            key={i}
+                                            variant="body2"
+                                            sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                                        >
                                             • {weapon.name}
                                         </Typography>
                                     ))}
@@ -1329,6 +2567,7 @@ const CharacterCreatorView = () => {
                                     p: 2,
                                     backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
                                     border: `1px solid ${colors.neons.blue.default}40`,
+                                    backdropFilter: 'blur(5px)',
                                 }}
                             >
                                 <Typography variant="subtitle2" sx={{ color: colors.neons.blue.default, mb: 1 }}>
@@ -1336,7 +2575,11 @@ const CharacterCreatorView = () => {
                                 </Typography>
                                 <Stack spacing={0.5}>
                                     {character.armor.map((armor, i) => (
-                                        <Typography key={i} variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
+                                        <Typography
+                                            key={i}
+                                            variant="body2"
+                                            sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
+                                        >
                                             • {armor.name}
                                         </Typography>
                                     ))}
@@ -1353,6 +2596,7 @@ const CharacterCreatorView = () => {
                                     p: 2,
                                     backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
                                     border: `1px solid ${colors.neons.purple.default}40`,
+                                    backdropFilter: 'blur(5px)',
                                 }}
                             >
                                 <Typography variant="subtitle2" sx={{ color: colors.neons.purple.default, mb: 1 }}>
@@ -1361,44 +2605,37 @@ const CharacterCreatorView = () => {
                                 <Grid container spacing={1}>
                                     {character.cyberware.map((cyber, i) => (
                                         <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: readerMode ? colors.grays.gray100 : colors.grays.gray800,
+                                                    }}
+                                                >
                                                     {cyber.name}
                                                 </Typography>
-                                                <Chip 
-                                                    label={`-${cyber.humanityLoss} HL`} 
-                                                    size="small" 
-                                                    sx={{ 
-                                                        backgroundColor: Number(cyber.humanityLoss) > 0 ? colors.neons.pink.default + '40' : 'transparent',
+                                                <Chip
+                                                    label={`-${cyber.humanityLoss} HL`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor:
+                                                            Number(cyber.humanityLoss) > 0
+                                                                ? colors.neons.pink.default + '40'
+                                                                : 'transparent',
                                                         color: colors.neons.pink.default,
                                                         fontSize: '0.65rem',
-                                                    }} 
+                                                    }}
                                                 />
                                             </Box>
                                         </Grid>
                                     ))}
                                 </Grid>
-                            </Paper>
-                        </Grid>
-                    )}
-
-                    {/* Complete Package Note */}
-                    {isCompletePackage && (
-                        <Grid size={12}>
-                            <Paper
-                                sx={{
-                                    p: 2,
-                                    backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10, 15, 25, 0.95)',
-                                    border: `1px solid ${colors.neons.yellow.default}40`,
-                                }}
-                            >
-                                <Typography variant="subtitle2" sx={{ color: colors.neons.yellow.default, mb: 1 }}>
-                                    Complete Package - Buy Your Gear
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}>
-                                    As a Complete Package character, you start with {character.eurobucks}eb to purchase your own weapons, armor, gear, and cyberware from the Night Market. 
-                                    No starting equipment is provided - you have full control over your loadout!
-                                </Typography>
                             </Paper>
                         </Grid>
                     )}
@@ -1412,7 +2649,10 @@ const CharacterCreatorView = () => {
                         onClick={handleSaveCharacter}
                         sx={{
                             backgroundColor: colors.neons.green.default,
-                            '&:hover': { backgroundColor: colors.neons.green.dark },
+                            '&:hover': {
+                                backgroundColor: colors.neons.green.dark,
+                                boxShadow: `0 0 15px ${colors.neons.green.default}60`,
+                            },
                             fontFamily: '"Orbitron", sans-serif',
                             px: 4,
                             py: 1.5,
@@ -1452,6 +2692,8 @@ const CharacterCreatorView = () => {
             <Box sx={{ mb: 4, textAlign: 'center' }}>
                 <Typography
                     variant="h3"
+                    className="glitch-text"
+                    data-text="CHARACTER CREATOR"
                     sx={{
                         color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
                         fontFamily: '"Orbitron", sans-serif',
@@ -1461,7 +2703,13 @@ const CharacterCreatorView = () => {
                 >
                     CHARACTER CREATOR
                 </Typography>
-                <Typography variant="body1" sx={{ color: colors.grays.gray600 }}>
+                <Typography
+                    variant="body1"
+                    sx={{
+                        color: readerMode ? colors.grays.gray000 : colors.neons.green.default,
+                        textShadow: readerMode ? 'none' : `0 0 8px ${colors.neons.green.default}`,
+                    }}
+                >
                     Build your Edgerunner for the streets of Night City
                 </Typography>
             </Box>
@@ -1474,13 +2722,26 @@ const CharacterCreatorView = () => {
                             sx={{
                                 '& .MuiStepLabel-label': {
                                     color: colors.grays.gray600,
-                                    '&.Mui-active': { color: colors.neons.cyan.default },
-                                    '&.Mui-completed': { color: colors.neons.green.default },
+                                    fontFamily: '"Rajdhani", sans-serif',
+                                    '&.Mui-active': {
+                                        color: colors.neons.cyan.default,
+                                        textShadow: `0 0 8px ${colors.neons.cyan.default}`,
+                                    },
+                                    '&.Mui-completed': {
+                                        color: colors.neons.green.default,
+                                        textShadow: `0 0 5px ${colors.neons.green.default}`,
+                                    },
                                 },
                                 '& .MuiStepIcon-root': {
                                     color: colors.grays.gray700,
-                                    '&.Mui-active': { color: colors.neons.cyan.default },
-                                    '&.Mui-completed': { color: colors.neons.green.default },
+                                    '&.Mui-active': {
+                                        color: colors.neons.cyan.default,
+                                        filter: `drop-shadow(0 0 4px ${colors.neons.cyan.default})`,
+                                    },
+                                    '&.Mui-completed': {
+                                        color: colors.neons.green.default,
+                                        filter: `drop-shadow(0 0 4px ${colors.neons.green.default})`,
+                                    },
                                 },
                             }}
                         >
@@ -1499,7 +2760,15 @@ const CharacterCreatorView = () => {
                     variant="outlined"
                     startIcon={<RestartAlt />}
                     onClick={handleReset}
-                    sx={{ borderColor: colors.grays.gray600, color: colors.grays.gray600 }}
+                    sx={{
+                        borderColor: colors.grays.gray600,
+                        color: colors.grays.gray600,
+                        '&:hover': {
+                            borderColor: colors.neons.red.default,
+                            color: colors.neons.red.default,
+                            boxShadow: `0 0 10px ${colors.neons.red.default}40`,
+                        },
+                    }}
                 >
                     Start Over
                 </Button>
@@ -1512,6 +2781,10 @@ const CharacterCreatorView = () => {
                         sx={{
                             borderColor: colors.neons.cyan.default,
                             color: colors.neons.cyan.default,
+                            '&:hover': {
+                                bgcolor: 'rgba(0, 30, 60, 0.8)',
+                                boxShadow: `0 0 10px ${colors.neons.cyan.default}40`,
+                            },
                         }}
                     >
                         Back
@@ -1524,7 +2797,10 @@ const CharacterCreatorView = () => {
                             disabled={currentStep === 0 && !method}
                             sx={{
                                 backgroundColor: colors.neons.cyan.default,
-                                '&:hover': { backgroundColor: colors.neons.cyan.dark },
+                                '&:hover': {
+                                    backgroundColor: colors.neons.cyan.dark,
+                                    boxShadow: `0 0 15px ${colors.neons.cyan.default}60`,
+                                },
                             }}
                         >
                             Next
@@ -1537,26 +2813,89 @@ const CharacterCreatorView = () => {
             <Dialog
                 open={showSaveDialog}
                 onClose={handleSaveDialogClose}
-                PaperProps={{
-                    sx: {
-                        backgroundColor: colors.grays.gray900,
-                        border: `1px solid ${colors.neons.green.default}`,
+                slotProps={{
+                    paper: {
+                        sx: readerMode
+                            ? {
+                                  bgcolor: '#ffffff',
+                                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                  color: '#333',
+                              }
+                            : {
+                                  bgcolor: 'rgba(10, 15, 30, 0.95)',
+                                  backdropFilter: 'blur(4px)',
+                                  border: `1px solid ${colors.neons.green.default}40`,
+                                  boxShadow: `0 0 20px ${colors.neons.green.default}40`,
+                                  color: '#fff',
+                                  position: 'relative',
+                                  '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      backgroundImage:
+                                          'linear-gradient(to right, rgba(0, 255, 139, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 255, 139, 0.03) 1px, transparent 1px)',
+                                      backgroundSize: '20px 20px',
+                                      pointerEvents: 'none',
+                                      opacity: 0.5,
+                                  },
+                              },
                     },
                 }}
             >
-                <DialogTitle sx={{ color: colors.neons.green.default, fontFamily: '"Orbitron", monospace' }}>
+                <DialogTitle
+                    sx={
+                        readerMode
+                            ? { color: '#2e7d32', borderBottom: '1px solid #eee' }
+                            : {
+                                  color: colors.neons.green.default,
+                                  fontFamily: '"Orbitron", monospace',
+                                  textShadow: `0 0 5px ${colors.neons.green.default}`,
+                                  borderBottom: `1px solid ${colors.neons.green.default}40`,
+                                  position: 'relative',
+                                  '&::after': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      bottom: 0,
+                                      left: '10%',
+                                      width: '80%',
+                                      height: '1px',
+                                      background: `linear-gradient(90deg, transparent, ${colors.neons.green.default}, transparent)`,
+                                  },
+                              }
+                    }
+                >
                     <Stack direction="row" alignItems="center" spacing={1}>
                         <Check />
                         <span>{t('common.saved')}</span>
                     </Stack>
                 </DialogTitle>
                 <DialogContent>
-                    <Typography sx={{ color: colors.grays.gray200 }}>
-                        {t('characterCreator.savedMessage', { name: characterName || characterHandle || 'New Character' })}
+                    <Typography sx={{ color: readerMode ? '#333' : colors.grays.gray200, mt: 1 }}>
+                        {t('characterCreator.savedMessage', {
+                            name: characterName || characterHandle || 'New Character',
+                        })}
                     </Typography>
                 </DialogContent>
-                <DialogActions sx={{ borderTop: `1px solid ${colors.neons.green.default}30`, p: 2 }}>
-                    <Button onClick={handleSaveDialogClose} sx={{ color: colors.neons.green.default }}>
+                <DialogActions
+                    sx={{ borderTop: `1px solid ${readerMode ? '#eee' : colors.neons.green.default + '30'}`, p: 2 }}
+                >
+                    <Button
+                        onClick={handleSaveDialogClose}
+                        sx={
+                            readerMode
+                                ? { color: '#2e7d32' }
+                                : {
+                                      color: colors.neons.green.default,
+                                      '&:hover': {
+                                          bgcolor: 'rgba(0, 30, 0, 0.8)',
+                                          boxShadow: `0 0 10px ${colors.neons.green.default}40`,
+                                      },
+                                  }
+                        }
+                    >
                         {t('edgerunners.viewEdgerunners')}
                     </Button>
                     <Button
@@ -1565,7 +2904,18 @@ const CharacterCreatorView = () => {
                             setShowSaveDialog(false)
                             handleReset()
                         }}
-                        sx={{ backgroundColor: colors.neons.cyan.default, color: colors.grays.gray900 }}
+                        sx={
+                            readerMode
+                                ? { backgroundColor: '#1976d2', color: '#fff' }
+                                : {
+                                      backgroundColor: colors.neons.cyan.default,
+                                      color: colors.grays.gray900,
+                                      '&:hover': {
+                                          backgroundColor: colors.neons.cyan.dark,
+                                          boxShadow: `0 0 15px ${colors.neons.cyan.default}60`,
+                                      },
+                                  }
+                        }
                     >
                         {t('characterCreator.createAnother')}
                     </Button>
@@ -1576,4 +2926,3 @@ const CharacterCreatorView = () => {
 }
 
 export default CharacterCreatorView
-
