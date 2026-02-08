@@ -8,7 +8,7 @@ const globbed = (() => {
     }
 })()
 
-export const STATIC_TOKEN_MODEL_PATHS: string[] = globbed.sort()
+const STATIC_TOKEN_MODEL_PATHS: string[] = globbed.sort()
 
 export const loadTokenModelPaths = async (): Promise<string[]> => {
     // Always read from index.json to reflect runtime updates, but keep glob as fast path

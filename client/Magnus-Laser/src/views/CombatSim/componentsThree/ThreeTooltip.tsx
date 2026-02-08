@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import type { StatsActions, Token } from '../utils/types'
 
+function escapeHtml(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 const ACTION_COLORS: Record<StatsActions['type'], string> = {
     melee: '#ff0055',
     ranged: '#ffff00',
@@ -26,7 +30,7 @@ function buildTooltipHTML(token: Token): string {
         (s.currentHealth ?? s.health) < Math.ceil(s.health / 2) && !s.ignoreSeriouslyWoundedPenalty
 
     let html = `<div style="font-family:'Orbitron',monospace;font-size:12px;color:#00ffff;line-height:1.6">`
-    html += `<div style="font-size:14px;font-weight:bold;color:#7affff;letter-spacing:0.5px;margin-bottom:6px">${token.name.toUpperCase()}</div>`
+    html += `<div style="font-size:14px;font-weight:bold;color:#7affff;letter-spacing:0.5px;margin-bottom:6px">${escapeHtml(token.name.toUpperCase())}</div>`
 
     // Health + Movement row
     html += `<div style="display:flex;gap:16px">`
@@ -48,7 +52,7 @@ function buildTooltipHTML(token: Token): string {
     // Actions
     for (const a of s.actions || []) {
         const color = ACTION_COLORS[a.type] || '#00ffff'
-        const name = a.name || a.type
+        const name = escapeHtml(a.name || a.type)
         const dmg = formatDamageDice(a.damage)
         html += `<div style="display:flex;gap:16px">`
         html += `<span><b style="color:${color}">${name}:</b> ${a.value}</span>`

@@ -405,7 +405,7 @@ const CombatSimView = () => {
                             onBlastCopy={onBlastCopy}
                             onBlastCut={onBlastCut}
                             onBlastLock={onBlastLock}
-                            onBlastpixiOnBlastUpdateConepdateCone={pixiOnBlastUpdateCone}
+                            onBlastUpdateCone={pixiOnBlastUpdateCone}
                             onPendingCountChange={setPendingCount}
                             pixiOnBindPendingControls={pixiOnBindPendingControls}
                             pixiOnBindFit={pixiOnBindFit}
@@ -430,7 +430,7 @@ const CombatSimView = () => {
                         pixiOnBlastDrop={pixiOnBlastDrop}
                         pixiOnBlastMove={pixiOnBlastMove}
                         pixiOnBlastComplete={pixiOnBlastComplete}
-                        onBlastpixiOnBlastUpdateConepdateCone={pixiOnBlastUpdateCone}
+                        onBlastUpdateCone={pixiOnBlastUpdateCone}
                         pixiSidePanelWidth={pixiSidePanelWidth}
                         pixiHostReady={pixiHostReady}
                         pixiSetHostReady={pixiSetHostReady}

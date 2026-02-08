@@ -34,6 +34,7 @@ export class PixiContextMenu extends Container {
     private currentX: number
     private currentY: number
     private menuDestroyed = false
+    private _rafId: number | null = null
     private onCloseCalled = false
     private _zoomHandler?: () => void
     private _moveHandler?: () => void
@@ -113,7 +114,7 @@ export class PixiContextMenu extends Container {
                 this.updatePositionFromStoredProps()
             }
             if (!this.menuDestroyed) {
-                requestAnimationFrame(checkZoom)
+                this._rafId = requestAnimationFrame(checkZoom)
             }
         }
         checkZoom()
@@ -466,6 +467,10 @@ export class PixiContextMenu extends Container {
         this.isVisible = false
         this.visible = false
         this.menuDestroyed = true
+        if (this._rafId !== null) {
+            cancelAnimationFrame(this._rafId)
+            this._rafId = null
+        }
 
         // Remove click handlers
         const clickHandler = this._clickHandler

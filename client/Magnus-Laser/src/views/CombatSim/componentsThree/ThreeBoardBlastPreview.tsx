@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import type { BlastType } from '../utils/types'
+import { snapToNinePoints } from '../utils/gridUtils'
 import { createFallbackBlastModel } from './loaders/ModelLoader'
 import { createCyberpunkBlastMaterial } from './materials/cyberpunkMaterials'
 
@@ -53,13 +54,10 @@ export function useBlastPreview(
         const endX = previewEnd.x
         const endZ = previewEnd.z
 
-        // Apply grid snapping if enabled
-        let snappedEndX = endX
-        let snappedEndZ = endZ
-        if (snapToGrid) {
-            snappedEndX = Math.round(endX / gridSize) * gridSize
-            snappedEndZ = Math.round(endZ / gridSize) * gridSize
-        }
+        // Apply grid snapping if enabled (9-point snap for consistency with Pixi)
+        const snapped = snapToNinePoints(endX, endZ, gridSize, snapToGrid)
+        const snappedEndX = snapped.x
+        const snappedEndZ = snapped.y
 
         let previewMesh: THREE.Group | null = null
         let sizeText = ''

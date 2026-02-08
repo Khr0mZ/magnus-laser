@@ -88,7 +88,7 @@ type PixiBoardProps = {
     pixiOnBlastDrop?: (blastData: { type: BlastType; id?: string }, worldX: number, worldY: number) => void
     pixiOnBlastMove?: (blastId: string, worldX: number, worldY: number) => void
     pixiOnBlastComplete?: (blast: Blast) => void
-    onBlastpixiOnBlastUpdateConepdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
+    onBlastUpdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
     onBlastDelete?: (id: string) => void
     onBlastCopy?: (id: string) => void
     onBlastCut?: (id: string) => void
@@ -158,7 +158,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         pixiOnBlastDrop: onBlastDrop,
         pixiOnBlastMove: onBlastMove,
         pixiOnBlastComplete: onBlastComplete,
-        onBlastpixiOnBlastUpdateConepdateCone: onBlastUpdateCone,
+        onBlastUpdateCone: onBlastUpdateCone,
         onBlastDelete,
         onBlastCopy,
         onBlastCut,
@@ -613,7 +613,12 @@ const PixiBoard = (props: PixiBoardProps) => {
     )
 
     // Track when host ref becomes available (runs after DOM updates)
+    // Also detect stale pixiReady from ThreeBoard: if pixiReady is true but we have no PIXI app,
+    // it means ThreeBoard set it and we need to reset before our effects fire.
     useLayoutEffect(() => {
+        if (pixiReady && !appRef.current) {
+            pixiSetReady(false)
+        }
         if (hostRef.current && !pixiHostReady) {
             pixiSetHostReady(true)
         }
@@ -621,7 +626,7 @@ const PixiBoard = (props: PixiBoardProps) => {
     // Set up texture ready callback
     useEffect(() => {
         setTexturesReadyCallback(() => {
-            // Textures are ready, the component will re-render naturally when needed
+            forceRender((prev) => prev + 1)
         })
     }, [])
 
@@ -2880,6 +2885,12 @@ const PixiBoard = (props: PixiBoardProps) => {
 
             // Expose accept/cancel-all controls
             onBindPendingControls?.(acceptAllPending, cancelAllPending)
+
+            // Mark board as ready now that viewport, background and all layers are set up.
+            // This ensures rendering effects fire even when pixiReady was stale from ThreeBoard.
+            if (!destroyed) {
+                pixiSetReady(true)
+            }
         }
 
         init()

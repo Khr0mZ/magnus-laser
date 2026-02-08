@@ -72,8 +72,6 @@ export function useCSS2DRenderer(
         return () => {
             if (labelRendererRef.current && containerRef.current) {
                 containerRef.current.removeChild(labelRendererRef.current.domElement)
-                // CSS2DRenderer doesn't have dispose method
-                labelRendererRef.current = null
                 labelRendererRef.current = null
             }
         }
@@ -93,7 +91,7 @@ export function useCSS2DRenderer(
         const interval = setInterval(render, 16) // ~60fps
 
         return () => clearInterval(interval)
-    }, [camera, labelSceneRef.current])
+    }, [camera])
 
     return labelRendererRef
 }

@@ -32,8 +32,14 @@ export const useThreeContextMenus = (props: UseThreeContextMenusProps) => {
     const tokenContextMenuRef = useRef<HTMLDivElement | null>(null)
     const mapContextMenuRef = useRef<HTMLDivElement | null>(null)
     const blastContextMenuRef = useRef<HTMLDivElement | null>(null)
+    const clickOutsideHandlerRef = useRef<((e: globalThis.MouseEvent) => void) | null>(null)
 
     const closeAllContextMenus = () => {
+        // Remove any pending click-outside listener
+        if (clickOutsideHandlerRef.current) {
+            document.removeEventListener('mousedown', clickOutsideHandlerRef.current)
+            clickOutsideHandlerRef.current = null
+        }
         if (tokenContextMenuRef.current) {
             tokenContextMenuRef.current.remove()
             tokenContextMenuRef.current = null
@@ -147,9 +153,9 @@ export const useThreeContextMenus = (props: UseThreeContextMenusProps) => {
         const handleClickOutside = (e: globalThis.MouseEvent) => {
             if (menu && !menu.contains(e.target as globalThis.Node)) {
                 closeAllContextMenus()
-                document.removeEventListener('mousedown', handleClickOutside)
             }
         }
+        clickOutsideHandlerRef.current = handleClickOutside
         setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0)
     }
 
@@ -237,9 +243,9 @@ export const useThreeContextMenus = (props: UseThreeContextMenusProps) => {
         const handleClickOutside = (e: globalThis.MouseEvent) => {
             if (menu && !menu.contains(e.target as globalThis.Node)) {
                 closeAllContextMenus()
-                document.removeEventListener('mousedown', handleClickOutside)
             }
         }
+        clickOutsideHandlerRef.current = handleClickOutside
         setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0)
     }
 
@@ -351,9 +357,9 @@ export const useThreeContextMenus = (props: UseThreeContextMenusProps) => {
         const handleClickOutside = (e: globalThis.MouseEvent) => {
             if (menu && !menu.contains(e.target as globalThis.Node)) {
                 closeAllContextMenus()
-                document.removeEventListener('mousedown', handleClickOutside)
             }
         }
+        clickOutsideHandlerRef.current = handleClickOutside
         setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0)
     }
 

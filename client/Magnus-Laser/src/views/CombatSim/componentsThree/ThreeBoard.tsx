@@ -96,7 +96,7 @@ type ThreeBoardProps = {
     onBlastCopy?: (id: string) => void
     onBlastCut?: (id: string) => void
     onBlastLock?: (id: string, locked: boolean) => void
-    onBlastpixiOnBlastUpdateConepdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
+    onBlastUpdateCone?: (blastId: string, x2: number, y2: number, x: number, y: number) => void
     // Pending movements
     onPendingCountChange?: (count: number) => void
     pixiOnBindPendingControls?: (acceptAll: () => void, cancelAll: () => void) => void
@@ -180,9 +180,6 @@ const createRectangleWallGeometry = (
     return group
 }
 
-/**
- * Create a hollow circle wall geometry (only circumference)
- */
 /**
  * Create a hollow circle wall geometry (only circumference)
  * Walls start at Y=0 and extend upward
@@ -373,7 +370,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         onBlastCopy,
         onBlastCut,
         onBlastLock,
-        onBlastpixiOnBlastUpdateConepdateCone,
+        onBlastUpdateCone,
         onBlastDelete: onBlastDeleteProp = () => {},
         // Pending movements
         onPendingCountChange,
@@ -813,7 +810,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 }
             }
             if (!template) {
-                const modelIndex = Math.abs(hashStringToIndex(token.id, tokenModelTemplatesRef.current.length))
+                const modelIndex = hashStringToIndex(token.id, tokenModelTemplatesRef.current.length)
                 template =
                     modelIndex >= 0 && modelIndex < tokenModelTemplatesRef.current.length
                         ? tokenModelTemplatesRef.current[modelIndex]
@@ -1790,13 +1787,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         }
     }, [activeTokenId, tokens, gridSize])
 
-    // Debug: Log scene children count periodically
-    useEffect(() => {
-        if (sceneRef.current) {
-            const interval = setInterval(() => {}, 1000)
-            return () => clearInterval(interval)
-        }
-    }, [])
 
     // Render walls
     useEffect(() => {
@@ -2384,7 +2374,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         }
 
         pixiOnBindFit(fitFn)
-    }, [pixiOnBindFit, mapTexture, mapPlaneRef.current])
+    }, [pixiOnBindFit, mapTexture])
 
     // Pending movements: acceptAll and cancelAll functions
     useEffect(() => {
@@ -2801,8 +2791,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         blastDrawMode
     )
 
-    // Pending movements (placeholder for future implementation)
-    // usePendingMovements(pendingMovementsRef.current, tokens, sceneRef.current, gridSize)
 
     // Mouse interaction for measuring and token dragging
     useEffect(() => {
@@ -3563,8 +3551,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     } else {
                         // Existing cone — update endpoint
-                        if (onBlastpixiOnBlastUpdateConepdateCone) {
-                            onBlastpixiOnBlastUpdateConepdateCone(apex.id, endX, endZ, apex.apexX, apex.apexZ)
+                        if (onBlastUpdateCone) {
+                            onBlastUpdateCone(apex.id, endX, endZ, apex.apexX, apex.apexZ)
                         }
                     }
                 }
@@ -3889,7 +3877,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         pixiOnBlastDrop,
         pixiOnBlastMoveProp,
         pixiOnWallDraw,
-        onBlastpixiOnBlastUpdateConepdateCone,
+        onBlastUpdateCone,
         blasts,
         blastsNotInMap,
         pixiSetSelectedTokenId,
