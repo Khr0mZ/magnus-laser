@@ -7,6 +7,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import CustomScrollbar from './components/CustomScrollbar'
 import CyberpunkLoader from './components/CyberpunkLoader'
 import { GMToolsDrawer } from './components/GMTools'
+import EdgerunnerDetailDialog from './views/Edgerunners/EdgerunnerDetailDialog'
 import NavigationDrawer from './components/NavigationDrawer/NavigationDrawer'
 import { DataProvider } from './contexts/DataContext'
 import { useData } from './contexts/dataHooks'
@@ -144,6 +145,7 @@ const AppContent = () => {
                 <BrowserRouter>
                     <NavigationDrawer />
                     <GMToolsDrawer />
+                    <EdgerunnerDetailDialog />
                     <CustomScrollbar scrollDirection="vertical">
                         <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
                             <Routes>

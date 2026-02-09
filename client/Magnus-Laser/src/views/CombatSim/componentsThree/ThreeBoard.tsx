@@ -15,7 +15,7 @@ import type { Blast, BlastType, Image as ImageData, Token, Wall, WallShape } fro
 import { useThreeCallbackRefs } from './hooks/useThreeCallbackRefs'
 import { useThreeClipboard } from './hooks/useThreeClipboard'
 import { useThreeContextMenus } from './hooks/useThreeContextMenus'
-import { createFallbackBlastModel, createFallbackTokenModel, loadModel, loadTexture } from './loaders/ModelLoader'
+import { createFallbackBlastModel, createFallbackTokenModel, getAnimationClips, loadModel, loadTexture } from './loaders/ModelLoader'
 import {
     createActiveTokenMaterial,
     createCyberpunkBlastMaterial,
@@ -225,13 +225,31 @@ type PointerEventLike = {
     clientY: number
 }
 
-const cloneGroupWithBakedSkinned = (source: THREE.Group): THREE.Group => {
+const cloneGroupDualMesh = (source: THREE.Group): THREE.Group => {
     const clone = skeletonClone(source) as THREE.Group
-    const toReplace: Array<{ parent: THREE.Object3D; skinned: THREE.SkinnedMesh; baked: THREE.Mesh }> = []
+    const toAdd: Array<{ parent: THREE.Object3D; baked: THREE.Mesh }> = []
 
     clone.traverse((child) => {
         if (child instanceof THREE.SkinnedMesh) {
+            // Keep SkinnedMesh visible for animation, mark to skip raycasting
+            child.userData.skipRaycast = true
+
+            // Override bone-dependent CPU methods to avoid crashes from broken bone refs.
+            // skeletonClone can produce undefined bones when the skeleton root is outside
+            // the cloned subtree. GPU vertex shader still applies bone transforms for rendering.
             const geom = child.geometry as THREE.BufferGeometry
+            if (!geom.boundingBox) geom.computeBoundingBox()
+            if (!geom.boundingSphere) geom.computeBoundingSphere()
+            child.computeBoundingBox = function () {
+                if (this.boundingBox === null) this.boundingBox = new THREE.Box3()
+                this.boundingBox.copy(this.geometry.boundingBox!)
+            }
+            child.computeBoundingSphere = function () {
+                if (this.boundingSphere === null) this.boundingSphere = new THREE.Sphere()
+                this.boundingSphere.copy(this.geometry.boundingSphere!)
+            }
+            child.raycast = () => {} // Use baked proxy mesh for raycasting instead
+
             const bakedGeom = geom.clone()
             bakedGeom.deleteAttribute('skinWeight')
             bakedGeom.deleteAttribute('skinIndex')
@@ -246,17 +264,20 @@ const cloneGroupWithBakedSkinned = (source: THREE.Group): THREE.Group => {
                     ? child.material.map((m) => (m instanceof THREE.Material ? m.clone() : m))
                     : child.material
 
+            // Create invisible baked proxy for raycasting
             const bakedMesh = new THREE.Mesh(bakedGeom, mat)
-            bakedMesh.castShadow = child.castShadow
-            bakedMesh.receiveShadow = child.receiveShadow
-            bakedMesh.name = child.name || 'bakedMesh'
+            bakedMesh.visible = false
+            bakedMesh.userData.isRaycastProxy = true
+            bakedMesh.castShadow = false
+            bakedMesh.receiveShadow = false
+            bakedMesh.name = (child.name || 'mesh') + '_raycastProxy'
             bakedMesh.position.copy(child.position)
             bakedMesh.rotation.copy(child.rotation)
             bakedMesh.scale.copy(child.scale)
             bakedMesh.matrixAutoUpdate = true
 
             if (child.parent) {
-                toReplace.push({ parent: child.parent, skinned: child, baked: bakedMesh })
+                toAdd.push({ parent: child.parent, baked: bakedMesh })
             }
         } else if (child instanceof THREE.Mesh) {
             child.geometry = child.geometry.clone()
@@ -268,9 +289,9 @@ const cloneGroupWithBakedSkinned = (source: THREE.Group): THREE.Group => {
         }
     })
 
-    toReplace.forEach(({ parent, skinned, baked }) => {
+    // Add baked proxies alongside SkinnedMesh (don't remove SkinnedMesh)
+    toAdd.forEach(({ parent, baked }) => {
         parent.add(baked)
-        parent.remove(skinned)
     })
 
     return clone
@@ -281,19 +302,43 @@ const computeMeshBoundingBox = (object: THREE.Object3D): THREE.Box3 | null => {
     const box = new THREE.Box3()
     object.updateMatrixWorld(true)
     object.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-            const geom = child.geometry as THREE.BufferGeometry
-            if (geom && geom.attributes?.position) {
-                if (!geom.boundingBox) {
-                    geom.computeBoundingBox()
+        // Skip invisible raycast proxy meshes created by cloneGroupDualMesh
+        if (child instanceof THREE.Mesh && !child.userData.isRaycastProxy) {
+            if (child instanceof THREE.SkinnedMesh) {
+                // Use bone-aware bbox so sizing reflects actual skeleton pose, not bind pose
+                try {
+                    THREE.SkinnedMesh.prototype.computeBoundingBox.call(child)
+                    if (child.boundingBox) {
+                        const childBox = child.boundingBox.clone().applyMatrix4(child.matrixWorld)
+                        if (!hasMesh) { box.copy(childBox); hasMesh = true }
+                        else { box.union(childBox) }
+                    }
+                } catch {
+                    // Fallback to static geometry bbox if bones are broken
+                    const geom = child.geometry as THREE.BufferGeometry
+                    if (geom?.attributes?.position) {
+                        if (!geom.boundingBox) geom.computeBoundingBox()
+                        if (geom.boundingBox) {
+                            const childBox = geom.boundingBox.clone().applyMatrix4(child.matrixWorld)
+                            if (!hasMesh) { box.copy(childBox); hasMesh = true }
+                            else { box.union(childBox) }
+                        }
+                    }
                 }
-                if (geom.boundingBox) {
-                    const childBox = geom.boundingBox.clone().applyMatrix4(child.matrixWorld)
-                    if (!hasMesh) {
-                        box.copy(childBox)
-                        hasMesh = true
-                    } else {
-                        box.union(childBox)
+            } else {
+                const geom = child.geometry as THREE.BufferGeometry
+                if (geom && geom.attributes?.position) {
+                    if (!geom.boundingBox) {
+                        geom.computeBoundingBox()
+                    }
+                    if (geom.boundingBox) {
+                        const childBox = geom.boundingBox.clone().applyMatrix4(child.matrixWorld)
+                        if (!hasMesh) {
+                            box.copy(childBox)
+                            hasMesh = true
+                        } else {
+                            box.union(childBox)
+                        }
                     }
                 }
             }
@@ -392,6 +437,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
     // Object maps for tracking
     const tokenMeshesRef = useRef<Map<string, THREE.Group>>(new Map())
+    const tokenAnimationMixersRef = useRef<Map<string, THREE.AnimationMixer>>(new Map())
     const tokenLabelsRef = useRef<Map<string, THREE.Object3D>>(new Map())
     const wallMeshesRef = useRef<Map<string, THREE.Mesh | THREE.Group>>(new Map())
     const blastMeshesRef = useRef<Map<string, THREE.Group>>(new Map())
@@ -756,6 +802,145 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         return null
     }
 
+    const getTokenVisualPosition = (token: Token): { x: number; z: number } => {
+        const pending = pendingMovementsRef.current.get(token.id)
+        if (pending) {
+            return { x: pending.endX, z: pending.endZ }
+        }
+        const mesh = tokenMeshesRef.current.get(token.id)
+        if (mesh) {
+            return { x: mesh.position.x, z: mesh.position.z }
+        }
+        return { x: token.x, z: token.y }
+    }
+
+    const findClosestTokenAtWorldPoint = (worldPoint: THREE.Vector3): Token | null => {
+        let hitToken: Token | null = null
+        let minDist = Number.POSITIVE_INFINITY
+        for (const token of tokens) {
+            const pos = getTokenVisualPosition(token)
+            const radius = token.customRadius ?? gridSize / 2
+            const d = Math.hypot(pos.x - worldPoint.x, pos.z - worldPoint.z)
+            if (d <= radius && d < minDist) {
+                hitToken = token
+                minDist = d
+            }
+        }
+        return hitToken
+    }
+
+    const pickTokenHybrid = (raycaster: THREE.Raycaster, worldPoint?: THREE.Vector3 | null): Token | null => {
+        const tokenById = new Map(tokens.map((token) => [token.id, token]))
+        const tokenIntersects = raycaster
+            .intersectObjects(Array.from(tokenMeshesRef.current.values()), true)
+            .filter((hit) => !hit.object.userData.skipRaycast)
+
+        for (const hit of tokenIntersects) {
+            const tokenHit = findTokenFromObject(hit.object)
+            if (!tokenHit) continue
+            const tokenData = tokenById.get(tokenHit.id)
+            if (tokenData) {
+                return tokenData
+            }
+        }
+
+        if (worldPoint) {
+            return findClosestTokenAtWorldPoint(worldPoint)
+        }
+        return null
+    }
+
+    const syncTokenGroundImage = (group: THREE.Group, token: Token, radius: number): void => {
+        const applyGroundTextureMaterialTuning = (material: THREE.MeshStandardMaterial) => {
+            material.depthWrite = false
+            material.depthTest = true
+            material.polygonOffset = true
+            material.polygonOffsetFactor = -2
+            material.polygonOffsetUnits = -2
+            material.alphaTest = 0.02
+            material.needsUpdate = true
+        }
+
+        const disposeGroundTextureMesh = (mesh: THREE.Mesh) => {
+            group.remove(mesh)
+            mesh.geometry.dispose()
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+            materials.forEach((material) => {
+                if ('map' in material && material.map instanceof THREE.Texture) {
+                    material.map.dispose()
+                }
+                material.dispose()
+            })
+        }
+
+        const groundTextureMeshes = group.children.filter(
+            (child): child is THREE.Mesh => child instanceof THREE.Mesh && Boolean(child.userData?.isTokenTexture)
+        )
+
+        if (!token.imageId) {
+            groundTextureMeshes.forEach(disposeGroundTextureMesh)
+            return
+        }
+
+        const texture = tokenTextureCacheRef.current.get(token.imageId)
+        if (!texture) {
+            groundTextureMeshes.forEach(disposeGroundTextureMesh)
+            return
+        }
+
+        const desiredRadius = radius * 0.8
+        const groundOffset = Math.max(0.05, gridSize * 0.001)
+        const existingMesh = groundTextureMeshes[0]
+
+        if (existingMesh) {
+            for (const extraMesh of groundTextureMeshes.slice(1)) {
+                disposeGroundTextureMesh(extraMesh)
+            }
+
+            const currentImageId = existingMesh.userData?.tokenImageId as string | undefined
+            const currentRadius = existingMesh.userData?.tokenImageRadius as number | undefined
+            const sameImage = currentImageId === token.imageId
+            const sameRadius =
+                typeof currentRadius === 'number' && Math.abs(currentRadius - desiredRadius) < 0.0001
+
+            if (sameImage && sameRadius) {
+                existingMesh.position.y = groundOffset - group.position.y
+                existingMesh.rotation.x = -Math.PI / 2
+                existingMesh.userData.tokenId = token.id
+                if (existingMesh.material instanceof THREE.MeshStandardMaterial) {
+                    applyGroundTextureMaterialTuning(existingMesh.material)
+                }
+                return
+            }
+
+            disposeGroundTextureMesh(existingMesh)
+        }
+
+        const textureGeometry = new THREE.CircleGeometry(desiredRadius, 32)
+        const textureMaterial = new THREE.MeshStandardMaterial({
+            map: texture.clone(),
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.95,
+            side: THREE.DoubleSide,
+        })
+        applyGroundTextureMaterialTuning(textureMaterial)
+        const textureMesh = new THREE.Mesh(textureGeometry, textureMaterial)
+        textureMesh.position.y = groundOffset - group.position.y
+        textureMesh.rotation.x = -Math.PI / 2
+        textureMesh.castShadow = false
+        textureMesh.receiveShadow = false
+        textureMesh.renderOrder = 1
+        textureMesh.userData = {
+            ...(textureMesh.userData ?? {}),
+            isTokenTexture: true,
+            tokenId: token.id,
+            tokenImageId: token.imageId,
+            tokenImageRadius: desiredRadius,
+        }
+        group.add(textureMesh)
+    }
+
     // Disable zoom while Shift is held (global key handlers)
     useEffect(() => {
         const handleKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -816,7 +1001,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         ? tokenModelTemplatesRef.current[modelIndex]
                         : tokenModelTemplatesRef.current[tokenModelTemplatesRef.current.length - 1]
             }
-            const model = cloneGroupWithBakedSkinned(template)
+            const model = cloneGroupDualMesh(template)
             tokenGroup = new THREE.Group()
             tokenGroup.add(model)
             tokenGroup.userData.useOriginalMaterials = true
@@ -825,6 +1010,22 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             if (modelPath) {
                 model.userData = { ...(model.userData ?? {}), __modelPath: modelPath }
                 tokenGroup.userData.modelPath = modelPath
+            }
+
+            // Set up animation mixer if model has animation clips
+            if (modelPath) {
+                const clips = getAnimationClips(modelPath)
+                if (clips.length > 0) {
+                    const mixer = new THREE.AnimationMixer(model)
+                    clips.forEach(clip => {
+                        const action = mixer.clipAction(clip.clone())
+                        action.play()
+                    })
+                    tokenAnimationMixersRef.current.set(token.id, mixer)
+                    // Evaluate first frame so bone-aware bbox reflects actual pose, not bind pose
+                    mixer.update(0)
+                    model.updateMatrixWorld(true)
+                }
             }
 
             // Initial bbox
@@ -1289,6 +1490,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 }
             }
 
+            // Update model animation mixers
+            for (const mixer of tokenAnimationMixersRef.current.values()) {
+                mixer.update(delta)
+            }
+
             controls.update()
             renderer.render(scene, camera)
         }
@@ -1303,6 +1509,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             }
             renderer.dispose()
             controls.dispose()
+            // Clean up all animation mixers
+            for (const mixer of tokenAnimationMixersRef.current.values()) {
+                mixer.stopAllAction()
+            }
+            tokenAnimationMixersRef.current.clear()
             setThreeReady(false)
         }
     }, [])
@@ -1568,6 +1779,12 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             tokenMeshes.delete(id)
             tokenLabels.delete(id)
             tokenOrientationRef.current.delete(id)
+            // Clean up animation mixer
+            const mixer = tokenAnimationMixersRef.current.get(id)
+            if (mixer) {
+                mixer.stopAllAction()
+                tokenAnimationMixersRef.current.delete(id)
+            }
         }
 
         // Add/update tokens
@@ -1578,7 +1795,10 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             // PixiJS: (0,0) top-left, X right, Y down
             // Three.js: X = token.x (same), Z = token.y (same), Y slightly lifted to avoid base clipping
             const tokenBaseLift = Math.max(0.1, gridSize * 0.01) // small lift above ground
-            const tokenPosition = new THREE.Vector3(token.x, tokenBaseLift, token.y)
+            const pending = pendingMovements.get(token.id)
+            const posX = pending ? pending.endX : token.x
+            const posZ = pending ? pending.endZ : token.y
+            const tokenPosition = new THREE.Vector3(posX, tokenBaseLift, posZ)
             const isActive = token.id === activeTokenId
             const orientationDeg = tokenOrientationRef.current.get(token.id) ?? token.orientationDeg ?? 0
 
@@ -1604,12 +1824,19 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     })
                     tokenMeshes.delete(token.id)
+                    // Clean up old animation mixer before rebuild
+                    const oldMixer = tokenAnimationMixersRef.current.get(token.id)
+                    if (oldMixer) {
+                        oldMixer.stopAllAction()
+                        tokenAnimationMixersRef.current.delete(token.id)
+                    }
 
                     // Build fresh group with correct scale
                     const newGroup = buildTokenGroup(token, radius, height, isActive)
                     newGroup.position.copy(tokenPosition)
                     newGroup.userData.tokenId = token.id
                     newGroup.userData.lastRadius = radius
+                    syncTokenGroundImage(newGroup, token, radius)
                     scene.add(newGroup)
                     tokenMeshes.set(token.id, newGroup)
 
@@ -1619,33 +1846,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         scene.add(label)
                     }
 
-                    // Add or update texture
-                    if (token.imageId) {
-                        const texture = tokenTextureCacheRef.current.get(token.imageId)
-                        if (texture) {
-                            // Calculate bottom position
-                            newGroup.updateMatrixWorld(true)
-                            const bbox = new THREE.Box3().setFromObject(newGroup)
-                            const bottomY = bbox.min.y
-                            const textureRadius = radius * 0.8
-                            const textureGeometry = new THREE.CircleGeometry(textureRadius, 32)
-                            const textureMaterial = new THREE.MeshStandardMaterial({
-                                map: texture.clone(),
-                                color: 0xffffff,
-                                transparent: true,
-                                opacity: 0.9,
-                                side: THREE.DoubleSide,
-                            })
-                            const textureMesh = new THREE.Mesh(textureGeometry, textureMaterial)
-                            const localBottomY = bottomY / newGroup.scale.y
-                            textureMesh.position.y = localBottomY - 0.01
-                            textureMesh.rotation.x = Math.PI / 2
-                            textureMesh.castShadow = false
-                            textureMesh.receiveShadow = false
-                            textureMesh.userData.isTokenTexture = true
-                            newGroup.add(textureMesh)
-                        }
-                    }
                 }
                 const group = tokenMeshes.get(token.id)!
 
@@ -1667,6 +1867,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     child.userData = { ...(child.userData ?? {}), tokenId: token.id }
                 })
                 tokenOrientationRef.current.set(token.id, orientationDeg)
+                syncTokenGroundImage(group, token, radius)
 
                 // Update materials for active state and selection
                 const isSelected = token.id === pixiSelectedTokenId
@@ -1713,6 +1914,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 if (existingInScene) {
                     console.warn('ThreeBoard: Token already exists in scene, reusing', token.id)
                     tokenMeshes.set(token.id, existingInScene as THREE.Group)
+                    syncTokenGroundImage(existingInScene as THREE.Group, token, radius)
                     // Update label if it exists
                     const existingLabel = Array.from(scene.children).find(
                         (child) => child.userData?.tokenLabelId === token.id
@@ -1727,6 +1929,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 tokenGroup.position.copy(tokenPosition)
                 tokenGroup.rotation.y = (orientationDeg * Math.PI) / 180
                 tokenGroup.userData.tokenId = token.id // Mark with token ID
+                syncTokenGroundImage(tokenGroup, token, radius)
                 tokenGroup.traverse((child) => {
                     child.userData = { ...(child.userData ?? {}), tokenId: token.id }
                 })
@@ -1746,7 +1949,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 tokenLabels.set(token.id, label)
             }
         })
-    }, [tokens, activeTokenId, gridSize, assetVersion])
+    }, [tokens, activeTokenId, gridSize, assetVersion, pendingMovements])
 
     // Crosshair ring on active token
     useEffect(() => {
@@ -1769,7 +1972,10 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         })
         const ring = new THREE.Mesh(ringGeo, ringMat)
         ring.rotation.x = -Math.PI / 2 // Lay flat on ground
-        ring.position.set(token.x, 0.15, token.y)
+        const ringPending = pendingMovements.get(activeTokenId)
+        const ringX = ringPending ? ringPending.endX : token.x
+        const ringZ = ringPending ? ringPending.endZ : token.y
+        ring.position.set(ringX, 0.15, ringZ)
         scene.add(ring)
 
         let animId: number
@@ -1785,7 +1991,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             ringGeo.dispose()
             ringMat.dispose()
         }
-    }, [activeTokenId, tokens, gridSize])
+    }, [activeTokenId, tokens, gridSize, pendingMovements])
 
 
     // Render walls
@@ -2838,32 +3044,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 mouseVector.x = (mouse.x / width) * 2 - 1
                 mouseVector.y = -(mouse.y / height) * 2 + 1
                 raycaster.setFromCamera(mouseVector, cameraRef.current!)
-
-                // Intersect against token meshes to allow model/texture hit
-                const tokenIntersects = raycaster.intersectObjects(Array.from(tokenMeshesRef.current.values()), true)
-                let hitToken: Token | null = null
-                if (tokenIntersects.length > 0) {
-                    const tokenHit = findTokenFromObject(tokenIntersects[0].object)
-                    if (tokenHit) {
-                        hitToken = tokens.find((t) => t.id === tokenHit.id) ?? null
-                    }
-                }
-
-                // Fallback: use ground projection if no mesh hit
-                if (!hitToken) {
-                    const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
-                    if (intersectionPoint) {
-                        let minDist = Number.POSITIVE_INFINITY
-                        for (const t of tokens) {
-                            const currentRadius = t.customRadius ?? gridSize / 2
-                            const d = Math.hypot(t.x - intersectionPoint.x, t.y - intersectionPoint.z)
-                            if (d <= currentRadius && d < minDist) {
-                                hitToken = t
-                                minDist = d
-                            }
-                        }
-                    }
-                }
+                const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
+                const hitToken = pickTokenHybrid(raycaster, intersectionPoint)
 
                 if (hitToken) {
                     const delta = e.deltaY < 0 ? 45 : -45
@@ -2899,32 +3081,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             mouseVector.x = (mouse.x / width) * 2 - 1
             mouseVector.y = -(mouse.y / height) * 2 + 1
             raycaster.setFromCamera(mouseVector, cameraRef.current!)
-
-            // Intersect against token meshes to allow model/texture hit
-            const tokenIntersects = raycaster.intersectObjects(Array.from(tokenMeshesRef.current.values()), true)
-            let hitToken: Token | null = null
-            if (tokenIntersects.length > 0) {
-                const tokenHit = findTokenFromObject(tokenIntersects[0].object)
-                if (tokenHit) {
-                    hitToken = tokens.find((t) => t.id === tokenHit.id) ?? null
-                }
-            }
-
-            // Fallback: use ground projection if no mesh hit
-            if (!hitToken) {
-                const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
-                if (intersectionPoint) {
-                    let minDist = Number.POSITIVE_INFINITY
-                    for (const t of tokens) {
-                        const currentRadius = t.customRadius ?? gridSize / 2
-                        const d = Math.hypot(t.x - intersectionPoint.x, t.y - intersectionPoint.z)
-                        if (d <= currentRadius && d < minDist) {
-                            hitToken = t
-                            minDist = d
-                        }
-                    }
-                }
-            }
+            const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
+            const hitToken = pickTokenHybrid(raycaster, intersectionPoint)
 
             if (hitToken && pixiOnTokenUpdate) {
                 const delta = e.deltaY < 0 ? 1 : -1 // Negative deltaY means wheel up (increase size)
@@ -3047,21 +3205,12 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     mouseVector.x = (mouse.x / width) * 2 - 1
                     mouseVector.y = -(mouse.y / height) * 2 + 1
                     raycaster.setFromCamera(mouseVector, cameraRef.current)
-                    const tokenIntersects = raycaster.intersectObjects(
-                        Array.from(tokenMeshesRef.current.values()),
-                        true
-                    )
-                    if (tokenIntersects.length > 0) {
-                        const hitObject = tokenIntersects[0].object
-                        const tokenHit = findTokenFromObject(hitObject)
-                        if (tokenHit) {
-                            const tokenData = tokens.find((t) => t.id === tokenHit.id)
-                            if (tokenData) {
-                                const snapped = snapToNinePoints(tokenData.x, tokenData.y, gridSize, snapToGrid)
-                                setMeasureStart(new THREE.Vector3(snapped.x, 0, snapped.y))
-                                return
-                            }
-                        }
+                    const tokenHit = pickTokenHybrid(raycaster, intersectionPoint)
+                    if (tokenHit) {
+                        const tokenPos = getTokenVisualPosition(tokenHit)
+                        const snapped = snapToNinePoints(tokenPos.x, tokenPos.z, gridSize, snapToGrid)
+                        setMeasureStart(new THREE.Vector3(snapped.x, 0, snapped.y))
+                        return
                     }
                     const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
                     setMeasureStart(new THREE.Vector3(snapped.x, 0, snapped.y))
@@ -3099,36 +3248,32 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 raycaster.setFromCamera(mouseVector, cameraRef.current)
 
                 // Check for token click (walk up ancestor chain)
-                const tokenIntersects = raycaster.intersectObjects(Array.from(tokenMeshesRef.current.values()), true)
-                if (tokenIntersects.length > 0) {
-                    const hitObject = tokenIntersects[0].object
-                    const tokenHit = findTokenFromObject(hitObject)
-                    if (tokenHit) {
-                        const id = tokenHit.id
-                        const tokenData = tokens.find((t) => t.id === id)
-                        const inSession = !!session && connected
-                        if (inSession && role === 'player' && tokenData?.owner && tokenData.owner !== displayName) {
-                            return
-                        }
-                        pixiSetSelectedTokenId(id)
-                        leftClickTokenRef.current = { id, x: event.clientX, y: event.clientY }
-                        isLeftClickDraggingRef.current = false
-                        setDraggedTokenId(id)
-                        const pendingExisting = pendingMovementsRef.current.get(id)
-                        const lastPoint =
-                            pendingExisting?.points?.[pendingExisting.points.length - 1] ??
-                            (pendingExisting ? { x: pendingExisting.endX, z: pendingExisting.endZ } : undefined)
-                        const startX = pendingExisting
-                            ? lastPoint?.x ?? pendingExisting.endX ?? tokenData?.x ?? intersectionPoint.x
-                            : tokenData?.x ?? intersectionPoint.x
-                        const startZ = pendingExisting
-                            ? lastPoint?.z ?? pendingExisting.endZ ?? tokenData?.y ?? intersectionPoint.z
-                            : tokenData?.y ?? intersectionPoint.z
-                        // Mark new segment when a pending path already exists
-                        isStartingNewSegmentRef.current = Boolean(pendingExisting)
-                        newSegmentPreviewAddedRef.current = false
-                        dragStartRef.current = { x: startX, z: startZ }
+                const tokenData = pickTokenHybrid(raycaster, intersectionPoint)
+                if (tokenData) {
+                    const id = tokenData.id
+                    const inSession = !!session && connected
+                    if (inSession && role === 'player' && tokenData.owner && tokenData.owner !== displayName) {
+                        return
                     }
+                    pixiSetSelectedTokenId(id)
+                    leftClickTokenRef.current = { id, x: event.clientX, y: event.clientY }
+                    isLeftClickDraggingRef.current = false
+                    setDraggedTokenId(id)
+                    const pendingExisting = pendingMovementsRef.current.get(id)
+                    const visualPos = getTokenVisualPosition(tokenData)
+                    const lastPoint =
+                        pendingExisting?.points?.[pendingExisting.points.length - 1] ??
+                        (pendingExisting ? { x: pendingExisting.endX, z: pendingExisting.endZ } : undefined)
+                    const startX = pendingExisting
+                        ? lastPoint?.x ?? pendingExisting.endX ?? visualPos.x
+                        : visualPos.x
+                    const startZ = pendingExisting
+                        ? lastPoint?.z ?? pendingExisting.endZ ?? visualPos.z
+                        : visualPos.z
+                    // Mark new segment when a pending path already exists
+                    isStartingNewSegmentRef.current = Boolean(pendingExisting)
+                    newSegmentPreviewAddedRef.current = false
+                    dragStartRef.current = { x: startX, z: startZ }
                 } else {
                     // Click on blast to select or drag
                     const blastIntersects = raycaster.intersectObjects(
@@ -3470,47 +3615,40 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             raycaster.setFromCamera(mouseVector, cameraRef.current)
 
                             // Check for token click (walk ancestors)
-                            const tokenIntersects = raycaster.intersectObjects(
-                                Array.from(tokenMeshesRef.current.values()),
+                            const tokenHit = pickTokenHybrid(raycaster, intersectionPoint)
+                            if (tokenHit) {
+                                contextMenus.openTokenContextMenu(
+                                    intersectionPoint.x,
+                                    intersectionPoint.z,
+                                    tokenHit.id
+                                )
+                                return
+                            }
+
+                            // Check for blast click
+                            const blastIntersects = raycaster.intersectObjects(
+                                Array.from(blastMeshesRef.current.values()),
                                 true
                             )
-                            if (tokenIntersects.length > 0) {
-                                const hitObject = tokenIntersects[0].object
-                                const tokenHit = findTokenFromObject(hitObject)
-                                if (tokenHit) {
-                                    contextMenus.openTokenContextMenu(
-                                        intersectionPoint.x,
-                                        intersectionPoint.z,
-                                        tokenHit.id
-                                    )
-                                    return
+                            if (blastIntersects.length > 0) {
+                                const hitObject = blastIntersects[0].object
+                                for (const [id] of blastMeshesRef.current.entries()) {
+                                    const group = blastMeshesRef.current.get(id)
+                                    if (group && (group === hitObject || group.children.includes(hitObject))) {
+                                        const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === id)
+                                        if (blast) {
+                                            contextMenus.openBlastContextMenu(
+                                                intersectionPoint.x,
+                                                intersectionPoint.z,
+                                                blast
+                                            )
+                                        }
+                                        break
+                                    }
                                 }
                             } else {
-                                // Check for blast click
-                                const blastIntersects = raycaster.intersectObjects(
-                                    Array.from(blastMeshesRef.current.values()),
-                                    true
-                                )
-                                if (blastIntersects.length > 0) {
-                                    const hitObject = blastIntersects[0].object
-                                    for (const [id] of blastMeshesRef.current.entries()) {
-                                        const group = blastMeshesRef.current.get(id)
-                                        if (group && (group === hitObject || group.children.includes(hitObject))) {
-                                            const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === id)
-                                            if (blast) {
-                                                contextMenus.openBlastContextMenu(
-                                                    intersectionPoint.x,
-                                                    intersectionPoint.z,
-                                                    blast
-                                                )
-                                            }
-                                            break
-                                        }
-                                    }
-                                } else {
-                                    // Click on empty space - open map context menu
-                                    contextMenus.openMapContextMenu(intersectionPoint.x, intersectionPoint.z)
-                                }
+                                // Click on empty space - open map context menu
+                                contextMenus.openMapContextMenu(intersectionPoint.x, intersectionPoint.z)
                             }
                         }
                     }

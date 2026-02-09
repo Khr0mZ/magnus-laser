@@ -36,21 +36,11 @@ export interface OpenQuestionResult {
     id: string
     timestamp: number
     question: string
-    category: OpenQuestionCategory
-    focus: string
-    detail: string
+    verb: string
+    noun: string
+    adjective: string
     notes?: string
 }
-
-export type OpenQuestionCategory =
-    | 'ACTION'
-    | 'DESCRIPTION'
-    | 'COMPLICATION'
-    | 'NPC_ACTION'
-    | 'NPC_MOOD'
-    | 'LOCATION'
-    | 'OBJECT'
-    | 'EVENT'
 
 // === SOLO PLAY CLOCK TYPES ===
 // Based on PDF page 25 - Dice Pool system
@@ -390,6 +380,15 @@ export type TableCategory =
     | 'TWIST'
     | 'CLUE'
     | 'RUMOR'
+    | 'SENSORY'
+    | 'NAME'
+    | 'ENCOUNTER'
+    | 'LOOT'
+    | 'MEDIA'
+    | 'THING'
+    | 'FACTION'
+    | 'VENUE'
+    | 'MISSION_ITEM'
 
 // === IP TRACKING TYPES ===
 
@@ -409,6 +408,158 @@ export interface IPTracker {
     entries: IPEntry[]
 }
 
+// === INVESTIGATION TRACKER TYPES ===
+// Based on PDF page 97 - 5-step framework
+
+export type InvestigationComplexity = 'SIMPLE' | 'AVERAGE' | 'DIFFICULT'
+// SIMPLE: 3 checks, AVERAGE: 5 checks, DIFFICULT: 7 checks
+
+export interface InvestigationCheck {
+    checkNumber: number
+    skill: string
+    dv: number
+    description: string
+    roll?: number
+    skillTotal?: number
+    success?: boolean
+    notes?: string
+}
+
+export interface InvestigationSession {
+    id: string
+    name: string
+    goal: string
+    complexity: InvestigationComplexity
+    numberOfChecks: number // 3, 5, or 7
+    checks: InvestigationCheck[]
+    currentCheck: number
+    successCount: number
+    failureCount: number
+    isComplete: boolean
+    success?: boolean // True if majority passed
+    discoveryNotes?: string
+    createdAt: number
+    completedAt?: number
+}
+
+// === SOCIAL CHALLENGE TRACKER TYPES ===
+// Based on PDF page 98
+
+export type NPCImportance = 'BACKGROUND' | 'SUPPORTING' | 'KEY'
+// BACKGROUND: Just narrate, no check needed
+// SUPPORTING: Single skill check with DV
+// KEY: Full social challenge (multiple opposed checks)
+
+export interface SocialCheck {
+    checkNumber: number
+    edgerunnerSkill: string
+    npcSkill: string
+    edgerunnerRoll?: number
+    edgerunnerTotal?: number
+    npcRoll?: number
+    npcTotal?: number
+    winner?: 'EDGERUNNER' | 'NPC' | 'TIE'
+    notes?: string
+}
+
+export interface SocialChallengeSession {
+    id: string
+    name: string
+    goal: string
+    npcName: string
+    npcImportance: NPCImportance
+    numberOfChecks: number // 1 for Supporting, 3/5/7 for Key
+    checks: SocialCheck[]
+    currentCheck: number
+    edgerunnerWins: number
+    npcWins: number
+    isComplete: boolean
+    success?: boolean
+    outcomeNotes?: string
+    createdAt: number
+    completedAt?: number
+}
+
+// === NPC FORM TYPES ===
+// Based on PDF pages 92-95
+
+export interface NPCFormSimple {
+    id: string
+    name: string
+    handle?: string
+    role?: string
+    look: string // What do they look like?
+    do: string // What do they do?
+    quirk: string // What is a quirk that makes them distinct?
+    mood?: string
+    notes?: string
+    createdAt: number
+}
+
+export interface NPCFormComplex extends NPCFormSimple {
+    // Stats
+    int?: number
+    ref?: number
+    dex?: number
+    tech?: number
+    cool?: number
+    will?: number
+    luck?: number
+    move?: number
+    body?: number
+    emp?: number
+    // Combat
+    hp?: number
+    initiative?: number
+    reputation?: number
+    // Skills
+    importantSkills?: string
+    // Equipment
+    attacks?: string
+    armorHead?: string
+    armorBody?: string
+    gear?: string
+    cyberware?: string
+}
+
+export interface NPCTrackerEntry {
+    id: string
+    name: string
+    role?: string
+    firstEncounter: string // Scene/session where first met
+    relationship?: string // From randomRelationshipsTable
+    mood?: string
+    status: 'ALIVE' | 'DEAD' | 'MISSING' | 'UNKNOWN'
+    notes?: string
+    createdAt: number
+}
+
+// === RANDOM ENCOUNTER TYPES ===
+
+export type EncounterZone = 'CORPORATE' | 'MODERATE' | 'COMBAT_ZONE' | 'OUTSKIRTS'
+export type TimeOfDay = 'DAY' | 'NIGHT' | 'AFTER_MIDNIGHT'
+
+export interface RandomEncounterResult {
+    id: string
+    zone: EncounterZone
+    timeOfDay: TimeOfDay
+    description: string
+    followUp?: string
+    createdAt: number
+}
+
+// === CORPSE LOOT TYPES ===
+
+export type CorpseType = 'STREETRAT' | 'EDGERUNNER' | 'CORPORATE'
+
+export interface CorpseLootResult {
+    id: string
+    corpseType: CorpseType
+    items: string[]
+    notes?: string
+    createdAt: number
+}
+
 // === SOLO PLAY SESSION STATE ===
 
 export interface SoloPlaySession {
@@ -423,6 +574,12 @@ export interface SoloPlaySession {
     missions: SoloMission[]
     combatSessions: QDCombatSession[]
     netrunSessions: QDNetrunSession[]
+    investigationSessions: InvestigationSession[]
+    socialChallengeSessions: SocialChallengeSession[]
+    npcForms: (NPCFormSimple | NPCFormComplex)[]
+    npcTracker: NPCTrackerEntry[]
+    encounters: RandomEncounterResult[]
+    corpseLoot: CorpseLootResult[]
     scenes: SceneEntry[]
     ipTrackers: IPTracker[]
     notes: string

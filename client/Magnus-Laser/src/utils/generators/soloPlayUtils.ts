@@ -12,7 +12,6 @@ import type {
     MoraleMentality,
     MoraleConfig,
     NetArchitectureSize,
-    OpenQuestionCategory,
     OpenQuestionResult,
     OracleAnswer,
     OracleProbability,
@@ -26,15 +25,19 @@ import type {
 } from '../../types/soloPlay'
 import {
     actionFocusTable,
+    adjectivesTable,
+    cliffhangersTable,
+    climaxesTable,
     clueTypeTable,
     complicationTable,
     corpoNameTable,
     detailFocusTable,
+    developmentsTable,
     eventTable,
-    fixerNameTable,
     gangNameTable,
     getRandomFromArray,
     getRandomFromWeightedArray,
+    hooksTable,
     locationTypeTable,
     missionTypeTable,
     npcAppearanceTable,
@@ -42,12 +45,18 @@ import {
     npcMotivationTable,
     npcOccupationTable,
     paymentTypeTable,
+    resolutionsTable,
     rollD10,
     rollD6,
     rumorTable,
     twistTable,
     whoIsHiringTable,
 } from './soloPlayTables'
+import {
+    generateMissionItem,
+    generateRandomName,
+    generateNPCByRole,
+} from './soloPlayTablesExpanded'
 
 // ============================================
 // ORACLE SYSTEM
@@ -109,58 +118,19 @@ export const rollOracle = (
 
 /**
  * Roll for an Open Question
- * Generates action + detail focus for narrative prompts
+ * Per the PDF: roll Verb (d100) + Noun (d100) + Adjective (d100)
+ * and interpret the 3 words creatively
  */
 export const rollOpenQuestion = (
     question: string,
-    category: OpenQuestionCategory = 'ACTION'
 ): OpenQuestionResult => {
-    let focus: string
-    let detail: string
-
-    switch (category) {
-        case 'ACTION':
-            focus = getRandomFromArray(actionFocusTable)
-            detail = getRandomFromArray(detailFocusTable)
-            break
-        case 'NPC_ACTION':
-            focus = getRandomFromArray(actionFocusTable)
-            detail = getRandomFromArray(npcMotivationTable)
-            break
-        case 'NPC_MOOD':
-            focus = getRandomFromArray(npcMoodTable)
-            detail = getRandomFromArray(npcAppearanceTable)
-            break
-        case 'LOCATION':
-            focus = getRandomFromArray(locationTypeTable)
-            detail = getRandomFromArray(detailFocusTable)
-            break
-        case 'COMPLICATION':
-            focus = getRandomFromArray(complicationTable)
-            detail = getRandomFromArray(eventTable)
-            break
-        case 'EVENT':
-            focus = getRandomFromArray(eventTable)
-            detail = getRandomFromArray(complicationTable)
-            break
-        case 'OBJECT':
-            focus = getRandomFromArray(clueTypeTable)
-            detail = getRandomFromArray(detailFocusTable)
-            break
-        case 'DESCRIPTION':
-        default:
-            focus = getRandomFromArray(detailFocusTable)
-            detail = getRandomFromArray(actionFocusTable)
-            break
-    }
-
     return {
         id: uuidv4(),
         timestamp: Date.now(),
         question,
-        category,
-        focus,
-        detail,
+        verb: getRandomFromArray(actionFocusTable),
+        noun: getRandomFromArray(detailFocusTable),
+        adjective: getRandomFromArray(adjectivesTable),
     }
 }
 
@@ -565,24 +535,56 @@ export const getChecksForFloors = (floors: number): number => {
 export const generateRandomEmployer = (): MissionEmployer => {
     const type = getRandomFromWeightedArray(whoIsHiringTable)
     let name: string
+    let description: string | undefined
 
     switch (type) {
-        case 'FIXER':
-            name = getRandomFromArray(fixerNameTable)
+        case 'FIXER': {
+            const npc = generateNPCByRole('Fixer')
+            name = npc.npc.name
+            description = npc.npc.notes
             break
-        case 'CORPO':
-            name = `${getRandomFromArray(corpoNameTable)} Executive`
+        }
+        case 'CORPO': {
+            const corp = getRandomFromArray(corpoNameTable)
+            const npc = generateNPCByRole('Exec')
+            name = `${npc.npc.name} (${corp.name})`
+            description = corp.notes
             break
-        case 'GANG':
-            name = `${getRandomFromArray(gangNameTable)} Representative`
+        }
+        case 'GANG': {
+            const gang = getRandomFromArray(gangNameTable)
+            name = `${gang.name} Representative`
+            description = gang.notes
             break
-        default:
-            name = `Unknown ${type.toLowerCase()}`
+        }
+        case 'NETRUNNER': {
+            const npc = generateNPCByRole('Netrunner')
+            name = npc.npc.name
+            description = npc.npc.notes
+            break
+        }
+        case 'NOMAD': {
+            const npc = generateNPCByRole('Nomad')
+            name = npc.npc.name
+            description = npc.npc.notes
+            break
+        }
+        case 'MEDIA': {
+            const npc = generateNPCByRole('Media')
+            name = npc.npc.name
+            description = npc.npc.notes
+            break
+        }
+        default: {
+            const randomName = generateRandomName()
+            name = randomName.name
+        }
     }
 
     return {
         type: type as MissionEmployer['type'],
         name,
+        description,
     }
 }
 
@@ -638,20 +640,9 @@ export const generateRandomPayment = (): MissionPayment => {
 export const generateMissionSummary = (): string => {
     const missionType = getRandomFromArray(missionTypeTable)
     const location = getRandomFromArray(locationTypeTable)
-    const target = getRandomFromArray([
-        'a corporate executive',
-        'a gang leader',
-        'valuable data',
-        'a prototype weapon',
-        'a missing person',
-        'an informant',
-        'a package',
-        'a witness',
-        'a hacker',
-        'a rogue AI',
-    ])
+    const macguffin = generateMissionItem()
 
-    return `${missionType} involving ${target} at ${location.toLowerCase()}`
+    return `${missionType} involving ${macguffin.item.toLowerCase()} at ${location.toLowerCase()} (${macguffin.zone})`
 }
 
 /**
@@ -669,7 +660,8 @@ export const generateMissionFocus = (): string => {
  * Generate a mission twist
  */
 export const generateMissionTwist = (): string => {
-    return getRandomFromArray(twistTable)
+    const twist = getRandomFromArray(twistTable)
+    return `${twist.twist}: ${twist.notes}`
 }
 
 /**
@@ -721,34 +713,19 @@ export const generateEmptyBeatChart = (developmentCount: number = 6): BeatChartE
 export const generateBeatDescription = (beatType: BeatType): string => {
     switch (beatType) {
         case 'HOOK':
-            return getRandomFromArray([
-                `Contacted by ${getRandomFromArray(fixerNameTable)} with an urgent job`,
-                `Witness to ${getRandomFromArray(eventTable).toLowerCase()}`,
-                `Discovered ${getRandomFromArray(clueTypeTable).toLowerCase()}`,
-                `Approached by ${getRandomFromArray(npcOccupationTable).toLowerCase()} in need`,
-            ])
+            return getRandomFromArray(hooksTable)
         case 'CLIMAX':
-            return getRandomFromArray([
-                'Final confrontation with the main threat',
-                'The truth is finally revealed',
-                'Everything comes together for the final push',
-                'Time to make the ultimate choice',
-            ])
+            return getRandomFromArray(climaxesTable)
         case 'RESOLUTION':
-            return getRandomFromArray([
-                'Collect payment and assess the fallout',
-                'Deal with the consequences of your actions',
-                'New opportunities arise from completed mission',
-                'Tie up loose ends and move on',
-            ])
-        default:
-            // Development beats
-            return getRandomFromArray([
-                `${getRandomFromArray(actionFocusTable)} at ${getRandomFromArray(locationTypeTable).toLowerCase()}`,
-                `Encounter with ${getRandomFromArray(npcOccupationTable).toLowerCase()}`,
-                `Complication: ${getRandomFromArray(complicationTable).toLowerCase()}`,
-                `Discovery: ${getRandomFromArray(clueTypeTable).toLowerCase()}`,
-            ])
+            return getRandomFromArray(resolutionsTable)
+        default: {
+            // Development beats: alternate between Cliffhangers and Developments
+            const beatNum = parseInt(beatType.replace('DEVELOPMENT_', '')) || 1
+            if (beatNum % 2 === 1) {
+                return `[Cliffhanger] ${getRandomFromArray(cliffhangersTable)}`
+            }
+            return `[Development] ${getRandomFromArray(developmentsTable)}`
+        }
     }
 }
 
@@ -821,7 +798,10 @@ export const generateQuickEvent = (): string => generateEvent()
 export const generateQuickComplication = (): string => generateComplication()
 export const generateQuickRumor = (): string => generateRumor()
 export const generateQuickClue = (): string => generateClue()
-export const generateQuickTwist = (): string => getRandomFromArray(twistTable)
+export const generateQuickTwist = (): string => {
+    const twist = getRandomFromArray(twistTable)
+    return `${twist.twist}: ${twist.notes}`
+}
 export const generateQuickMotivation = (): string => getRandomFromArray(npcMotivationTable)
 export const generateQuickMood = (): string => getRandomFromArray(npcMoodTable)
 

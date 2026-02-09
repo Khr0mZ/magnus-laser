@@ -5,9 +5,13 @@ import type { GMToolType } from './GMToolsStore'
 import BeatChartTool from './tools/BeatChartTool'
 import ClocksTool from './tools/ClocksTool'
 import GeneratorTool from './tools/GeneratorTool'
+import InvestigationTool from './tools/InvestigationTool'
+import IPTrackingTool from './tools/IPTrackingTool'
 import MissionBuilderTool from './tools/MissionBuilderTool'
+import NPCTrackerTool from './tools/NPCTrackerTool'
 import OracleTool from './tools/OracleTool'
 import RandomTablesTool from './tools/RandomTablesTool'
+import SocialChallengeTool from './tools/SocialChallengeTool'
 
 interface GMToolsContentProps {
     activeTool: GMToolType
@@ -28,6 +32,14 @@ const GMToolsContent = ({ activeTool }: GMToolsContentProps) => {
                 return <BeatChartTool />
             case 'randomTables':
                 return <RandomTablesTool />
+            case 'investigation':
+                return <InvestigationTool />
+            case 'socialChallenge':
+                return <SocialChallengeTool />
+            case 'npcTracker':
+                return <NPCTrackerTool />
+            case 'ipTracker':
+                return <IPTrackingTool />
             case 'gangGenerator':
                 return <GeneratorTool type="gang" />
             case 'buildingGenerator':

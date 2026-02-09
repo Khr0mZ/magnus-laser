@@ -8,11 +8,13 @@ import {
     AccordionDetails,
     AccordionSummary,
     Autocomplete,
+    Avatar,
     Box,
     Button,
     Card,
     CardActions,
     CardContent,
+    Checkbox,
     Chip,
     Container,
     Dialog,
@@ -21,7 +23,9 @@ import {
     DialogTitle,
     Grid,
     IconButton,
+    MenuItem,
     Paper,
+    Select,
     Stack,
     Tab,
     Tabs,
@@ -30,18 +34,20 @@ import {
     Typography,
 } from '@mui/material'
 import { useDocumentTitle } from '@uidotdev/usehooks'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { neonPulse, pulseGlowGreen } from '../../components/common/Animations'
 import { WarningDialog } from '../../components/common/WarningDialog'
 import CustomScrollbar from '../../components/CustomScrollbar'
+import CyberpunkFormControl from '../../components/CyberpunkFormControl'
 import { useGMToolsDataStore } from '../../components/GMTools/GMToolsDataStore'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import NavigationPaths from '../../navigation'
 import type { Armor, Character, Cyberware, GearItem, SkillCategory, Weapon } from '../../types/characterCreator'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
+import { db } from '../../utils/db'
 import {
     AFFECTATIONS,
     ALL_SKILLS,
@@ -72,6 +78,21 @@ import {
     type ShopWeapon,
 } from '../../utils/generators/characterCreatorData'
 import { calculateCurrentEMP, getEffectiveStats } from '../../utils/generators/characterCreatorUtils'
+import { characterToToken } from '../../utils/generators/edgerunnerToToken'
+import { loadTokenModelPaths } from '../CombatSim/utils/modelAssets'
+import type { Image as ImageRecord } from '../CombatSim/utils/types'
+
+// Neon color swatches for token color picker
+const NEON_COLOR_SWATCHES = [
+    { label: 'Cyan', value: 0x00ffff },
+    { label: 'Pink', value: 0xff00ff },
+    { label: 'Green', value: 0x00ff8b },
+    { label: 'Blue', value: 0x0099ff },
+    { label: 'Purple', value: 0x9900ff },
+    { label: 'Yellow', value: 0xffff00 },
+    { label: 'Red', value: 0xff0055 },
+    { label: 'Orange', value: 0xff5e00 },
+]
 
 // Role colors for the chips
 const ROLE_COLORS: Record<string, string> = {
@@ -182,9 +203,73 @@ const EdgerunnersView = () => {
     const [editedEdgerunner, setEditedEdgerunner] = useState<Character | null>(null)
     const [shoppingTab, setShoppingTab] = useState<'weapons' | 'armor' | 'gear' | 'cyberware' | 'fashion'>('weapons')
 
+    // Combat tab state (token image blob URLs)
+    const [tokenImageUrls, setTokenImageUrls] = useState<Record<string, string>>({})
+
+    // Combat tab state (image select / model select — same as TokenDetailsDialog)
+    const [combatImages, setCombatImages] = useState<ImageRecord[]>([])
+    const [modelOptions, setModelOptions] = useState<Array<{ value: string; label: string }>>([
+        { value: '', label: 'Aleatorio (por ID)' },
+    ])
+    const [modelViewerReady, setModelViewerReady] = useState(false)
+
+    // Load images from DB and model paths when detail dialog opens
+    useEffect(() => {
+        if (!detailDialogOpen) return
+        db.images.toArray().then((imgs) => setCombatImages(imgs as ImageRecord[]))
+        loadTokenModelPaths()
+            .then((paths) => {
+                const mapped = paths.map((f) => {
+                    const name = f.split('/').pop() || f
+                    const base = name.replace(/\.(glb|gltf)$/i, '')
+                    return { value: f, label: base }
+                })
+                setModelOptions([{ value: '', label: 'Aleatorio (por ID)' }, ...mapped])
+            })
+            .catch(() => setModelOptions([{ value: '', label: 'Aleatorio (por ID)' }]))
+        // Load model-viewer script
+        const hasScript = document.querySelector('script[src*="model-viewer"]')
+        if (!hasScript) {
+            const script = document.createElement('script')
+            script.type = 'module'
+            script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js'
+            script.onload = () => setModelViewerReady(true)
+            document.head.appendChild(script)
+        } else {
+            setModelViewerReady(true)
+        }
+    }, [detailDialogOpen])
+
+    const sortedCombatImages = useMemo(() => {
+        const arr = [...combatImages]
+        arr.sort((a, b) => a.name.localeCompare(b.name))
+        return arr
+    }, [combatImages])
+
+    const resolveCombatImageUrl = (imageId: string | undefined): string | undefined => {
+        if (!imageId) return undefined
+        // First check cached blob URLs
+        if (tokenImageUrls[imageId]) return tokenImageUrls[imageId]
+        // Fallback: find in loaded images
+        const img = combatImages.find((i) => i.id === imageId)
+        if (img?.blob) {
+            const url = URL.createObjectURL(img.blob)
+            setTokenImageUrls((prev) => ({ ...prev, [imageId]: url }))
+            return url
+        }
+        return undefined
+    }
+
     // IP tab state
     const [stagedImprovements, setStagedImprovements] = useState<
-        { type: 'skill' | 'role'; skillName?: string; fromLevel: number; toLevel: number; cost: number; isX2: boolean }[]
+        {
+            type: 'skill' | 'role'
+            skillName?: string
+            fromLevel: number
+            toLevel: number
+            cost: number
+            isX2: boolean
+        }[]
     >([])
     const [showAllSkillsIP, setShowAllSkillsIP] = useState(false)
 
@@ -280,12 +365,25 @@ const EdgerunnersView = () => {
         navigate(NavigationPaths.CHARACTER_CREATOR)
     }
 
-    const handleCardClick = (edgerunner: Character) => {
+    const handleCardClick = async (edgerunner: Character) => {
         setEditedEdgerunner({ ...edgerunner, ip: edgerunner.ip ?? 0 })
         setViewTab(0)
         setShoppingTab('weapons')
         setStagedImprovements([])
         setDetailDialogOpen(true)
+        // Load token image URLs from IndexedDB
+        const urls: Record<string, string> = {}
+        for (const imageId of [edgerunner.tokenImageId, edgerunner.tokenModelId]) {
+            if (imageId) {
+                try {
+                    const img = await db.images.get(imageId)
+                    if (img?.blob) urls[imageId] = URL.createObjectURL(img.blob)
+                } catch {
+                    /* ignore */
+                }
+            }
+        }
+        setTokenImageUrls(urls)
     }
 
     // Export character as JSON (Gap 20)
@@ -300,9 +398,22 @@ const EdgerunnersView = () => {
         URL.revokeObjectURL(url)
     }
 
-    const handleDetailSave = () => {
+    const handleDetailSave = async () => {
         if (editedEdgerunner) {
             updateEdgerunner(editedEdgerunner.id, editedEdgerunner)
+            // Sync associated combat token if it exists
+            const tokenId = `er-${editedEdgerunner.id}`
+            const existingToken = await db.tokens.get(tokenId)
+            if (existingToken) {
+                const fresh = characterToToken(editedEdgerunner, existingToken.mapId, existingToken.x, existingToken.y)
+                fresh.id = tokenId
+                fresh.stats.currentHealth = existingToken.stats.currentHealth
+                fresh.stats.currentMovement = existingToken.stats.currentMovement
+                fresh.stats.armor.currentSpb = existingToken.stats.armor.currentSpb
+                fresh.stats.armor.currentSph = existingToken.stats.armor.currentSph
+                fresh.stats.currentLuck = existingToken.stats.currentLuck
+                await db.tokens.put(fresh)
+            }
         }
         setDetailDialogOpen(false)
         setEditedEdgerunner(null)
@@ -422,6 +533,7 @@ const EdgerunnersView = () => {
             damage: shopWeapon.damage,
             rof: shopWeapon.rof,
             cost: shopWeapon.cost,
+            skill: shopWeapon.skill,
         }
         setEditedEdgerunner({
             ...editedEdgerunner,
@@ -448,6 +560,7 @@ const EdgerunnersView = () => {
             sp: shopArmor.sp,
             penalty: shopArmor.penalty,
             cost: shopArmor.cost,
+            location: shopArmor.location,
         }
         setEditedEdgerunner({
             ...editedEdgerunner,
@@ -1132,6 +1245,7 @@ const EdgerunnersView = () => {
                             <Tab label="Lifepath" />
                             <Tab label="IP" />
                             <Tab label="Notes" />
+                            <Tab label="Combat" />
                         </Tabs>
 
                         <DialogContent sx={{ p: 0 }}>
@@ -1350,10 +1464,13 @@ const EdgerunnersView = () => {
 
                                                     {/* Current rank details */}
                                                     {(() => {
-                                                        const roleDetails = ROLE_ABILITY_RANK_DETAILS[editedEdgerunner.role]
+                                                        const roleDetails =
+                                                            ROLE_ABILITY_RANK_DETAILS[editedEdgerunner.role]
                                                         if (!roleDetails) return null
                                                         const currentRankInfo = roleDetails.ranks.find(
-                                                            (r) => editedEdgerunner.roleRank >= r.minRank && editedEdgerunner.roleRank <= r.maxRank
+                                                            (r) =>
+                                                                editedEdgerunner.roleRank >= r.minRank &&
+                                                                editedEdgerunner.roleRank <= r.maxRank
                                                         )
                                                         if (!currentRankInfo) return null
                                                         return (
@@ -1388,7 +1505,9 @@ const EdgerunnersView = () => {
                                                                             lineHeight: 1.5,
                                                                         }}
                                                                     >
-                                                                        {detail.startsWith('  ') ? detail : `• ${detail}`}
+                                                                        {detail.startsWith('  ')
+                                                                            ? detail
+                                                                            : `• ${detail}`}
                                                                     </Typography>
                                                                 ))}
                                                             </Box>
@@ -1407,7 +1526,14 @@ const EdgerunnersView = () => {
                                                             }}
                                                         >
                                                             <AccordionSummary
-                                                                expandIcon={<ExpandMore sx={{ color: colors.grays.gray500, fontSize: 16 }} />}
+                                                                expandIcon={
+                                                                    <ExpandMore
+                                                                        sx={{
+                                                                            color: colors.grays.gray500,
+                                                                            fontSize: 16,
+                                                                        }}
+                                                                    />
+                                                                }
                                                                 sx={{
                                                                     minHeight: 28,
                                                                     '& .MuiAccordionSummary-content': { my: 0.3 },
@@ -1415,13 +1541,18 @@ const EdgerunnersView = () => {
                                                             >
                                                                 <Typography
                                                                     variant="caption"
-                                                                    sx={{ color: colors.grays.gray500, fontSize: '0.7rem' }}
+                                                                    sx={{
+                                                                        color: colors.grays.gray500,
+                                                                        fontSize: '0.7rem',
+                                                                    }}
                                                                 >
                                                                     All Ranks
                                                                 </Typography>
                                                             </AccordionSummary>
                                                             <AccordionDetails sx={{ p: 1, pt: 0 }}>
-                                                                {ROLE_ABILITY_RANK_DETAILS[editedEdgerunner.role].ranks.map((rankInfo) => {
+                                                                {ROLE_ABILITY_RANK_DETAILS[
+                                                                    editedEdgerunner.role
+                                                                ].ranks.map((rankInfo) => {
                                                                     const isCurrent =
                                                                         editedEdgerunner.roleRank >= rankInfo.minRank &&
                                                                         editedEdgerunner.roleRank <= rankInfo.maxRank
@@ -1432,16 +1563,23 @@ const EdgerunnersView = () => {
                                                                                 mb: 1,
                                                                                 pb: 0.5,
                                                                                 borderBottom: `1px solid ${colors.grays.gray300}`,
-                                                                                '&:last-child': { borderBottom: 'none', mb: 0 },
+                                                                                '&:last-child': {
+                                                                                    borderBottom: 'none',
+                                                                                    mb: 0,
+                                                                                },
                                                                             }}
                                                                         >
                                                                             <Typography
                                                                                 variant="caption"
                                                                                 sx={{
                                                                                     color: isCurrent
-                                                                                        ? ROLE_COLORS[editedEdgerunner.role]
+                                                                                        ? ROLE_COLORS[
+                                                                                              editedEdgerunner.role
+                                                                                          ]
                                                                                         : colors.grays.gray500,
-                                                                                    fontWeight: isCurrent ? 'bold' : 'normal',
+                                                                                    fontWeight: isCurrent
+                                                                                        ? 'bold'
+                                                                                        : 'normal',
                                                                                     display: 'block',
                                                                                     mb: 0.3,
                                                                                 }}
@@ -1459,11 +1597,15 @@ const EdgerunnersView = () => {
                                                                                             : colors.grays.gray500,
                                                                                         display: 'block',
                                                                                         fontSize: '0.68rem',
-                                                                                        pl: detail.startsWith('  ') ? 1.5 : 0.5,
+                                                                                        pl: detail.startsWith('  ')
+                                                                                            ? 1.5
+                                                                                            : 0.5,
                                                                                         lineHeight: 1.4,
                                                                                     }}
                                                                                 >
-                                                                                    {detail.startsWith('  ') ? detail : `• ${detail}`}
+                                                                                    {detail.startsWith('  ')
+                                                                                        ? detail
+                                                                                        : `• ${detail}`}
                                                                                 </Typography>
                                                                             ))}
                                                                         </Box>
@@ -1636,6 +1778,19 @@ const EdgerunnersView = () => {
                                                                 >
                                                                     Total
                                                                 </Typography>
+                                                                <Tooltip title="Combat action" arrow>
+                                                                    <Typography
+                                                                        variant="caption"
+                                                                        sx={{
+                                                                            color: colors.grays.gray500,
+                                                                            width: 28,
+                                                                            textAlign: 'center',
+                                                                            fontSize: '0.6rem',
+                                                                        }}
+                                                                    >
+                                                                        Act
+                                                                    </Typography>
+                                                                </Tooltip>
                                                             </Box>
                                                             {categorySkills.map((skillDef) => {
                                                                 const charSkill = editedEdgerunner.skills.find(
@@ -1745,6 +1900,36 @@ const EdgerunnersView = () => {
                                                                         >
                                                                             {total}
                                                                         </Typography>
+                                                                        <Checkbox
+                                                                            size="small"
+                                                                            checked={!!charSkill?.isTokenAction}
+                                                                            disabled={level === 0}
+                                                                            onChange={() => {
+                                                                                if (!charSkill) return
+                                                                                setEditedEdgerunner({
+                                                                                    ...editedEdgerunner,
+                                                                                    skills: editedEdgerunner.skills.map(
+                                                                                        (s) =>
+                                                                                            s.skill.name ===
+                                                                                            skillDef.name
+                                                                                                ? {
+                                                                                                      ...s,
+                                                                                                      isTokenAction:
+                                                                                                          !s.isTokenAction,
+                                                                                                  }
+                                                                                                : s
+                                                                                    ),
+                                                                                })
+                                                                            }}
+                                                                            sx={{
+                                                                                p: 0,
+                                                                                width: 28,
+                                                                                color: colors.neons.cyan.dark,
+                                                                                '&.Mui-checked': {
+                                                                                    color: colors.neons.cyan.default,
+                                                                                },
+                                                                            }}
+                                                                        />
                                                                     </Box>
                                                                 )
                                                             })}
@@ -2544,15 +2729,52 @@ const EdgerunnersView = () => {
                                                                                 py: 0.3,
                                                                             }}
                                                                         >
-                                                                            <Typography
-                                                                                variant="body2"
-                                                                                sx={{
-                                                                                    color: colors.grays.gray800,
-                                                                                    fontSize: '0.8rem',
-                                                                                }}
+                                                                            <Stack
+                                                                                direction="row"
+                                                                                alignItems="center"
+                                                                                spacing={0}
                                                                             >
-                                                                                {w.name}
-                                                                            </Typography>
+                                                                                <Tooltip title="Combat action" arrow>
+                                                                                    <Checkbox
+                                                                                        size="small"
+                                                                                        checked={!!w.isTokenAction}
+                                                                                        onChange={() => {
+                                                                                            setEditedEdgerunner({
+                                                                                                ...editedEdgerunner,
+                                                                                                weapons:
+                                                                                                    editedEdgerunner.weapons.map(
+                                                                                                        (ww, wi) =>
+                                                                                                            wi === i
+                                                                                                                ? {
+                                                                                                                      ...ww,
+                                                                                                                      isTokenAction:
+                                                                                                                          !ww.isTokenAction,
+                                                                                                                  }
+                                                                                                                : ww
+                                                                                                    ),
+                                                                                            })
+                                                                                        }}
+                                                                                        sx={{
+                                                                                            p: 0.25,
+                                                                                            color: colors.neons.red
+                                                                                                .dark,
+                                                                                            '&.Mui-checked': {
+                                                                                                color: colors.neons.red
+                                                                                                    .default,
+                                                                                            },
+                                                                                        }}
+                                                                                    />
+                                                                                </Tooltip>
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    sx={{
+                                                                                        color: colors.grays.gray800,
+                                                                                        fontSize: '0.8rem',
+                                                                                    }}
+                                                                                >
+                                                                                    {w.name}
+                                                                                </Typography>
+                                                                            </Stack>
                                                                             <Button
                                                                                 size="small"
                                                                                 onClick={() => handleSellWeapon(i)}
@@ -3391,9 +3613,7 @@ const EdgerunnersView = () => {
                                                                     <Typography
                                                                         variant="subtitle2"
                                                                         sx={{
-                                                                            color: ROLE_COLORS[
-                                                                                editedEdgerunner.role
-                                                                            ],
+                                                                            color: ROLE_COLORS[editedEdgerunner.role],
                                                                             fontWeight: 'bold',
                                                                         }}
                                                                     >
@@ -3406,9 +3626,7 @@ const EdgerunnersView = () => {
                                                                             height: 18,
                                                                             fontSize: '0.65rem',
                                                                             backgroundColor: `${ROLE_COLORS[editedEdgerunner.role]}25`,
-                                                                            color: ROLE_COLORS[
-                                                                                editedEdgerunner.role
-                                                                            ],
+                                                                            color: ROLE_COLORS[editedEdgerunner.role],
                                                                             fontWeight: 'bold',
                                                                         }}
                                                                     />
@@ -3473,9 +3691,7 @@ const EdgerunnersView = () => {
                                                                 textTransform: 'none',
                                                             }}
                                                         >
-                                                            {showAllSkillsIP
-                                                                ? 'Show trained only'
-                                                                : 'Show all skills'}
+                                                            {showAllSkillsIP ? 'Show trained only' : 'Show all skills'}
                                                         </Button>
                                                     </Stack>
 
@@ -3488,16 +3704,13 @@ const EdgerunnersView = () => {
                                                         const visibleSkills = showAllSkillsIP
                                                             ? categorySkills
                                                             : categorySkills.filter((s) => {
-                                                                  const cs =
-                                                                      editedEdgerunner.skills.find(
-                                                                          (cs) => cs.skill.name === s.name
-                                                                      )
-                                                                  const hasStaged =
-                                                                      stagedImprovements.some(
-                                                                          (si) =>
-                                                                              si.type === 'skill' &&
-                                                                              si.skillName === s.name
-                                                                      )
+                                                                  const cs = editedEdgerunner.skills.find(
+                                                                      (cs) => cs.skill.name === s.name
+                                                                  )
+                                                                  const hasStaged = stagedImprovements.some(
+                                                                      (si) =>
+                                                                          si.type === 'skill' && si.skillName === s.name
+                                                                  )
                                                                   return (cs && cs.level > 0) || hasStaged
                                                               })
                                                         if (visibleSkills.length === 0) return null
@@ -3515,9 +3728,7 @@ const EdgerunnersView = () => {
                                                                 }}
                                                             >
                                                                 <AccordionSummary
-                                                                    expandIcon={
-                                                                        <ExpandMore sx={{ color: catColor }} />
-                                                                    }
+                                                                    expandIcon={<ExpandMore sx={{ color: catColor }} />}
                                                                     sx={{
                                                                         minHeight: 36,
                                                                         '& .MuiAccordionSummary-content': {
@@ -3582,8 +3793,9 @@ const EdgerunnersView = () => {
                                                                         <Box sx={{ width: 30 }} />
                                                                     </Box>
                                                                     {visibleSkills.map((skillDef) => {
-                                                                        const effectiveLevel =
-                                                                            getEffectiveSkillLevel(skillDef.name)
+                                                                        const effectiveLevel = getEffectiveSkillLevel(
+                                                                            skillDef.name
+                                                                        )
                                                                         const nextLevel = effectiveLevel + 1
                                                                         const nextCost =
                                                                             effectiveLevel < 10
@@ -3609,10 +3821,8 @@ const EdgerunnersView = () => {
                                                                                     sx={{
                                                                                         color:
                                                                                             effectiveLevel > 0
-                                                                                                ? colors.grays
-                                                                                                      .gray800
-                                                                                                : colors.grays
-                                                                                                      .gray500,
+                                                                                                ? colors.grays.gray800
+                                                                                                : colors.grays.gray500,
                                                                                         fontSize: '0.8rem',
                                                                                         flex: 1,
                                                                                     }}
@@ -3622,11 +3832,9 @@ const EdgerunnersView = () => {
                                                                                         <Typography
                                                                                             component="span"
                                                                                             sx={{
-                                                                                                color: colors
-                                                                                                    .neons.yellow
-                                                                                                    .default,
-                                                                                                fontSize:
-                                                                                                    '0.65rem',
+                                                                                                color: colors.neons
+                                                                                                    .yellow.default,
+                                                                                                fontSize: '0.65rem',
                                                                                                 ml: 0.5,
                                                                                             }}
                                                                                         >
@@ -3653,8 +3861,8 @@ const EdgerunnersView = () => {
                                                                                 <Typography
                                                                                     variant="caption"
                                                                                     sx={{
-                                                                                        color: colors.neons
-                                                                                            .yellow.default,
+                                                                                        color: colors.neons.yellow
+                                                                                            .default,
                                                                                         fontFamily:
                                                                                             '"Orbitron", monospace',
                                                                                         fontSize: '0.7rem',
@@ -3686,14 +3894,11 @@ const EdgerunnersView = () => {
                                                                                             backgroundColor: `${colors.neons.green.default}20`,
                                                                                         },
                                                                                         '&.Mui-disabled': {
-                                                                                            color: colors.grays
-                                                                                                .gray400,
+                                                                                            color: colors.grays.gray400,
                                                                                         },
                                                                                     }}
                                                                                 >
-                                                                                    <Add
-                                                                                        sx={{ fontSize: 16 }}
-                                                                                    />
+                                                                                    <Add sx={{ fontSize: 16 }} />
                                                                                 </IconButton>
                                                                             </Box>
                                                                         )
@@ -3747,13 +3952,11 @@ const EdgerunnersView = () => {
                                                                             sx={{
                                                                                 display: 'flex',
                                                                                 alignItems: 'center',
-                                                                                justifyContent:
-                                                                                    'space-between',
+                                                                                justifyContent: 'space-between',
                                                                                 py: 0.5,
                                                                                 px: 1,
                                                                                 borderRadius: '4px',
-                                                                                backgroundColor:
-                                                                                    'rgba(0, 0, 0, 0.2)',
+                                                                                backgroundColor: 'rgba(0, 0, 0, 0.2)',
                                                                                 border: `1px solid ${colors.grays.gray300}`,
                                                                             }}
                                                                         >
@@ -3761,8 +3964,7 @@ const EdgerunnersView = () => {
                                                                                 <Typography
                                                                                     variant="body2"
                                                                                     sx={{
-                                                                                        color: colors.grays
-                                                                                            .gray800,
+                                                                                        color: colors.grays.gray800,
                                                                                         fontSize: '0.8rem',
                                                                                     }}
                                                                                 >
@@ -3774,12 +3976,9 @@ const EdgerunnersView = () => {
                                                                                         <Typography
                                                                                             component="span"
                                                                                             sx={{
-                                                                                                color: colors
-                                                                                                    .neons
-                                                                                                    .yellow
-                                                                                                    .default,
-                                                                                                fontSize:
-                                                                                                    '0.6rem',
+                                                                                                color: colors.neons
+                                                                                                    .yellow.default,
+                                                                                                fontSize: '0.6rem',
                                                                                                 ml: 0.5,
                                                                                             }}
                                                                                         >
@@ -3790,22 +3989,18 @@ const EdgerunnersView = () => {
                                                                                 <Typography
                                                                                     variant="caption"
                                                                                     sx={{
-                                                                                        color: colors.grays
-                                                                                            .gray500,
+                                                                                        color: colors.grays.gray500,
                                                                                         fontSize: '0.65rem',
                                                                                     }}
                                                                                 >
-                                                                                    {item.fromLevel} →{' '}
-                                                                                    {item.toLevel}
+                                                                                    {item.fromLevel} → {item.toLevel}
                                                                                 </Typography>
                                                                             </Box>
                                                                             <Typography
                                                                                 variant="body2"
                                                                                 sx={{
-                                                                                    color: colors.neons.yellow
-                                                                                        .default,
-                                                                                    fontFamily:
-                                                                                        '"Orbitron", monospace',
+                                                                                    color: colors.neons.yellow.default,
+                                                                                    fontFamily: '"Orbitron", monospace',
                                                                                     fontSize: '0.75rem',
                                                                                     fontWeight: 'bold',
                                                                                     mx: 1,
@@ -3816,22 +4011,17 @@ const EdgerunnersView = () => {
                                                                             <IconButton
                                                                                 size="small"
                                                                                 onClick={() =>
-                                                                                    handleUnstageImprovement(
-                                                                                        idx
-                                                                                    )
+                                                                                    handleUnstageImprovement(idx)
                                                                                 }
                                                                                 sx={{
-                                                                                    color: colors.neons.red
-                                                                                        .default,
+                                                                                    color: colors.neons.red.default,
                                                                                     p: 0.3,
                                                                                     '&:hover': {
                                                                                         backgroundColor: `${colors.neons.red.default}20`,
                                                                                     },
                                                                                 }}
                                                                             >
-                                                                                <DeleteOutline
-                                                                                    sx={{ fontSize: 16 }}
-                                                                                />
+                                                                                <DeleteOutline sx={{ fontSize: 16 }} />
                                                                             </IconButton>
                                                                         </Box>
                                                                     ))}
@@ -3861,11 +4051,9 @@ const EdgerunnersView = () => {
                                                                         <Typography
                                                                             variant="body2"
                                                                             sx={{
-                                                                                color: colors.neons.yellow
-                                                                                    .default,
+                                                                                color: colors.neons.yellow.default,
                                                                                 fontWeight: 'bold',
-                                                                                fontFamily:
-                                                                                    '"Orbitron", monospace',
+                                                                                fontFamily: '"Orbitron", monospace',
                                                                             }}
                                                                         >
                                                                             {totalStagedCost} IP
@@ -3888,13 +4076,10 @@ const EdgerunnersView = () => {
                                                                             sx={{
                                                                                 color:
                                                                                     availableIP >= 0
-                                                                                        ? colors.neons.green
-                                                                                              .default
-                                                                                        : colors.neons.red
-                                                                                              .default,
+                                                                                        ? colors.neons.green.default
+                                                                                        : colors.neons.red.default,
                                                                                 fontWeight: 'bold',
-                                                                                fontFamily:
-                                                                                    '"Orbitron", monospace',
+                                                                                fontFamily: '"Orbitron", monospace',
                                                                             }}
                                                                         >
                                                                             {availableIP} IP
@@ -3911,9 +4096,7 @@ const EdgerunnersView = () => {
                                                                 >
                                                                     <Button
                                                                         size="small"
-                                                                        onClick={() =>
-                                                                            setStagedImprovements([])
-                                                                        }
+                                                                        onClick={() => setStagedImprovements([])}
                                                                         sx={{
                                                                             color: colors.neons.red.default,
                                                                             fontSize: '0.75rem',
@@ -3929,12 +4112,11 @@ const EdgerunnersView = () => {
                                                                         variant="contained"
                                                                         onClick={handleApplyImprovements}
                                                                         disabled={
-                                                                            stagedImprovements.length ===
-                                                                                0 || availableIP < 0
+                                                                            stagedImprovements.length === 0 ||
+                                                                            availableIP < 0
                                                                         }
                                                                         sx={{
-                                                                            backgroundColor:
-                                                                                colors.neons.green.default,
+                                                                            backgroundColor: colors.neons.green.default,
                                                                             color: colors.grays.gray900,
                                                                             fontWeight: 'bold',
                                                                             fontSize: '0.75rem',
@@ -3990,6 +4172,418 @@ const EdgerunnersView = () => {
                                                     },
                                                 }}
                                             />
+                                        </Box>
+                                    )}
+
+                                    {/* === TAB 6: COMBAT === */}
+                                    {viewTab === 6 && (
+                                        <Box>
+                                            {/* Token Color */}
+                                            <Typography
+                                                variant="subtitle2"
+                                                sx={{ color: colors.neons.pink.default, fontWeight: 'bold', mb: 1 }}
+                                            >
+                                                TOKEN COLOR
+                                            </Typography>
+                                            <Stack direction="row" spacing={1} mb={2} flexWrap="wrap" useFlexGap>
+                                                {NEON_COLOR_SWATCHES.map((swatch) => (
+                                                    <Box
+                                                        key={swatch.value}
+                                                        onClick={() =>
+                                                            setEditedEdgerunner({
+                                                                ...editedEdgerunner,
+                                                                tokenColor: swatch.value,
+                                                            })
+                                                        }
+                                                        sx={{
+                                                            width: 36,
+                                                            height: 36,
+                                                            borderRadius: '50%',
+                                                            bgcolor: `#${swatch.value.toString(16).padStart(6, '0')}`,
+                                                            cursor: 'pointer',
+                                                            border:
+                                                                (editedEdgerunner.tokenColor ?? 0x00ff8b) ===
+                                                                swatch.value
+                                                                    ? `3px solid ${colors.grays.gray000}`
+                                                                    : '3px solid transparent',
+                                                            boxShadow:
+                                                                (editedEdgerunner.tokenColor ?? 0x00ff8b) ===
+                                                                swatch.value
+                                                                    ? `0 0 12px #${swatch.value.toString(16).padStart(6, '0')}`
+                                                                    : 'none',
+                                                            transition: 'all 0.2s ease',
+                                                            '&:hover': {
+                                                                transform: 'scale(1.15)',
+                                                                boxShadow: `0 0 10px #${swatch.value.toString(16).padStart(6, '0')}80`,
+                                                            },
+                                                        }}
+                                                    />
+                                                ))}
+                                            </Stack>
+
+                                            {/* Custom color hex input */}
+                                            <TextField
+                                                label="Custom hex"
+                                                size="small"
+                                                value={`#${(editedEdgerunner.tokenColor ?? 0x00ff8b).toString(16).padStart(6, '0')}`}
+                                                onChange={(e) => {
+                                                    const hex = e.target.value.replace('#', '')
+                                                    if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+                                                        setEditedEdgerunner({
+                                                            ...editedEdgerunner,
+                                                            tokenColor: parseInt(hex, 16),
+                                                        })
+                                                    }
+                                                }}
+                                                sx={{
+                                                    mb: 3,
+                                                    width: 140,
+                                                    '& .MuiOutlinedInput-root': {
+                                                        color: colors.grays.gray800,
+                                                        '& fieldset': { borderColor: `${colors.neons.cyan.default}30` },
+                                                        '&:hover fieldset': {
+                                                            borderColor: `${colors.neons.cyan.default}60`,
+                                                        },
+                                                        '&.Mui-focused fieldset': {
+                                                            borderColor: colors.neons.cyan.default,
+                                                        },
+                                                    },
+                                                    '& .MuiInputLabel-root': { color: colors.grays.gray500 },
+                                                }}
+                                            />
+
+                                            {/* 2D Image - Select + Preview */}
+                                            <Typography
+                                                variant="subtitle2"
+                                                sx={{ color: colors.neons.pink.default, fontWeight: 'bold', mb: 1 }}
+                                            >
+                                                2D IMAGE
+                                            </Typography>
+                                            <Grid container spacing={2} sx={{ mb: 3 }}>
+                                                <Grid size={8}>
+                                                    <CyberpunkFormControl
+                                                        readerMode={readerMode}
+                                                        label={t('combatSim.selectImage')}
+                                                    >
+                                                        <Select
+                                                            value={editedEdgerunner.tokenImageId ?? ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value as string
+                                                                setEditedEdgerunner({
+                                                                    ...editedEdgerunner,
+                                                                    tokenImageId: val === '' ? undefined : val,
+                                                                })
+                                                            }}
+                                                            label={t('combatSim.selectImage')}
+                                                            sx={{
+                                                                color: readerMode
+                                                                    ? colors.grays.gray900
+                                                                    : colors.neons.cyan.default,
+                                                                borderColor: readerMode
+                                                                    ? undefined
+                                                                    : colors.neons.cyan.default,
+                                                            }}
+                                                            renderValue={(selected) => {
+                                                                if (!selected) return t('combatSim.noImage')
+                                                                const img = combatImages.find((i) => i.id === selected)
+                                                                return img ? img.name : t('combatSim.noImage')
+                                                            }}
+                                                        >
+                                                            <MenuItem value="">
+                                                                <em>{t('combatSim.noImage')}</em>
+                                                            </MenuItem>
+                                                            {sortedCombatImages.map((img) => (
+                                                                <MenuItem key={img.id} value={img.id}>
+                                                                    {img.name}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </CyberpunkFormControl>
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        component="label"
+                                                        sx={{
+                                                            mt: 1,
+                                                            borderColor: colors.neons.cyan.default,
+                                                            color: colors.neons.cyan.default,
+                                                            '&:hover': {
+                                                                bgcolor: 'rgba(0, 30, 60, 0.6)',
+                                                                boxShadow: `0 0 8px ${colors.neons.cyan.default}40`,
+                                                            },
+                                                        }}
+                                                    >
+                                                        {t('common.uploadImage')}
+                                                        <input
+                                                            type="file"
+                                                            hidden
+                                                            accept="image/*"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0]
+                                                                if (!file) return
+                                                                const img =
+                                                                    await new Promise<globalThis.HTMLImageElement>(
+                                                                        (resolve) => {
+                                                                            const i = new globalThis.Image()
+                                                                            i.onload = () => resolve(i)
+                                                                            i.src = URL.createObjectURL(file)
+                                                                        }
+                                                                    )
+                                                                const imageId = globalThis.crypto?.randomUUID
+                                                                    ? globalThis.crypto.randomUUID()
+                                                                    : String(Date.now())
+                                                                const newImg = {
+                                                                    id: imageId,
+                                                                    name: file.name,
+                                                                    mimeType: file.type,
+                                                                    width: img.width,
+                                                                    height: img.height,
+                                                                    blob: file,
+                                                                }
+                                                                await db.images.put(newImg)
+                                                                setCombatImages((prev) => [
+                                                                    ...prev,
+                                                                    newImg as ImageRecord,
+                                                                ])
+                                                                const url = URL.createObjectURL(file)
+                                                                setTokenImageUrls((prev) => ({
+                                                                    ...prev,
+                                                                    [imageId]: url,
+                                                                }))
+                                                                setEditedEdgerunner({
+                                                                    ...editedEdgerunner,
+                                                                    tokenImageId: imageId,
+                                                                })
+                                                                e.target.value = ''
+                                                            }}
+                                                        />
+                                                    </Button>
+                                                </Grid>
+                                                <Grid size={4}>
+                                                    <CyberpunkFormControl
+                                                        readerMode={readerMode}
+                                                        label={t('combatSim.tokenImage')}
+                                                        labelSx={{
+                                                            top: -25,
+                                                            lineHeight: '1 !important',
+                                                            py: '0 !important',
+                                                        }}
+                                                    >
+                                                        <Box
+                                                            sx={{
+                                                                width: '100%',
+                                                                aspectRatio: '1 / 1',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                bgcolor: readerMode
+                                                                    ? colors.grays.gray900
+                                                                    : 'rgba(0, 0, 0, 0.5)',
+                                                                border: `2px solid ${readerMode ? colors.grays.gray800 : 'rgba(0, 255, 255, 0.65)'}`,
+                                                                borderRadius: '4px',
+                                                                overflow: 'hidden',
+                                                            }}
+                                                        >
+                                                            {editedEdgerunner.tokenImageId ? (
+                                                                <Avatar
+                                                                    src={resolveCombatImageUrl(
+                                                                        editedEdgerunner.tokenImageId
+                                                                    )}
+                                                                    variant="rounded"
+                                                                    slotProps={{
+                                                                        img: {
+                                                                            style: {
+                                                                                objectFit: 'contain',
+                                                                                width: '100%',
+                                                                                height: '100%',
+                                                                            },
+                                                                        },
+                                                                    }}
+                                                                    sx={{
+                                                                        bgcolor: 'transparent',
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    sx={{
+                                                                        color: readerMode
+                                                                            ? colors.grays.gray200
+                                                                            : colors.neons.cyan.default,
+                                                                        textTransform: 'uppercase',
+                                                                        fontWeight: 600,
+                                                                        textAlign: 'center',
+                                                                        px: 1,
+                                                                    }}
+                                                                >
+                                                                    {t('common.noImageFound')}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    </CyberpunkFormControl>
+                                                </Grid>
+                                            </Grid>
+
+                                            {/* 3D Model - Select + Preview */}
+                                            <Typography
+                                                variant="subtitle2"
+                                                sx={{ color: colors.neons.pink.default, fontWeight: 'bold', mb: 1 }}
+                                            >
+                                                3D MODEL
+                                            </Typography>
+                                            <Grid container spacing={2} sx={{ mb: 3 }}>
+                                                <Grid size={8}>
+                                                    <CyberpunkFormControl
+                                                        readerMode={readerMode}
+                                                        label={t('combatSim.tokenModel') ?? '3D Model'}
+                                                    >
+                                                        <Select
+                                                            value={editedEdgerunner.tokenModelId ?? ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value as string
+                                                                setEditedEdgerunner({
+                                                                    ...editedEdgerunner,
+                                                                    tokenModelId: val === '' ? undefined : val,
+                                                                })
+                                                            }}
+                                                            displayEmpty
+                                                            sx={{
+                                                                color: readerMode
+                                                                    ? colors.grays.gray900
+                                                                    : colors.neons.cyan.default,
+                                                                borderColor: readerMode
+                                                                    ? undefined
+                                                                    : colors.neons.cyan.default,
+                                                            }}
+                                                        >
+                                                            {modelOptions.map((opt) => (
+                                                                <MenuItem key={opt.value || 'random'} value={opt.value}>
+                                                                    {opt.label}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </CyberpunkFormControl>
+                                                </Grid>
+                                                <Grid size={4}>
+                                                    <CyberpunkFormControl
+                                                        readerMode={readerMode}
+                                                        label={t('combatSim.tokenModel') ?? '3D Model'}
+                                                        labelSx={{
+                                                            top: -25,
+                                                            lineHeight: '1 !important',
+                                                            py: '0 !important',
+                                                        }}
+                                                    >
+                                                        <Box
+                                                            sx={{
+                                                                width: '100%',
+                                                                aspectRatio: '1 / 1',
+                                                                borderRadius: '4px',
+                                                                border: `2px solid ${readerMode ? colors.grays.gray800 : colors.neons.cyan.default + '80'}`,
+                                                                bgcolor: readerMode
+                                                                    ? colors.grays.gray900
+                                                                    : 'rgba(0,0,0,0.6)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                overflow: 'hidden',
+                                                            }}
+                                                        >
+                                                            {editedEdgerunner.tokenModelId && modelViewerReady ? (
+                                                                <model-viewer
+                                                                    src={editedEdgerunner.tokenModelId}
+                                                                    style={{ width: '100%', height: '100%' }}
+                                                                    camera-controls
+                                                                    disable-zoom
+                                                                    interaction-prompt="none"
+                                                                    autoplay
+                                                                    exposure="1"
+                                                                    shadow-intensity="0.5"
+                                                                    camera-orbit="0deg 65deg auto"
+                                                                    auto-rotate
+                                                                />
+                                                            ) : (
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        color: readerMode
+                                                                            ? colors.grays.gray200
+                                                                            : colors.neons.cyan.default,
+                                                                        textTransform: 'uppercase',
+                                                                        fontWeight: 600,
+                                                                        fontSize: '14px',
+                                                                        textAlign: 'center',
+                                                                        px: 1,
+                                                                    }}
+                                                                >
+                                                                    {modelOptions[0]?.label ?? 'Aleatorio'}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    </CyberpunkFormControl>
+                                                </Grid>
+                                            </Grid>
+
+                                            {/* Token Preview */}
+                                            <Typography
+                                                variant="subtitle2"
+                                                sx={{ color: colors.neons.pink.default, fontWeight: 'bold', mb: 1 }}
+                                            >
+                                                TOKEN PREVIEW
+                                            </Typography>
+                                            <Stack direction="row" spacing={3} alignItems="center">
+                                                <Box
+                                                    sx={{
+                                                        width: 80,
+                                                        height: 80,
+                                                        borderRadius: '50%',
+                                                        bgcolor: `#${(editedEdgerunner.tokenColor ?? 0x00ff8b).toString(16).padStart(6, '0')}`,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        overflow: 'hidden',
+                                                        boxShadow: `0 0 16px #${(editedEdgerunner.tokenColor ?? 0x00ff8b).toString(16).padStart(6, '0')}80`,
+                                                        border: `2px solid #${(editedEdgerunner.tokenColor ?? 0x00ff8b).toString(16).padStart(6, '0')}`,
+                                                    }}
+                                                >
+                                                    {editedEdgerunner.tokenImageId ? (
+                                                        <img
+                                                            src={
+                                                                resolveCombatImageUrl(editedEdgerunner.tokenImageId) ||
+                                                                ''
+                                                            }
+                                                            alt="Preview"
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <Typography
+                                                            sx={{ color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}
+                                                        >
+                                                            {(editedEdgerunner.handle || editedEdgerunner.name)
+                                                                .charAt(0)
+                                                                .toUpperCase()}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                                <Box>
+                                                    <Typography
+                                                        sx={{ color: colors.grays.gray800, fontWeight: 'bold' }}
+                                                    >
+                                                        {editedEdgerunner.handle || editedEdgerunner.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: colors.grays.gray500 }}>
+                                                        HP: {editedEdgerunner.derivedStats.HP} | MOV:{' '}
+                                                        {editedEdgerunner.stats.MOVE} | Init:{' '}
+                                                        {editedEdgerunner.stats.REF}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
                                         </Box>
                                     )}
                                 </Box>

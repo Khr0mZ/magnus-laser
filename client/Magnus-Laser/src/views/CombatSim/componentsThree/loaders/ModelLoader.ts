@@ -1,9 +1,11 @@
 import * as THREE from 'three'
 import { TextureLoader } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 // Asset cache
 const modelCache = new Map<string, THREE.Group>()
+const animationClipsCache = new Map<string, THREE.AnimationClip[]>()
 const textureCache = new Map<string, THREE.Texture>()
 
 // Loaders
@@ -25,7 +27,7 @@ export async function loadModel(path: string, onProgress?: ProgressCallback): Pr
     // Check cache first
     const cached = modelCache.get(path)
     if (cached) {
-        return cached.clone()
+        return skeletonClone(cached) as THREE.Group
     }
 
     return new Promise((resolve, reject) => {
@@ -35,8 +37,12 @@ export async function loadModel(path: string, onProgress?: ProgressCallback): Pr
                 const model = gltf.scene
                 // Cache the original
                 modelCache.set(path, model)
-                // Return a clone for use
-                resolve(model.clone())
+                // Cache animation clips if present
+                if (gltf.animations && gltf.animations.length > 0) {
+                    animationClipsCache.set(path, gltf.animations)
+                }
+                // Return a clone for use (skeletonClone preserves SkinnedMesh bone refs)
+                resolve(skeletonClone(model) as THREE.Group)
             },
             (progress) => {
                 if (onProgress && progress.total > 0) {
@@ -110,6 +116,13 @@ export async function preloadModels(paths: string[], onProgress?: ProgressCallba
 }
 
 /**
+ * Get animation clips for a model path
+ */
+export function getAnimationClips(path: string): THREE.AnimationClip[] {
+    return animationClipsCache.get(path) ?? []
+}
+
+/**
  * Clear all caches
  */
 export function clearCaches(): void {
@@ -127,6 +140,7 @@ export function clearCaches(): void {
         })
     }
     modelCache.clear()
+    animationClipsCache.clear()
 
     // Dispose textures
     for (const texture of textureCache.values()) {

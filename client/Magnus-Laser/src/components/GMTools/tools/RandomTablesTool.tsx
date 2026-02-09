@@ -2,17 +2,24 @@ import Casino from '@mui/icons-material/Casino'
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import DeleteOutline from '@mui/icons-material/DeleteOutline'
 import Edit from '@mui/icons-material/Edit'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import Refresh from '@mui/icons-material/Refresh'
 import {
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
     Box,
     Button,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
+    FormControl,
     Grid,
     IconButton,
+    MenuItem,
     Paper,
+    Select,
     Stack,
     TextField,
     Tooltip,
@@ -23,7 +30,35 @@ import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import colors from '../../../utils/colors'
-import { actionFocusTable, getRandomFromArray } from '../../../utils/generators/soloPlayTables'
+import {
+    actionFocusTable,
+    adjectivesTable,
+    detailFocusTable,
+    getRandomFromArray,
+    nightCityDistrictsTable,
+} from '../../../utils/generators/soloPlayTables'
+import {
+    generateBlackIce,
+    generateCorpseLoot,
+    generateFashion,
+    generateFashionware,
+    generateFirearm,
+    generateFlavor,
+    generateHandle,
+    generateMissionItem,
+    generateNPCByRole,
+    generatePlaceToLive,
+    generateRadioStation,
+    generateRandomEncounter,
+    generateRandomName,
+    generateRelationship,
+    generateSensoryDetail,
+    generateTVShow,
+    generateVenue,
+    generateVisitor,
+    type EncounterTime,
+    type EncounterZone,
+} from '../../../utils/generators/soloPlayTablesExpanded'
 import {
     generateQuickClue,
     generateQuickComplication,
@@ -39,27 +74,173 @@ import { useGMToolsDataStore, type RandomTableResult } from '../GMToolsDataStore
 import {
     getCyberpunkButtonStyle,
     getCyberpunkPaperStyle,
+    getCyberpunkSelectStyle,
     getCyberpunkTextFieldStyle,
     getSectionTitleStyle,
 } from '../GMToolsStyles'
 
-const generators = [
-    { key: 'npc', color: colors.neons.cyan.default, generator: generateQuickNPC },
-    { key: 'location', color: colors.neons.blue.default, generator: generateQuickLocation },
-    { key: 'event', color: colors.neons.green.default, generator: generateQuickEvent },
-    { key: 'complication', color: colors.neons.yellow.default, generator: generateQuickComplication },
-    { key: 'rumor', color: colors.neons.pink.default, generator: generateQuickRumor },
-    { key: 'clue', color: colors.neons.cyan.default, generator: generateQuickClue },
-    { key: 'twist', color: colors.neons.red.default, generator: generateQuickTwist },
-    { key: 'action', color: colors.neons.orange.default, generator: () => getRandomFromArray(actionFocusTable) },
-    { key: 'motivation', color: colors.neons.purple.default, generator: generateQuickMotivation },
-    { key: 'mood', color: colors.neons.green.default, generator: generateQuickMood },
+// === Generator Types ===
+
+interface GeneratorDef {
+    key: string
+    color: string
+    generator: () => unknown
+}
+
+interface GeneratorCategory {
+    key: string
+    color: string
+    defaultExpanded?: boolean
+    generators: GeneratorDef[]
+}
+
+// === Wrapper generators for nested objects ===
+
+const wrapNPCByRole = () => {
+    const r = generateNPCByRole()
+    return { role: r.role, name: r.npc.name, notes: r.npc.notes }
+}
+
+const wrapPlaceToLive = () => {
+    const r = generatePlaceToLive()
+    return { type: r.type, name: r.place.name, description: r.place.description }
+}
+
+const wrapVenue = () => {
+    const r = generateVenue()
+    return { type: r.type, name: r.venue.name, description: r.venue.description }
+}
+
+const wrapFlavor = () => {
+    const r = generateFlavor()
+    return { type: r.type, flavor: r.flavor.flavor, description: r.flavor.description }
+}
+
+// === Categories with generators ===
+
+const categories: GeneratorCategory[] = [
+    {
+        key: 'core',
+        color: colors.neons.green.default,
+        defaultExpanded: true,
+        generators: [
+            { key: 'npc', color: colors.neons.cyan.default, generator: generateQuickNPC },
+            { key: 'location', color: colors.neons.blue.default, generator: generateQuickLocation },
+            { key: 'event', color: colors.neons.green.default, generator: generateQuickEvent },
+            { key: 'complication', color: colors.neons.yellow.default, generator: generateQuickComplication },
+            { key: 'rumor', color: colors.neons.pink.default, generator: generateQuickRumor },
+            { key: 'clue', color: colors.neons.cyan.default, generator: generateQuickClue },
+            { key: 'twist', color: colors.neons.red.default, generator: generateQuickTwist },
+            { key: 'motivation', color: colors.neons.purple.default, generator: generateQuickMotivation },
+            { key: 'mood', color: colors.neons.green.default, generator: generateQuickMood },
+        ],
+    },
+    {
+        key: 'words',
+        color: colors.neons.orange.default,
+        generators: [
+            { key: 'action', color: colors.neons.orange.default, generator: () => getRandomFromArray(actionFocusTable) },
+            { key: 'noun', color: colors.neons.blue.default, generator: () => getRandomFromArray(detailFocusTable) },
+            { key: 'adjective', color: colors.neons.purple.default, generator: () => getRandomFromArray(adjectivesTable) },
+        ],
+    },
+    {
+        key: 'sensory',
+        color: colors.neons.purple.default,
+        generators: [
+            { key: 'sensory', color: colors.neons.purple.default, generator: generateSensoryDetail },
+        ],
+    },
+    {
+        key: 'names',
+        color: colors.neons.cyan.default,
+        generators: [
+            { key: 'nameMasc', color: colors.neons.cyan.default, generator: () => generateRandomName('masc') },
+            { key: 'nameFemme', color: colors.neons.pink.default, generator: () => generateRandomName('femme') },
+            { key: 'nameNB', color: colors.neons.purple.default, generator: () => generateRandomName('nonbinary') },
+            { key: 'handle', color: colors.neons.orange.default, generator: generateHandle },
+        ],
+    },
+    {
+        key: 'nightCity',
+        color: colors.neons.blue.default,
+        generators: [
+            { key: 'district', color: colors.neons.blue.default, generator: () => getRandomFromArray(nightCityDistrictsTable) },
+            { key: 'venue', color: colors.neons.green.default, generator: wrapVenue },
+            { key: 'placeToLive', color: colors.neons.yellow.default, generator: wrapPlaceToLive },
+        ],
+    },
+    {
+        key: 'people',
+        color: colors.neons.pink.default,
+        generators: [
+            { key: 'npcByRole', color: colors.neons.cyan.default, generator: wrapNPCByRole },
+            { key: 'relationship', color: colors.neons.pink.default, generator: generateRelationship },
+            { key: 'visitor', color: colors.neons.orange.default, generator: generateVisitor },
+        ],
+    },
+    {
+        key: 'things',
+        color: colors.neons.yellow.default,
+        generators: [
+            { key: 'fashion', color: colors.neons.pink.default, generator: generateFashion },
+            { key: 'fashionware', color: colors.neons.purple.default, generator: generateFashionware },
+            { key: 'blackIce', color: colors.neons.red.default, generator: generateBlackIce },
+            { key: 'firearm', color: colors.neons.orange.default, generator: generateFirearm },
+            { key: 'flavor', color: colors.neons.yellow.default, generator: wrapFlavor },
+        ],
+    },
+    {
+        key: 'media',
+        color: colors.neons.cyan.default,
+        generators: [
+            { key: 'radioStation', color: colors.neons.cyan.default, generator: generateRadioStation },
+            { key: 'tvShow', color: colors.neons.blue.default, generator: generateTVShow },
+        ],
+    },
+    {
+        key: 'corpseLoot',
+        color: colors.neons.red.default,
+        generators: [
+            { key: 'lootStreetrat', color: colors.neons.yellow.default, generator: () => generateCorpseLoot('streetrat') },
+            { key: 'lootEdgerunner', color: colors.neons.orange.default, generator: () => generateCorpseLoot('edgerunner') },
+            { key: 'lootCorporate', color: colors.neons.cyan.default, generator: () => generateCorpseLoot('corporate') },
+        ],
+    },
+    {
+        key: 'mission',
+        color: colors.neons.green.default,
+        generators: [
+            { key: 'missionItem', color: colors.neons.green.default, generator: generateMissionItem },
+        ],
+    },
 ]
 
-// Helper to capitalize first letter of a string
-const capitalize = (str: string): string => {
-    return str.charAt(0).toUpperCase() + str.slice(1)
+// Build flat lookup from all categories (for reroll + color)
+const allGenerators: Record<string, GeneratorDef> = {}
+for (const category of categories) {
+    for (const gen of category.generators) {
+        allGenerators[gen.key] = gen
+    }
 }
+// Add encounter as special entry (handled separately but needs color lookup)
+allGenerators['encounter'] = { key: 'encounter', color: colors.neons.red.default, generator: () => '' }
+
+// Helper to capitalize first letter
+const capitalize = (str: string): string => str.charAt(0).toUpperCase() + str.slice(1)
+
+// Format any generator result to string
+const formatResult = (rawResult: unknown): string => {
+    if (typeof rawResult === 'string') return rawResult
+    if (typeof rawResult === 'object' && rawResult !== null) {
+        return Object.entries(rawResult)
+            .map(([key, value]) => `${capitalize(key)}: ${value}`)
+            .join('\n')
+    }
+    return String(rawResult)
+}
+
+// === Component ===
 
 const RandomTablesTool = () => {
     const { t } = useTranslation()
@@ -78,52 +259,50 @@ const RandomTablesTool = () => {
     const [editingResult, setEditingResult] = useState<RandomTableResult | null>(null)
     const [editContent, setEditContent] = useState('')
 
+    // Encounter selector state
+    const [encounterZone, setEncounterZone] = useState<EncounterZone>('moderate')
+    const [encounterTime, setEncounterTime] = useState<EncounterTime>('day')
+
     // Styles
     const titleStyle = getSectionTitleStyle(readerMode, colors.neons.green.default)
     const textFieldStyle = getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)
 
     const handleGenerate = (type: string, generator: () => unknown) => {
-        const rawResult = generator()
-        let content: string
-
-        if (typeof rawResult === 'string') {
-            content = rawResult
-        } else if (typeof rawResult === 'object' && rawResult !== null) {
-            // Format as multiline with capitalized keys
-            content = Object.entries(rawResult)
-                .map(([key, value]) => `${capitalize(key)}: ${value}`)
-                .join('\n')
-        } else {
-            content = String(rawResult)
-        }
-
         const newResult: RandomTableResult = {
             id: uuidv4(),
             type,
-            content,
+            content: formatResult(generator()),
+            timestamp: Date.now(),
+        }
+        addRandomTableResult(newResult)
+    }
+
+    const handleGenerateEncounter = () => {
+        const encounter = generateRandomEncounter(encounterZone, encounterTime)
+        const zoneLabel = t(`soloPlay.tables.zones.${encounterZone}`)
+        const timeLabel = t(`soloPlay.tables.times.${encounterTime}`)
+        const newResult: RandomTableResult = {
+            id: uuidv4(),
+            type: 'encounter',
+            content: `Zone: ${zoneLabel}\nTime: ${timeLabel}\nEncounter: ${encounter}`,
             timestamp: Date.now(),
         }
         addRandomTableResult(newResult)
     }
 
     const handleReroll = (result: RandomTableResult) => {
-        const gen = generators.find((g) => g.key === result.type)
-        if (!gen) return
-
-        const rawResult = gen.generator()
-        let content: string
-
-        if (typeof rawResult === 'string') {
-            content = rawResult
-        } else if (typeof rawResult === 'object' && rawResult !== null) {
-            content = Object.entries(rawResult)
-                .map(([key, value]) => `${capitalize(key)}: ${value}`)
-                .join('\n')
-        } else {
-            content = String(rawResult)
+        if (result.type === 'encounter') {
+            const encounter = generateRandomEncounter(encounterZone, encounterTime)
+            const zoneLabel = t(`soloPlay.tables.zones.${encounterZone}`)
+            const timeLabel = t(`soloPlay.tables.times.${encounterTime}`)
+            updateRandomTableResult(result.id, {
+                content: `Zone: ${zoneLabel}\nTime: ${timeLabel}\nEncounter: ${encounter}`,
+            })
+            return
         }
-
-        updateRandomTableResult(result.id, { content })
+        const gen = allGenerators[result.type]
+        if (!gen) return
+        updateRandomTableResult(result.id, { content: formatResult(gen.generator()) })
     }
 
     const handleOpenEdit = (result: RandomTableResult) => {
@@ -142,37 +321,143 @@ const RandomTablesTool = () => {
         navigator.clipboard.writeText(content)
     }
 
+    // Accordion summary style helper
+    const accordionSx = {
+        backgroundColor: 'transparent',
+        boxShadow: 'none',
+        '&::before': { display: 'none' },
+        '&.Mui-expanded': { margin: 0 },
+    }
+
+    const accordionSummarySx = (color: string) => ({
+        minHeight: 32,
+        '&.Mui-expanded': { minHeight: 32 },
+        '& .MuiAccordionSummary-content': { margin: '4px 0' },
+        '& .MuiAccordionSummary-content.Mui-expanded': { margin: '4px 0' },
+        borderBottom: readerMode ? '1px solid rgba(0,0,0,0.1)' : `1px solid ${color}20`,
+    })
+
+    const categoryLabelSx = (color: string) => ({
+        color: readerMode ? colors.grays.gray000 : color,
+        fontFamily: '"Orbitron", sans-serif',
+        fontWeight: 'bold',
+        fontSize: '0.65rem',
+        letterSpacing: '2px',
+        textTransform: 'uppercase' as const,
+        textShadow: readerMode ? 'none' : `0 0 5px ${color}60`,
+    })
+
     return (
         <Box>
             <Typography variant="h6" sx={titleStyle}>
                 {t('gmTools.randomTables')}
             </Typography>
 
-            {/* Generator Buttons */}
-            <Grid container spacing={1} sx={{ mb: 2 }}>
-                {generators.map((gen) => (
-                    <Grid size={{ xs: 6 }} key={gen.key}>
+            {/* Generator Categories */}
+            {categories.map((category) => (
+                <Accordion
+                    key={category.key}
+                    defaultExpanded={category.defaultExpanded}
+                    sx={accordionSx}
+                    disableGutters
+                >
+                    <AccordionSummary
+                        expandIcon={<ExpandMore sx={{ color: readerMode ? colors.grays.gray400 : category.color }} />}
+                        sx={accordionSummarySx(category.color)}
+                    >
+                        <Typography variant="caption" sx={categoryLabelSx(category.color)}>
+                            {t(`soloPlay.tables.categories.${category.key}`)}
+                        </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ p: 0, pt: 1 }}>
+                        <Grid container spacing={1} sx={{ mb: 1 }}>
+                            {category.generators.map((gen) => (
+                                <Grid size={{ xs: 6 }} key={gen.key}>
+                                    <Button
+                                        fullWidth
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<Casino />}
+                                        onClick={() => handleGenerate(gen.key, gen.generator)}
+                                        sx={{
+                                            ...getCyberpunkButtonStyle(readerMode, gen.color),
+                                            textTransform: 'uppercase',
+                                            justifyContent: 'flex-start',
+                                            fontSize: '0.7rem',
+                                        }}
+                                    >
+                                        {t(`soloPlay.tables.${gen.key}`)}
+                                    </Button>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </AccordionDetails>
+                </Accordion>
+            ))}
+
+            {/* Encounters Section (special - needs zone/time selectors) */}
+            <Accordion sx={accordionSx} disableGutters>
+                <AccordionSummary
+                    expandIcon={<ExpandMore sx={{ color: readerMode ? colors.grays.gray400 : colors.neons.red.default }} />}
+                    sx={accordionSummarySx(colors.neons.red.default)}
+                >
+                    <Typography variant="caption" sx={categoryLabelSx(colors.neons.red.default)}>
+                        {t('soloPlay.tables.categories.encounters')}
+                    </Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 0, pt: 1 }}>
+                    <Stack spacing={1} sx={{ mb: 1 }}>
+                        <Stack direction="row" spacing={1}>
+                            <FormControl size="small" sx={{ flex: 1 }}>
+                                <Select
+                                    value={encounterZone}
+                                    onChange={(e) => setEncounterZone(e.target.value as EncounterZone)}
+                                    sx={{
+                                        ...getCyberpunkSelectStyle(readerMode, colors.neons.red.default),
+                                        fontSize: '0.75rem',
+                                    }}
+                                >
+                                    <MenuItem value="corporate">{t('soloPlay.tables.zones.corporate')}</MenuItem>
+                                    <MenuItem value="moderate">{t('soloPlay.tables.zones.moderate')}</MenuItem>
+                                    <MenuItem value="combatZone">{t('soloPlay.tables.zones.combatZone')}</MenuItem>
+                                    <MenuItem value="outskirts">{t('soloPlay.tables.zones.outskirts')}</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <FormControl size="small" sx={{ flex: 1 }}>
+                                <Select
+                                    value={encounterTime}
+                                    onChange={(e) => setEncounterTime(e.target.value as EncounterTime)}
+                                    sx={{
+                                        ...getCyberpunkSelectStyle(readerMode, colors.neons.red.default),
+                                        fontSize: '0.75rem',
+                                    }}
+                                >
+                                    <MenuItem value="day">{t('soloPlay.tables.times.day')}</MenuItem>
+                                    <MenuItem value="night">{t('soloPlay.tables.times.night')}</MenuItem>
+                                    <MenuItem value="midnight">{t('soloPlay.tables.times.midnight')}</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Stack>
                         <Button
                             fullWidth
                             size="small"
                             variant="outlined"
                             startIcon={<Casino />}
-                            onClick={() => handleGenerate(gen.key, gen.generator)}
+                            onClick={handleGenerateEncounter}
                             sx={{
-                                ...getCyberpunkButtonStyle(readerMode, gen.color),
+                                ...getCyberpunkButtonStyle(readerMode, colors.neons.red.default),
                                 textTransform: 'uppercase',
-                                justifyContent: 'flex-start',
                                 fontSize: '0.7rem',
                             }}
                         >
-                            {t(`soloPlay.tables.${gen.key}`)}
+                            {t('soloPlay.tables.encounter')}
                         </Button>
-                    </Grid>
-                ))}
-            </Grid>
+                    </Stack>
+                </AccordionDetails>
+            </Accordion>
 
             {/* Results */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1} mt={2}>
                 <Typography
                     variant="subtitle2"
                     sx={{
@@ -221,8 +506,7 @@ const RandomTablesTool = () => {
                 ) : (
                     <Stack spacing={1}>
                         {randomTableResults.map((result) => {
-                            const gen = generators.find((g) => g.key === result.type)
-                            const resultColor = gen?.color || colors.grays.gray600
+                            const resultColor = allGenerators[result.type]?.color || colors.grays.gray600
                             const isMultiline = result.content.includes('\n')
 
                             return (
@@ -247,7 +531,7 @@ const RandomTablesTool = () => {
                                                 textShadow: readerMode ? 'none' : `0 0 5px ${resultColor}60`,
                                             }}
                                         >
-                                            {t(`soloPlay.tables.${result.type}`)}
+                                            {t(`soloPlay.tables.${result.type}`, result.type)}
                                         </Typography>
                                         <Stack direction="row" spacing={0.5}>
                                             <Tooltip title={t('soloPlay.tables.reroll')}>
@@ -325,7 +609,7 @@ const RandomTablesTool = () => {
                                         </Stack>
                                     </Stack>
 
-                                    {/* Content - multiline format */}
+                                    {/* Content */}
                                     {isMultiline ? (
                                         <Stack spacing={0.5}>
                                             {result.content.split('\n').map((line, idx) => {

@@ -128,6 +128,7 @@ const CombatPanels = (props: CombatPanelsProps) => {
                     getActiveMapKey={getActiveMapKey}
                     setTokens={setTokens}
                     resolveImageUrl={resolveImageUrl}
+                    gridSize={gridSize}
                     tokens={tokens}
                     tokensNotInMap={tokensNotInMap}
                     defaultTokens={defaultTokens}

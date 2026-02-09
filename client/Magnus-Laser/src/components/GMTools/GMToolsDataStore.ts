@@ -4,8 +4,12 @@ import type { Character } from '../../types/characterCreator'
 import type {
     BeatChartEntry,
     ClockRollResult,
+    InvestigationSession,
+    IPTracker,
+    NPCTrackerEntry,
     OpenQuestionResult,
     OracleResult,
+    SocialChallengeSession,
     SoloMission,
     SoloPlayClock,
 } from '../../types/soloPlay'
@@ -76,6 +80,34 @@ interface GMToolsDataState {
     updateEdgerunner: (id: string, updates: Partial<Character>) => void
     deleteEdgerunner: (id: string) => void
     clearEdgerunners: () => void
+
+    // Investigation Sessions
+    investigationSessions: InvestigationSession[]
+    addInvestigationSession: (session: InvestigationSession) => void
+    updateInvestigationSession: (id: string, updates: Partial<InvestigationSession>) => void
+    deleteInvestigationSession: (id: string) => void
+
+    // Social Challenge Sessions
+    socialChallengeSessions: SocialChallengeSession[]
+    addSocialChallengeSession: (session: SocialChallengeSession) => void
+    updateSocialChallengeSession: (id: string, updates: Partial<SocialChallengeSession>) => void
+    deleteSocialChallengeSession: (id: string) => void
+
+    // NPC Tracker
+    npcTracker: NPCTrackerEntry[]
+    addNPCEntry: (entry: NPCTrackerEntry) => void
+    updateNPCEntry: (id: string, updates: Partial<NPCTrackerEntry>) => void
+    deleteNPCEntry: (id: string) => void
+
+    // IP Trackers
+    ipTrackers: IPTracker[]
+    addIPTracker: (tracker: IPTracker) => void
+    updateIPTracker: (id: string, updates: Partial<IPTracker>) => void
+    deleteIPTracker: (id: string) => void
+
+    // Edgerunner dialog (opened from CombatSim TokenPanel)
+    openEdgerunnerId: string | null
+    setOpenEdgerunnerId: (id: string | null) => void
 }
 
 export const useGMToolsDataStore = create<GMToolsDataState>()(
@@ -276,9 +308,142 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                     edgerunners: state.edgerunners.filter((c) => c.id !== id),
                 })),
             clearEdgerunners: () => set({ edgerunners: [] }),
+
+            // Investigation Sessions
+            investigationSessions: [],
+            addInvestigationSession: (session) =>
+                set((state) => ({
+                    investigationSessions: [session, ...state.investigationSessions],
+                })),
+            updateInvestigationSession: (id, updates) =>
+                set((state) => ({
+                    investigationSessions: state.investigationSessions.map((s) =>
+                        s.id === id ? { ...s, ...updates } : s
+                    ),
+                })),
+            deleteInvestigationSession: (id) =>
+                set((state) => ({
+                    investigationSessions: state.investigationSessions.filter((s) => s.id !== id),
+                })),
+
+            // Social Challenge Sessions
+            socialChallengeSessions: [],
+            addSocialChallengeSession: (session) =>
+                set((state) => ({
+                    socialChallengeSessions: [session, ...state.socialChallengeSessions],
+                })),
+            updateSocialChallengeSession: (id, updates) =>
+                set((state) => ({
+                    socialChallengeSessions: state.socialChallengeSessions.map((s) =>
+                        s.id === id ? { ...s, ...updates } : s
+                    ),
+                })),
+            deleteSocialChallengeSession: (id) =>
+                set((state) => ({
+                    socialChallengeSessions: state.socialChallengeSessions.filter((s) => s.id !== id),
+                })),
+
+            // NPC Tracker
+            npcTracker: [],
+            addNPCEntry: (entry) =>
+                set((state) => ({
+                    npcTracker: [entry, ...state.npcTracker],
+                })),
+            updateNPCEntry: (id, updates) =>
+                set((state) => ({
+                    npcTracker: state.npcTracker.map((n) =>
+                        n.id === id ? { ...n, ...updates } : n
+                    ),
+                })),
+            deleteNPCEntry: (id) =>
+                set((state) => ({
+                    npcTracker: state.npcTracker.filter((n) => n.id !== id),
+                })),
+
+            // IP Trackers
+            ipTrackers: [],
+            addIPTracker: (tracker) =>
+                set((state) => ({
+                    ipTrackers: [...state.ipTrackers, tracker],
+                })),
+            updateIPTracker: (id, updates) =>
+                set((state) => ({
+                    ipTrackers: state.ipTrackers.map((t) =>
+                        t.id === id ? { ...t, ...updates } : t
+                    ),
+                })),
+            deleteIPTracker: (id) =>
+                set((state) => ({
+                    ipTrackers: state.ipTrackers.filter((t) => t.id !== id),
+                })),
+
+            // Edgerunner dialog
+            openEdgerunnerId: null,
+            setOpenEdgerunnerId: (id) => set({ openEdgerunnerId: id }),
         }),
         {
             name: 'gm-tools-data',
+            version: 2,
+            migrate: (persistedState: unknown, version: number) => {
+                const state = persistedState as Record<string, unknown>
+                if (version === 0) {
+                    // Migrate OpenQuestionResult: focus/detail/category -> verb/noun/adjective
+                    const oldHistory = state.openQuestionHistory as Array<Record<string, unknown>> | undefined
+                    if (oldHistory) {
+                        state.openQuestionHistory = oldHistory.map((result) => {
+                            if ('focus' in result && !('verb' in result)) {
+                                return {
+                                    id: result.id,
+                                    timestamp: result.timestamp,
+                                    question: result.question,
+                                    verb: result.focus || '',
+                                    noun: result.detail || '',
+                                    adjective: '',
+                                    notes: result.notes,
+                                }
+                            }
+                            return result
+                        })
+                    }
+                }
+                if (version < 2) {
+                    // Migrate edgerunners: backfill weapon.skill, armor.location, tokenColor
+                    const weaponSkillMap: Record<string, string> = {
+                        'Melee': 'Melee Weapon', 'Exotic Melee': 'Melee Weapon', 'Exotic VH Melee': 'Melee Weapon',
+                        'Pistol': 'Handgun', 'Exotic Pistol': 'Handgun', 'Exotic VH Pistol': 'Handgun',
+                        'SMG': 'Shoulder Arms', 'Shotgun': 'Shoulder Arms', 'Exotic Shotgun': 'Shoulder Arms',
+                        'Rifle': 'Shoulder Arms', 'Exotic Rifle': 'Shoulder Arms',
+                        'Bow': 'Archery',
+                        'Heavy': 'Heavy Weapons', 'Exotic Grenade Launcher': 'Heavy Weapons',
+                    }
+                    const edgerunners = state.edgerunners as Array<Record<string, unknown>> | undefined
+                    if (edgerunners) {
+                        state.edgerunners = edgerunners.map((char) => {
+                            const weapons = char.weapons as Array<Record<string, unknown>> | undefined
+                            if (weapons) {
+                                char.weapons = weapons.map((w) => ({
+                                    ...w,
+                                    skill: w.skill || weaponSkillMap[w.type as string] || 'Melee Weapon',
+                                }))
+                            }
+                            const armor = char.armor as Array<Record<string, unknown>> | undefined
+                            if (armor) {
+                                char.armor = armor.map((a) => {
+                                    if (a.location) return a
+                                    const name = (a.name as string) || ''
+                                    let location: string = 'Body'
+                                    if (name.includes('(Head)')) location = 'Head'
+                                    else if (name.includes('Shield')) location = 'Shield'
+                                    return { ...a, location }
+                                })
+                            }
+                            if (!char.tokenColor) char.tokenColor = 0x00ff8b
+                            return char
+                        })
+                    }
+                }
+                return state as unknown as GMToolsDataState
+            },
         }
     )
 )

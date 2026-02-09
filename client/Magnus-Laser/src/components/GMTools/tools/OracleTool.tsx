@@ -18,7 +18,6 @@ import { useTranslation } from 'react-i18next'
 import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import type {
-    OpenQuestionCategory,
     OracleProbability,
     OracleResult,
 } from '../../../types/soloPlay'
@@ -53,7 +52,6 @@ const OracleTool = () => {
     const [closedQuestion, setClosedQuestion] = useState('')
     const [probability, setProbability] = useState<OracleProbability>('FIFTY_FIFTY')
     const [openQuestion, setOpenQuestion] = useState('')
-    const [questionCategory, setQuestionCategory] = useState<OpenQuestionCategory>('ACTION')
 
     const handleAskOracle = () => {
         if (!closedQuestion.trim()) return
@@ -64,7 +62,7 @@ const OracleTool = () => {
 
     const handleAskOpenQuestion = () => {
         if (!openQuestion.trim()) return
-        const result = rollOpenQuestion(openQuestion, questionCategory)
+        const result = rollOpenQuestion(openQuestion)
         addOpenQuestionResult(result)
         setOpenQuestion('')
     }
@@ -92,17 +90,6 @@ const OracleTool = () => {
         { value: 'FIFTY_FIFTY', label: t('soloPlay.oracle.probabilities.fifty_fifty') },
         { value: 'UNLIKELY', label: t('soloPlay.oracle.probabilities.unlikely') },
         { value: 'IMPOSSIBLE', label: t('soloPlay.oracle.probabilities.impossible') },
-    ]
-
-    const categoryOptions: { value: OpenQuestionCategory; label: string }[] = [
-        { value: 'ACTION', label: t('soloPlay.oracle.categories.action') },
-        { value: 'DESCRIPTION', label: t('soloPlay.oracle.categories.description') },
-        { value: 'COMPLICATION', label: t('soloPlay.oracle.categories.complication') },
-        { value: 'NPC_ACTION', label: t('soloPlay.oracle.categories.npcAction') },
-        { value: 'NPC_MOOD', label: t('soloPlay.oracle.categories.npcMood') },
-        { value: 'LOCATION', label: t('soloPlay.oracle.categories.location') },
-        { value: 'OBJECT', label: t('soloPlay.oracle.categories.object') },
-        { value: 'EVENT', label: t('soloPlay.oracle.categories.event') },
     ]
 
     // Styles
@@ -304,41 +291,16 @@ const OracleTool = () => {
                         sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.pink.default)}
                     />
 
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <CyberpunkFormControl
-                            readerMode={readerMode}
-                            label={t('soloPlay.oracle.category')}
-                            fullWidth={false}
-                            sx={{ minWidth: 140 }}
-                        >
-                            <Select
-                                value={questionCategory}
-                                onChange={(e) =>
-                                    setQuestionCategory(e.target.value as OpenQuestionCategory)
-                                }
-                                label={t('soloPlay.oracle.category')}
-                                size="small"
-                                sx={getCyberpunkSelectStyle(readerMode, colors.neons.pink.default)}
-                            >
-                                {categoryOptions.map((opt) => (
-                                    <MenuItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </CyberpunkFormControl>
-
-                        <Button
-                            variant="outlined"
-                            onClick={handleAskOpenQuestion}
-                            disabled={!openQuestion.trim()}
-                            size="small"
-                            startIcon={<Casino />}
-                            sx={pinkButtonStyle}
-                        >
-                            {t('soloPlay.oracle.generate')}
-                        </Button>
-                    </Stack>
+                    <Button
+                        variant="outlined"
+                        onClick={handleAskOpenQuestion}
+                        disabled={!openQuestion.trim()}
+                        size="small"
+                        startIcon={<Casino />}
+                        sx={pinkButtonStyle}
+                    >
+                        {t('soloPlay.oracle.generate')} (Verb + Noun + Adjective)
+                    </Button>
 
                     <Box>
                         <Stack
@@ -394,9 +356,9 @@ const OracleTool = () => {
                                             >
                                                 "{result.question}"
                                             </Typography>
-                                            <Stack direction="row" spacing={0.5} mt={0.5}>
+                                            <Stack direction="row" spacing={0.5} mt={0.5} flexWrap="wrap">
                                                 <Chip
-                                                    label={result.focus}
+                                                    label={result.verb}
                                                     size="small"
                                                     sx={{
                                                         backgroundColor: readerMode
@@ -412,7 +374,7 @@ const OracleTool = () => {
                                                     }}
                                                 />
                                                 <Chip
-                                                    label={result.detail}
+                                                    label={result.noun}
                                                     size="small"
                                                     sx={{
                                                         backgroundColor: readerMode
@@ -427,6 +389,24 @@ const OracleTool = () => {
                                                         boxShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.blue.default}40`,
                                                     }}
                                                 />
+                                                {result.adjective && (
+                                                    <Chip
+                                                        label={result.adjective}
+                                                        size="small"
+                                                        sx={{
+                                                            backgroundColor: readerMode
+                                                                ? colors.neons.purple.default
+                                                                : `${colors.neons.purple.default}30`,
+                                                            color: readerMode ? '#fff' : colors.neons.purple.default,
+                                                            border: readerMode ? 'none' : `1px solid ${colors.neons.purple.default}`,
+                                                            height: 22,
+                                                            fontSize: '0.7rem',
+                                                            fontFamily: '"Lexend", sans-serif',
+                                                            fontWeight: 'bold',
+                                                            boxShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.purple.default}40`,
+                                                        }}
+                                                    />
+                                                )}
                                             </Stack>
                                         </Box>
                                         <DeleteOutline

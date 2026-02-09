@@ -62,6 +62,7 @@ export interface Skill {
 export interface CharacterSkill {
     skill: Skill
     level: number
+    isTokenAction?: boolean
 }
 
 // === LIFEPATH ===
@@ -161,6 +162,8 @@ export interface Weapon {
     damage: string
     rof: number
     cost: number
+    skill?: string
+    isTokenAction?: boolean
 }
 
 export interface Armor {
@@ -168,6 +171,7 @@ export interface Armor {
     sp: number
     penalty: number
     cost: number
+    location?: 'Body' | 'Head' | 'Shield'
 }
 
 export interface GearItem {
@@ -213,6 +217,10 @@ export interface Character {
     notes: string
     createdAt: number
     updatedAt: number
+    // Token display fields (for Combat Simulator integration)
+    tokenColor?: number // Pixi hex color, default 0x00ff8b (neon green)
+    tokenImageId?: string // 2D image reference
+    tokenModelId?: string // 3D model reference
 }
 
 // === STAT TEMPLATES ===

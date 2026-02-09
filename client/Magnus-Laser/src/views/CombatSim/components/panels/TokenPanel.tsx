@@ -12,13 +12,15 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import CustomScrollbar from '../../../../components/CustomScrollbar'
+import { useGMToolsDataStore } from '../../../../components/GMTools/GMToolsDataStore'
 import { useUserPreferences } from '../../../../contexts/userPreferencesHooks'
 import colors from '../../../../utils/colors'
 import { db } from '../../../../utils/db'
+import { characterToToken } from '../../../../utils/generators/edgerunnerToToken'
 import { Token } from '../../utils/types'
 import { TokenContextMenu } from '../contextMenus/TokenContextMenu'
 import { TokenTooltip } from '../TokenTooltip'
@@ -29,6 +31,7 @@ interface TokenPanelProps {
     getActiveMapKey: () => string
     setTokens: React.Dispatch<React.SetStateAction<Token[]>>
     resolveImageUrl: (imageId: string | undefined) => string | undefined
+    gridSize: number
     tokens: Token[]
     tokensNotInMap: Token[]
     defaultTokens: Token[]
@@ -45,6 +48,7 @@ const TokenPanel = ({
     getActiveMapKey,
     setTokens,
     resolveImageUrl,
+    gridSize,
     tokens,
     tokensNotInMap,
     defaultTokens,
@@ -59,6 +63,8 @@ const TokenPanel = ({
     const [tokenContextMenuAnchor, setTokenContextMenuAnchor] = useState<HTMLElement | null>(null)
     const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null)
     const { displayName } = useSession()
+    const { edgerunners, setOpenEdgerunnerId } = useGMToolsDataStore()
+    const draggedEdgerunnerIdRef = useRef<string | null>(null)
 
     const renderToken = (token: Token, isDefault?: boolean) => {
         const tokenElement = (
@@ -360,6 +366,263 @@ const TokenPanel = ({
         onTokenCut(tokenId)
     }
 
+    const renderEdgerunnerAccordion = () => {
+        if (edgerunners.length === 0 || isPlayerConnected) return null
+
+        const half = Math.max(1, Math.floor(gridSize / 2))
+
+        return (
+            <Accordion
+                sx={{
+                    border: `1px solid ${colors.neons.cyan.dark}`,
+                    borderRadius: 0.5,
+                    width: '100%',
+                }}
+                disableGutters
+                defaultExpanded
+            >
+                <AccordionSummary
+                    sx={{
+                        backgroundColor: 'transparent',
+                        mr: -3,
+                        borderBottom: `1px solid ${colors.neons.pink.dark}90`,
+                        bgcolor: readerMode ? colors.blues.default : 'transparent',
+                    }}
+                    expandIcon={
+                        <ExpandMore
+                            className="glitch-text"
+                            data-text={'V'}
+                            sx={{
+                                color: readerMode ? colors.grays.gray900 : colors.yellows.default + '99',
+                                textShadow: `0 0 8px ${colors.grays.gray000}`,
+                            }}
+                            fontSize="large"
+                        />
+                    }
+                >
+                    <Typography
+                        sx={{
+                            color: readerMode ? colors.grays.gray900 : colors.neons.yellow.default + '99',
+                            fontWeight: 700,
+                            textShadow: `0 0 8px ${colors.grays.gray000}`,
+                        }}
+                        className="glitch-text"
+                        data-text={t('combatSim.edgerunners')}
+                    >
+                        {t('combatSim.edgerunners')}
+                    </Typography>
+                </AccordionSummary>
+                <AccordionDetails
+                    sx={{
+                        px: 0,
+                        pb: 0,
+                        bgcolor: readerMode ? colors.grays.gray400 : 'transparent',
+                    }}
+                >
+                    {edgerunners.map((character) => {
+                        const charDisplayName = character.handle || character.name
+                        const tokenColor = character.tokenColor ?? 0x00ff8b
+
+                        return (
+                            <Stack
+                                key={character.id}
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                draggable
+                                onDragStart={(e) => {
+                                    const edgerunnerTokenId = `er-${character.id}`
+                                    const allTokens = [...tokens, ...tokensNotInMap]
+                                    const existing = allTokens.find((t) => t.id === edgerunnerTokenId)
+
+                                    if (existing) {
+                                        // Token already exists — just move it (cut & paste)
+                                        draggedEdgerunnerIdRef.current = null
+                                    } else {
+                                        // First time — create token with deterministic ID
+                                        const newToken = characterToToken(
+                                            character,
+                                            getActiveMapKey(),
+                                            half,
+                                            half
+                                        )
+                                        newToken.id = edgerunnerTokenId
+                                        newToken.name = charDisplayName
+                                        db.tokens.add(newToken)
+                                        setTokens((prev) => [...prev, newToken])
+                                        draggedEdgerunnerIdRef.current = edgerunnerTokenId
+                                    }
+
+                                    e.dataTransfer.effectAllowed = 'move'
+                                    e.dataTransfer.setData(
+                                        'application/json',
+                                        JSON.stringify({ id: edgerunnerTokenId })
+                                    )
+
+                                    // Drag preview
+                                    const avatarElement =
+                                        e.currentTarget.querySelector('img')
+                                    if (avatarElement) {
+                                        const dragPreview =
+                                            document.createElement('div')
+                                        dragPreview.style.position = 'absolute'
+                                        dragPreview.style.top = '-1000px'
+                                        dragPreview.style.left = '-1000px'
+                                        dragPreview.style.width = '50px'
+                                        dragPreview.style.height = '50px'
+                                        dragPreview.style.borderRadius = '50%'
+                                        dragPreview.style.overflow = 'hidden'
+                                        dragPreview.style.backgroundColor =
+                                            pixiToCss(tokenColor)
+
+                                        const imgClone =
+                                            avatarElement.cloneNode(
+                                                true
+                                            ) as HTMLElement
+                                        imgClone.style.width = '100%'
+                                        imgClone.style.height = '100%'
+                                        if ('objectFit' in imgClone.style) {
+                                            ;(
+                                                imgClone.style as {
+                                                    objectFit: string
+                                                }
+                                            ).objectFit = 'cover'
+                                        }
+                                        dragPreview.appendChild(imgClone)
+
+                                        document.body.appendChild(dragPreview)
+                                        e.dataTransfer.setDragImage(
+                                            dragPreview,
+                                            25,
+                                            25
+                                        )
+                                        setTimeout(() => {
+                                            document.body.removeChild(
+                                                dragPreview
+                                            )
+                                        }, 0)
+                                    } else {
+                                        const dragPreview =
+                                            document.createElement('div')
+                                        dragPreview.style.position = 'absolute'
+                                        dragPreview.style.top = '-1000px'
+                                        dragPreview.style.left = '-1000px'
+                                        dragPreview.style.width = '50px'
+                                        dragPreview.style.height = '50px'
+                                        dragPreview.style.borderRadius = '50%'
+                                        dragPreview.style.backgroundColor =
+                                            pixiToCss(tokenColor)
+                                        dragPreview.style.display = 'flex'
+                                        dragPreview.style.alignItems = 'center'
+                                        dragPreview.style.justifyContent =
+                                            'center'
+                                        dragPreview.style.fontSize = '9px'
+                                        dragPreview.style.fontWeight = 'bold'
+                                        dragPreview.style.color = '#fff'
+                                        dragPreview.style.textShadow =
+                                            '0 0 4px rgba(0,0,0,0.8)'
+                                        dragPreview.style.textAlign = 'center'
+                                        dragPreview.style.padding = '2px'
+                                        dragPreview.style.wordBreak =
+                                            'break-word'
+                                        dragPreview.textContent =
+                                            charDisplayName
+
+                                        document.body.appendChild(dragPreview)
+                                        e.dataTransfer.setDragImage(
+                                            dragPreview,
+                                            25,
+                                            25
+                                        )
+                                        setTimeout(() => {
+                                            document.body.removeChild(
+                                                dragPreview
+                                            )
+                                        }, 0)
+                                    }
+                                }}
+                                onDragEnd={(e) => {
+                                    const id = draggedEdgerunnerIdRef.current
+                                    if (
+                                        e.dataTransfer.dropEffect === 'none' &&
+                                        id
+                                    ) {
+                                        // Drag cancelled — remove the token we pre-created
+                                        db.tokens.delete(id)
+                                        setTokens((prev) =>
+                                            prev.filter((t) => t.id !== id)
+                                        )
+                                    }
+                                    draggedEdgerunnerIdRef.current = null
+                                }}
+                                onClick={() =>
+                                    setOpenEdgerunnerId(character.id)
+                                }
+                                sx={{
+                                    width: '100%',
+                                    height: '40px',
+                                    background: readerMode
+                                        ? `linear-gradient(0deg, ${colors.blues.dark}, ${colors.blues.default}90)`
+                                        : `linear-gradient(0deg, ${colors.neons.cyan.default}30, transparent)`,
+                                    borderRadius: '6px',
+                                    p: 1,
+                                    cursor: 'grab',
+                                    justifyContent: 'space-between',
+                                    '&:hover': {
+                                        backgroundColor: readerMode
+                                            ? colors.blues.default
+                                            : 'rgba(0, 0, 40, 0.6)',
+                                        boxShadow: `0 0 8px ${colors.neons.cyan.default}80`,
+                                        '&::after': {
+                                            opacity: 0.8,
+                                            height: '100%',
+                                        },
+                                    },
+                                    '&:active': {
+                                        cursor: 'grabbing',
+                                        opacity: 0.5,
+                                    },
+                                }}
+                            >
+                                <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    alignItems="center"
+                                >
+                                    <Avatar
+                                        sx={{
+                                            width: 28,
+                                            height: 28,
+                                            bgcolor: pixiToCss(tokenColor),
+                                            fontSize: '0.75rem',
+                                        }}
+                                        src={resolveImageUrl(
+                                            character.tokenImageId
+                                        )}
+                                    >
+                                        {charDisplayName
+                                            .charAt(0)
+                                            .toUpperCase()}
+                                    </Avatar>
+                                    <Typography
+                                        variant="body1"
+                                        sx={{
+                                            color: readerMode
+                                                ? colors.grays.gray900
+                                                : colors.neons.cyan.light,
+                                        }}
+                                    >
+                                        {charDisplayName}
+                                    </Typography>
+                                </Stack>
+                            </Stack>
+                        )
+                    })}
+                </AccordionDetails>
+            </Accordion>
+        )
+    }
+
     return (
         <>
             <Box
@@ -412,6 +675,8 @@ const TokenPanel = ({
                             {defaultTokens.length > 0 &&
                                 !isPlayerConnected &&
                                 renderAccordion(defaultTokens, t('combatSim.defaultTokens'), true)}
+                            {/* Edgerunners */}
+                            {renderEdgerunnerAccordion()}
                             {/* Map tokens */}
                             {tokens.length > 0 &&
                                 !isPlayerConnected &&

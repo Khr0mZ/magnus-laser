@@ -243,6 +243,7 @@ const CharacterCreatorView = () => {
             damage: shopWeapon.damage,
             rof: shopWeapon.rof,
             cost: shopWeapon.cost,
+            skill: shopWeapon.skill,
         }
         setCharacter({
             ...character,
@@ -271,6 +272,7 @@ const CharacterCreatorView = () => {
             sp: shopArmor.sp,
             penalty: shopArmor.penalty,
             cost: shopArmor.cost,
+            location: shopArmor.location,
         }
         setCharacter({
             ...character,

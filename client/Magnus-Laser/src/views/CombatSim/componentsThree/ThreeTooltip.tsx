@@ -112,7 +112,7 @@ export function useThreeTooltip(
 
         const tooltip = tooltipRef.current
 
-        const handleMouseMove = (e: MouseEvent) => {
+        const handleMouseMove = (e: globalThis.MouseEvent) => {
             // Hide during special modes
             if (isWallMode || isMeasuring || blastDrawMode) {
                 tooltip.style.display = 'none'

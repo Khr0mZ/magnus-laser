@@ -2,12 +2,16 @@ import AccountBalance from '@mui/icons-material/AccountBalance'
 import Assignment from '@mui/icons-material/Assignment'
 import AutoFixHigh from '@mui/icons-material/AutoFixHigh'
 import Casino from '@mui/icons-material/Casino'
+import Forum from '@mui/icons-material/Forum'
 import Groups from '@mui/icons-material/Groups'
 import Inventory from '@mui/icons-material/Inventory'
 import Person from '@mui/icons-material/Person'
 import Psychology from '@mui/icons-material/Psychology'
+import Search from '@mui/icons-material/Search'
+import Stars from '@mui/icons-material/Stars'
 import Timeline from '@mui/icons-material/Timeline'
 import TrendingUp from '@mui/icons-material/TrendingUp'
+import RecentActors from '@mui/icons-material/RecentActors'
 import Work from '@mui/icons-material/Work'
 import WorkOutline from '@mui/icons-material/WorkOutline'
 import {
@@ -69,6 +73,30 @@ const soloPlayTools: ToolItem[] = [
         icon: <Casino />,
         labelKey: 'gmTools.randomTables',
         color: colors.neons.green.default,
+    },
+    {
+        id: 'investigation',
+        icon: <Search />,
+        labelKey: 'gmTools.investigation',
+        color: colors.neons.green.default,
+    },
+    {
+        id: 'socialChallenge',
+        icon: <Forum />,
+        labelKey: 'gmTools.socialChallenge',
+        color: colors.neons.purple.default,
+    },
+    {
+        id: 'npcTracker',
+        icon: <RecentActors />,
+        labelKey: 'gmTools.npcTracker',
+        color: colors.neons.orange.default,
+    },
+    {
+        id: 'ipTracker',
+        icon: <Stars />,
+        labelKey: 'gmTools.ipTracker',
+        color: colors.neons.blue.default,
     },
 ]
 
