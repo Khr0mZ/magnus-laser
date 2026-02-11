@@ -2,14 +2,14 @@ import { TableColumn } from './types'
 
 // Module types
 export enum ModuleTypes {
-    // GANG = 'GANG',
-    // BUILDING = 'BUILDING',
-    // FIXER_JOB = 'FIXER_JOB',
-    // BOUNTY = 'BOUNTY',
-    // CLUB = 'CLUB',
-    // ITEM = 'ITEM',
-    // CHARACTER = 'CHARACTER',
-    // CHARACTER_CREATOR = 'CHARACTER_CREATOR',
+    GANG = 'GANG',
+    BUILDING = 'BUILDING',
+    FIXER_JOB = 'FIXER_JOB',
+    BOUNTY = 'BOUNTY',
+    CLUB = 'CLUB',
+    ITEM = 'ITEM',
+    CHARACTER = 'CHARACTER',
+    CHARACTER_CREATOR = 'CHARACTER_CREATOR',
     EDGERUNNERS = 'EDGERUNNERS',
     MAP = 'MAP',
     SETTINGS = 'SETTINGS',
