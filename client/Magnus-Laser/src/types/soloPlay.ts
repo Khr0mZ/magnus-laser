@@ -58,6 +58,8 @@ export interface SoloPlayClock {
     event: string
     // Difficulty variation
     scaleUp: boolean // If true, remove dice on 1 OR 6 (harder)
+    // Devil's Luck: remove a d6 to refresh an Edgerunner's Luck Pool (once per clock)
+    devilsLuckUsed: boolean
     // Roll history
     rollHistory: ClockRollResult[]
     // State
@@ -352,6 +354,17 @@ export interface SceneCheck {
     checkNumber: number
     description: string
     success: boolean
+}
+
+// === CUSTOM RANDOM THINGS TABLE ===
+// Based on PDF pages 85-89
+
+export interface CustomRandomTable {
+    id: string
+    name: string
+    size: number // 3-20
+    items: string[] // length === size
+    createdAt: number
 }
 
 // === RANDOM TABLES TYPES ===

@@ -2,6 +2,8 @@ import AccountBalance from '@mui/icons-material/AccountBalance'
 import Assignment from '@mui/icons-material/Assignment'
 import AutoFixHigh from '@mui/icons-material/AutoFixHigh'
 import Casino from '@mui/icons-material/Casino'
+import ContactPage from '@mui/icons-material/ContactPage'
+import FormatListNumbered from '@mui/icons-material/FormatListNumbered'
 import Forum from '@mui/icons-material/Forum'
 import Groups from '@mui/icons-material/Groups'
 import Inventory from '@mui/icons-material/Inventory'
@@ -9,6 +11,7 @@ import Person from '@mui/icons-material/Person'
 import Psychology from '@mui/icons-material/Psychology'
 import Search from '@mui/icons-material/Search'
 import Stars from '@mui/icons-material/Stars'
+import Theaters from '@mui/icons-material/Theaters'
 import Timeline from '@mui/icons-material/Timeline'
 import TrendingUp from '@mui/icons-material/TrendingUp'
 import RecentActors from '@mui/icons-material/RecentActors'
@@ -97,6 +100,24 @@ const soloPlayTools: ToolItem[] = [
         icon: <Stars />,
         labelKey: 'gmTools.ipTracker',
         color: colors.neons.blue.default,
+    },
+    {
+        id: 'sceneTracker',
+        icon: <Theaters />,
+        labelKey: 'gmTools.sceneTracker',
+        color: colors.neons.blue.default,
+    },
+    {
+        id: 'npcForms',
+        icon: <ContactPage />,
+        labelKey: 'gmTools.npcForms',
+        color: colors.neons.cyan.default,
+    },
+    {
+        id: 'randomThings',
+        icon: <FormatListNumbered />,
+        labelKey: 'gmTools.randomThings',
+        color: colors.neons.pink.default,
     },
 ]
 

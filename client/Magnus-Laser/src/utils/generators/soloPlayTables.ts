@@ -651,3 +651,44 @@ export const getRandomFromWeightedArray = <T extends { type: string; weight: num
     }
     return arr[arr.length - 1].type
 }
+
+// === RANDOM THINGS (3-20) PROBABILITY WEIGHTS ===
+// Based on PDF pages 85-89
+
+export const RANDOM_THINGS_WEIGHTS: Record<number, number[]> = {
+    3: [33.34, 33.33, 33.33],
+    4: [25, 25, 25, 25],
+    5: [16.67, 16.67, 33.33, 16.67, 16.66],
+    6: [16.67, 16.67, 16.67, 16.67, 16.66, 16.66],
+    7: [20, 10, 10, 10, 20, 10, 20],
+    8: [20, 10, 10, 10, 10, 10, 10, 20],
+    9: [10, 10, 10, 10, 20, 10, 10, 10, 10],
+    10: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    11: [2.78, 5.56, 8.33, 11.11, 13.89, 16.67, 13.89, 11.11, 8.33, 5.56, 2.78],
+    12: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 20],
+    13: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 15, 15],
+    14: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 11, 11],
+    15: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 9, 8, 8],
+    16: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 7, 7, 7],
+    17: [1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 8, 7, 7, 6, 6, 6, 6],
+    18: [1, 2, 3, 4, 5, 6, 7, 8, 8, 8, 7, 7, 6, 6, 5, 5, 6, 6],
+    19: [1, 2, 3, 4, 5, 6, 7, 7, 7, 7, 7, 6, 6, 5, 5, 5, 5, 6, 6],
+    20: [1, 2, 3, 4, 5, 6, 6, 6, 6, 7, 7, 6, 6, 5, 5, 5, 5, 5, 5, 5],
+}
+
+/**
+ * Roll on a custom Random Things table using weighted probability.
+ * Returns 0-based index of the selected item.
+ */
+export const rollRandomThings = (size: number): number => {
+    const weights = RANDOM_THINGS_WEIGHTS[size]
+    if (!weights) return Math.floor(Math.random() * size)
+
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0)
+    let random = Math.random() * totalWeight
+    for (let i = 0; i < weights.length; i++) {
+        random -= weights[i]
+        if (random <= 0) return i
+    }
+    return weights.length - 1
+}

@@ -38,23 +38,31 @@ import {
     nightCityDistrictsTable,
 } from '../../../utils/generators/soloPlayTables'
 import {
+    generateAdvertisement,
+    generateApartment,
+    generateBar,
     generateBlackIce,
+    generateCargoContainer,
+    generateCorporateConapt,
     generateCorpseLoot,
+    generateCubeHotel,
     generateFashion,
     generateFashionware,
     generateFirearm,
-    generateFlavor,
     generateHandle,
+    generateHotspot,
+    generateKibbleFlavor,
     generateMissionItem,
     generateNPCByRole,
-    generatePlaceToLive,
     generateRadioStation,
     generateRandomEncounter,
     generateRandomName,
     generateRelationship,
-    generateSensoryDetail,
+    generateSight,
+    generateSmell,
+    generateSound,
+    generateTritiFizz,
     generateTVShow,
-    generateVenue,
     generateVisitor,
     type EncounterTime,
     type EncounterZone,
@@ -101,19 +109,19 @@ const wrapNPCByRole = () => {
     return { role: r.role, name: r.npc.name, notes: r.npc.notes }
 }
 
-const wrapPlaceToLive = () => {
-    const r = generatePlaceToLive()
-    return { type: r.type, name: r.place.name, description: r.place.description }
+const wrapVenue = (gen: () => { name: string; description: string }) => () => {
+    const r = gen()
+    return { name: r.name, description: r.description }
 }
 
-const wrapVenue = () => {
-    const r = generateVenue()
-    return { type: r.type, name: r.venue.name, description: r.venue.description }
+const wrapPlace = (gen: () => { name: string; description: string }) => () => {
+    const r = gen()
+    return { name: r.name, description: r.description }
 }
 
-const wrapFlavor = () => {
-    const r = generateFlavor()
-    return { type: r.type, flavor: r.flavor.flavor, description: r.flavor.description }
+const wrapFlavorItem = (gen: () => { flavor: string; description: string }) => () => {
+    const r = gen()
+    return { flavor: r.flavor, description: r.description }
 }
 
 // === Categories with generators ===
@@ -148,7 +156,9 @@ const categories: GeneratorCategory[] = [
         key: 'sensory',
         color: colors.neons.purple.default,
         generators: [
-            { key: 'sensory', color: colors.neons.purple.default, generator: generateSensoryDetail },
+            { key: 'sight', color: colors.neons.purple.default, generator: generateSight },
+            { key: 'sound', color: colors.neons.blue.default, generator: generateSound },
+            { key: 'smell', color: colors.neons.green.default, generator: generateSmell },
         ],
     },
     {
@@ -166,8 +176,12 @@ const categories: GeneratorCategory[] = [
         color: colors.neons.blue.default,
         generators: [
             { key: 'district', color: colors.neons.blue.default, generator: () => getRandomFromArray(nightCityDistrictsTable) },
-            { key: 'venue', color: colors.neons.green.default, generator: wrapVenue },
-            { key: 'placeToLive', color: colors.neons.yellow.default, generator: wrapPlaceToLive },
+            { key: 'hotspot', color: colors.neons.green.default, generator: wrapVenue(generateHotspot) },
+            { key: 'bar', color: colors.neons.orange.default, generator: wrapVenue(generateBar) },
+            { key: 'cubeHotel', color: colors.neons.yellow.default, generator: wrapPlace(generateCubeHotel) },
+            { key: 'cargoContainer', color: colors.neons.cyan.default, generator: wrapPlace(generateCargoContainer) },
+            { key: 'corporateConapt', color: colors.neons.purple.default, generator: wrapPlace(generateCorporateConapt) },
+            { key: 'apartment', color: colors.neons.pink.default, generator: wrapPlace(generateApartment) },
         ],
     },
     {
@@ -187,7 +201,8 @@ const categories: GeneratorCategory[] = [
             { key: 'fashionware', color: colors.neons.purple.default, generator: generateFashionware },
             { key: 'blackIce', color: colors.neons.red.default, generator: generateBlackIce },
             { key: 'firearm', color: colors.neons.orange.default, generator: generateFirearm },
-            { key: 'flavor', color: colors.neons.yellow.default, generator: wrapFlavor },
+            { key: 'kibbleFlavor', color: colors.neons.yellow.default, generator: wrapFlavorItem(generateKibbleFlavor) },
+            { key: 'tritiFizz', color: colors.neons.green.default, generator: wrapFlavorItem(generateTritiFizz) },
         ],
     },
     {
@@ -196,6 +211,7 @@ const categories: GeneratorCategory[] = [
         generators: [
             { key: 'radioStation', color: colors.neons.cyan.default, generator: generateRadioStation },
             { key: 'tvShow', color: colors.neons.blue.default, generator: generateTVShow },
+            { key: 'advertisement', color: colors.neons.yellow.default, generator: generateAdvertisement },
         ],
     },
     {
@@ -211,7 +227,10 @@ const categories: GeneratorCategory[] = [
         key: 'mission',
         color: colors.neons.green.default,
         generators: [
-            { key: 'missionItem', color: colors.neons.green.default, generator: generateMissionItem },
+            { key: 'missionItemCorporate', color: colors.neons.cyan.default, generator: () => generateMissionItem('corporate') },
+            { key: 'missionItemModerate', color: colors.neons.blue.default, generator: () => generateMissionItem('moderate') },
+            { key: 'missionItemStreet', color: colors.neons.orange.default, generator: () => generateMissionItem('street') },
+            { key: 'missionItemNomad', color: colors.neons.yellow.default, generator: () => generateMissionItem('nomad') },
         ],
     },
 ]

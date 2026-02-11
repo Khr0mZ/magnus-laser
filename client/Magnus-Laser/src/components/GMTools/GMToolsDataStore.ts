@@ -4,11 +4,15 @@ import type { Character } from '../../types/characterCreator'
 import type {
     BeatChartEntry,
     ClockRollResult,
+    CustomRandomTable,
     InvestigationSession,
     IPTracker,
+    NPCFormComplex,
+    NPCFormSimple,
     NPCTrackerEntry,
     OpenQuestionResult,
     OracleResult,
+    SceneEntry,
     SocialChallengeSession,
     SoloMission,
     SoloPlayClock,
@@ -47,6 +51,7 @@ interface GMToolsDataState {
     updateClock: (id: string, updates: Partial<SoloPlayClock>) => void
     rollClockDice: (id: string) => { diceRolled: number[]; diceRemoved: number; isComplete: boolean } | null
     addDiceBack: (id: string) => void
+    useDevilsLuck: (id: string) => void
     resetClock: (id: string) => void
     deleteClock: (id: string) => void
     clearClocks: () => void
@@ -104,6 +109,24 @@ interface GMToolsDataState {
     addIPTracker: (tracker: IPTracker) => void
     updateIPTracker: (id: string, updates: Partial<IPTracker>) => void
     deleteIPTracker: (id: string) => void
+
+    // Scene Tracker
+    scenes: SceneEntry[]
+    addScene: (scene: SceneEntry) => void
+    updateScene: (id: string, updates: Partial<SceneEntry>) => void
+    deleteScene: (id: string) => void
+
+    // NPC Forms
+    npcForms: (NPCFormSimple | NPCFormComplex)[]
+    addNPCForm: (npc: NPCFormSimple | NPCFormComplex) => void
+    updateNPCForm: (id: string, updates: Partial<NPCFormSimple | NPCFormComplex>) => void
+    deleteNPCForm: (id: string) => void
+
+    // Custom Random Tables (Random Things 3-20)
+    customTables: CustomRandomTable[]
+    addCustomTable: (table: CustomRandomTable) => void
+    updateCustomTable: (id: string, updates: Partial<CustomRandomTable>) => void
+    deleteCustomTable: (id: string) => void
 
     // Edgerunner dialog (opened from CombatSim TokenPanel)
     openEdgerunnerId: string | null
@@ -207,6 +230,20 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                             : clock
                     ),
                 })),
+            useDevilsLuck: (id) =>
+                set((state) => ({
+                    clocks: state.clocks.map((clock) =>
+                        clock.id === id && !clock.devilsLuckUsed && clock.remainingDice > 0 && !clock.isComplete
+                            ? {
+                                  ...clock,
+                                  remainingDice: clock.remainingDice - 1,
+                                  devilsLuckUsed: true,
+                                  isComplete: clock.remainingDice - 1 <= 0,
+                                  completedAt: clock.remainingDice - 1 <= 0 ? Date.now() : clock.completedAt,
+                              }
+                            : clock
+                    ),
+                })),
             resetClock: (id) =>
                 set((state) => ({
                     clocks: state.clocks.map((clock) =>
@@ -217,6 +254,7 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                                   rollHistory: [],
                                   isComplete: false,
                                   completedAt: undefined,
+                                  devilsLuckUsed: false,
                               }
                             : clock
                     ),
@@ -377,13 +415,46 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                     ipTrackers: state.ipTrackers.filter((t) => t.id !== id),
                 })),
 
+            // Scene Tracker
+            scenes: [],
+            addScene: (scene) =>
+                set((state) => ({ scenes: [...state.scenes, scene] })),
+            updateScene: (id, updates) =>
+                set((state) => ({
+                    scenes: state.scenes.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+                })),
+            deleteScene: (id) =>
+                set((state) => ({ scenes: state.scenes.filter((s) => s.id !== id) })),
+
+            // NPC Forms
+            npcForms: [],
+            addNPCForm: (npc) =>
+                set((state) => ({ npcForms: [...state.npcForms, npc] })),
+            updateNPCForm: (id, updates) =>
+                set((state) => ({
+                    npcForms: state.npcForms.map((n) => (n.id === id ? { ...n, ...updates } : n)),
+                })),
+            deleteNPCForm: (id) =>
+                set((state) => ({ npcForms: state.npcForms.filter((n) => n.id !== id) })),
+
+            // Custom Random Tables
+            customTables: [],
+            addCustomTable: (table) =>
+                set((state) => ({ customTables: [...state.customTables, table] })),
+            updateCustomTable: (id, updates) =>
+                set((state) => ({
+                    customTables: state.customTables.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+                })),
+            deleteCustomTable: (id) =>
+                set((state) => ({ customTables: state.customTables.filter((t) => t.id !== id) })),
+
             // Edgerunner dialog
             openEdgerunnerId: null,
             setOpenEdgerunnerId: (id) => set({ openEdgerunnerId: id }),
         }),
         {
             name: 'gm-tools-data',
-            version: 2,
+            version: 3,
             migrate: (persistedState: unknown, version: number) => {
                 const state = persistedState as Record<string, unknown>
                 if (version === 0) {
@@ -440,6 +511,16 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                             if (!char.tokenColor) char.tokenColor = 0x00ff8b
                             return char
                         })
+                    }
+                }
+                if (version < 3) {
+                    // Backfill devilsLuckUsed on existing clocks
+                    const clocks = state.clocks as Array<Record<string, unknown>> | undefined
+                    if (clocks) {
+                        state.clocks = clocks.map((clock) => ({
+                            ...clock,
+                            devilsLuckUsed: clock.devilsLuckUsed ?? false,
+                        }))
                     }
                 }
                 return state as unknown as GMToolsDataState

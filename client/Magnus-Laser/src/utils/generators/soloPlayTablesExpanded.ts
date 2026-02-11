@@ -1275,3 +1275,57 @@ export const generateBlackIce = (): string => getRandomFromArray(blackIceTable)
 
 /** Roll a random firearm type */
 export const generateFirearm = (): string => getRandomFromArray(firearmsTable)
+
+// === Individual table generators (split from combined generators) ===
+
+/** Roll a random sight */
+export const generateSight = (): string => getRandomFromArray(sightsTable)
+
+/** Roll a random sound */
+export const generateSound = (): string => getRandomFromArray(soundsTable)
+
+/** Roll a random smell */
+export const generateSmell = (): string => getRandomFromArray(smellsTable)
+
+/** Roll a random hotspot */
+export const generateHotspot = (): { name: string; description: string } => getRandomFromArray(nightCityHotspotsTable)
+
+/** Roll a random bar */
+export const generateBar = (): { name: string; description: string } => getRandomFromArray(nightCityBarsTable)
+
+/** Roll a random cube hotel */
+export const generateCubeHotel = (): PlaceToLive => getRandomFromArray(cubeHotelsTable)
+
+/** Roll a random cargo container community */
+export const generateCargoContainer = (): PlaceToLive => getRandomFromArray(cargoContainersTable)
+
+/** Roll a random corporate conapt */
+export const generateCorporateConapt = (): PlaceToLive => getRandomFromArray(corporateConaptsTable)
+
+/** Roll a random apartment building */
+export const generateApartment = (): PlaceToLive => getRandomFromArray(apartmentBuildingsTable)
+
+/** Roll a random kibble flavor */
+export const generateKibbleFlavor = (): FlavorItem => getRandomFromArray(kibbleFlavorsTable)
+
+/** Roll a random triti-fizz flavor */
+export const generateTritiFizz = (): FlavorItem => getRandomFromArray(tritiFizzTable)
+
+// === ADVERTISEMENTS TABLE (1d10) - PDF Page 64 ===
+// The book contains image-based ads; these are faithful text recreations in Cyberpunk RED style
+
+export const advertisementsTable: { product: string; ad: string }[] = [
+    { product: 'Kibble SportFlakes', ad: "Start your morning like a champion! Kibble SportFlakes — fueling Night City's finest athletes since 2035. Now with 40% more protein paste!" },
+    { product: 'Triti-Fizz Lightning', ad: 'A TINGLE ON YOUR TASTE BUDS! Triti-Fizz Lightning — the official drink of the Night City Heat. Crack one open after a long night in the Zone.' },
+    { product: 'Trauma Team Platinum', ad: 'When seconds matter, Trauma Team delivers. Upgrade to Platinum today. Because you deserve to survive. Terms and conditions apply.' },
+    { product: 'No/Brainer App', ad: 'Download No/Brainer — the app that thinks so you do not have to. Powered by GunMart. Available on all Agent devices. Your brain called. It wants a break.' },
+    { product: 'Rocklin Augmentics', ad: "Chrome never looked so good. Rocklin Augmentics — where style meets cyberware. Book your consultation today. You're worth the upgrade." },
+    { product: 'Oasis Convenience', ad: 'Open 24/7, 365. Oasis — everything you need, every corner you turn. Affordable snacks, ammo, and first-aid kits. Life in Night City just got easier.' },
+    { product: 'Segotari GameDeck', ad: 'ESCAPE REALITY. The new Segotari GameDeck immerses you in worlds beyond the smog. Pre-order now and get a free braindance sampler!' },
+    { product: 'REO Meatwagon', ad: 'Flatlining? REO Meatwagon — budget paramedics for budget prices. We show up. Usually. Plans starting at 50eb/month.' },
+    { product: 'SlamDance Personal Defense', ad: 'SlamDance Inc presents the Hammerhead — a compact, concealable weapon for the discerning citizen. Because in Night City, trouble finds you first.' },
+    { product: 'Continental Brands Maple Syrup', ad: "The ORIGINAL synthetic maple syrup. Continental Brands — making mornings tolerable since 2020. Pairs well with Kibble Extra Fluffy Pancake. It's almost real!" },
+]
+
+/** Roll a random advertisement */
+export const generateAdvertisement = (): { product: string; ad: string } => getRandomFromArray(advertisementsTable)

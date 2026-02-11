@@ -8,9 +8,12 @@ import GeneratorTool from './tools/GeneratorTool'
 import InvestigationTool from './tools/InvestigationTool'
 import IPTrackingTool from './tools/IPTrackingTool'
 import MissionBuilderTool from './tools/MissionBuilderTool'
+import NPCFormsTool from './tools/NPCFormsTool'
 import NPCTrackerTool from './tools/NPCTrackerTool'
 import OracleTool from './tools/OracleTool'
 import RandomTablesTool from './tools/RandomTablesTool'
+import RandomThingsTool from './tools/RandomThingsTool'
+import SceneTrackerTool from './tools/SceneTrackerTool'
 import SocialChallengeTool from './tools/SocialChallengeTool'
 
 interface GMToolsContentProps {
@@ -52,6 +55,12 @@ const GMToolsContent = ({ activeTool }: GMToolsContentProps) => {
                 return <GeneratorTool type="item" />
             case 'contactGenerator':
                 return <GeneratorTool type="contact" />
+            case 'sceneTracker':
+                return <SceneTrackerTool />
+            case 'npcForms':
+                return <NPCFormsTool />
+            case 'randomThings':
+                return <RandomThingsTool />
             default:
                 return (
                     <Box

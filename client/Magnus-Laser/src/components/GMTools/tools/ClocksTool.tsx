@@ -1,4 +1,5 @@
 import Add from '@mui/icons-material/Add'
+import AutoFixHigh from '@mui/icons-material/AutoFixHigh'
 import Casino from '@mui/icons-material/Casino'
 import DeleteOutline from '@mui/icons-material/DeleteOutline'
 import Edit from '@mui/icons-material/Edit'
@@ -41,7 +42,7 @@ const ClocksTool = () => {
     const { readerMode } = useUserPreferences()
 
     // Persisted state
-    const { clocks, addClock, updateClock, rollClockDice, addDiceBack, resetClock, deleteClock } =
+    const { clocks, addClock, updateClock, rollClockDice, addDiceBack, useDevilsLuck, resetClock, deleteClock } =
         useGMToolsDataStore()
 
     // Local state for new clock form
@@ -79,6 +80,7 @@ const ClocksTool = () => {
             trigger: clockTrigger || 'Each round / When a check fails',
             event: clockEvent || 'Event triggers!',
             scaleUp,
+            devilsLuckUsed: false,
             rollHistory: [],
             isComplete: false,
             createdAt: Date.now(),
@@ -356,6 +358,19 @@ const ClocksTool = () => {
                                                 }}
                                             />
                                         )}
+                                        {clock.devilsLuckUsed && (
+                                            <Chip
+                                                label={t('soloPlay.clocks.devilsLuckUsed')}
+                                                size="small"
+                                                sx={{
+                                                    mt: 0.5,
+                                                    backgroundColor: colors.neons.purple.default,
+                                                    color: '#fff',
+                                                    fontSize: '0.65rem',
+                                                    height: 18,
+                                                }}
+                                            />
+                                        )}
                                     </Box>
                                     <Stack direction="row" spacing={0.5}>
                                         {/* Roll Dice Button */}
@@ -406,6 +421,34 @@ const ClocksTool = () => {
                                                     }}
                                                 >
                                                     <AddCircleOutline fontSize="small" />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        {/* Devil's Luck: remove a d6 to refresh Luck Pool (once per clock) */}
+                                        <Tooltip title={t('soloPlay.clocks.devilsLuck')}>
+                                            <span>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => useDevilsLuck(clock.id)}
+                                                    disabled={
+                                                        clock.devilsLuckUsed ||
+                                                        clock.remainingDice <= 0 ||
+                                                        clock.isComplete
+                                                    }
+                                                    sx={{
+                                                        color: colors.neons.purple.default,
+                                                        border: `1px solid ${colors.neons.purple.default}40`,
+                                                        borderRadius: 0,
+                                                        '&:hover': {
+                                                            backgroundColor: `${colors.neons.purple.default}20`,
+                                                            boxShadow: `0 0 10px ${colors.neons.purple.default}40`,
+                                                        },
+                                                        '&.Mui-disabled': {
+                                                            borderColor: 'rgba(255,255,255,0.1)',
+                                                        },
+                                                    }}
+                                                >
+                                                    <AutoFixHigh fontSize="small" />
                                                 </IconButton>
                                             </span>
                                         </Tooltip>

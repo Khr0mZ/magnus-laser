@@ -16,6 +16,9 @@ export type GMToolType =
     | 'bountyGenerator'
     | 'itemGenerator'
     | 'contactGenerator'
+    | 'sceneTracker'
+    | 'npcForms'
+    | 'randomThings'
     | null
 
 interface GMToolsState {
