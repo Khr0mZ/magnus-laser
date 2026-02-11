@@ -27,7 +27,6 @@ try {
         .sort()
 
     fs.writeFileSync(INDEX_FILE, JSON.stringify(files, null, 2))
-    console.log(`[generate-token-model-index] Wrote ${files.length} entries to ${INDEX_FILE}`)
 } catch (err) {
     console.error('[generate-token-model-index] Failed to generate index:', err)
     process.exit(1)

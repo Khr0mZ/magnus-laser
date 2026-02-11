@@ -169,15 +169,10 @@ const CombatSimView = () => {
         pixiSetHostReady,
         pixiHostReady,
         pixiSetTokenContextMenuAnchor,
-        pixiTokenContextMenuAnchor,
         pixiSetMapContextMenuAnchor,
-        pixiMapContextMenuAnchor,
         pixiSetSelectedTokenId,
-        pixiSelectedTokenId,
         pixiSetBlastContextMenuAnchor,
-        pixiBlastContextMenuAnchor,
         pixiSetSelectedBlastId,
-        pixiSelectedBlastId,
         pixiOnTokenDrop,
         pixiOnWallDraw,
         pixiOnBindPendingControls,
@@ -392,15 +387,10 @@ const CombatSimView = () => {
                             pixiOnPasteBlast={pixiOnPasteBlast}
                             tokenClipboard={tokenClipboard}
                             blastClipboard={blastClipboard}
-                            pixiTokenContextMenuAnchor={pixiTokenContextMenuAnchor}
                             pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
-                            pixiMapContextMenuAnchor={pixiMapContextMenuAnchor}
                             pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
-                            pixiBlastContextMenuAnchor={pixiBlastContextMenuAnchor}
                             pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
-                            pixiSelectedTokenId={pixiSelectedTokenId}
                             pixiSetSelectedTokenId={pixiSetSelectedTokenId}
-                            pixiSelectedBlastId={pixiSelectedBlastId}
                             pixiSetSelectedBlastId={pixiSetSelectedBlastId}
                             onBlastCopy={onBlastCopy}
                             onBlastCut={onBlastCut}
@@ -434,15 +424,10 @@ const CombatSimView = () => {
                         pixiSidePanelWidth={pixiSidePanelWidth}
                         pixiHostReady={pixiHostReady}
                         pixiSetHostReady={pixiSetHostReady}
-                        pixiTokenContextMenuAnchor={pixiTokenContextMenuAnchor}
                         pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
-                        pixiMapContextMenuAnchor={pixiMapContextMenuAnchor}
                         pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
-                        pixiSelectedTokenId={pixiSelectedTokenId}
                         pixiSetSelectedTokenId={pixiSetSelectedTokenId}
-                        pixiBlastContextMenuAnchor={pixiBlastContextMenuAnchor}
                         pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
-                        pixiSelectedBlastId={pixiSelectedBlastId}
                         pixiSetSelectedBlastId={pixiSetSelectedBlastId}
                         mapTexture={mapTexture}
                         mapKey={getActiveMapKey()}

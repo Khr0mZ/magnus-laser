@@ -5,17 +5,19 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import type { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { useSession } from '../../../state/sessionStore'
-import {
-    segmentHitsCircleBoundary,
-    segmentIntersectsRectangle,
-    segmentsIntersect,
-} from '../utils/geometryUtils'
+import { segmentHitsCircleBoundary, segmentIntersectsRectangle, segmentsIntersect } from '../utils/geometryUtils'
 import { snapToNinePoints } from '../utils/gridUtils'
 import type { Blast, BlastType, Image as ImageData, Token, Wall, WallShape } from '../utils/types'
 import { useThreeCallbackRefs } from './hooks/useThreeCallbackRefs'
 import { useThreeClipboard } from './hooks/useThreeClipboard'
 import { useThreeContextMenus } from './hooks/useThreeContextMenus'
-import { createFallbackBlastModel, createFallbackTokenModel, getAnimationClips, loadModel, loadTexture } from './loaders/ModelLoader'
+import {
+    createFallbackBlastModel,
+    createFallbackTokenModel,
+    getAnimationClips,
+    loadModel,
+    loadTexture,
+} from './loaders/ModelLoader'
 import {
     createActiveTokenMaterial,
     createCyberpunkBlastMaterial,
@@ -261,8 +263,8 @@ const cloneGroupDualMesh = (source: THREE.Group): THREE.Group => {
                 child.material instanceof THREE.Material
                     ? child.material.clone()
                     : Array.isArray(child.material)
-                    ? child.material.map((m) => (m instanceof THREE.Material ? m.clone() : m))
-                    : child.material
+                      ? child.material.map((m) => (m instanceof THREE.Material ? m.clone() : m))
+                      : child.material
 
             // Create invisible baked proxy for raycasting
             const bakedMesh = new THREE.Mesh(bakedGeom, mat)
@@ -303,15 +305,19 @@ const computeMeshBoundingBox = (object: THREE.Object3D): THREE.Box3 | null => {
     object.updateMatrixWorld(true)
     object.traverse((child) => {
         // Skip invisible raycast proxy meshes created by cloneGroupDualMesh
-        if (child instanceof THREE.Mesh && !child.userData.isRaycastProxy) {
+        if (child instanceof THREE.Mesh && !child.userData.isRaycastProxy && !child.userData.isCollisionMesh) {
             if (child instanceof THREE.SkinnedMesh) {
                 // Use bone-aware bbox so sizing reflects actual skeleton pose, not bind pose
                 try {
                     THREE.SkinnedMesh.prototype.computeBoundingBox.call(child)
                     if (child.boundingBox) {
                         const childBox = child.boundingBox.clone().applyMatrix4(child.matrixWorld)
-                        if (!hasMesh) { box.copy(childBox); hasMesh = true }
-                        else { box.union(childBox) }
+                        if (!hasMesh) {
+                            box.copy(childBox)
+                            hasMesh = true
+                        } else {
+                            box.union(childBox)
+                        }
                     }
                 } catch {
                     // Fallback to static geometry bbox if bones are broken
@@ -320,8 +326,12 @@ const computeMeshBoundingBox = (object: THREE.Object3D): THREE.Box3 | null => {
                         if (!geom.boundingBox) geom.computeBoundingBox()
                         if (geom.boundingBox) {
                             const childBox = geom.boundingBox.clone().applyMatrix4(child.matrixWorld)
-                            if (!hasMesh) { box.copy(childBox); hasMesh = true }
-                            else { box.union(childBox) }
+                            if (!hasMesh) {
+                                box.copy(childBox)
+                                hasMesh = true
+                            } else {
+                                box.union(childBox)
+                            }
                         }
                     }
                 }
@@ -352,6 +362,65 @@ const safeBox = (object: THREE.Object3D, fallbackSize: number): THREE.Box3 => {
     if (box) return box
     const v = new THREE.Vector3(fallbackSize, fallbackSize, fallbackSize)
     return new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(0, 0, 0), v)
+}
+
+/** Dispose geometry and materials from a wall object (Mesh or Group) */
+const disposeWallObject = (wallObject: THREE.Mesh | THREE.Group) => {
+    if (wallObject instanceof THREE.Mesh) {
+        wallObject.geometry.dispose()
+        if (wallObject.material instanceof THREE.MeshStandardMaterial) {
+            wallObject.material.dispose()
+        }
+    } else if (wallObject instanceof THREE.Group) {
+        wallObject.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+                child.geometry.dispose()
+                if (child.material instanceof THREE.MeshStandardMaterial) {
+                    child.material.dispose()
+                }
+            }
+        })
+    }
+}
+
+/** Position a blast group: cone apex at (blast.x, blast.y), non-cone centered */
+const positionBlastGroup = (group: THREE.Group, blast: Blast) => {
+    if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
+        const baseDx = blast.x2 - blast.x
+        const baseDy = blast.y2 - blast.y
+        const length = Math.sqrt(baseDx * baseDx + baseDy * baseDy)
+        group.rotation.y = Math.atan2(baseDx, baseDy)
+        if (length > 0) {
+            const directionX = baseDx / length
+            const directionZ = baseDy / length
+            group.position.set(blast.x + directionX * length, 0, blast.y + directionZ * length)
+        } else {
+            group.position.set(blast.x, 0, blast.y)
+        }
+        group.updateMatrixWorld(true)
+        const bbox = new THREE.Box3().setFromObject(group)
+        group.position.y -= (bbox.max.y + bbox.min.y) / 2
+    } else {
+        group.position.set(blast.x, 0, blast.y)
+    }
+}
+
+/** Position a blast point light: cone at midpoint, non-cone at center */
+const positionBlastLight = (light: THREE.PointLight, blast: Blast) => {
+    if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
+        const baseDx = blast.x2 - blast.x
+        const baseDy = blast.y2 - blast.y
+        const length = Math.sqrt(baseDx * baseDx + baseDy * baseDy)
+        if (length > 0) {
+            const centerX = blast.x + (baseDx / length) * length * 0.5
+            const centerZ = blast.y + (baseDy / length) * length * 0.5
+            light.position.set(centerX, 20, centerZ)
+        } else {
+            light.position.set(blast.x, 20, blast.y)
+        }
+    } else {
+        light.position.set(blast.x, 20, blast.y)
+    }
 }
 
 const ThreeBoard = (props: ThreeBoardProps) => {
@@ -428,6 +497,47 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
     const { sendAction, role, session, displayName, connected } = useSession()
 
+    // Stable refs for values used inside animation loop and event handlers (avoid stale closures)
+    const pixiOnTokenMoveRef = useRef(pixiOnTokenMove)
+    pixiOnTokenMoveRef.current = pixiOnTokenMove
+    const isCombatActiveRef = useRef(props.isCombatActive)
+    isCombatActiveRef.current = props.isCombatActive
+
+    // Stable refs for frequently-changing values used in mouse interaction handlers
+    const tokensRef = useRef(tokens)
+    tokensRef.current = tokens
+    const wallsRef = useRef(walls)
+    wallsRef.current = walls
+    const blastsRef = useRef(blasts)
+    blastsRef.current = blasts
+    const blastsNotInMapRef = useRef(blastsNotInMap)
+    blastsNotInMapRef.current = blastsNotInMap
+    const pixiOnTokenUpdateRef = useRef(pixiOnTokenUpdate)
+    pixiOnTokenUpdateRef.current = pixiOnTokenUpdate
+    const pixiOnTokenDropRef = useRef(pixiOnTokenDrop)
+    pixiOnTokenDropRef.current = pixiOnTokenDrop
+    const pixiOnBlastDropRef = useRef(pixiOnBlastDrop)
+    pixiOnBlastDropRef.current = pixiOnBlastDrop
+    const pixiOnBlastMoveRef = useRef(pixiOnBlastMoveProp)
+    pixiOnBlastMoveRef.current = pixiOnBlastMoveProp
+    const pixiOnWallDrawRef = useRef(pixiOnWallDraw)
+    pixiOnWallDrawRef.current = pixiOnWallDraw
+    const onBlastUpdateConeRef = useRef(onBlastUpdateCone)
+    onBlastUpdateConeRef.current = onBlastUpdateCone
+    const pixiSetSelectedTokenIdRef = useRef(pixiSetSelectedTokenId)
+    pixiSetSelectedTokenIdRef.current = pixiSetSelectedTokenId
+    const pixiSetSelectedBlastIdRef = useRef(pixiSetSelectedBlastId)
+    pixiSetSelectedBlastIdRef.current = pixiSetSelectedBlastId
+    const onOpenTokenDialogRef = useRef(onOpenTokenDialog)
+    onOpenTokenDialogRef.current = onOpenTokenDialog
+    const mapKeyRef = useRef(mapKey)
+    mapKeyRef.current = mapKey
+    const wallColorRef = useRef(wallColor)
+    wallColorRef.current = wallColor
+    const wallAlphaRef = useRef(wallAlpha)
+    wallAlphaRef.current = wallAlpha
+    const contextMenusRef = useRef<ReturnType<typeof useThreeContextMenus> | null>(null)
+
     const containerRef = useRef<HTMLDivElement>(null)
     const sceneRef = useRef<THREE.Scene | null>(null)
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
@@ -480,6 +590,13 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     const erasePreviewRef = useRef<{ x: number; z: number } | null>(null)
     const eraseLineRef = useRef<THREE.Line | null>(null)
     const highlightedWallIdsRef = useRef<Set<string>>(new Set())
+
+    // Reusable raycasting objects (avoid allocation per mouse event)
+    const raycasterRef = useRef(new THREE.Raycaster())
+    const mouseVecRef = useRef(new THREE.Vector2())
+    const groundPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0))
+    const intersectionPointRef = useRef(new THREE.Vector3())
+    const blastClippingPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0))
 
     // Pending movements state - use state to trigger re-renders
     const [pendingMovements, setPendingMovements] = useState<
@@ -615,15 +732,16 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         pixiSetBlastContextMenuAnchor,
         pixiSetSelectedBlastId,
     }) // Track temporary PixiJS app to prevent multiple contexts
+    contextMenusRef.current = contextMenus
 
     // Measure tool state
     const [measureStart, setMeasureStart] = useState<THREE.Vector3 | null>(null)
     const [measureEnd, setMeasureEnd] = useState<THREE.Vector3 | null>(null)
 
-    // Drag and drop state
-    const [draggedTokenId, setDraggedTokenId] = useState<string | null>(null)
+    // Drag and drop state (refs, not state — only used in event handlers, never in render)
+    const draggedTokenIdRef = useRef<string | null>(null)
     const dragStartRef = useRef<{ x: number; z: number } | null>(null)
-    const [draggedBlastId, setDraggedBlastId] = useState<string | null>(null)
+    const draggedBlastIdRef = useRef<string | null>(null)
     const dragBlastStartRef = useRef<{ x: number; z: number } | null>(null)
 
     // Blast preview state
@@ -632,7 +750,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     // Wall drawing state
     const [wallDrawingStart, setWallDrawingStart] = useState<THREE.Vector3 | null>(null)
     const [wallDrawingEnd, setWallDrawingEnd] = useState<THREE.Vector3 | null>(null)
-    const [assetVersion, setAssetVersion] = useState(0)
+    const [textureVersion, setTextureVersion] = useState(0)
     const [threeReady, setThreeReady] = useState(false)
     const [tokenModelsLoaded, setTokenModelsLoaded] = useState(false)
     const [blastModelsLoaded, setBlastModelsLoaded] = useState(false)
@@ -642,8 +760,20 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     // Combined flag: all assets are loaded
     const allAssetsLoaded = tokenModelsLoaded && blastModelsLoaded && blastTexturesLoaded && wallTexturesLoaded
 
+    // Overlay stays visible until render effects have run and Three.js has painted one frame
+    const [contentReady, setContentReady] = useState(false)
+    useEffect(() => {
+        if (contentReady) return
+        if (!threeReady || !allAssetsLoaded) return
+        const id = requestAnimationFrame(() => {
+            setContentReady(true)
+        })
+        return () => cancelAnimationFrame(id)
+    }, [threeReady, allAssetsLoaded, contentReady])
+
     // Load token textures from image blobs
     useEffect(() => {
+        let mounted = true
         const textureCache = tokenTextureCacheRef.current
         const currentImageIds = new Set(images.map((img) => img.id))
 
@@ -664,10 +794,14 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     loader.load(
                         url,
                         (texture) => {
+                            if (!mounted) {
+                                texture.dispose()
+                                URL.revokeObjectURL(url)
+                                return
+                            }
                             textureCache.set(image.id, texture)
                             URL.revokeObjectURL(url)
-                            // Trigger re-render by updating asset version
-                            setAssetVersion((v) => v + 1)
+                            setTextureVersion((v) => v + 1)
                         },
                         undefined,
                         (error) => {
@@ -679,6 +813,10 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     console.error('Error setting up texture loading for image:', image.id, error)
                 }
             }
+        }
+
+        return () => {
+            mounted = false
         }
     }, [images])
 
@@ -701,8 +839,12 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     )
                 )
                 if (mounted) {
-                    tokenModelTemplatesRef.current = tokenModels.filter((m): m is THREE.Group => Boolean(m))
-                    tokenModelPathsRef.current = modelPaths
+                    // Keep paths and templates in sync — only retain paths whose model loaded
+                    const loadedPairs = modelPaths
+                        .map((p, i) => [p, tokenModels[i]] as const)
+                        .filter((pair): pair is [string, THREE.Group] => pair[1] != null)
+                    tokenModelTemplatesRef.current = loadedPairs.map(([, m]) => m)
+                    tokenModelPathsRef.current = loadedPairs.map(([p]) => p)
                     const map = new Map<string, THREE.Group>()
                     tokenModelTemplatesRef.current.forEach((tpl) => {
                         const p = tpl.userData?.__modelPath
@@ -713,7 +855,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     })
                     tokenModelMapRef.current = map
-                    console.log(`ThreeBoard: Loaded ${tokenModelTemplatesRef.current.length} token models:`, modelPaths)
                     setTokenModelsLoaded(true)
                 }
 
@@ -735,7 +876,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     })
                     blastModelTemplatesRef.current = blastMap
-                    console.log(`ThreeBoard: Loaded ${Object.keys(blastMap).length} blast models`)
                     setBlastModelsLoaded(true)
                 }
 
@@ -757,9 +897,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     })
                     blastTextureTemplatesRef.current = blastTextureMap
-                    console.log(`ThreeBoard: Loaded ${Object.keys(blastTextureMap).length} blast textures`)
                     setBlastTexturesLoaded(true)
-                    setAssetVersion((v) => v + 1)
                 }
 
                 const wallTextures = await Promise.all(WALL_TEXTURES.map((path) => loadTexture(path).catch(() => null)))
@@ -773,9 +911,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             // Don't set repeat here - it will be set per-material based on wall size
                             return tex
                         })
-                    console.log(`ThreeBoard: Loaded ${wallTextureTemplatesRef.current.length} wall textures`)
                     setWallTexturesLoaded(true)
-                    setAssetVersion((v) => v + 1)
                 }
             } catch (assetError) {
                 console.warn('ThreeBoard: asset preload failed', assetError)
@@ -900,8 +1036,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             const currentImageId = existingMesh.userData?.tokenImageId as string | undefined
             const currentRadius = existingMesh.userData?.tokenImageRadius as number | undefined
             const sameImage = currentImageId === token.imageId
-            const sameRadius =
-                typeof currentRadius === 'number' && Math.abs(currentRadius - desiredRadius) < 0.0001
+            const sameRadius = typeof currentRadius === 'number' && Math.abs(currentRadius - desiredRadius) < 0.0001
 
             if (sameImage && sameRadius) {
                 existingMesh.position.y = groundOffset - group.position.y
@@ -1017,7 +1152,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 const clips = getAnimationClips(modelPath)
                 if (clips.length > 0) {
                     const mixer = new THREE.AnimationMixer(model)
-                    clips.forEach(clip => {
+                    clips.forEach((clip) => {
                         const action = mixer.clipAction(clip.clone())
                         action.play()
                     })
@@ -1071,6 +1206,16 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             tokenGroup.traverse((child) => {
                 child.frustumCulled = false
             })
+
+            // Create invisible collision cylinder for reliable raycasting
+            // (bind-pose proxy geometry may not match animated pose for some models)
+            const collisionGeom = new THREE.CylinderGeometry(radius, radius, height, 16)
+            const collisionMesh = new THREE.Mesh(collisionGeom, new THREE.MeshBasicMaterial())
+            collisionMesh.visible = false
+            collisionMesh.position.y = height / 2
+            collisionMesh.userData.isCollisionMesh = true
+            collisionMesh.frustumCulled = false
+            tokenGroup.add(collisionMesh)
 
             tokenGroup.userData.baseYOffset = 0
         } else {
@@ -1227,7 +1372,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         sceneRef.current = scene
 
         // Camera
-        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 10000)
+        const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 10000)
         camera.position.set(0, 500, 500)
         camera.lookAt(0, 0, 0)
         cameraRef.current = camera
@@ -1247,7 +1392,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         controls.enableDamping = true
         controls.dampingFactor = 0.05
         controls.minDistance = 100
-        controls.maxDistance = 2000
+        controls.maxDistance = 5000
         controls.maxPolarAngle = Math.PI / 2.1 // Prevent going below ground
         controls.enablePan = true
         controls.enableZoom = true
@@ -1355,11 +1500,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             const nextIndex = currentIndex + 1
                             if (nextIndex >= points.length) {
                                 pendingAnimationsRef.current.delete(tokenId)
-                                pixiOnTokenMove(
+                                pixiOnTokenMoveRef.current(
                                     tokenId,
                                     points[points.length - 1].x,
                                     points[points.length - 1].z,
-                                    props.isCombatActive ? totalDistance : undefined
+                                    isCombatActiveRef.current ? totalDistance : undefined
                                 )
                                 // Start restore rotation if needed
                                 const currentRot = mesh.rotation.y
@@ -1410,11 +1555,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             const nextIndex = currentIndex + 1
                             if (nextIndex >= points.length) {
                                 pendingAnimationsRef.current.delete(tokenId)
-                                pixiOnTokenMove(
+                                pixiOnTokenMoveRef.current(
                                     tokenId,
                                     points[points.length - 1].x,
                                     points[points.length - 1].z,
-                                    props.isCombatActive ? totalDistance : undefined
+                                    isCombatActiveRef.current ? totalDistance : undefined
                                 )
                                 // Start restore rotation if needed
                                 const currentRot = mesh.rotation.y
@@ -1660,6 +1805,9 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 const material = new THREE.MeshStandardMaterial({
                     map: threeTexture,
                     color: 0xffffff,
+                    polygonOffset: true,
+                    polygonOffsetFactor: 1,
+                    polygonOffsetUnits: 1,
                 })
                 const plane = new THREE.Mesh(geometry, material)
                 plane.rotation.x = -Math.PI / 2 // Rotate to horizontal plane (XZ plane)
@@ -1714,7 +1862,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
         // Wait for token models to be loaded before rendering tokens
         if (!tokenModelsLoaded) {
-            console.log('ThreeBoard: Waiting for token models to load before rendering tokens...')
             return
         }
 
@@ -1845,7 +1992,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     if (label && label.parent !== scene) {
                         scene.add(label)
                     }
-
                 }
                 const group = tokenMeshes.get(token.id)!
 
@@ -1949,9 +2095,9 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 tokenLabels.set(token.id, label)
             }
         })
-    }, [tokens, activeTokenId, gridSize, assetVersion, pendingMovements])
+    }, [tokens, activeTokenId, gridSize, textureVersion, pendingMovements, tokenModelsLoaded])
 
-    // Crosshair ring on active token
+    // Crosshair on active token (matches Pixi: outer yellow ring + inner magenta ring + cyan cross lines)
     useEffect(() => {
         const scene = sceneRef.current
         if (!scene || !activeTokenId) return
@@ -1960,39 +2106,76 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         if (!token) return
 
         const radius = token.customRadius ?? gridSize / 2
-        const innerRadius = radius * 1.15
-        const outerRadius = radius * 1.3
+        const crosshairGroup = new THREE.Group()
 
-        const ringGeo = new THREE.RingGeometry(innerRadius, outerRadius, 64)
-        const ringMat = new THREE.MeshBasicMaterial({
-            color: 0x00ffff,
+        const pending = pendingMovements.get(activeTokenId)
+        const posX = pending ? pending.endX : token.x
+        const posZ = pending ? pending.endZ : token.y
+        crosshairGroup.position.set(posX, 0.02, posZ)
+
+        const baseMat = {
             transparent: true,
-            opacity: 0.6,
             side: THREE.DoubleSide,
-        })
-        const ring = new THREE.Mesh(ringGeo, ringMat)
-        ring.rotation.x = -Math.PI / 2 // Lay flat on ground
-        const ringPending = pendingMovements.get(activeTokenId)
-        const ringX = ringPending ? ringPending.endX : token.x
-        const ringZ = ringPending ? ringPending.endZ : token.y
-        ring.position.set(ringX, 0.15, ringZ)
-        scene.add(ring)
+            depthTest: true,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -4,
+            polygonOffsetUnits: -4,
+        }
+
+        // Outer ring — yellow, pulsing alpha
+        const outerRingRadius = radius * 1.5
+        const outerRingGeo = new THREE.RingGeometry(outerRingRadius - radius * 0.06, outerRingRadius, 64)
+        const outerRingMat = new THREE.MeshBasicMaterial({ ...baseMat, color: 0xffff00, opacity: 0.8 })
+        const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat)
+        outerRing.rotation.x = -Math.PI / 2
+        crosshairGroup.add(outerRing)
+
+        // Inner ring — magenta, constant alpha
+        const innerRingRadius = outerRingRadius * 0.8
+        const innerRingGeo = new THREE.RingGeometry(innerRingRadius - radius * 0.03, innerRingRadius, 64)
+        const innerRingMat = new THREE.MeshBasicMaterial({ ...baseMat, color: 0xff00ff, opacity: 0.9 })
+        const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat)
+        innerRing.rotation.x = -Math.PI / 2
+        crosshairGroup.add(innerRing)
+
+        // Crosshair lines — cyan, constant alpha
+        const lineLength = radius * 2.5
+        const lineWidth = radius * 0.05
+        const lineMat = new THREE.MeshBasicMaterial({ ...baseMat, color: 0x00ffff, opacity: 0.7 })
+
+        const hLineGeo = new THREE.PlaneGeometry(lineLength * 2, lineWidth)
+        const hLine = new THREE.Mesh(hLineGeo, lineMat)
+        hLine.rotation.x = -Math.PI / 2
+        crosshairGroup.add(hLine)
+
+        const vLineGeo = new THREE.PlaneGeometry(lineWidth, lineLength * 2)
+        const vLine = new THREE.Mesh(vLineGeo, lineMat)
+        vLine.rotation.x = -Math.PI / 2
+        crosshairGroup.add(vLine)
+
+        scene.add(crosshairGroup)
 
         let animId: number
-        const animateRing = () => {
-            ring.rotation.z += 0.02
-            animId = requestAnimationFrame(animateRing)
+        const animateCrosshair = () => {
+            const pulse = Math.sin((Date.now() / 1000) * 3) * 0.2 + 0.8
+            outerRingMat.opacity = pulse
+            animId = requestAnimationFrame(animateCrosshair)
         }
-        animateRing()
+        animateCrosshair()
 
         return () => {
             cancelAnimationFrame(animId)
-            scene.remove(ring)
-            ringGeo.dispose()
-            ringMat.dispose()
+            scene.remove(crosshairGroup)
+            outerRingGeo.dispose()
+            outerRingMat.dispose()
+            innerRingGeo.dispose()
+            innerRingMat.dispose()
+            hLineGeo.dispose()
+            vLineGeo.dispose()
+            lineMat.dispose()
         }
     }, [activeTokenId, tokens, gridSize, pendingMovements])
-
 
     // Render walls
     useEffect(() => {
@@ -2003,7 +2186,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
         // Wait for all assets to be loaded before rendering walls
         if (!allAssetsLoaded) {
-            console.log('ThreeBoard: Waiting for all assets to load before rendering walls...')
             return
         }
 
@@ -2027,23 +2209,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 // Check if wall object is still in scene before removing
                 if (wallObject.parent === scene) {
                     scene.remove(wallObject)
-                    // Dispose geometry and materials
-                    if (wallObject instanceof THREE.Mesh) {
-                        wallObject.geometry.dispose()
-                        if (wallObject.material instanceof THREE.MeshStandardMaterial) {
-                            wallObject.material.dispose()
-                        }
-                    } else if (wallObject instanceof THREE.Group) {
-                        // Dispose all meshes in the group
-                        wallObject.traverse((child) => {
-                            if (child instanceof THREE.Mesh) {
-                                child.geometry.dispose()
-                                if (child.material instanceof THREE.MeshStandardMaterial) {
-                                    child.material.dispose()
-                                }
-                            }
-                        })
-                    }
+                    disposeWallObject(wallObject)
                 }
                 wallMeshes.delete(id)
             }
@@ -2065,22 +2231,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     scene.remove(oldWall)
                 }
 
-                // Dispose old wall
-                if (oldWall instanceof THREE.Mesh) {
-                    oldWall.geometry.dispose()
-                    if (oldWall.material instanceof THREE.MeshStandardMaterial) {
-                        oldWall.material.dispose()
-                    }
-                } else if (oldWall instanceof THREE.Group) {
-                    oldWall.traverse((child: THREE.Object3D) => {
-                        if (child instanceof THREE.Mesh) {
-                            child.geometry.dispose()
-                            if (child.material instanceof THREE.MeshStandardMaterial) {
-                                child.material.dispose()
-                            }
-                        }
-                    })
-                }
+                disposeWallObject(oldWall)
 
                 wallMeshes.delete(wall.id)
                 // Fall through to create new wall below
@@ -2109,8 +2260,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             Math.abs(Math.abs(dimensions.width) - Math.abs(dimensions.depth)) < 0.01
                                 ? dimensions.width
                                 : dimensions.width > dimensions.depth
-                                ? dimensions.width
-                                : dimensions.depth
+                                  ? dimensions.width
+                                  : dimensions.depth
                         const wallHeightForTexture = dimensions.height
                         const material = createCyberpunkWallMaterial(
                             color.getHex(),
@@ -2195,7 +2346,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 wallMeshes.set(wall.id, mesh)
             }
         })
-    }, [walls, wallColor, wallAlpha, gridSize, assetVersion, allAssetsLoaded])
+    }, [walls, wallColor, wallAlpha, gridSize, allAssetsLoaded])
 
     // Render blasts with enhanced cyberpunk models
     useEffect(() => {
@@ -2205,7 +2356,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
         // Wait for all assets to be loaded before rendering blasts
         if (!allAssetsLoaded) {
-            console.log('ThreeBoard: Waiting for all assets to load before rendering blasts...')
             return
         }
 
@@ -2272,46 +2422,10 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     scene.add(group)
                 }
 
-                // For cone blasts, positioning is special: apex at (blast.x, blast.y)
-                if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                    // Calculate distance and direction from apex to endpoint
-                    // In PixiBoard: baseDx = blast.x2 - blast.x, baseDy = blast.y2 - blast.y
-                    // baseAngle = Math.atan2(baseDy, baseDx)
-                    const baseDx = blast.x2 - blast.x
-                    const baseDy = blast.y2 - blast.y
-                    const length = Math.sqrt(baseDx * baseDx + baseDy * baseDy)
-
-                    // Rotate cone to point in the direction of the endpoint
-                    // In PixiBoard: sprite points +X initially, rotates by Math.atan2(baseDy, baseDx)
-                    // In Three.js: after rotating -90° in X, cone points +Z initially
-                    // Coordinate mapping: PixiBoard (X right, Y down) → Three.js (X right, Z forward)
-                    // So baseDy in PixiBoard maps to baseDz in Three.js
-                    // In Three.js, rotation around Y rotates in XZ plane
-                    // To point from +Z toward (baseDx, baseDy), we rotate by Math.atan2(baseDx, baseDy)
-                    group.rotation.y = Math.atan2(baseDx, baseDy)
-
-                    // Position cone so apex is at (blast.x, blast.y)
-                    // Currently the base is at the origin (0,0,0) in local coordinates
-                    // We need to move the group forward by the cone length in the direction of the cone
-                    // The cone points in direction (baseDx, baseDy) normalized, so move by +length in that direction
-                    const directionX = baseDx / length
-                    const directionZ = baseDy / length
-                    group.position.set(blast.x + directionX * length, 0, blast.y + directionZ * length)
-
-                    // Center vertically so half the cone is below ground and half above
-                    group.updateMatrixWorld(true)
-                    const bbox = new THREE.Box3().setFromObject(group)
-                    const centerY = (bbox.max.y + bbox.min.y) / 2
-                    group.position.y -= centerY
-                } else {
-                    // Non-cone blasts: center at blast position (centered horizontally, on ground)
-                    // In PixiBoard: sprites are centered with anchor.set(0.5), positioned at (blast.x, blast.y)
-                    // In Three.js: after fitting, group origin is at center horizontally and min Y at 0
-                    group.position.set(blast.x, 0, blast.y)
-                }
+                positionBlastGroup(group, blast)
 
                 // Update opacity and ensure clipping planes are set
-                const clippingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+                const clippingPlane = blastClippingPlane.current
                 let blastTexture = blastTextureTemplatesRef.current[blast.type]
 
                 // Adjust cone texture to cover the entire cone surface
@@ -2347,12 +2461,12 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
                 group.traverse((child) => {
                     if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
-                        // Update material with texture if available
+                        // Dispose old material before replacing
+                        child.material.dispose()
                         const material = createCyberpunkBlastMaterial(alpha, blastTexture)
                         material.clippingPlanes = [clippingPlane]
-                        // Add selection highlight
                         if (isBlastSelected) {
-                            material.emissive = new THREE.Color(0x00ffff).multiplyScalar(0.5) // Cyan highlight for selection
+                            material.emissive = new THREE.Color(0x00ffff).multiplyScalar(0.5)
                         }
                         child.material = material
                     }
@@ -2368,61 +2482,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     blastLights.set(blast.id, light)
                 }
 
-                // Update light position to match blast position
-                if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                    // For cones, position light at the center of the cone base
-                    const baseDx = blast.x2 - blast.x
-                    const baseDy = blast.y2 - blast.y
-                    const length = Math.sqrt(baseDx * baseDx + baseDy * baseDy)
-                    const directionX = baseDx / length
-                    const directionZ = baseDy / length
-                    const centerX = blast.x + directionX * length * 0.5
-                    const centerZ = blast.y + directionZ * length * 0.5
-                    light.position.set(centerX, 20, centerZ) // Slightly above ground
-                } else {
-                    // For other blasts, position light at blast center
-                    light.position.set(blast.x, 20, blast.y) // Slightly above ground
-                }
+                positionBlastLight(light, blast)
             } else {
                 const { group: blastGroup } = buildBlastGroup(blast)
 
-                // For cone blasts, positioning is special: apex at (blast.x, blast.y)
-                if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                    // Calculate distance and direction from apex to endpoint
-                    // In PixiBoard: baseDx = blast.x2 - blast.x, baseDy = blast.y2 - blast.y
-                    // baseAngle = Math.atan2(baseDy, baseDx)
-                    const baseDx = blast.x2 - blast.x
-                    const baseDy = blast.y2 - blast.y
-                    const length = Math.sqrt(baseDx * baseDx + baseDy * baseDy)
-
-                    // Rotate cone to point in the direction of the endpoint
-                    // In PixiBoard: sprite points +X initially, rotates by Math.atan2(baseDy, baseDx)
-                    // In Three.js: after rotating -90° in X, cone points +Z initially
-                    // Coordinate mapping: PixiBoard (X right, Y down) → Three.js (X right, Z forward)
-                    // So baseDy in PixiBoard maps to baseDz in Three.js
-                    // In Three.js, rotation around Y rotates in XZ plane
-                    // To point from +Z toward (baseDx, baseDy), we rotate by Math.atan2(baseDx, baseDy)
-                    blastGroup.rotation.y = Math.atan2(baseDx, baseDy)
-
-                    // Position cone so apex is at (blast.x, blast.y)
-                    // Currently the base is at the origin (0,0,0) in local coordinates
-                    // We need to move the group forward by the cone length in the direction of the cone
-                    // The cone points in direction (baseDx, baseDy) normalized, so move by +length in that direction
-                    const directionX = baseDx / length
-                    const directionZ = baseDy / length
-                    blastGroup.position.set(blast.x + directionX * length, 0, blast.y + directionZ * length)
-
-                    // Center vertically so half the cone is below ground and half above
-                    blastGroup.updateMatrixWorld(true)
-                    const bbox = new THREE.Box3().setFromObject(blastGroup)
-                    const centerY = (bbox.max.y + bbox.min.y) / 2
-                    blastGroup.position.y -= centerY
-                } else {
-                    // Non-cone blasts: center at blast position (centered horizontally, on ground)
-                    // In PixiBoard: sprites are centered with anchor.set(0.5), positioned at (blast.x, blast.y)
-                    // In Three.js: after fitting, group origin is at center horizontally and min Y at 0
-                    blastGroup.position.set(blast.x, 0, blast.y)
-                }
+                positionBlastGroup(blastGroup, blast)
                 blastGroup.userData.blastId = blast.id // Mark with blast ID
                 scene.add(blastGroup)
                 blastMeshes.set(blast.id, blastGroup)
@@ -2431,29 +2495,15 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 const light = new THREE.PointLight(0xff6600, 0.5, 200) // Orange color, soft intensity, 200 unit range
                 light.castShadow = false // Don't cast shadows for performance
 
-                // Position light based on blast type
-                if (blast.type === 'cone' && blast.x2 !== undefined && blast.y2 !== undefined) {
-                    // For cones, position light at the center of the cone base
-                    const baseDx = blast.x2 - blast.x
-                    const baseDy = blast.y2 - blast.y
-                    const length = Math.sqrt(baseDx * baseDx + baseDy * baseDy)
-                    const directionX = baseDx / length
-                    const directionZ = baseDy / length
-                    const centerX = blast.x + directionX * length * 0.5
-                    const centerZ = blast.y + directionZ * length * 0.5
-                    light.position.set(centerX, 20, centerZ) // Slightly above ground
-                } else {
-                    // For other blasts, position light at blast center
-                    light.position.set(blast.x, 20, blast.y) // Slightly above ground
-                }
+                positionBlastLight(light, blast)
 
                 scene.add(light)
                 blastLights.set(blast.id, light)
             }
         })
-    }, [blasts, blastsNotInMap, gridSize, assetVersion])
+    }, [blasts, blastsNotInMap, gridSize, allAssetsLoaded])
 
-    // Update grid helper size and appearance
+    // Rebuild grid geometry when size or map changes
     useEffect(() => {
         if (!sceneRef.current) return
 
@@ -2465,10 +2515,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             mapWidth = mapPlaneRef.current.geometry.parameters.width
             mapHeight = mapPlaneRef.current.geometry.parameters.height
         } else if (!mapTexture) {
-            // No map texture yet, skip grid update
             return
         } else if (mapTexture) {
-            // Use texture dimensions if available
             mapWidth = mapTexture.width || 1920
             mapHeight = mapTexture.height || 1920
         }
@@ -2478,66 +2526,56 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         if (oldGrid) {
             sceneRef.current.remove(oldGrid)
             oldGrid.geometry.dispose()
-            // Handle both LineBasicMaterial (custom grid) and Material (GridHelper)
-            if (oldGrid.material instanceof THREE.LineBasicMaterial) {
-                oldGrid.material.dispose()
-            } else if (oldGrid.material instanceof THREE.Material) {
+            if (oldGrid.material instanceof THREE.Material) {
                 oldGrid.material.dispose()
             }
         }
 
-        // Create grid matching map size exactly (same as PixiBoard)
-        // PixiBoard draws grid from (0,0) to (mapWidth, mapHeight) with step = gridSize
-        // Three.js map plane is centered at (mapWidth/2, 0, mapHeight/2) and extends from (0,0,0) to (mapWidth,0,mapHeight)
-        // Grid must cover exactly from (0,0,0) to (mapWidth,0,mapHeight)
-
         const gridColor3D = hexToThreeColor(gridColor)
-        const gridMaterial = new THREE.LineBasicMaterial({ color: gridColor3D, opacity: gridAlpha, transparent: true })
+        const gridMaterial = new THREE.LineBasicMaterial({ color: gridColor3D, opacity: gridAlpha, transparent: true, depthWrite: false })
 
         const gridGeometry = new THREE.BufferGeometry()
         const gridVertices: number[] = []
 
-        // Vertical lines (parallel to Z axis, varying X)
-        // Draw lines at x = 0, gridSize, 2*gridSize, ..., up to mapWidth
         const numVerticalLines = Math.ceil(mapWidth / gridSize) + 1
         for (let i = 0; i < numVerticalLines; i++) {
             const x = i * gridSize
-            // Always draw lines from z=0 to z=mapHeight to ensure full coverage
-            gridVertices.push(x, 0.01, 0)
-            gridVertices.push(x, 0.01, mapHeight)
+            gridVertices.push(x, 0.5, 0)
+            gridVertices.push(x, 0.5, mapHeight)
         }
-        // Ensure we have a line at the exact edge (mapWidth)
         if (mapWidth % gridSize !== 0) {
-            gridVertices.push(mapWidth, 0.01, 0)
-            gridVertices.push(mapWidth, 0.01, mapHeight)
+            gridVertices.push(mapWidth, 0.5, 0)
+            gridVertices.push(mapWidth, 0.5, mapHeight)
         }
 
-        // Horizontal lines (parallel to X axis, varying Z)
-        // Draw lines at z = 0, gridSize, 2*gridSize, ..., up to mapHeight
         const numHorizontalLines = Math.ceil(mapHeight / gridSize) + 1
         for (let i = 0; i < numHorizontalLines; i++) {
             const z = i * gridSize
-            // Always draw lines from x=0 to x=mapWidth to ensure full coverage
-            gridVertices.push(0, 0.01, z)
-            gridVertices.push(mapWidth, 0.01, z)
+            gridVertices.push(0, 0.5, z)
+            gridVertices.push(mapWidth, 0.5, z)
         }
-        // Ensure we have a line at the exact edge (mapHeight)
         if (mapHeight % gridSize !== 0) {
-            gridVertices.push(0, 0.01, mapHeight)
-            gridVertices.push(mapWidth, 0.01, mapHeight)
+            gridVertices.push(0, 0.5, mapHeight)
+            gridVertices.push(mapWidth, 0.5, mapHeight)
         }
 
         gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3))
 
         const gridHelper = new THREE.LineSegments(gridGeometry, gridMaterial)
-
-        // Grid starts at (0,0,0) and extends to (mapWidth,0,mapHeight)
-        // This matches PixiBoard which draws from (0,0) to (mapWidth, mapHeight)
-        // No position offset needed - grid is already at correct position
-
         sceneRef.current.add(gridHelper)
         gridHelperRef.current = gridHelper
-    }, [gridColor, gridAlpha, gridSize, mapTexture])
+    }, [gridSize, mapTexture])
+
+    // Update grid color/alpha without rebuilding geometry
+    useEffect(() => {
+        const grid = gridHelperRef.current
+        if (!grid) return
+        const mat = grid.material
+        if (mat instanceof THREE.LineBasicMaterial) {
+            mat.color = hexToThreeColor(gridColor)
+            mat.opacity = gridAlpha
+        }
+    }, [gridColor, gridAlpha])
 
     // Setup CSS2D renderer for labels
     useCSS2DRenderer(containerRef, sceneRef.current, cameraRef.current, width, height)
@@ -2940,8 +2978,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         mapKey,
         sendAction,
         threeReady,
-        sceneRef.current,
-        cameraRef.current,
     ])
 
     // Cleanup pending indicators on unmount only
@@ -2959,7 +2995,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     useMeasureTool(measureStart, measureEnd, sceneRef.current, gridSize)
 
     // Blast preview — use 'cone' during rotation mode even if blastDrawMode is null
-    const effectiveBlastPreviewMode: BlastType | null = rotatingConeRef.current ? 'cone' : (blastDrawMode || null)
+    const effectiveBlastPreviewMode: BlastType | null = rotatingConeRef.current ? 'cone' : blastDrawMode || null
     useBlastPreview(
         effectiveBlastPreviewMode,
         blastPreviewStart,
@@ -2997,7 +3033,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         blastDrawMode
     )
 
-
     // Mouse interaction for measuring and token dragging
     useEffect(() => {
         if (!containerRef.current || !cameraRef.current || !sceneRef.current) return
@@ -3006,18 +3041,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             const camera = cameraRef.current
             if (!camera) return null
 
-            const raycaster = new THREE.Raycaster()
-            const mouseVector = new THREE.Vector2()
-            mouseVector.x = (mouseX / width) * 2 - 1
-            mouseVector.y = -(mouseY / height) * 2 + 1
+            mouseVecRef.current.set((mouseX / width) * 2 - 1, -(mouseY / height) * 2 + 1)
+            raycasterRef.current.setFromCamera(mouseVecRef.current, camera)
+            raycasterRef.current.ray.intersectPlane(groundPlaneRef.current, intersectionPointRef.current)
 
-            raycaster.setFromCamera(mouseVector, camera)
-
-            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
-            const intersectionPoint = new THREE.Vector3()
-            raycaster.ray.intersectPlane(plane, intersectionPoint)
-
-            return intersectionPoint
+            return intersectionPointRef.current.clone()
         }
 
         // Handle token resize with Shift+Wheel and rotate with Ctrl+Wheel
@@ -3039,13 +3067,10 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     x: e.clientX - rect.left,
                     y: e.clientY - rect.top,
                 }
-                const raycaster = new THREE.Raycaster()
-                const mouseVector = new THREE.Vector2()
-                mouseVector.x = (mouse.x / width) * 2 - 1
-                mouseVector.y = -(mouse.y / height) * 2 + 1
-                raycaster.setFromCamera(mouseVector, cameraRef.current!)
+                mouseVecRef.current.set((mouse.x / width) * 2 - 1, -(mouse.y / height) * 2 + 1)
+                raycasterRef.current.setFromCamera(mouseVecRef.current, cameraRef.current!)
                 const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
-                const hitToken = pickTokenHybrid(raycaster, intersectionPoint)
+                const hitToken = pickTokenHybrid(raycasterRef.current, intersectionPoint)
 
                 if (hitToken) {
                     const delta = e.deltaY < 0 ? 45 : -45
@@ -3056,8 +3081,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     if (mesh) {
                         mesh.rotation.y = (newOrient * Math.PI) / 180
                     }
-                    if (pixiOnTokenUpdate) {
-                        pixiOnTokenUpdate(hitToken.id, { orientationDeg: newOrient })
+                    if (pixiOnTokenUpdateRef.current) {
+                        pixiOnTokenUpdateRef.current(hitToken.id, { orientationDeg: newOrient })
                     }
                 }
                 return
@@ -3076,22 +3101,19 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 y: e.clientY - rect.top,
             }
 
-            const raycaster = new THREE.Raycaster()
-            const mouseVector = new THREE.Vector2()
-            mouseVector.x = (mouse.x / width) * 2 - 1
-            mouseVector.y = -(mouse.y / height) * 2 + 1
-            raycaster.setFromCamera(mouseVector, cameraRef.current!)
+            mouseVecRef.current.set((mouse.x / width) * 2 - 1, -(mouse.y / height) * 2 + 1)
+            raycasterRef.current.setFromCamera(mouseVecRef.current, cameraRef.current!)
             const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
-            const hitToken = pickTokenHybrid(raycaster, intersectionPoint)
+            const hitToken = pickTokenHybrid(raycasterRef.current, intersectionPoint)
 
-            if (hitToken && pixiOnTokenUpdate) {
+            if (hitToken && pixiOnTokenUpdateRef.current) {
                 const delta = e.deltaY < 0 ? 1 : -1 // Negative deltaY means wheel up (increase size)
                 const sizeIncrement = gridSize / 2
                 const currentRadius = hitToken.customRadius ?? gridSize / 2
                 const newRadius = Math.max(0, currentRadius + delta * sizeIncrement)
 
                 // Update token
-                pixiOnTokenUpdate(hitToken.id, {
+                pixiOnTokenUpdateRef.current(hitToken.id, {
                     customRadius: newRadius > 0 ? newRadius : undefined,
                 })
             }
@@ -3114,8 +3136,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             if (!intersectionPoint) return
 
             // Try application/json first (Pixi format), fall back to text/plain
-            const data =
-                e.dataTransfer?.getData('application/json') || e.dataTransfer?.getData('text/plain')
+            const data = e.dataTransfer?.getData('application/json') || e.dataTransfer?.getData('text/plain')
             if (!data) return
 
             try {
@@ -3130,10 +3151,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 }
 
                 // Check if it's a blast type (grenade, circle, square, cone)
-                if (
-                    droppedData?.type &&
-                    ['grenade', 'circle', 'square', 'cone'].includes(droppedData.type)
-                ) {
+                if (droppedData?.type && ['grenade', 'circle', 'square', 'cone'].includes(droppedData.type)) {
                     if (droppedData.type === 'cone') {
                         // Cone: enter rotation mode
                         const coneLength = droppedData.size ?? 6
@@ -3146,16 +3164,14 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                         rotationReadyAtRef.current = Date.now() + 180
                         setBlastPreviewStart(new THREE.Vector3(finalX, 0, finalZ))
-                        setBlastPreviewEnd(
-                            new THREE.Vector3(finalX + gridSize * coneLength, 0, finalZ)
-                        )
-                    } else if (pixiOnBlastDrop) {
+                        setBlastPreviewEnd(new THREE.Vector3(finalX + gridSize * coneLength, 0, finalZ))
+                    } else if (pixiOnBlastDropRef.current) {
                         // Non-cone blasts: drop directly
-                        pixiOnBlastDrop(droppedData, finalX, finalZ)
+                        pixiOnBlastDropRef.current(droppedData, finalX, finalZ)
                     }
-                } else if (droppedData?.id && pixiOnTokenDrop) {
+                } else if (droppedData?.id && pixiOnTokenDropRef.current) {
                     // Token drop
-                    pixiOnTokenDrop(droppedData.id, finalX, finalZ)
+                    pixiOnTokenDropRef.current(droppedData.id, finalX, finalZ)
                 }
             } catch (error) {
                 console.error('Error handling drop:', error)
@@ -3200,12 +3216,9 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             if (isMeasuring) {
                 // Measuring mode - check for token hit to start from token position (like Pixi)
                 if (!measureStart) {
-                    const raycaster = new THREE.Raycaster()
-                    const mouseVector = new THREE.Vector2()
-                    mouseVector.x = (mouse.x / width) * 2 - 1
-                    mouseVector.y = -(mouse.y / height) * 2 + 1
-                    raycaster.setFromCamera(mouseVector, cameraRef.current)
-                    const tokenHit = pickTokenHybrid(raycaster, intersectionPoint)
+                    mouseVecRef.current.set((mouse.x / width) * 2 - 1, -(mouse.y / height) * 2 + 1)
+                    raycasterRef.current.setFromCamera(mouseVecRef.current, cameraRef.current)
+                    const tokenHit = pickTokenHybrid(raycasterRef.current, intersectionPoint)
                     if (tokenHit) {
                         const tokenPos = getTokenVisualPosition(tokenHit)
                         const snapped = snapToNinePoints(tokenPos.x, tokenPos.z, gridSize, snapToGrid)
@@ -3241,42 +3254,35 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 }
             } else {
                 // Token drag/select mode
-                const raycaster = new THREE.Raycaster()
-                const mouseVector = new THREE.Vector2()
-                mouseVector.x = (mouse.x / width) * 2 - 1
-                mouseVector.y = -(mouse.y / height) * 2 + 1
-                raycaster.setFromCamera(mouseVector, cameraRef.current)
+                mouseVecRef.current.set((mouse.x / width) * 2 - 1, -(mouse.y / height) * 2 + 1)
+                raycasterRef.current.setFromCamera(mouseVecRef.current, cameraRef.current)
 
                 // Check for token click (walk up ancestor chain)
-                const tokenData = pickTokenHybrid(raycaster, intersectionPoint)
+                const tokenData = pickTokenHybrid(raycasterRef.current, intersectionPoint)
                 if (tokenData) {
                     const id = tokenData.id
                     const inSession = !!session && connected
                     if (inSession && role === 'player' && tokenData.owner && tokenData.owner !== displayName) {
                         return
                     }
-                    pixiSetSelectedTokenId(id)
+                    pixiSetSelectedTokenIdRef.current(id)
                     leftClickTokenRef.current = { id, x: event.clientX, y: event.clientY }
                     isLeftClickDraggingRef.current = false
-                    setDraggedTokenId(id)
+                    draggedTokenIdRef.current = id
                     const pendingExisting = pendingMovementsRef.current.get(id)
                     const visualPos = getTokenVisualPosition(tokenData)
                     const lastPoint =
                         pendingExisting?.points?.[pendingExisting.points.length - 1] ??
                         (pendingExisting ? { x: pendingExisting.endX, z: pendingExisting.endZ } : undefined)
-                    const startX = pendingExisting
-                        ? lastPoint?.x ?? pendingExisting.endX ?? visualPos.x
-                        : visualPos.x
-                    const startZ = pendingExisting
-                        ? lastPoint?.z ?? pendingExisting.endZ ?? visualPos.z
-                        : visualPos.z
+                    const startX = pendingExisting ? (lastPoint?.x ?? pendingExisting.endX ?? visualPos.x) : visualPos.x
+                    const startZ = pendingExisting ? (lastPoint?.z ?? pendingExisting.endZ ?? visualPos.z) : visualPos.z
                     // Mark new segment when a pending path already exists
                     isStartingNewSegmentRef.current = Boolean(pendingExisting)
                     newSegmentPreviewAddedRef.current = false
                     dragStartRef.current = { x: startX, z: startZ }
                 } else {
                     // Click on blast to select or drag
-                    const blastIntersects = raycaster.intersectObjects(
+                    const blastIntersects = raycasterRef.current.intersectObjects(
                         Array.from(blastMeshesRef.current.values()),
                         true
                     )
@@ -3284,15 +3290,17 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         const hitObject = blastIntersects[0].object
                         for (const [id, group] of blastMeshesRef.current.entries()) {
                             if (group === hitObject || group.children.includes(hitObject)) {
-                                pixiSetSelectedBlastId(id)
+                                pixiSetSelectedBlastIdRef.current(id)
                                 // Start dragging blast (skip if locked)
-                                const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === id)
+                                const blast = [...blastsRef.current, ...blastsNotInMapRef.current].find(
+                                    (b) => b.id === id
+                                )
                                 if (blast && blast.locked) break
-                                if (blast && pixiOnBlastMoveProp) {
+                                if (blast && pixiOnBlastMoveRef.current) {
                                     // Clear selection highlight during drag
-                                    pixiSetSelectedBlastId(null)
+                                    pixiSetSelectedBlastIdRef.current(null)
                                     // Rotation mode for cones is set AFTER drag in mouseup
-                                    setDraggedBlastId(id)
+                                    draggedBlastIdRef.current = id
                                     dragBlastStartRef.current = { x: blast.x, z: blast.y }
                                 }
                                 break
@@ -3300,8 +3308,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     } else {
                         // Click on empty space - deselect and clear left-click tracking
-                        pixiSetSelectedTokenId(null)
-                        pixiSetSelectedBlastId(null)
+                        pixiSetSelectedTokenIdRef.current(null)
+                        pixiSetSelectedBlastIdRef.current(null)
                         leftClickTokenRef.current = null
                         isLeftClickDraggingRef.current = false
                     }
@@ -3398,7 +3406,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     const s2 = { x: ex, y: ez }
 
                     const newHighlighted = new Set<string>()
-                    for (const w of walls) {
+                    for (const w of wallsRef.current) {
                         const wallShape = w.shape || 'line'
                         let hit = false
                         if (wallShape === 'line') {
@@ -3455,14 +3463,16 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 // Update wall preview end point (snapped to grid)
                 const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
                 setWallDrawingEnd(new THREE.Vector3(snapped.x, 0, snapped.y))
-            } else if (draggedBlastId && dragBlastStartRef.current) {
+            } else if (draggedBlastIdRef.current && dragBlastStartRef.current) {
                 // Blast dragging — move the blast mesh visually
                 const snapped = snapToNinePoints(intersectionPoint.x, intersectionPoint.z, gridSize, snapToGrid)
-                const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === draggedBlastId)
+                const blast = [...blastsRef.current, ...blastsNotInMapRef.current].find(
+                    (b) => b.id === draggedBlastIdRef.current
+                )
                 if (blast) {
                     const dx = snapped.x - dragBlastStartRef.current.x
                     const dz = snapped.y - dragBlastStartRef.current.z
-                    const group = blastMeshesRef.current.get(draggedBlastId)
+                    const group = blastMeshesRef.current.get(draggedBlastIdRef.current)
                     if (group) {
                         if (blast.type === 'cone') {
                             // Cone group is at endpoint (base/wide end), not apex
@@ -3474,8 +3484,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     }
                 }
-            } else if (draggedTokenId && dragStartRef.current) {
-                const token = tokens.find((t) => t.id === draggedTokenId)
+            } else if (draggedTokenIdRef.current && dragStartRef.current) {
+                const token = tokensRef.current.find((t) => t.id === draggedTokenIdRef.current)
                 if (!token) return
 
                 // Drag token - in session players build pending moves instead of moving immediately
@@ -3500,15 +3510,15 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     const shouldUsePending = !session || (inSession && isPlayerRole)
 
                     if (shouldUsePending) {
-                        const existing = pendingMovementsRef.current.get(draggedTokenId)
+                        const existing = pendingMovementsRef.current.get(draggedTokenIdRef.current)
                         const startX =
                             isStartingNewSegmentRef.current && dragStartRef.current?.x !== undefined
                                 ? dragStartRef.current.x
-                                : existing?.startX ?? dragStartRef.current.x ?? token.x
+                                : (existing?.startX ?? dragStartRef.current.x ?? token.x)
                         const startZ =
                             isStartingNewSegmentRef.current && dragStartRef.current?.z !== undefined
                                 ? dragStartRef.current.z
-                                : existing?.startZ ?? dragStartRef.current.z ?? token.y
+                                : (existing?.startZ ?? dragStartRef.current.z ?? token.y)
 
                         let points: { x: number; z: number }[]
                         if (existing) {
@@ -3540,7 +3550,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             ]
                         }
 
-                        const prev = pendingMovementsRef.current.get(draggedTokenId)
+                        const prev = pendingMovementsRef.current.get(draggedTokenIdRef.current)
                         const prevLast = prev?.points[prev.points.length - 1]
                         if (
                             !isStartingNewSegmentRef.current &&
@@ -3560,16 +3570,16 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             fromRemotePlayer: false,
                         }
 
-                        pendingMovementsRef.current.set(draggedTokenId, updatedPending)
+                        pendingMovementsRef.current.set(draggedTokenIdRef.current, updatedPending)
                         setPendingMovements(new Map(pendingMovementsRef.current))
 
                         // Broadcast locally so other views (e.g., Pixi) show the pending path immediately
                         window.dispatchEvent(
                             new CustomEvent('pendingMovementReceived', {
                                 detail: {
-                                    tokenId: draggedTokenId,
+                                    tokenId: draggedTokenIdRef.current,
                                     points: updatedPending.points.map((p) => ({ x: p.x, y: p.z })),
-                                    mapId: mapKey,
+                                    mapId: mapKeyRef.current,
                                 },
                             })
                         )
@@ -3578,14 +3588,14 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         if (session && isPlayerRole) {
                             sendAction({
                                 kind: 'PENDING_MOVEMENT',
-                                tokenId: draggedTokenId,
+                                tokenId: draggedTokenIdRef.current,
                                 points: updatedPending.points.map((p) => ({ x: p.x, y: p.z })),
-                                mapId: mapKey,
+                                mapId: mapKeyRef.current,
                             })
                         }
                     } else {
                         // Offline/DM move tokens immediately
-                        pixiOnTokenMove(draggedTokenId, newX, newZ)
+                        pixiOnTokenMoveRef.current(draggedTokenIdRef.current, newX, newZ)
                     }
                 }
             }
@@ -3608,16 +3618,13 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
                         const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
                         if (intersectionPoint) {
-                            const raycaster = new THREE.Raycaster()
-                            const mouseVector = new THREE.Vector2()
-                            mouseVector.x = (mouse.x / width) * 2 - 1
-                            mouseVector.y = -(mouse.y / height) * 2 + 1
-                            raycaster.setFromCamera(mouseVector, cameraRef.current)
+                            mouseVecRef.current.set((mouse.x / width) * 2 - 1, -(mouse.y / height) * 2 + 1)
+                            raycasterRef.current.setFromCamera(mouseVecRef.current, cameraRef.current)
 
                             // Check for token click (walk ancestors)
-                            const tokenHit = pickTokenHybrid(raycaster, intersectionPoint)
+                            const tokenHit = pickTokenHybrid(raycasterRef.current, intersectionPoint)
                             if (tokenHit) {
-                                contextMenus.openTokenContextMenu(
+                                contextMenusRef.current?.openTokenContextMenu(
                                     intersectionPoint.x,
                                     intersectionPoint.z,
                                     tokenHit.id
@@ -3626,7 +3633,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             }
 
                             // Check for blast click
-                            const blastIntersects = raycaster.intersectObjects(
+                            const blastIntersects = raycasterRef.current.intersectObjects(
                                 Array.from(blastMeshesRef.current.values()),
                                 true
                             )
@@ -3635,9 +3642,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                                 for (const [id] of blastMeshesRef.current.entries()) {
                                     const group = blastMeshesRef.current.get(id)
                                     if (group && (group === hitObject || group.children.includes(hitObject))) {
-                                        const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === id)
+                                        const blast = [...blastsRef.current, ...blastsNotInMapRef.current].find(
+                                            (b) => b.id === id
+                                        )
                                         if (blast) {
-                                            contextMenus.openBlastContextMenu(
+                                            contextMenusRef.current?.openBlastContextMenu(
                                                 intersectionPoint.x,
                                                 intersectionPoint.z,
                                                 blast
@@ -3648,7 +3657,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                                 }
                             } else {
                                 // Click on empty space - open map context menu
-                                contextMenus.openMapContextMenu(intersectionPoint.x, intersectionPoint.z)
+                                contextMenusRef.current?.openMapContextMenu(intersectionPoint.x, intersectionPoint.z)
                             }
                         }
                     }
@@ -3669,13 +3678,15 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     const endZ = blastPreviewEnd.z
 
                     // Check if this is a new cone (from drawer drop) or existing cone (after move)
-                    const existingBlast = [...blasts, ...blastsNotInMap].find((b) => b.id === apex.id)
+                    const existingBlast = [...blastsRef.current, ...blastsNotInMapRef.current].find(
+                        (b) => b.id === apex.id
+                    )
                     if (!existingBlast) {
                         // New cone from template — create it with pixiOnBlastComplete
                         if (pixiOnBlastComplete) {
                             const newBlast: Blast = {
                                 id: apex.id,
-                                mapId: mapKey,
+                                mapId: mapKeyRef.current,
                                 type: 'cone',
                                 x: apex.apexX,
                                 y: apex.apexZ,
@@ -3689,8 +3700,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     } else {
                         // Existing cone — update endpoint
-                        if (onBlastUpdateCone) {
-                            onBlastUpdateCone(apex.id, endX, endZ, apex.apexX, apex.apexZ)
+                        if (onBlastUpdateConeRef.current) {
+                            onBlastUpdateConeRef.current(apex.id, endX, endZ, apex.apexX, apex.apexZ)
                         }
                     }
                 }
@@ -3700,47 +3711,47 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 rotatingConeRef.current = null
                 setBlastPreviewStart(null)
                 setBlastPreviewEnd(null)
-                setDraggedBlastId(null)
+                draggedBlastIdRef.current = null
                 dragBlastStartRef.current = null
                 return
             }
 
-            if (draggedTokenId) {
+            if (draggedTokenIdRef.current) {
                 isStartingNewSegmentRef.current = false
                 newSegmentPreviewAddedRef.current = false
                 // If player dragged a token in session, broadcast pending movement to DM
                 if (isLeftClickDraggingRef.current && session && role === 'player') {
-                    const pending = pendingMovementsRef.current.get(draggedTokenId)
+                    const pending = pendingMovementsRef.current.get(draggedTokenIdRef.current)
                     if (pending) {
                         const points = pending.points.map((p) => ({ x: p.x, y: p.z }))
                         sendAction({
                             kind: 'PENDING_MOVEMENT',
-                            tokenId: draggedTokenId,
+                            tokenId: draggedTokenIdRef.current,
                             points,
-                            mapId: mapKey,
+                            mapId: mapKeyRef.current,
                         })
                         // Also fire local event so other views on the same client (Pixi) render the indicator
                         window.dispatchEvent(
                             new CustomEvent('pendingMovementReceived', {
                                 detail: {
-                                    tokenId: draggedTokenId,
+                                    tokenId: draggedTokenIdRef.current,
                                     points,
-                                    mapId: mapKey,
+                                    mapId: mapKeyRef.current,
                                 },
                             })
                         )
                     }
                 } else if (isLeftClickDraggingRef.current && !session) {
                     // No session: still keep pending so local accept/cancel works
-                    const pending = pendingMovementsRef.current.get(draggedTokenId)
+                    const pending = pendingMovementsRef.current.get(draggedTokenIdRef.current)
                     if (pending) {
                         const points = pending.points.map((p) => ({ x: p.x, y: p.z }))
                         window.dispatchEvent(
                             new CustomEvent('pendingMovementReceived', {
                                 detail: {
-                                    tokenId: draggedTokenId,
+                                    tokenId: draggedTokenIdRef.current,
                                     points,
-                                    mapId: mapKey,
+                                    mapId: mapKeyRef.current,
                                 },
                             })
                         )
@@ -3748,13 +3759,13 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 }
 
                 // Only open token dialog if it wasn't a drag (no movement)
-                if (leftClickTokenRef.current && !isLeftClickDraggingRef.current && onOpenTokenDialog) {
-                    onOpenTokenDialog(leftClickTokenRef.current.id)
+                if (leftClickTokenRef.current && !isLeftClickDraggingRef.current && onOpenTokenDialogRef.current) {
+                    onOpenTokenDialogRef.current(leftClickTokenRef.current.id)
                 }
                 // Reset left-click tracking
                 leftClickTokenRef.current = null
                 isLeftClickDraggingRef.current = false
-                setDraggedTokenId(null)
+                draggedTokenIdRef.current = null
                 dragStartRef.current = null
             } else {
                 // Clear left-click tracking if no drag happened
@@ -3773,11 +3784,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     eraseLineRef.current = null
                 }
                 const end = erasePreviewRef.current
-                if (end && pixiOnWallDraw) {
+                if (end) {
                     const s1 = { x: eraseStartRef.current.x, y: eraseStartRef.current.z }
                     const s2 = { x: end.x, y: end.z }
                     const keep: Wall[] = []
-                    for (const w of walls) {
+                    for (const w of wallsRef.current) {
                         const wallShape = w.shape || 'line'
                         let intersects = false
                         if (wallShape === 'line') {
@@ -3796,7 +3807,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                             keep.push(w)
                         }
                     }
-                    pixiOnWallDraw(keep, mapKey)
+                    pixiOnWallDrawRef.current(keep, mapKeyRef.current)
                 }
                 // Restore all highlighted wall materials
                 const wallMeshes = wallMeshesRef.current
@@ -3822,10 +3833,12 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 erasePreviewRef.current = null
             }
 
-            if (draggedBlastId) {
+            if (draggedBlastIdRef.current) {
                 // Persist blast position on drag end
-                const blast = [...blasts, ...blastsNotInMap].find((b) => b.id === draggedBlastId)
-                if (blast && dragBlastStartRef.current && pixiOnBlastMoveProp) {
+                const blast = [...blastsRef.current, ...blastsNotInMapRef.current].find(
+                    (b) => b.id === draggedBlastIdRef.current
+                )
+                if (blast && dragBlastStartRef.current && pixiOnBlastMoveRef.current) {
                     const rect = containerRef.current?.getBoundingClientRect()
                     if (rect) {
                         const mx = event.clientX - rect.left
@@ -3833,7 +3846,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         const dropPoint = getGroundIntersection(mx, my)
                         if (dropPoint) {
                             const snapped = snapToNinePoints(dropPoint.x, dropPoint.z, gridSize, snapToGrid)
-                            pixiOnBlastMoveProp(draggedBlastId, snapped.x, snapped.y)
+                            pixiOnBlastMoveRef.current!(draggedBlastIdRef.current, snapped.x, snapped.y)
 
                             // For cones, enter rotation mode after move
                             if (blast.type === 'cone') {
@@ -3869,7 +3882,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         }
                     }
                 }
-                setDraggedBlastId(null)
+                draggedBlastIdRef.current = null
                 dragBlastStartRef.current = null
             } else if (blastDrawMode && blastPreviewStart && blastPreviewEnd) {
                 // Complete blast drawing — match Pixi's onBlastComplete logic
@@ -3883,7 +3896,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 if (dx !== 0 || dz !== 0) {
                     const newBlast: Blast = {
                         id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
-                        mapId: mapKey,
+                        mapId: mapKeyRef.current,
                         type: blastDrawMode,
                         x: 0,
                         y: 0,
@@ -3942,20 +3955,18 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 if (startX !== endX || startZ !== endZ) {
                     const newWall: Wall = {
                         id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now()),
-                        mapId: mapKey,
+                        mapId: mapKeyRef.current,
                         x1: startX,
                         y1: startZ,
                         x2: endX,
                         y2: endZ,
                         shape: wallDrawingShape,
-                        color: wallColor,
-                        alpha: wallAlpha,
+                        color: wallColorRef.current,
+                        alpha: wallAlphaRef.current,
                     }
 
-                    if (pixiOnWallDraw) {
-                        const updatedWalls = [...walls, newWall]
-                        pixiOnWallDraw(updatedWalls, mapKey)
-                    }
+                    const updatedWalls = [...wallsRef.current, newWall]
+                    pixiOnWallDrawRef.current(updatedWalls, mapKeyRef.current)
                 }
 
                 setWallDrawingStart(null)
@@ -3998,33 +4009,65 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         wallDrawingShape,
         wallDrawingStart,
         wallDrawingEnd,
+        isErasingWalls,
         width,
         height,
         gridSize,
         snapToGrid,
-        tokens,
-        walls,
-        mapKey,
-        wallColor,
-        wallAlpha,
-        draggedTokenId,
-        draggedBlastId,
-        pixiOnTokenMove,
-        pixiOnTokenUpdate,
-        pixiOnTokenDrop,
-        pixiOnBlastDrop,
-        pixiOnBlastMoveProp,
-        pixiOnWallDraw,
-        onBlastUpdateCone,
-        blasts,
-        blastsNotInMap,
-        pixiSetSelectedTokenId,
-        pixiSetSelectedBlastId,
-        onOpenTokenDialog,
-        contextMenus,
+        session,
+        connected,
+        role,
+        displayName,
+        sendAction,
+        pixiOnBlastComplete,
     ])
 
-    return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+    return (
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+            {!contentReady && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#050718',
+                        color: '#00FFFF',
+                        fontFamily: '"Orbitron", monospace',
+                        fontSize: '18px',
+                        flexDirection: 'column',
+                        gap: '20px',
+                        zIndex: 9999,
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            border: '3px solid #00FFFF',
+                            borderTop: '3px solid #FF00FF',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                        }}
+                    />
+                    <div>LOADING 3D ASSETS...</div>
+                    <style>
+                        {`
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        `}
+                    </style>
+                </div>
+            )}
+        </div>
+    )
 }
 
 export default ThreeBoard

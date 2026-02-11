@@ -268,7 +268,6 @@ async function main() {
     for (const task of tasks) {
         const mesh = task.builder()
         await exportGlb(mesh, task.name)
-        console.log(`Generated ${task.name}`)
     }
 }
 

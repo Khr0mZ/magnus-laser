@@ -848,10 +848,11 @@ const EdgerunnersView = () => {
                     onClick={handleCreateNew}
                     sx={{
                         backgroundColor: colors.neons.cyan.default,
-                        color: colors.grays.gray900,
+                        color: colors.neons.orange.default,
                         fontWeight: 'bold',
                         '&:hover': {
                             backgroundColor: colors.neons.cyan.light,
+                            color: colors.neons.orange.dark,
                             boxShadow: `0 0 15px ${colors.neons.cyan.default}60`,
                         },
                     }}
@@ -1404,6 +1405,55 @@ const EdgerunnersView = () => {
                                                         />
                                                     </Stack>
                                                 </Stack>
+                                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                                                    <Typography
+                                                        variant="subtitle2"
+                                                        sx={{ color: colors.neons.yellow.default }}
+                                                    >
+                                                        Eurobucks:
+                                                    </Typography>
+                                                    <TextField
+                                                        type="tel"
+                                                        value={editedEdgerunner.eurobucks}
+                                                        onChange={(e) =>
+                                                            updateEditedField(
+                                                                'eurobucks',
+                                                                Math.max(0, parseInt(e.target.value) || 0)
+                                                            )
+                                                        }
+                                                        variant="standard"
+                                                        size="small"
+                                                        slotProps={{
+                                                            htmlInput: {
+                                                                min: 0,
+                                                                style: { textAlign: 'center', padding: 0 },
+                                                            },
+                                                        }}
+                                                        sx={{
+                                                            width: 80,
+                                                            '& .MuiInput-input': {
+                                                                color: colors.neons.yellow.default,
+                                                                fontWeight: 'bold',
+                                                                fontFamily: '"Orbitron", monospace',
+                                                            },
+                                                            '& .MuiInput-underline:before': {
+                                                                borderColor: 'transparent',
+                                                            },
+                                                            '& .MuiInput-underline:hover:before': {
+                                                                borderColor: `${colors.neons.yellow.default}40 !important`,
+                                                            },
+                                                            '& .MuiInput-underline:after': {
+                                                                borderColor: colors.neons.yellow.default,
+                                                            },
+                                                        }}
+                                                    />
+                                                    <Typography
+                                                        variant="subtitle2"
+                                                        sx={{ color: colors.neons.yellow.default }}
+                                                    >
+                                                        eb
+                                                    </Typography>
+                                                </Stack>
                                             </Grid>
 
                                             {/* Role Ability */}
@@ -1615,59 +1665,6 @@ const EdgerunnersView = () => {
                                                         </Accordion>
                                                     )}
                                                 </Paper>
-                                            </Grid>
-
-                                            {/* Eurobucks */}
-                                            <Grid size={12}>
-                                                <Stack direction="row" spacing={1} alignItems="center">
-                                                    <Typography
-                                                        variant="subtitle2"
-                                                        sx={{ color: colors.neons.yellow.default }}
-                                                    >
-                                                        Eurobucks:
-                                                    </Typography>
-                                                    <TextField
-                                                        type="tel"
-                                                        value={editedEdgerunner.eurobucks}
-                                                        onChange={(e) =>
-                                                            updateEditedField(
-                                                                'eurobucks',
-                                                                Math.max(0, parseInt(e.target.value) || 0)
-                                                            )
-                                                        }
-                                                        variant="standard"
-                                                        size="small"
-                                                        slotProps={{
-                                                            htmlInput: {
-                                                                min: 0,
-                                                                style: { textAlign: 'center', padding: 0 },
-                                                            },
-                                                        }}
-                                                        sx={{
-                                                            width: 80,
-                                                            '& .MuiInput-input': {
-                                                                color: colors.neons.yellow.default,
-                                                                fontWeight: 'bold',
-                                                                fontFamily: '"Orbitron", monospace',
-                                                            },
-                                                            '& .MuiInput-underline:before': {
-                                                                borderColor: 'transparent',
-                                                            },
-                                                            '& .MuiInput-underline:hover:before': {
-                                                                borderColor: `${colors.neons.yellow.default}40 !important`,
-                                                            },
-                                                            '& .MuiInput-underline:after': {
-                                                                borderColor: colors.neons.yellow.default,
-                                                            },
-                                                        }}
-                                                    />
-                                                    <Typography
-                                                        variant="subtitle2"
-                                                        sx={{ color: colors.neons.yellow.default }}
-                                                    >
-                                                        eb
-                                                    </Typography>
-                                                </Stack>
                                             </Grid>
                                         </Grid>
                                     )}
@@ -4637,11 +4634,11 @@ const EdgerunnersView = () => {
                                           }
                                         : {
                                               backgroundColor: colors.neons.cyan.default,
-                                              color: colors.grays.gray900,
+                                              color: colors.neons.orange.default,
                                               fontWeight: 'bold',
-                                              textShadow: '0 0 3px rgba(0,0,0,0.3)',
                                               '&:hover': {
                                                   backgroundColor: colors.neons.cyan.light,
+                                                  color: colors.neons.orange.dark,
                                                   boxShadow: `0 0 15px ${colors.neons.cyan.default}60`,
                                               },
                                           }

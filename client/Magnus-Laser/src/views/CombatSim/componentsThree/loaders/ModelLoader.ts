@@ -250,7 +250,7 @@ export function createFallbackBlastModel(
             const halfAngleRad = (14 * Math.PI) / 180 // 14 degrees in radians
             const baseRadius = size * Math.tan(halfAngleRad) // radius = length * tan(14°)
             // openEnded = false means include base cap
-            const geometry = new THREE.ConeGeometry(baseRadius, size, 8, 1, false)
+            const geometry = new THREE.ConeGeometry(baseRadius, size, 32, 1, false)
             const material = new THREE.MeshStandardMaterial({
                 color: color,
                 emissive: new THREE.Color(color).multiplyScalar(0.5),
