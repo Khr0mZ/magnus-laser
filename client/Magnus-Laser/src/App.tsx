@@ -7,7 +7,6 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import CustomScrollbar from './components/CustomScrollbar'
 import CyberpunkLoader from './components/CyberpunkLoader'
 import { GMToolsDrawer } from './components/GMTools'
-import EdgerunnerDetailDialog from './views/Edgerunners/EdgerunnerDetailDialog'
 import NavigationDrawer from './components/NavigationDrawer/NavigationDrawer'
 import { DataProvider } from './contexts/DataContext'
 import { useData } from './contexts/dataHooks'
@@ -19,17 +18,11 @@ import NavigationPaths from './navigation'
 import { useSession } from './state/sessionStore'
 import { initCombatSimSync } from './sync/combatSimSync'
 import { getDesignTokens } from './utils/theme'
-import BountyView from './views/Bounty/BountyView.tsx'
-import BuildingView from './views/Building/BuildingView'
-import CharacterView from './views/Character/CharacterView.tsx'
 import CharacterCreatorView from './views/CharacterCreator/CharacterCreatorView'
-import ClubView from './views/Club/ClubView.tsx'
 import CombatSimView from './views/CombatSim/CombatSimView.tsx'
 import Dashboard from './views/Dashboard/Dashboard'
+import EdgerunnerDetailDialog from './views/Edgerunners/EdgerunnerDetailDialog'
 import EdgerunnersView from './views/Edgerunners/EdgerunnersView'
-import FixerJob from './views/FixerJob/FixerJobView'
-import GangView from './views/Gang/GangView'
-import ItemView from './views/Item/ItemView.tsx'
 import MapView from './views/Map/MapView.tsx'
 import SettingsView from './views/Settings/SettingsView'
 import SoloPlayView from './views/SoloPlay/SoloPlayView'
@@ -152,13 +145,6 @@ const AppContent = () => {
                                 <Route path={NavigationPaths.DASHBOARD} element={<Dashboard />} />
                                 <Route path={NavigationPaths.MAP} element={<MapView />} />
                                 <Route path={NavigationPaths.COMBAT_SIM} element={<CombatSimView />} />
-                                <Route path={NavigationPaths.GANG} element={<GangView />} />
-                                <Route path={NavigationPaths.FIXER_JOB} element={<FixerJob />} />
-                                <Route path={NavigationPaths.CLUB} element={<ClubView />} />
-                                <Route path={NavigationPaths.BOUNTY} element={<BountyView />} />
-                                <Route path={NavigationPaths.CHARACTER} element={<CharacterView />} />
-                                <Route path={NavigationPaths.ITEM} element={<ItemView />} />
-                                <Route path={NavigationPaths.BUILDING} element={<BuildingView />} />
                                 <Route path={NavigationPaths.SOLO_PLAY} element={<SoloPlayView />} />
                                 <Route path={NavigationPaths.CHARACTER_CREATOR} element={<CharacterCreatorView />} />
                                 <Route path={NavigationPaths.EDGERUNNERS} element={<EdgerunnersView />} />

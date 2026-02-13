@@ -73,6 +73,7 @@ export type AppPreferences = {
     readerMode: boolean
     animationsEnabled: boolean
     loaderEnabled: boolean
+    language: string
     huggingFaceApiKey: string
     openAIApiKey: string
     geminiApiKey: string

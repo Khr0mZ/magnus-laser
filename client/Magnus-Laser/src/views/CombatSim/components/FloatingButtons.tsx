@@ -257,7 +257,7 @@ const FloatingButtons = (props: FloatingButtonsProps) => {
                             boxShadow: `0 0 8px ${colors.neons.pink.default}80`,
                         },
                     }}
-                    title="Blasts"
+                    title={t('combatSim.blastsPanelTitle')}
                 >
                     <Box
                         sx={{

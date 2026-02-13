@@ -1,106 +1,290 @@
 # Magnus Laser
 
-A cyberpunk-themed desktop application for managing tabletop RPG game elements. This application provides comprehensive tools to manage gangs, buildings, characters, fixer jobs, bounties, items, and tactical combat for your cyberpunk tabletop RPG campaigns.
+A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magnus Laser provides a comprehensive toolkit for Game Masters and players: world-building databases, AI-powered content generation, a full tactical combat simulator with dual 2D/3D renderers, real-time multiplayer sessions, a 7-step character creator, 18 GM solo-play tools, and much more.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-0.2.0-green)
-
-## Screenshots
-
-### Cyberpunk UI
-
-![Dashboard](./screenshots/dashboard.png)
-![Gang](./screenshots/gang.png)
-![Building](./screenshots/building.png)
-![Item](./screenshots/item.png)
-![Gig](./screenshots/gig.png)
-![Bounty](./screenshots/bounty.png)
-![System](./screenshots/system.png)
-![Combat Simulator](./screenshots/combat_simulator.png)
-
-### Reader Mode
-
-![Dashboard](./screenshots/dashboard_reader.png)
-![Gang](./screenshots/gang_reader.png)
-![Building](./screenshots/building_reader.png)
-![Item](./screenshots/item_reader.png)
-![Gig](./screenshots/gig_reader.png)
-![Bounty](./screenshots/bounty_reader.png)
-![System](./screenshots/system_reader.png)
-![Combat Simulator](./screenshots/combat_simulator_reader.png)
+![Version](https://img.shields.io/badge/version-0.2.7-green)
 
 ## Features
 
-- **Cyberpunk UI**: Immersive interface with glitch effects, power lines, scanlines, and neon elements.
-- **Reader Mode**: Toggle between cyberpunk visual style and a cleaner, more accessible reader mode.
-- **Multilingual Support**: Internationalization with i18next and react-i18next. (English available)
-- **Module Management**:
-  - **Dashboard**: Central hub showing all modules with quick access.
-  - **Characters**: Create and manage player (TBD) and non-player characters.
-  - **Gangs**: Create and manage gang organizations with detailed hierarchies.
-  - **Buildings**: Design and organize buildings and locations with rich metadata.
-  - **Clubs**: Manage nightlife and entertainment venues. (Placeholder - TBD)
-  - **Items**: Track equipment, weapons, and inventory with detailed stats.
-  - **Gigs**: Plan and manage fixer jobs and missions with complex plot structures.
-  - **Bounties**: Track and manage bounty hunting activities with target details.
-  - **Map**: Interactive map with draggable markers for buildings, gangs, and contacts.
-  - **Combat Simulator**: Fully implemented tactical grid-based combat system with per-map initiative tracking, dice rolling, real-time multiplayer sync, persistent storage, and tactical tools.
-  - **Settings**: Configure API keys, reader mode, animations, and other preferences.
-- **AI-Assisted Generation**: Auto-generate content using Google Generative AI (Gemini), OpenAI, and Hugging Face APIs.
-- **Rich Text Editor**: Integrated TipTap v3 editor for notes and descriptions with markdown support.
-- **Interactive Map**: Built with Leaflet and Leaflet Draw for world building and marker management.
-- **Data Persistence**: Offline-first storage powered by Dexie (IndexedDB) for automatic saving and loading.
-- **Data Import/Export**: Export and import all application data as JSON files for backup and sharing.
-- **Notifications**: Real-time in-app notifications with Notistack.
-- **Cross-Platform Desktop App**: Packaged with Tauri v2 for macOS, Linux, and Windows.
+### Cyberpunk UI
 
-## Session Hosting (Magnus Laser)
+- Immersive interface with glitch effects, scanlines, neon glow, and Matrix rain background
+- Custom CyberpunkLoader startup screen with per-module progress bars and hex-address simulation
+- Orbitron/Rajdhani fonts, chromatic aberration button effects, and pulsing neon animations
+- Full **Reader Mode** toggle: switches to a clean, accessible light theme with no animations
 
-Magnus Laser ships with a free click-to-host relay for your tabletop sessions. Everything runs on your machine—no logins, no paid infrastructure.
+### Multilingual Support
 
-1. **Install `cloudflared`:** Download the standalone binary from [Cloudflare](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation) and place it somewhere on your PATH (or keep the path handy—the app lets you pick it).
-   - Optional fallback: install the `localtunnel` CLI (`npm install -g localtunnel`) if you prefer a quick random subdomain.
-2. **Launch the Session view:** Inside the desktop app open **Session** in the navigation bar. Pick a display name, choose the **Game Master** role, and click **Create Session**. The app spins up a local WebSocket relay and exposes it through a Cloudflare Quick Tunnel.
-3. **Share the invite:** Copy the public URL + session code and send them to your players. They only need those values to join—no accounts or extra software.
-4. **Join as a player:** Players select the **Player** role, paste the host’s URL/code, and connect. The app attempts WebRTC data channels first; if NAT punches fail after ~9 seconds it automatically falls back to the relay tunnel.
+- Internationalization powered by i18next and react-i18next (English and Spanish)
+- Language selector in Settings with persistent preference
+
+### Main Navigation Modules
+
+- **Dashboard** — Central hub showing primary modules (Map, Combat Simulator, Solo Play, Edgerunners, Settings) as clickable cards with cyberpunk animations.
+- **Map** — Interactive Leaflet-based world map with draggable custom markers for buildings, gangs, and contacts. Marker CRUD with persistent storage. Drawing tools via Leaflet Draw.
+
+### World-Building Modules (via GM Tools)
+
+The following modules are accessible from the GM Tools drawer. Each supports grid and table view modes, compact/expanded display, AI-powered random generation, and full CRUD operations with persistent storage.
+
+- **Characters** — Create and manage NPCs with type, attitude, appearance, and AI-generated portraits. Random generation with name, description, and image.
+- **Gangs** — Manage gang organizations with cyberware quality, skill levels, weapons, armor, reputation, attitudes, secrets, and flaws. AI-generated profiles and images.
+- **Buildings** — Design locations with type, ownership, security personnel, style, events, secrets, parking, elevators, emergency exits, landing pads, and more. AI-generated descriptions and images.
+- **Items** — Track equipment and inventory with type, condition, and detailed stats. AI-generated item cards.
+- **Gigs (Fixer Jobs)** — Plan missions with difficulty levels (Easy/Typical/Dangerous). AI generation creates the job plus all associated entities (gangs, buildings, characters, items) in one pass. Plot verb system for mission objectives.
+- **Bounties** — Track bounty targets linked to characters with crime types (Bribe, Contraband, Drug, Murder, Theft), specialties, rewards, and status tracking (Active/Captured/Dead).
+
+### Edgerunners
+
+Full character sheet management for player characters:
+
+- **10 Base Stats**: INT, REF, DEX, TECH, COOL, WILL, LUCK, MOVE, BODY, EMP (editable, clamped 1-10)
+- **Derived Stats**: HP, Seriously Wounded threshold, Death Save, Humanity (current/max), EMP
+- **9 Skill Categories**: Awareness, Body, Control, Education, Fighting, Performance, Ranged Weapon, Social, Technique — each skill editable with color-coded proficiency levels
+- **Equipment Shopping**: Buy/sell weapons, armor, gear, cyberware, and fashion with real-time eurobucks tracking
+  - Cyberware: Foundation slot system, stat requirements, humanity loss tracking, prerequisite validation, unique enforcement, borgware support
+  - Fashion: Separate budget from eurobucks
+  - 50% refund on resale
+- **Lifepath**: Cultural origin, personality, dress style, affectation, motivation, family background, childhood, crisis, life goal
+- **IP Tracking**: Staged skill and role rank improvements with cost preview and cascade unstaging
+- **Combat Token Sync**: Changes to edgerunner stats automatically sync to associated combat tokens
+- **Export**: Download individual edgerunner data as JSON
+
+### Character Creator
+
+7-step guided wizard for creating new characters:
+
+1. **Method Selection** — Choose from three creation paths:
+   - _Streetrat_ (beginner): Pre-generated stats and fixed skills
+   - _Edgerunner_ (recommended): Stat template with 86 distributable skill points
+   - _Complete Package_ (advanced): 62 stat points + 86 skill points + 2,550eb gear budget
+2. **Role Selection** — 10 roles (Rockerboy, Solo, Netrunner, Tech, Medtech, Media, Lawman, Exec, Fixer, Nomad), each with unique Role Ability and rank-based scaling mechanics
+3. **Stats** — Allocate points across 10 stats with real-time derived stat calculation (HP, Humanity, Death Save, Seriously Wounded threshold)
+4. **Skills** — Distribute 86 points across all skills with x2 cost support, basic skill minimums, and free cultural language
+5. **Gear Shopping** (Complete Package only) — Night Market interface with 5 tabs (Weapons, Armor, Gear, Cyberware, Fashion). 8 color-coded cyberware categories with slot management, prerequisite tracking, and humanity loss warnings (including cyberpsychosis threshold)
+6. **Lifepath** — Randomly generated backstory: cultural origin, personality, style, motivation, family, life events (color-coded: good/bad/friend/enemy/rival). Full reroll support
+7. **Finishing Touches** — Name and handle input, character summary card, and save to library
+
+### Solo Play
+
+Quick resolution systems for single-player adventures:
+
+- **Quick & Dirty Combat** — 6-phase streamlined combat system:
+  1. _Setup_: Configure edgerunners (with hardened criteria) and enemies (Mook/Lieutenant/Mini-Boss/Boss levels)
+  2. _Tactics_: Contested roll to determine attack distribution
+  3. _Counting_: Calculate total attacks per side
+  4. _Attacking_: Generate individual attack checks with fumble tracking
+  5. _Comparing_: Match attacks, calculate damage, track critical injuries and bullet dodge
+  6. _Outcome_: Determine winner with optional morale checks (Lost to Violence/Experienced/Trained/Inexperienced/Unsure)
+
+- **Quick & Dirty Netrunning** — Floor-based hacking system:
+  - Architecture sizes: Small (3-6 floors, 3 checks), Medium (7-12 floors, 5 checks), Large (13+ floors, 7 checks)
+  - Check types: Password, File, Control Node, Black ICE (opposed)
+  - Majority-based success/failure with Black ICE hit accumulation and unsafe jackout consequences
+
+### GM Tools
+
+18 specialized tools accessible from the GM Tools drawer:
+
+#### Solo Play Tools (12)
+
+| Tool                 | Description                                                                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Oracle**           | Fate determination engine. Closed questions: d100 roll with 5 probability levels (Certain → Impossible) producing 5 answer types. Open questions: random verb + noun + adjective combinations. History tracking (100 results) |
+| **Clocks**           | Dice pool countdown system (3-10 d6). Removes 1s on roll, optional 6s removal (scale-up mode). Devil's Luck mechanic, add-dice-back recovery. Roll history with degree-of-consequence bonuses                                 |
+| **Mission Builder**  | Solo mission generator with employer types (Fixer/Corpo/Gang), payment, summary, focus, specifics, and twist. Per-section reroll, save/load, clipboard copy                                                                   |
+| **Beat Chart**       | Story structure tracker with 4 beat types (Hook/Development/Climax/Resolution). Multi-chart tabs, 1-10 development steps, progress bar with completion tracking                                                               |
+| **Random Tables**    | Massive generator hub with 40+ generators across 9 categories: Core, Words, Sensory, Names, Night City, People, Things, Media, and Mission Items. Zone/time-based encounter generator. 50-result history                      |
+| **Investigation**    | Research check tracker. Complexity levels (Simple=3, Average=5, Difficult=7 checks). Skill + DV rolls with success/failure counting and majority determination                                                                |
+| **Social Challenge** | NPC interaction tracker. Importance levels (Background/Supporting/Key) determine check count. Opposed skill rolls with win/tie/loss tracking                                                                                  |
+| **NPC Tracker**      | Character status monitor with status tracking (Alive/Dead/Missing/Unknown), role, first encounter, relationship, mood, and notes. Random generators for each field                                                            |
+| **IP Tracker**       | Improvement Points ledger per edgerunner. Track earned vs. spent IP with date, amount, and spend-on description. Auto-calculated available IP                                                                                 |
+| **Scene Tracker**    | Session structure tracker with auto-numbered scenes. Track location, participants, goal, outcome, notes. Attachable checks with completion tracking. Random location generator                                                |
+| **NPC Forms**        | NPC creation in two modes: Simple (name, handle, role, look, quirk, mood, notes) and Complex (adds 10 CB3010 stats, combat stats, HP, initiative, reputation, equipment, cyberware)                                           |
+| **Random Things**    | Custom d3-d20 random tables with weighted probability. Visual percentage display per item. Create, edit, roll, and delete custom tables                                                                                       |
+
+#### Content Generators (6)
+
+AI-powered generators that create entities and persist them to the main database:
+
+| Generator              | Output                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| **Gang Generator**     | Full gang profiles with all properties                                          |
+| **Building Generator** | Locations with type, status, and details                                        |
+| **Gig Generator**      | Fixer jobs with cascading entity creation (gangs, buildings, characters, items) |
+| **Bounty Generator**   | Bounty targets with crime generation and auto-created characters                |
+| **Item Generator**     | Equipment with type and categorization                                          |
+| **Contact Generator**  | Standalone NPC characters                                                       |
+
+### AI-Assisted Content Generation
+
+Three-tier fallback strategy for generating names, descriptions, and images:
+
+1. **Google Gemini** (gemini-2.0-flash for text, Imagen 3.0 for images) — preferred
+2. **Hugging Face** (Mistral-7B-Instruct for text, Stable Diffusion XL for images) — fallback
+3. **OpenAI** (GPT-3.5-turbo for text, DALL-E 3 for images) — fallback
+4. **Local procedural generation** — deterministic templates when all APIs fail
+
+All generated content uses cyberpunk-themed prompts and is automatically persisted to IndexedDB. Image regeneration available from entity edit dialogs.
+
+### Additional Features
+
+- **Rich Text Editor** — TipTap v3 with markdown support for notes and descriptions
+- **Data Persistence** — Offline-first storage via Dexie (IndexedDB) with 24+ database tables. Automatic saving and loading
+- **Data Import/Export** — Export and import all application data (or individual modules) as JSON files for backup and sharing
+- **Notifications** — Real-time in-app notifications with Notistack
+- **Cross-Platform Desktop App** — Packaged with Tauri v2 for macOS, Linux, and Windows
+
+## Combat Simulator
+
+A fully implemented tactical combat system with real-time multiplayer synchronization, supporting both 2D and 3D rendering modes.
+
+### Dual Renderer
+
+- **2D Mode (PixiJS)** — Default canvas-based renderer with pixi-viewport for pan/zoom
+- **3D Mode (Three.js)** — Toggle to a full 3D board with camera presets, cyberpunk materials, and 3D models for tokens, walls, and blasts
+
+### Grid & Board
+
+- Customizable grid with adjustable cell size, color, and alpha
+- Snap-to-grid with 9-point snapping (vertices, centers, edge midpoints)
+- Custom background images (upload, manage, replace, delete)
+- Per-map settings persistence
+
+### Token Management
+
+- Create tokens with custom name, color (8 neon presets), and size
+- Full stat block: HP, armor (head/body with current tracking), movement, initiative, and combat actions (melee/ranged/grenade/skill with damage dice)
+- PC tokens with luck stat
+- Custom token images from asset library
+- 3D model assignment with orientation control
+- Owner assignment for multiplayer (players control their own tokens)
+- Drag-and-drop positioning, copy/cut/paste via clipboard
+- Context menus for quick actions, hover tooltips with stats
+
+### Walls & Barriers
+
+- Draw walls in three shapes: line, rectangle, and circle
+- Custom wall colors and alpha
+- Wall erasing tool
+- Walls serve as barriers for fog of war and line-of-sight calculations
+
+### Blast & Area-of-Effect
+
+- Four blast types: grenade, circle, square, and cone
+- Adjustable size and positioning
+- Lock/unlock blasts on the board
+- Drag-and-drop placement
+
+### Fog of War & Line of Sight
+
+- Visibility polygon calculation using 360 regular 1-degree rays plus endpoint-targeted rays
+- Canvas 2D offscreen rendering with `destination-out` compositing to punch visibility holes
+- Wall collision detection for accurate line-of-sight blocking
+- Works identically in both 2D and 3D renderers
+
+### Combat System
+
+- **Per-Map Initiative** — Each map maintains its own initiative state: active token, current round, combat active flag, and auto-settings
+- **Dice Rolling** — D10-based system with attack rolls (modifiers), damage rolls (auto-roll option), and general rolls. Critical success/failure and fumble handling
+- **Roll History** — Per-map roll log sorted by timestamp with damage reveal system (hidden until GM reveals)
+- **Auto-Settings** — Per-map auto-reroll initiative and auto-roll damage toggles
+
+### Tactical Tools
+
+- **Measurement Ruler** — Click-and-drag distance measurement
+- **Floating Buttons** — Quick access to wall drawing modes, erasing, measurement, panel toggles, and color pickers
+- **Side Panels** — Token panel, Initiative panel, Roll History panel, Blasts panel
+
+### 3D-Specific Features
+
+- Camera presets for different viewing angles
+- Cyberpunk-themed materials and shaders
+- 3D model loader for tokens, walls, and blast effects
+- Board labels and wall/blast previews during placement
+
+### Multiplayer Sync
+
+All combat state syncs in real-time between DM and players (see Session Hosting below).
+
+## Session Hosting
+
+Magnus Laser ships with a free click-to-host relay for your tabletop sessions. Everything runs on your machine — no logins, no paid infrastructure.
+
+### Setup
+
+1. **Install `cloudflared`:** Download the standalone binary from [Cloudflare](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation) and place it somewhere on your PATH.
+2. **Launch the Session view:** Inside the desktop app open **Settings** in the navigation bar. Pick a display name, choose the **Game Master** role, and click **Create Session**. The app spins up a local WebSocket relay and exposes it through a Cloudflare Quick Tunnel.
+3. **Share the invite:** Copy the public URL + session code and send them to your players. They only need those values to join — no accounts or extra software.
+4. **Join as a player:** Players select the **Player** role, paste the host's URL/code, and connect.
 5. **End the session:** When you click **End Session** the tunnel and local WebSocket server are shut down cleanly.
 
-All persistent state lives in Dexie/IndexedDB on each client. The relay layer handles presence, signaling, and (if needed) message forwarding without storing game data on any third-party servers.
+### Transport Architecture
+
+- **Primary: WebRTC data channels** — Direct peer-to-peer connection for lowest latency. Uses STUN/TURN servers for NAT traversal.
+- **Fallback: WebSocket relay** — If WebRTC fails to connect within 9 seconds, the system automatically falls back to relaying through the Cloudflare tunnel.
+- **Auto-reconnect** — Players automatically rejoin their last session on app restart. Exponential backoff with tab-visibility awareness and PING/PONG heartbeat.
+
+### State Synchronization
+
+- **Snapshot-based sync** — DM watches all combat tables for changes and broadcasts full snapshots (250ms debounce)
+- **Chunked asset streaming** — Large map images and assets are split into 64KB chunks with SHA256 hash verification
+- **Ownership validation** — Players can only modify tokens they own; DM validates all mutations before applying
+- **Pending movement** — Players declare movements, DM approves or rejects
+- **Session tables** — Players write to separate session-prefixed tables (`sessionTokens`, `sessionMaps`, etc.) to isolate their view from local prep data
+
+### Backend Options
+
+- **Tauri desktop** — Built-in `start_host` command spawns the WebSocket server and Cloudflare tunnel directly
+- **Companion server** — Standalone Rust server (Axum + tokio-tungstenite) at `server/` for headless hosting
+
+All persistent state lives in Dexie/IndexedDB on each client. The relay layer handles presence, signaling, and message forwarding without storing game data on any third-party servers.
 
 ## Technologies Used
 
 - **Frontend:**
-
   - React 19.2.0 & React Router v7.9.3
   - TypeScript 5.9.3
   - Material-UI (MUI) v7.3.4
   - i18next 25.5.3 & react-i18next 16.0.0
+  - Zustand 4.5.4 for state management
   - TipTap v3.6.5 for rich text editing
-  - PixiJS 8.13.2 & @pixi/react 8.0.3 for combat simulator
+  - PixiJS 8.13.2 & @pixi/react 8.0.3 for 2D combat rendering
+  - Three.js 0.181.2 for 3D combat rendering
   - pixi-viewport 6.0.3 for interactive canvas controls
   - Leaflet 1.9.4 & React Leaflet 5.0.0 for interactive maps
   - Leaflet Draw 1.0.4 for map drawing tools
   - Dexie 4.2.0 for IndexedDB database management
-  - @hello-pangea/dnd 18.0.1 for drag and drop functionality
+  - @hello-pangea/dnd 18.0.1 for drag and drop
   - Notistack 3.0.2 for notifications
-  - Google Generative AI SDK 0.24.1
-  - OpenAI & Hugging Face integrations
-  - GraphQL 16.11.0 & GraphQL Code Generator 6.0.0
-  - @uiw/react-color 2.9.0 & @uiw/react-md-editor 4.0.8
+  - @uiw/react-color 2.9.0 for color picking
   - DOMPurify 3.2.7 for sanitization
   - date-fns 4.1.0 for date handling
   - smooth-scrollbar 8.8.4 for custom scrolling
-  - ESLint 9.37.0 for code quality
+  - diff 8.0.2 for state patching
+
+- **AI Providers:**
+  - Google Generative AI SDK 0.24.1 (Gemini)
+  - OpenAI API (GPT-3.5-turbo, DALL-E 3)
+  - Hugging Face API (Mistral-7B, Stable Diffusion XL)
 
 - **Desktop:**
-
-  - Tauri 2.8.4 for building cross-platform desktop applications
+  - Tauri 2.8.4 for cross-platform desktop applications
   - Rust backend with Tauri plugins (fs, shell)
+
+- **Server (Companion):**
+  - Rust with Axum 0.7 web framework
+  - tokio async runtime
+  - tokio-tungstenite for WebSocket
+  - Cloudflare tunnel integration (cloudflared subprocess)
 
 - **Build Tools:**
   - Vite 7.1.9
-  - TypeScript Compiler
-  - GraphQL Codegen
+  - TypeScript 5.9.3
+  - ESLint 9.37.0
+  - GraphQL Codegen 6.0.0
+  - Vitest 2.1.4 for testing
 
 ## Getting Started
 
@@ -124,32 +308,24 @@ All persistent state lives in Dexie/IndexedDB on each client. The relay layer ha
 
    ```bash
    npm install
-   # or
-   yarn
    ```
 
 3. Start the development server
 
    ```bash
    npm run dev
-   # or
-   yarn dev
    ```
 
 4. For desktop development with Tauri:
 
    ```bash
    npm run tauri dev
-   # or
-   yarn tauri dev
    ```
 
 5. To build the desktop application for production:
 
    ```bash
    npm run tauri build
-   # or
-   yarn tauri build
    ```
 
 6. Open your browser and navigate to `http://localhost:5173`
@@ -158,70 +334,137 @@ All persistent state lives in Dexie/IndexedDB on each client. The relay layer ha
 
 From within the `client/Magnus-Laser` directory:
 
-- `npm run dev` / `yarn dev`: Start Vite development server.
-- `npm run build` / `yarn build`: Build web app for production.
-- `npm run preview` / `yarn preview`: Preview production build.
-- `npm run ts` / `yarn ts`: Run TypeScript compiler in watch mode.
-- `npm run lint` / `yarn lint`: Run ESLint checks.
-- `npm run ts:lint` / `yarn ts:lint`: Run TypeScript and ESLint together.
-- `npm run generate` / `yarn generate`: Generate GraphQL types and hooks.
-- `npm run tauri dev` / `yarn tauri dev`: Launch the Tauri desktop app in development mode.
-- `npm run tauri build` / `yarn tauri build`: Build the Tauri desktop app for production.
+| Script                        | Description                                      |
+| ----------------------------- | ------------------------------------------------ |
+| `npm run dev`                 | Start Vite development server                    |
+| `npm run build`               | TypeScript check + Vite production build         |
+| `npm run preview`             | Preview production build locally                 |
+| `npm run ts`                  | Run TypeScript compiler in watch mode            |
+| `npm run lint`                | Run ESLint checks                                |
+| `npm run ts:lint`             | Run TypeScript and ESLint together               |
+| `npm run generate`            | Generate GraphQL types and hooks                 |
+| `npm run test`                | Run Vitest in watch mode                         |
+| `npm run test:run`            | Run Vitest once                                  |
+| `npm run tauri dev`           | Launch the Tauri desktop app in development mode |
+| `npm run tauri build`         | Build the Tauri desktop app for production       |
+| `npm run tauri:build:windows` | Build for Windows (x86_64)                       |
+| `npm run tauri:build:linux`   | Build for Linux (x86_64)                         |
+| `npm run tauri:build:macos`   | Build for macOS (x86_64)                         |
 
 ## Project Structure
 
 ```
-client/Magnus-Laser/
-├── src/
-│   ├── views/           # Main application views/modules
-│   │   ├── Dashboard/   # Central hub
-│   │   ├── Character/   # Character management
-│   │   ├── Gang/        # Gang organizations
-│   │   ├── Building/    # Building/location management
-│   │   ├── Item/        # Equipment and inventory
-│   │   ├── FixerJob/    # Gigs/missions
-│   │   ├── Bounty/      # Bounty hunting
-│   │   ├── Map/         # Interactive map
-│   │   ├── CombatSim/   # Tactical combat simulator
-│   │   └── Settings/    # Application settings
-│   ├── components/      # Reusable UI components
-│   ├── contexts/        # React contexts for state management
-│   ├── utils/           # Utility functions and helpers
-│   │   ├── generators/  # AI-powered content generators
-│   │   ├── db.ts        # Dexie database configuration
-│   │   ├── storage.ts   # Storage utilities
-│   │   └── ...
-│   ├── graphql/         # GraphQL type definitions
-│   └── i18n/            # Internationalization
-├── src-tauri/           # Tauri Rust backend
+magnus-laser/
+├── client/Magnus-Laser/
 │   ├── src/
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-└── public/              # Static assets
+│   │   ├── views/                   # Main application views
+│   │   │   ├── Dashboard/           # Central hub
+│   │   │   ├── Character/           # NPC management
+│   │   │   ├── Gang/                # Gang organizations
+│   │   │   ├── Building/            # Location management
+│   │   │   ├── Item/                # Equipment and inventory
+│   │   │   ├── FixerJob/            # Gigs and missions
+│   │   │   ├── Bounty/              # Bounty hunting
+│   │   │   ├── Map/                 # Interactive world map
+│   │   │   ├── CombatSim/           # Tactical combat simulator
+│   │   │   │   ├── components/      # React UI (panels, dialogs, menus)
+│   │   │   │   ├── componentsPixi/  # 2D renderer (PixiJS)
+│   │   │   │   ├── componentsThree/ # 3D renderer (Three.js)
+│   │   │   │   ├── hooks/           # Custom combat hooks
+│   │   │   │   ├── context/         # Combat context providers
+│   │   │   │   └── utils/           # Geometry, grid, visibility, dice
+│   │   │   ├── Edgerunners/         # PC character sheet management
+│   │   │   ├── CharacterCreator/    # 7-step character creation wizard
+│   │   │   ├── SoloPlay/            # Quick combat & netrunning
+│   │   │   └── Settings/            # App configuration & sessions
+│   │   ├── components/              # Reusable UI components
+│   │   │   ├── common/              # Themed inputs, dialogs, scrollbars
+│   │   │   ├── GMTools/             # 18 GM solo-play tools
+│   │   │   │   └── tools/           # Individual tool modules
+│   │   │   ├── NavigationDrawer/    # Main navigation
+│   │   │   └── session/             # SessionLobby, SessionHUD
+│   │   ├── contexts/                # DataContext, UserPreferencesContext
+│   │   ├── state/                   # Zustand session store
+│   │   ├── sync/                    # Combat sim sync logic
+│   │   ├── net/                     # Signaling, WebRTC, relay transport
+│   │   ├── types/                   # TypeScript type definitions
+│   │   ├── utils/                   # Utility functions and helpers
+│   │   │   ├── generators/          # AI-powered content generators
+│   │   │   ├── db.ts                # Dexie database configuration
+│   │   │   ├── storage.ts           # Storage utilities
+│   │   │   └── colors.ts            # Cyberpunk color palette
+│   │   ├── graphql/                 # GraphQL type definitions
+│   │   └── i18n/                    # Internationalization (en.json)
+│   ├── src-tauri/                   # Tauri Rust backend
+│   │   ├── src/
+│   │   │   ├── main.rs              # Tauri app entry
+│   │   │   ├── api.rs               # API handlers
+│   │   │   ├── server.rs            # WebSocket server
+│   │   │   ├── host.rs              # Host/tunnel management
+│   │   │   └── tunnel.rs            # Cloudflare tunnel integration
+│   │   ├── Cargo.toml
+│   │   └── tauri.conf.json
+│   └── public/                      # Static assets
+│       ├── blasts/                  # 2D blast sprites
+│       ├── models3d/                # 3D models (tokens, walls, blasts, UI)
+│       ├── map/                     # Map tiles
+│       ├── logos/                   # Brand assets
+│       └── fonts/                   # Custom fonts
+├── server/                          # Companion Rust server
+│   ├── src/
+│   │   ├── main.rs                  # Server entry (Axum)
+│   │   ├── api.rs                   # REST endpoints
+│   │   ├── server.rs                # WebSocket signaling + rooms
+│   │   ├── host.rs                  # Session lifecycle
+│   │   └── tunnel.rs                # Cloudflare tunnel spawning
+│   └── Cargo.toml
+└── graphql/                         # GraphQL schema definitions
+    ├── bounty/
+    ├── building/
+    ├── character/
+    ├── fixerJob/
+    ├── gang/
+    └── item/
 ```
 
 ## Data Storage
 
-Magnus Laser uses **Dexie.js** (an IndexedDB wrapper) for offline-first data persistence:
+Magnus Laser uses **Dexie.js** (an IndexedDB wrapper) for offline-first data persistence.
 
-- **Database Tables**:
-  - `gangs` - Gang organizations
-  - `buildings` - Buildings and locations
-  - `characters` - NPCs and player characters
-  - `items` - Equipment and inventory
-  - `fixerJobs` - Missions and gigs
-  - `bounties` - Bounty targets and details
-  - `preferences` - User settings and API keys
-  - `mapMarkers` - Custom map markers
-  - **Combat Simulator Tables**:
-    - `boardMaps` - Combat maps with grid configuration
-    - `tokens` - Combat tokens with stats and positioning
-    - `maps` - Map layers and configurations
-    - `walls` - Barrier placement for tactical positioning
-    - `images` - Custom map backgrounds and assets
-    - `blasts` - Area-of-effect visualizations
-    - `initiative` - Per-map initiative state and settings
-    - `rollHistory` - Per-map dice roll history with timestamps
+### Core Entity Tables
+
+| Table                   | Primary Key | Indexes                         | Purpose                     |
+| ----------------------- | ----------- | ------------------------------- | --------------------------- |
+| `gangs`                 | `ID`        | `&name`                         | Gang organizations          |
+| `buildings`             | `ID`        | `&name`                         | Buildings and locations     |
+| `characters`            | `ID`        | `&name`                         | NPCs and player characters  |
+| `items`                 | `ID`        | `&name`                         | Equipment and inventory     |
+| `bounties`              | `ID`        | `characterId`                   | Bounty targets and details  |
+| `fixerJobs`             | `ID`        | `plotId`                        | Missions and gigs           |
+| `plots`                 | `ID`        | `plotBuildingId, plotSubjectId` | Mission plot structures     |
+| `plotBuildings`         | `ID`        | `buildingId`                    | Plot-building relationships |
+| `plotComplications`     | `ID`        | `characterId, itemId`           | Plot complications          |
+| `buildingComplications` | `ID`        | `characterId, itemId`           | Building complications      |
+| `preferences`           | `id`        | —                               | User settings and API keys  |
+| `mapMarkers`            | `id`        | —                               | Custom map markers          |
+| `kv`                    | `key`       | —                               | Key-value app settings      |
+
+### Combat Simulator Tables
+
+| Table         | Primary Key | Indexes                     | Purpose                       |
+| ------------- | ----------- | --------------------------- | ----------------------------- |
+| `boardMaps`   | `id`        | `&name`                     | Combat map configurations     |
+| `tokens`      | `id`        | `mapId`                     | Combat tokens with stats      |
+| `maps`        | `id`        | `&name`                     | Map image assets              |
+| `walls`       | `id`        | `mapId`                     | Barrier placement             |
+| `images`      | `id`        | `&name`                     | Custom image assets           |
+| `blasts`      | `id`        | `mapId`                     | Area-of-effect visualizations |
+| `initiative`  | `mapId`     | —                           | Per-map initiative state      |
+| `rollHistory` | `id`        | `tokenId, timestamp, mapId` | Per-map dice roll history     |
+
+### Session Tables (Player Mirror)
+
+During multiplayer sessions, players write to session-prefixed mirrors of all combat tables (`sessionBoardMaps`, `sessionTokens`, `sessionMaps`, `sessionWalls`, `sessionImages`, `sessionBlasts`, `sessionInitiative`, `sessionRollHistory`) to isolate session state from local prep data.
 
 All data is stored locally in your browser's IndexedDB, ensuring:
 
@@ -230,64 +473,6 @@ All data is stored locally in your browser's IndexedDB, ensuring:
 - Automatic persistence
 - Privacy (data never leaves your device unless you export it)
 
-## Combat Simulator
-
-The Combat Simulator is a **fully implemented tactical combat system** with real-time multiplayer synchronization, built with PixiJS. All major features have been implemented and tested, providing a seamless combat experience with persistent state across sessions.
-
-### ✅ **Core Features**
-
-- **Grid-Based Combat**: Customizable grid with adjustable size and cell dimensions
-- **Token Management**: Create and manage combat tokens with colors, sizes, and stats
-- **Per-Map Initiative**: Each map maintains its own initiative state (active token, round, combat status, auto-settings)
-- **Per-Map Roll History**: Roll history is isolated per map and sorted by timestamp
-- **Real-time Sync**: Full integration with session plumbing for multiplayer support between DM and players
-- **Persistent Settings**: Auto-roll damage and auto-reroll initiative settings are stored per-map
-
-### ✅ **Implementation Status**
-
-**Database Schema**: All tables implemented with proper indexing for per-map state isolation
-
-- `initiative: "mapId"` - Per-map initiative state
-- `rollHistory: "id, tokenId, timestamp, mapId"` - Per-map roll history with timestamps
-
-**Dice Rolling System**: D10-based rolls with critical success/failure handling
-
-  - Attack rolls with modifiers
-- Damage rolls with auto-roll settings
-  - General D10 rolls with special results
-- Comprehensive roll history tracking
-
-**Tactical Tools**:
-
-- Wall/barrier placement for tactical positioning
-  - Ruler tool for measuring distances
-  - Context menus for quick actions
-  - Token tooltips with stats
-- Blast effects and area-of-effect visualization
-
-**Map & Assets**:
-
-- Support for custom background images
-- Map markers for buildings, gangs, and contacts
-- District and street name overlays
-- Asset management with persistent storage
-
-### ✅ **Multiplayer Features**
-
-- **Real-time Synchronization**: Changes sync immediately between DM and players
-- **Session Hosting**: Built-in WebRTC + Cloudflare tunnel relay system
-- **Error Recovery**: Comprehensive logging and graceful error handling
-- **State Management**: Automatic loading/saving of per-map combat state
-
-### ✅ **Data Persistence**
-
-- **Offline-First Storage**: Dexie/IndexedDB for automatic saving and loading
-- **Per-Map Isolation**: All combat state (initiative, roll history, auto-settings) is isolated per map
-- **Data Import/Export**: Export and import combat scenarios as JSON files
-- **Automatic Persistence**: State automatically saves when changed and loads when switching maps
-
-You can find useful maps, for example, here: https://www.reddit.com/r/cyberpunkred/comments/1eko852/stop_making_assumptions_if_they_come_with_knives/
-
 ## Building for Release
 
 To build the Tauri desktop application for production:
@@ -295,8 +480,6 @@ To build the Tauri desktop application for production:
 ```bash
 cd client/Magnus-Laser
 npm run tauri build
-# or
-yarn tauri build
 ```
 
 ### Output Location
@@ -318,7 +501,6 @@ client/Magnus-Laser/src-tauri/target/release/bundle/
 - **Linux**:
   - `.deb` package in `bundle/deb/`
   - `.AppImage` in `bundle/appimage/`
-  - `.rpm` package (if configured)
 
 ### Building for Specific Platforms
 
@@ -335,6 +517,30 @@ npm run tauri build -- --bundles dmg
 # Build multiple formats
 npm run tauri build -- --bundles msi,nsis
 ```
+
+## Companion Server
+
+The `server/` directory contains a standalone Rust server for headless session hosting (alternative to the built-in Tauri host).
+
+### Server Endpoints
+
+| Method | Path               | Description                                      |
+| ------ | ------------------ | ------------------------------------------------ |
+| `GET`  | `/health`          | Health check                                     |
+| `POST` | `/api/host/start`  | Create a session (spawns cloudflared tunnel)     |
+| `POST` | `/api/host/stop`   | End the current session                          |
+| `GET`  | `/api/host/status` | Get session status (running, code, URLs, uptime) |
+| `POST` | `/api/host/kick`   | Kick a player from the session                   |
+| `WS`   | `/signal`          | WebSocket signaling endpoint (11 message types)  |
+
+### Running the Server
+
+```bash
+cd server
+cargo run -- --host 127.0.0.1 --port 3030
+```
+
+The server manages in-memory room state with automatic 2-hour TTL cleanup. No database required.
 
 ## Contributing
 

@@ -1956,7 +1956,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 // Update existing token
                 const existingGroup = tokenMeshes.get(token.id)!
                 const lastRadius = existingGroup.userData.lastRadius as number | undefined
-                const needsRebuild = lastRadius === undefined || Math.abs(lastRadius - radius) > 0.01
+                const lastModelId = existingGroup.userData.lastModelId as string | undefined
+                const needsRebuild =
+                    lastRadius === undefined ||
+                    Math.abs(lastRadius - radius) > 0.01 ||
+                    (token.modelId ?? '') !== (lastModelId ?? '')
 
                 if (needsRebuild) {
                     // Remove old group
@@ -1986,6 +1990,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     newGroup.position.copy(tokenPosition)
                     newGroup.userData.tokenId = token.id
                     newGroup.userData.lastRadius = radius
+                    newGroup.userData.lastModelId = token.modelId
                     syncTokenGroundImage(newGroup, token, radius)
                     scene.add(newGroup)
                     tokenMeshes.set(token.id, newGroup)
@@ -2080,6 +2085,8 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 tokenGroup.position.copy(tokenPosition)
                 tokenGroup.rotation.y = (orientationDeg * Math.PI) / 180
                 tokenGroup.userData.tokenId = token.id // Mark with token ID
+                tokenGroup.userData.lastRadius = radius
+                tokenGroup.userData.lastModelId = token.modelId
                 syncTokenGroundImage(tokenGroup, token, radius)
                 tokenGroup.traverse((child) => {
                     child.userData = { ...(child.userData ?? {}), tokenId: token.id }

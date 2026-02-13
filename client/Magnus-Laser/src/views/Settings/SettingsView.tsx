@@ -13,6 +13,8 @@ import {
     Divider,
     FormControlLabel,
     Grid,
+    MenuItem,
+    Select,
     Stack,
     Switch,
     TextField,
@@ -76,8 +78,16 @@ interface JoinArgs {
 const SettingsView = () => {
     const { t } = useTranslation()
     useDocumentTitle(`Magnus Laser - ${t('common.settings')}`)
-    const { readerMode, animationsEnabled, toggleAnimations, loaderEnabled, toggleLoader, toggleReaderMode } =
-        useUserPreferences()
+    const {
+        readerMode,
+        animationsEnabled,
+        toggleAnimations,
+        loaderEnabled,
+        toggleLoader,
+        toggleReaderMode,
+        language,
+        changeLanguage,
+    } = useUserPreferences()
     const { enqueueSnackbar, closeSnackbar } = useSnackbar()
     const [importDialogOpen, setImportDialogOpen] = useState(false)
     const [nukeDialogOpen, setNukeDialogOpen] = useState(false)
@@ -360,7 +370,7 @@ const SettingsView = () => {
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Save sx={{ mr: 1 }} />
-                        <Typography variant="body2">API keys saved successfully</Typography>
+                        <Typography variant="body2">{t('settings.apiKeysSaved')}</Typography>
                     </Box>
                 </Alert>
             ),
@@ -449,7 +459,7 @@ const SettingsView = () => {
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Typography variant="body2">
-                                {`Exported ${Object.keys(data).length} collections successfully`}
+                                {t('settings.exportSuccess', { count: Object.keys(data).length })}
                             </Typography>
                         </Box>
                     </Alert>
@@ -476,7 +486,7 @@ const SettingsView = () => {
                         onClose={() => closeSnackbar(key)}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="body2">Failed to export data</Typography>
+                            <Typography variant="body2">{t('settings.exportFailed')}</Typography>
                         </Box>
                     </Alert>
                 ),
@@ -632,7 +642,7 @@ const SettingsView = () => {
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <UploadFile sx={{ mr: 1 }} />
                                             <Typography variant="body2">
-                                                {`Imported ${importedRegistries} registries in ${importedCollections} collections successfully`}
+                                                {t('settings.importSuccess', { registries: importedRegistries, collections: importedCollections })}
                                             </Typography>
                                         </Box>
                                     </Alert>
@@ -657,7 +667,7 @@ const SettingsView = () => {
                                         onClose={() => closeSnackbar(key)}
                                     >
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Typography variant="body2">No collections found in import file</Typography>
+                                            <Typography variant="body2">{t('settings.importNoCollections')}</Typography>
                                         </Box>
                                     </Alert>
                                 ),
@@ -684,7 +694,7 @@ const SettingsView = () => {
                                     onClose={() => closeSnackbar(key)}
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        <Typography variant="body2">Failed to parse import file</Typography>
+                                        <Typography variant="body2">{t('settings.importParseFailed')}</Typography>
                                     </Box>
                                 </Alert>
                             ),
@@ -717,7 +727,7 @@ const SettingsView = () => {
                         onClose={() => closeSnackbar(key)}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="body2">Failed to import data</Typography>
+                            <Typography variant="body2">{t('settings.importFailed')}</Typography>
                         </Box>
                     </Alert>
                 ),
@@ -786,7 +796,7 @@ const SettingsView = () => {
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <DeleteForever sx={{ mr: 1 }} />
-                            <Typography variant="body2">All data has been completely cleared</Typography>
+                            <Typography variant="body2">{t('settings.nukeSuccess')}</Typography>
                         </Box>
                     </Alert>
                 ),
@@ -812,7 +822,7 @@ const SettingsView = () => {
                         onClose={() => closeSnackbar(key)}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="body2">Failed to clear data</Typography>
+                            <Typography variant="body2">{t('settings.nukeFailed')}</Typography>
                         </Box>
                     </Alert>
                 ),
@@ -836,9 +846,9 @@ const SettingsView = () => {
                 open={nukeDialogOpen}
                 onClose={() => setNukeDialogOpen(false)}
                 onConfirm={handleNukeConfirmed}
-                title="Nuke All Data"
-                message="This will permanently delete ALL your data including gangs, buildings, characters, items, bounties, fixer jobs, map markers, and combat simulator data. This action cannot be undone. Are you sure you want to proceed?"
-                confirmText="NUKE ALL DATA"
+                title={t('settings.nukeAllData')}
+                message={t('settings.nukeAllDataMessage')}
+                confirmText={t('settings.nukeAllDataConfirm')}
             />
             {/* Session Warning Dialogs */}
             {showHud && (
@@ -1654,6 +1664,38 @@ const SettingsView = () => {
                                         }
                                         labelPlacement="end"
                                     />
+                                </Stack>
+                                <Stack
+                                    direction="row"
+                                    sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                                    spacing={2}
+                                >
+                                    <Typography variant="body1">{t('settings.language')}</Typography>
+                                    <Select
+                                        size="small"
+                                        value={language}
+                                        onChange={async (e) => {
+                                            await changeLanguage(e.target.value as string)
+                                        }}
+                                        sx={{
+                                            minWidth: 140,
+                                            color: readerMode ? colors.grays.gray000 : colors.grays.gray900,
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: readerMode
+                                                    ? 'rgba(0, 180, 180, 0.3)'
+                                                    : 'rgba(0, 255, 255, 0.3)',
+                                            },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: colors.neons.green.default,
+                                            },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: colors.neons.green.default,
+                                            },
+                                        }}
+                                    >
+                                        <MenuItem value="en">English</MenuItem>
+                                        <MenuItem value="es">Español</MenuItem>
+                                    </Select>
                                 </Stack>
                             </Stack>
                         </CardContent>

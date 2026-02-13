@@ -91,7 +91,7 @@ const IPTrackingTool = () => {
             id: uuidv4(),
             edgerunnerName: tracker.edgerunnerName,
             date: entryDate || new Date().toLocaleDateString(),
-            spentOn: entryIsSpend ? entrySpentOn || 'Unspecified' : 'Earned',
+            spentOn: entryIsSpend ? entrySpentOn || t('soloPlay.ipTracker.unspecifiedDefault') : t('soloPlay.ipTracker.earnedDefault'),
             ipAmount: entryIsSpend ? -amount : amount,
         }
 
@@ -303,7 +303,7 @@ const IPTrackingTool = () => {
                         label={t('soloPlay.ipTracker.edgerunnerName')}
                         value={edgerunnerName}
                         onChange={(e) => setEdgerunnerName(e.target.value)}
-                        placeholder="V, Johnny, Jackie..."
+                        placeholder={t('soloPlay.ipTracker.namePlaceholder')}
                         sx={textFieldStyle}
                     />
                 </DialogContent>
@@ -346,7 +346,7 @@ const IPTrackingTool = () => {
                                 label={t('soloPlay.ipTracker.spentOnLabel')}
                                 value={entrySpentOn}
                                 onChange={(e) => setEntrySpentOn(e.target.value)}
-                                placeholder="Handgun +1, Athletics +1..."
+                                placeholder={t('soloPlay.ipTracker.spentOnPlaceholder')}
                                 sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)}
                             />
                         )}

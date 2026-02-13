@@ -128,9 +128,9 @@ export const rollOpenQuestion = (
         id: uuidv4(),
         timestamp: Date.now(),
         question,
-        verb: getRandomFromArray(actionFocusTable),
-        noun: getRandomFromArray(detailFocusTable),
-        adjective: getRandomFromArray(adjectivesTable),
+        verb: getRandomFromArray(actionFocusTable()),
+        noun: getRandomFromArray(detailFocusTable()),
+        adjective: getRandomFromArray(adjectivesTable()),
     }
 }
 
@@ -545,14 +545,14 @@ export const generateRandomEmployer = (): MissionEmployer => {
             break
         }
         case 'CORPO': {
-            const corp = getRandomFromArray(corpoNameTable)
+            const corp = getRandomFromArray(corpoNameTable())
             const npc = generateNPCByRole('Exec')
             name = `${npc.npc.name} (${corp.name})`
             description = corp.notes
             break
         }
         case 'GANG': {
-            const gang = getRandomFromArray(gangNameTable)
+            const gang = getRandomFromArray(gangNameTable())
             name = `${gang.name} Representative`
             description = gang.notes
             break
@@ -607,7 +607,7 @@ export const generateRandomPayment = (): MissionPayment => {
             description = 'A significant favor to be called in later'
             break
         case 'INFORMATION':
-            description = 'Valuable information about ' + getRandomFromArray(rumorTable)
+            description = 'Valuable information about ' + getRandomFromArray(rumorTable())
             break
         case 'EQUIPMENT':
             description = 'High-quality equipment valued at approximately ' + (baseAmount * 2) + ' eb'
@@ -638,8 +638,8 @@ export const generateRandomPayment = (): MissionPayment => {
  * Generate a random mission summary
  */
 export const generateMissionSummary = (): string => {
-    const missionType = getRandomFromArray(missionTypeTable)
-    const location = getRandomFromArray(locationTypeTable)
+    const missionType = getRandomFromArray(missionTypeTable())
+    const location = getRandomFromArray(locationTypeTable())
     const macguffin = generateMissionItem()
 
     return `${missionType} involving ${macguffin.item.toLowerCase()} at ${location.toLowerCase()} (${macguffin.zone})`
@@ -649,9 +649,9 @@ export const generateMissionSummary = (): string => {
  * Generate focus and specifics for a mission
  */
 export const generateMissionFocus = (): string => {
-    const action = getRandomFromArray(actionFocusTable)
-    const detail = getRandomFromArray(detailFocusTable)
-    const complication = getRandomFromArray(complicationTable)
+    const action = getRandomFromArray(actionFocusTable())
+    const detail = getRandomFromArray(detailFocusTable())
+    const complication = getRandomFromArray(complicationTable())
 
     return `${action} ${detail.toLowerCase()} objectives. Potential complication: ${complication.toLowerCase()}`
 }
@@ -660,7 +660,7 @@ export const generateMissionFocus = (): string => {
  * Generate a mission twist
  */
 export const generateMissionTwist = (): string => {
-    const twist = getRandomFromArray(twistTable)
+    const twist = getRandomFromArray(twistTable())
     return `${twist.twist}: ${twist.notes}`
 }
 
@@ -713,18 +713,18 @@ export const generateEmptyBeatChart = (developmentCount: number = 6): BeatChartE
 export const generateBeatDescription = (beatType: BeatType): string => {
     switch (beatType) {
         case 'HOOK':
-            return getRandomFromArray(hooksTable)
+            return getRandomFromArray(hooksTable())
         case 'CLIMAX':
-            return getRandomFromArray(climaxesTable)
+            return getRandomFromArray(climaxesTable())
         case 'RESOLUTION':
-            return getRandomFromArray(resolutionsTable)
+            return getRandomFromArray(resolutionsTable())
         default: {
             // Development beats: alternate between Cliffhangers and Developments
             const beatNum = parseInt(beatType.replace('DEVELOPMENT_', '')) || 1
             if (beatNum % 2 === 1) {
-                return `[Cliffhanger] ${getRandomFromArray(cliffhangersTable)}`
+                return `[Cliffhanger] ${getRandomFromArray(cliffhangersTable())}`
             }
-            return `[Development] ${getRandomFromArray(developmentsTable)}`
+            return `[Development] ${getRandomFromArray(developmentsTable())}`
         }
     }
 }
@@ -743,10 +743,10 @@ export const generateQuickNPC = (): {
     appearance: string
 } => {
     return {
-        occupation: getRandomFromArray(npcOccupationTable),
-        mood: getRandomFromArray(npcMoodTable),
-        motivation: getRandomFromArray(npcMotivationTable),
-        appearance: getRandomFromArray(npcAppearanceTable),
+        occupation: getRandomFromArray(npcOccupationTable()),
+        mood: getRandomFromArray(npcMoodTable()),
+        motivation: getRandomFromArray(npcMotivationTable()),
+        appearance: getRandomFromArray(npcAppearanceTable()),
     }
 }
 
@@ -759,9 +759,9 @@ export const generateQuickLocation = (): {
     event: string
 } => {
     return {
-        type: getRandomFromArray(locationTypeTable),
-        descriptor: getRandomFromArray(detailFocusTable),
-        event: getRandomFromArray(eventTable),
+        type: getRandomFromArray(locationTypeTable()),
+        descriptor: getRandomFromArray(detailFocusTable()),
+        event: getRandomFromArray(eventTable()),
     }
 }
 
@@ -769,28 +769,28 @@ export const generateQuickLocation = (): {
  * Generate a random rumor
  */
 export const generateRumor = (): string => {
-    return getRandomFromArray(rumorTable)
+    return getRandomFromArray(rumorTable())
 }
 
 /**
  * Generate a random clue
  */
 export const generateClue = (): string => {
-    return `${getRandomFromArray(detailFocusTable)} ${getRandomFromArray(clueTypeTable).toLowerCase()}`
+    return `${getRandomFromArray(detailFocusTable())} ${getRandomFromArray(clueTypeTable()).toLowerCase()}`
 }
 
 /**
  * Generate a random event
  */
 export const generateEvent = (): string => {
-    return getRandomFromArray(eventTable)
+    return getRandomFromArray(eventTable())
 }
 
 /**
  * Generate a random complication
  */
 export const generateComplication = (): string => {
-    return getRandomFromArray(complicationTable)
+    return getRandomFromArray(complicationTable())
 }
 
 // Alias functions for RandomTablesTool compatibility
@@ -799,9 +799,9 @@ export const generateQuickComplication = (): string => generateComplication()
 export const generateQuickRumor = (): string => generateRumor()
 export const generateQuickClue = (): string => generateClue()
 export const generateQuickTwist = (): string => {
-    const twist = getRandomFromArray(twistTable)
+    const twist = getRandomFromArray(twistTable())
     return `${twist.twist}: ${twist.notes}`
 }
-export const generateQuickMotivation = (): string => getRandomFromArray(npcMotivationTable)
-export const generateQuickMood = (): string => getRandomFromArray(npcMoodTable)
+export const generateQuickMotivation = (): string => getRandomFromArray(npcMotivationTable())
+export const generateQuickMood = (): string => getRandomFromArray(npcMoodTable())
 

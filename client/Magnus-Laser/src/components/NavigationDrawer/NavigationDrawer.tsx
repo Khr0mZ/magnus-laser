@@ -402,7 +402,6 @@ const hiddenModules = [
     ModuleTypes.GANG,
     ModuleTypes.BUILDING,
     ModuleTypes.FIXER_JOB,
-    ModuleTypes.CLUB,
     ModuleTypes.ITEM,
     ModuleTypes.CHARACTER,
     ModuleTypes.BOUNTY,
@@ -554,13 +553,13 @@ const NavigationDrawer = () => {
                                 color: readerMode
                                     ? colors.grays.gray000
                                     : isDrawerOpen
-                                    ? colors.neons.red.default
-                                    : colors.neons.cyan.default,
+                                      ? colors.neons.red.default
+                                      : colors.neons.cyan.default,
                                 boxShadow: readerMode
                                     ? '0 2px 8px rgba(0,0,0,0.1)'
                                     : isDrawerOpen
-                                    ? `0 0 15px ${colors.neons.red.default}60, inset 0 0 15px ${colors.neons.red.default}20`
-                                    : `0 0 15px ${colors.neons.cyan.default}60, inset 0 0 15px ${colors.neons.cyan.default}20`,
+                                      ? `0 0 15px ${colors.neons.red.default}60, inset 0 0 15px ${colors.neons.red.default}20`
+                                      : `0 0 15px ${colors.neons.cyan.default}60, inset 0 0 15px ${colors.neons.cyan.default}20`,
                                 // Corner accents
                                 '&::before': readerMode
                                     ? {}
@@ -603,8 +602,8 @@ const NavigationDrawer = () => {
                                     boxShadow: readerMode
                                         ? '0 4px 12px rgba(0,0,0,0.15)'
                                         : isDrawerOpen
-                                        ? `0 0 25px ${colors.neons.red.default}80, inset 0 0 20px ${colors.neons.red.default}30`
-                                        : `0 0 25px ${colors.neons.cyan.default}80, inset 0 0 20px ${colors.neons.cyan.default}30`,
+                                          ? `0 0 25px ${colors.neons.red.default}80, inset 0 0 20px ${colors.neons.red.default}30`
+                                          : `0 0 25px ${colors.neons.cyan.default}80, inset 0 0 20px ${colors.neons.cyan.default}30`,
                                 },
                                 transition: 'all 0.3s ease-in-out',
                             }}
@@ -615,8 +614,8 @@ const NavigationDrawer = () => {
                                     readerMode
                                         ? colors.grays.gray000
                                         : isDrawerOpen
-                                        ? colors.neons.red.default
-                                        : colors.neons.cyan.default
+                                          ? colors.neons.red.default
+                                          : colors.neons.cyan.default
                                 }
                             />
                         </IconButton>

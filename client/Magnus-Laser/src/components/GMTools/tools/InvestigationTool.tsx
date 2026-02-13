@@ -254,7 +254,7 @@ const InvestigationTool = () => {
                                             }}
                                         />
                                         <Chip
-                                            label={`${session.checks.length}/${session.numberOfChecks} checks`}
+                                            label={t('soloPlay.investigation.nChecks', { done: session.checks.length, total: session.numberOfChecks })}
                                             size="small"
                                             sx={{
                                                 backgroundColor: `${colors.neons.cyan.default}30`,
@@ -385,7 +385,7 @@ const InvestigationTool = () => {
                                                             )}
                                                             {check.roll !== undefined && (
                                                                 <Typography variant="caption" sx={{ color: colors.grays.gray600, display: 'block' }}>
-                                                                    Roll: {check.roll} + Skill: {check.skillTotal} = {(check.roll || 0) + (check.skillTotal || 0)} vs DV {check.dv}
+                                                                    {t('soloPlay.investigation.rollDetail', { roll: check.roll, skill: check.skillTotal, sum: (check.roll || 0) + (check.skillTotal || 0), dv: check.dv })}
                                                                 </Typography>
                                                             )}
                                                         </Box>
@@ -469,7 +469,7 @@ const InvestigationTool = () => {
                             label={t('soloPlay.investigation.name')}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="Tracking the smuggler ring"
+                            placeholder={t('soloPlay.investigation.namePlaceholder')}
                             sx={textFieldStyle}
                         />
                         <TextField
@@ -477,7 +477,7 @@ const InvestigationTool = () => {
                             label={t('soloPlay.investigation.goal')}
                             value={goal}
                             onChange={(e) => setGoal(e.target.value)}
-                            placeholder="Find the location of the hidden warehouse"
+                            placeholder={t('soloPlay.investigation.goalPlaceholder')}
                             multiline
                             rows={2}
                             sx={textFieldStyle}
@@ -492,9 +492,9 @@ const InvestigationTool = () => {
                                 label={t('soloPlay.investigation.complexityLabel')}
                                 sx={selectStyle}
                             >
-                                <MenuItem value="SIMPLE">{t('soloPlay.investigation.complexity.SIMPLE')} (3 checks)</MenuItem>
-                                <MenuItem value="AVERAGE">{t('soloPlay.investigation.complexity.AVERAGE')} (5 checks)</MenuItem>
-                                <MenuItem value="DIFFICULT">{t('soloPlay.investigation.complexity.DIFFICULT')} (7 checks)</MenuItem>
+                                <MenuItem value="SIMPLE">{t('soloPlay.investigation.complexity.SIMPLE')} {t('soloPlay.investigation.complexityChecks', { n: 3 })}</MenuItem>
+                                <MenuItem value="AVERAGE">{t('soloPlay.investigation.complexity.AVERAGE')} {t('soloPlay.investigation.complexityChecks', { n: 5 })}</MenuItem>
+                                <MenuItem value="DIFFICULT">{t('soloPlay.investigation.complexity.DIFFICULT')} {t('soloPlay.investigation.complexityChecks', { n: 7 })}</MenuItem>
                             </Select>
                         </FormControl>
                     </Stack>
@@ -533,7 +533,7 @@ const InvestigationTool = () => {
                             label={t('soloPlay.investigation.skill')}
                             value={checkSkill}
                             onChange={(e) => setCheckSkill(e.target.value)}
-                            placeholder="Streetwise, Library Search, Human Perception..."
+                            placeholder={t('soloPlay.investigation.skillPlaceholder')}
                             sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.cyan.default)}
                         />
                         <TextField
@@ -549,7 +549,7 @@ const InvestigationTool = () => {
                             label={t('soloPlay.investigation.checkDescription')}
                             value={checkDescription}
                             onChange={(e) => setCheckDescription(e.target.value)}
-                            placeholder="Ask around the local bars for information"
+                            placeholder={t('soloPlay.investigation.descriptionPlaceholder')}
                             multiline
                             rows={2}
                             sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.cyan.default)}
@@ -596,7 +596,7 @@ const InvestigationTool = () => {
                             type="number"
                             value={rollValue}
                             onChange={(e) => setRollValue(e.target.value)}
-                            placeholder="Leave empty for random d10"
+                            placeholder={t('soloPlay.investigation.rollPlaceholder')}
                             sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.yellow.default)}
                         />
                         <TextField
@@ -605,7 +605,7 @@ const InvestigationTool = () => {
                             type="number"
                             value={rollSkillTotal}
                             onChange={(e) => setRollSkillTotal(e.target.value)}
-                            placeholder="STAT + Skill"
+                            placeholder={t('soloPlay.investigation.totalPlaceholder')}
                             sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.yellow.default)}
                         />
                     </Stack>

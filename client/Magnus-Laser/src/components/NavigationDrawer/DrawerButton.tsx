@@ -31,7 +31,7 @@ const DrawerButton = ({ module }: DrawerButtonProps) => {
         return pathname.startsWith(navigationPath)
     }
 
-    const navigationPath = NavigationPaths[module]
+    const navigationPath = NavigationPaths[module as keyof typeof NavigationPaths]
     const active = isActive(navigationPath)
 
     return (

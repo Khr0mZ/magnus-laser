@@ -256,7 +256,7 @@ const SocialChallengeTool = () => {
                                         />
                                         {session.npcImportance !== 'BACKGROUND' && (
                                             <Chip
-                                                label={`${session.checks.filter((c) => c.winner).length}/${session.numberOfChecks} checks`}
+                                                label={t('soloPlay.social.nChecks', { done: session.checks.filter((c) => c.winner).length, total: session.numberOfChecks })}
                                                 size="small"
                                                 sx={{
                                                     backgroundColor: `${colors.neons.cyan.default}30`,
@@ -351,7 +351,7 @@ const SocialChallengeTool = () => {
                                                             </Typography>
                                                             {check.edgerunnerTotal !== undefined && (
                                                                 <Typography variant="caption" sx={{ color: colors.grays.gray600, display: 'block' }}>
-                                                                    Edgerunner: {check.edgerunnerTotal} vs NPC: {check.npcTotal}
+                                                                    {t('soloPlay.social.edgerunnerVsNpc', { eTotal: check.edgerunnerTotal, nTotal: check.npcTotal })}
                                                                 </Typography>
                                                             )}
                                                         </Box>
@@ -369,7 +369,7 @@ const SocialChallengeTool = () => {
                                                         ) : check.winner === 'NPC' ? (
                                                             <Cancel sx={{ color: colors.neons.red.default }} />
                                                         ) : (
-                                                            <Chip label="TIE" size="small" sx={{ backgroundColor: colors.grays.gray700, color: '#fff' }} />
+                                                            <Chip label={t('soloPlay.social.tie')} size="small" sx={{ backgroundColor: colors.grays.gray700, color: '#fff' }} />
                                                         )}
                                                     </Stack>
                                                 </Box>
@@ -437,9 +437,9 @@ const SocialChallengeTool = () => {
                 </DialogTitle>
                 <DialogContent sx={{ pt: 3, mt: 1 }}>
                     <Stack spacing={2.5}>
-                        <TextField fullWidth label={t('soloPlay.social.sessionName')} value={name} onChange={(e) => setName(e.target.value)} placeholder="Negotiate with fixer" sx={textFieldStyle} />
-                        <TextField fullWidth label={t('soloPlay.social.npcNameLabel')} value={npcName} onChange={(e) => setNpcName(e.target.value)} placeholder="Rogue Amendiares" sx={textFieldStyle} />
-                        <TextField fullWidth label={t('soloPlay.social.goal')} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Get a better deal on the gig" multiline rows={2} sx={textFieldStyle} />
+                        <TextField fullWidth label={t('soloPlay.social.sessionName')} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('soloPlay.social.sessionNamePlaceholder')} sx={textFieldStyle} />
+                        <TextField fullWidth label={t('soloPlay.social.npcNameLabel')} value={npcName} onChange={(e) => setNpcName(e.target.value)} placeholder={t('soloPlay.social.npcNamePlaceholder')} sx={textFieldStyle} />
+                        <TextField fullWidth label={t('soloPlay.social.goal')} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder={t('soloPlay.social.goalPlaceholder')} multiline rows={2} sx={textFieldStyle} />
                         <FormControl fullWidth>
                             <InputLabel sx={{ color: readerMode ? '#666' : accentColor }}>
                                 {t('soloPlay.social.importanceLabel')}
@@ -456,9 +456,9 @@ const SocialChallengeTool = () => {
                                     {t('soloPlay.social.numChecks')}
                                 </InputLabel>
                                 <Select value={numChecks} onChange={(e) => setNumChecks(e.target.value as number)} label={t('soloPlay.social.numChecks')} sx={selectStyle}>
-                                    <MenuItem value={3}>3 checks</MenuItem>
-                                    <MenuItem value={5}>5 checks</MenuItem>
-                                    <MenuItem value={7}>7 checks</MenuItem>
+                                    <MenuItem value={3}>{t('soloPlay.social.checksOption', { n: 3 })}</MenuItem>
+                                    <MenuItem value={5}>{t('soloPlay.social.checksOption', { n: 5 })}</MenuItem>
+                                    <MenuItem value={7}>{t('soloPlay.social.checksOption', { n: 7 })}</MenuItem>
                                 </Select>
                             </FormControl>
                         )}
@@ -492,18 +492,18 @@ const SocialChallengeTool = () => {
                         <Typography variant="caption" sx={{ color: colors.grays.gray500, textTransform: 'uppercase' }}>
                             {t('soloPlay.social.edgerunnerSide')}
                         </Typography>
-                        <TextField fullWidth label={t('soloPlay.social.skillLabel')} value={edgerunnerSkill} onChange={(e) => setEdgerunnerSkill(e.target.value)} placeholder="Persuasion, Trading, etc." sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
+                        <TextField fullWidth label={t('soloPlay.social.skillLabel')} value={edgerunnerSkill} onChange={(e) => setEdgerunnerSkill(e.target.value)} placeholder={t('soloPlay.social.edgerunnerSkillPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
                         <Stack direction="row" spacing={1}>
                             <TextField fullWidth label={t('soloPlay.social.rollLabel')} type="number" value={edgerunnerRoll} onChange={(e) => setEdgerunnerRoll(e.target.value)} placeholder="d10" sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
-                            <TextField fullWidth label={t('soloPlay.social.totalLabel')} type="number" value={edgerunnerTotal} onChange={(e) => setEdgerunnerTotal(e.target.value)} placeholder="Roll + Skill" sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
+                            <TextField fullWidth label={t('soloPlay.social.totalLabel')} type="number" value={edgerunnerTotal} onChange={(e) => setEdgerunnerTotal(e.target.value)} placeholder={t('soloPlay.social.edgerunnerTotalPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
                         </Stack>
                         <Typography variant="caption" sx={{ color: colors.grays.gray500, textTransform: 'uppercase' }}>
                             {t('soloPlay.social.npcSide')}
                         </Typography>
-                        <TextField fullWidth label={t('soloPlay.social.skillLabel')} value={npcSkill} onChange={(e) => setNpcSkill(e.target.value)} placeholder="Human Perception, etc." sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />
+                        <TextField fullWidth label={t('soloPlay.social.skillLabel')} value={npcSkill} onChange={(e) => setNpcSkill(e.target.value)} placeholder={t('soloPlay.social.npcSkillPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />
                         <Stack direction="row" spacing={1}>
                             <TextField fullWidth label={t('soloPlay.social.rollLabel')} type="number" value={npcRoll} onChange={(e) => setNpcRoll(e.target.value)} placeholder="d10" sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />
-                            <TextField fullWidth label={t('soloPlay.social.totalLabel')} type="number" value={npcTotal} onChange={(e) => setNpcTotal(e.target.value)} placeholder="Roll + Skill" sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />
+                            <TextField fullWidth label={t('soloPlay.social.totalLabel')} type="number" value={npcTotal} onChange={(e) => setNpcTotal(e.target.value)} placeholder={t('soloPlay.social.npcTotalPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />
                         </Stack>
                     </Stack>
                 </DialogContent>

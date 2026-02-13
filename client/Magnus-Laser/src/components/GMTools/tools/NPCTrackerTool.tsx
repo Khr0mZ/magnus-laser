@@ -90,7 +90,7 @@ const NPCTrackerTool = () => {
         if (notes.trim() === '') setNotes(result.npc.notes || '')
     }
 
-    const handleRandomMood = () => setMood(getRandomFromArray(npcMoodTable))
+    const handleRandomMood = () => setMood(getRandomFromArray(npcMoodTable()))
     const handleRandomRelationship = () => setRelationship(generateRelationship())
 
     const handleCreate = () => {
@@ -99,7 +99,7 @@ const NPCTrackerTool = () => {
             id: uuidv4(),
             name: npcName,
             role: role || undefined,
-            firstEncounter: firstEncounter || 'Unknown',
+            firstEncounter: firstEncounter || t('soloPlay.npcTracker.unknownDefault'),
             relationship: relationship || undefined,
             mood: mood || undefined,
             status,
@@ -237,7 +237,7 @@ const NPCTrackerTool = () => {
                 <DialogContent sx={{ pt: 3, mt: 1 }}>
                     <Stack spacing={2}>
                         <Stack direction="row" spacing={1} alignItems="flex-end">
-                            <TextField fullWidth label={t('soloPlay.npcTracker.nameLabel')} value={npcName} onChange={(e) => setNpcName(e.target.value)} placeholder="Enter or generate a name" sx={textFieldStyle} />
+                            <TextField fullWidth label={t('soloPlay.npcTracker.nameLabel')} value={npcName} onChange={(e) => setNpcName(e.target.value)} placeholder={t('soloPlay.npcTracker.namePlaceholder')} sx={textFieldStyle} />
                             <Tooltip title={t('soloPlay.npcTracker.randomName')}>
                                 <IconButton onClick={handleRandomName} sx={{ color: accentColor, border: `1px solid ${accentColor}40`, borderRadius: 0 }}>
                                     <Casino />
@@ -245,16 +245,16 @@ const NPCTrackerTool = () => {
                             </Tooltip>
                         </Stack>
                         <Stack direction="row" spacing={1} alignItems="flex-end">
-                            <TextField fullWidth label={t('soloPlay.npcTracker.roleLabel')} value={role} onChange={(e) => setRole(e.target.value)} placeholder="Solo, Fixer, Netrunner..." sx={textFieldStyle} />
+                            <TextField fullWidth label={t('soloPlay.npcTracker.roleLabel')} value={role} onChange={(e) => setRole(e.target.value)} placeholder={t('soloPlay.npcTracker.rolePlaceholder')} sx={textFieldStyle} />
                             <Tooltip title={t('soloPlay.npcTracker.randomRole')}>
                                 <IconButton onClick={handleRandomRole} sx={{ color: accentColor, border: `1px solid ${accentColor}40`, borderRadius: 0 }}>
                                     <Casino />
                                 </IconButton>
                             </Tooltip>
                         </Stack>
-                        <TextField fullWidth label={t('soloPlay.npcTracker.firstEncounter')} value={firstEncounter} onChange={(e) => setFirstEncounter(e.target.value)} placeholder="Session 3, at Afterlife bar" sx={textFieldStyle} />
+                        <TextField fullWidth label={t('soloPlay.npcTracker.firstEncounter')} value={firstEncounter} onChange={(e) => setFirstEncounter(e.target.value)} placeholder={t('soloPlay.npcTracker.firstEncounterPlaceholder')} sx={textFieldStyle} />
                         <Stack direction="row" spacing={1} alignItems="flex-end">
-                            <TextField fullWidth label={t('soloPlay.npcTracker.relationship')} value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Ally, rival, informant..." sx={textFieldStyle} />
+                            <TextField fullWidth label={t('soloPlay.npcTracker.relationship')} value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder={t('soloPlay.npcTracker.relationshipPlaceholder')} sx={textFieldStyle} />
                             <Tooltip title={t('soloPlay.npcTracker.randomRelationship')}>
                                 <IconButton onClick={handleRandomRelationship} sx={{ color: accentColor, border: `1px solid ${accentColor}40`, borderRadius: 0 }}>
                                     <Casino />
@@ -262,7 +262,7 @@ const NPCTrackerTool = () => {
                             </Tooltip>
                         </Stack>
                         <Stack direction="row" spacing={1} alignItems="flex-end">
-                            <TextField fullWidth label={t('soloPlay.npcTracker.mood')} value={mood} onChange={(e) => setMood(e.target.value)} placeholder="Hostile, friendly..." sx={textFieldStyle} />
+                            <TextField fullWidth label={t('soloPlay.npcTracker.mood')} value={mood} onChange={(e) => setMood(e.target.value)} placeholder={t('soloPlay.npcTracker.moodPlaceholder')} sx={textFieldStyle} />
                             <Tooltip title={t('soloPlay.npcTracker.randomMood')}>
                                 <IconButton onClick={handleRandomMood} sx={{ color: accentColor, border: `1px solid ${accentColor}40`, borderRadius: 0 }}>
                                     <Casino />

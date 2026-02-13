@@ -631,7 +631,7 @@ const QDNetrunPanel = () => {
                             label={t('soloPlay.netrun.checkDescription')}
                             value={currentCheckDescription}
                             onChange={(e) => setCurrentCheckDescription(e.target.value)}
-                            placeholder="DV6 Password / Asp Black ICE / Important File"
+                            placeholder={t('soloPlay.netrun.checkDescriptionPlaceholder')}
                         />
 
                         {currentCheckType !== 'BLACK_ICE' ? (

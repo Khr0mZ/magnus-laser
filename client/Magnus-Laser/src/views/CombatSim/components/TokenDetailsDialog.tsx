@@ -1087,14 +1087,81 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     )}
                                 </Grid>
 
+                                {/* Image Dropdown */}
+                                <Grid size={12}>
+                                    {/* Image Selection */}
+                                    <CyberpunkFormControl readerMode={readerMode} label={t('combatSim.selectImage')}>
+                                        <Select
+                                            value={selectedImage?.id ?? ''}
+                                            onChange={(e) => {
+                                                const selectedValue = e.target.value
+                                                if (selectedValue === '') {
+                                                    setSelectedImage(undefined)
+                                                    handleFieldChange('imageId', undefined)
+                                                } else {
+                                                    // Find the selected image
+                                                    const image = images.find((img) => img.id === selectedValue)
+                                                    if (image) {
+                                                        setSelectedImage(image)
+                                                        // Store the image ID in the token
+                                                        handleFieldChange('imageId', image.id)
+                                                    }
+                                                }
+                                            }}
+                                            label={t('combatSim.selectImage')}
+                                            sx={selectStyle}
+                                            renderValue={(selected) => {
+                                                if (!selected) return
+                                                const selectedImage = images.find((img) => img.id === selected)
+                                                return selectedImage ? selectedImage.name : t('combatSim.noImage')
+                                            }}
+                                        >
+                                            <MenuItem value="">
+                                                <em>{t('combatSim.noImage')}</em>
+                                            </MenuItem>
+                                            {sortedImages.map((image) => (
+                                                <MenuItem key={image.id} value={image.id}>
+                                                    {image.name}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </CyberpunkFormControl>
+                                </Grid>
+                                <Grid size={12}>
+                                    {/* Model Selection */}
+                                    <CyberpunkFormControl
+                                        readerMode={readerMode}
+                                        label={t('combatSim.selectModel')}
+                                        sx={{ mt: 2 }}
+                                    >
+                                        <Select
+                                            value={editedToken?.modelId ?? ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value as string
+                                                handleFieldChange('modelId', val === '' ? undefined : val)
+                                            }}
+                                            displayEmpty
+                                            sx={{
+                                                color: readerMode ? colors.grays.gray900 : colors.neons.cyan.default,
+                                                borderColor: readerMode ? undefined : colors.neons.cyan.default,
+                                            }}
+                                        >
+                                            {modelOptions.map((opt) => (
+                                                <MenuItem key={opt.value || 'random'} value={opt.value}>
+                                                    {opt.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </CyberpunkFormControl>
+                                </Grid>
                                 {/* Color Picker */}
-                                <Grid size={editedToken?.stats?.isPC ? 2 : 2.4}>
+                                <Grid size={2}>
                                     <CyberpunkFormControl
                                         readerMode={readerMode}
                                         label={t('combatSim.color')}
                                         labelId="item-image-label"
                                         labelSx={{
-                                            top: -25,
+                                            // top: -25,
                                             lineHeight: '1 !important',
                                             py: '0 !important',
                                         }}
@@ -1148,48 +1215,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                         </Box>
                                     </CyberpunkFormControl>
                                 </Grid>
-                                {/* Image Dropdown */}
-                                <Grid size={editedToken?.stats?.isPC ? 10 : 9.6}>
-                                    {/* Image Selection */}
-                                    <CyberpunkFormControl readerMode={readerMode} label={t('combatSim.selectImage')}>
-                                        <Select
-                                            value={selectedImage?.id ?? ''}
-                                            onChange={(e) => {
-                                                const selectedValue = e.target.value
-                                                if (selectedValue === '') {
-                                                    setSelectedImage(undefined)
-                                                    handleFieldChange('imageId', undefined)
-                                                } else {
-                                                    // Find the selected image
-                                                    const image = images.find((img) => img.id === selectedValue)
-                                                    if (image) {
-                                                        setSelectedImage(image)
-                                                        // Store the image ID in the token
-                                                        handleFieldChange('imageId', image.id)
-                                                    }
-                                                }
-                                            }}
-                                            label={t('combatSim.selectImage')}
-                                            sx={selectStyle}
-                                            renderValue={(selected) => {
-                                                if (!selected) return
-                                                const selectedImage = images.find((img) => img.id === selected)
-                                                return selectedImage ? selectedImage.name : t('combatSim.noImage')
-                                            }}
-                                        >
-                                            <MenuItem value="">
-                                                <em>{t('combatSim.noImage')}</em>
-                                            </MenuItem>
-                                            {sortedImages.map((image) => (
-                                                <MenuItem key={image.id} value={image.id}>
-                                                    {image.name}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </CyberpunkFormControl>
-                                </Grid>
                                 {/* Ignore Seriously Wounded Penalty */}
-                                <Grid size={12} sx={{ pl: 0.5 }}>
+                                <Grid size={10}>
                                     <CyberpunkFormControlLabel
                                         readerMode={readerMode}
                                         control={
@@ -1543,13 +1570,13 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                         color: !editedToken?.imageId
                                                             ? 'grey'
                                                             : readerMode
-                                                            ? '#d32f2f'
-                                                            : colors.neons.red.default,
+                                                              ? '#d32f2f'
+                                                              : colors.neons.red.default,
                                                         textShadow: !editedToken?.imageId
                                                             ? 'none'
                                                             : readerMode
-                                                            ? 'none'
-                                                            : `0 0 5px ${colors.neons.red.default}`,
+                                                              ? 'none'
+                                                              : `0 0 5px ${colors.neons.red.default}`,
                                                         zIndex: 2,
                                                         fontSize: '16px',
                                                     }}
@@ -1638,13 +1665,13 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                                         color: !editedToken?.imageId
                                                             ? 'grey'
                                                             : readerMode
-                                                            ? '#1976d2'
-                                                            : colors.neons.blue.default,
+                                                              ? '#1976d2'
+                                                              : colors.neons.blue.default,
                                                         textShadow: !editedToken?.imageId
                                                             ? 'none'
                                                             : readerMode
-                                                            ? 'none'
-                                                            : `0 0 5px ${colors.neons.blue.default}`,
+                                                              ? 'none'
+                                                              : `0 0 5px ${colors.neons.blue.default}`,
                                                         zIndex: 2,
                                                         fontSize: '16px',
                                                     }}
@@ -1656,7 +1683,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                 </CyberpunkFormControl>
                                 <CyberpunkFormControl
                                     readerMode={readerMode}
-                                    label={t('combatSim.tokenModel') ?? 'Modelo 3D'}
+                                    label={t('combatSim.tokenModel')}
                                     labelId="item-model-label"
                                     labelSx={{
                                         top: -25,
@@ -1665,28 +1692,8 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                     }}
                                     sx={{ mt: 2 }}
                                 >
-                                    <Select
-                                        value={editedToken?.modelId ?? ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value as string
-                                            handleFieldChange('modelId', val === '' ? undefined : val)
-                                        }}
-                                        displayEmpty
-                                        sx={{
-                                            color: readerMode ? colors.grays.gray900 : colors.neons.cyan.default,
-                                            borderColor: readerMode ? undefined : colors.neons.cyan.default,
-                                            mb: 1,
-                                        }}
-                                    >
-                                        {modelOptions.map((opt) => (
-                                            <MenuItem key={opt.value || 'random'} value={opt.value}>
-                                                {opt.label}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
                                     <Box
                                         sx={{
-                                            mt: 1,
                                             width: '100%',
                                             aspectRatio: '1 / 1',
                                             borderRadius: '4px',

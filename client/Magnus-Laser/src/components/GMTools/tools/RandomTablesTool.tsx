@@ -147,9 +147,9 @@ const categories: GeneratorCategory[] = [
         key: 'words',
         color: colors.neons.orange.default,
         generators: [
-            { key: 'action', color: colors.neons.orange.default, generator: () => getRandomFromArray(actionFocusTable) },
-            { key: 'noun', color: colors.neons.blue.default, generator: () => getRandomFromArray(detailFocusTable) },
-            { key: 'adjective', color: colors.neons.purple.default, generator: () => getRandomFromArray(adjectivesTable) },
+            { key: 'action', color: colors.neons.orange.default, generator: () => getRandomFromArray(actionFocusTable()) },
+            { key: 'noun', color: colors.neons.blue.default, generator: () => getRandomFromArray(detailFocusTable()) },
+            { key: 'adjective', color: colors.neons.purple.default, generator: () => getRandomFromArray(adjectivesTable()) },
         ],
     },
     {
@@ -175,7 +175,7 @@ const categories: GeneratorCategory[] = [
         key: 'nightCity',
         color: colors.neons.blue.default,
         generators: [
-            { key: 'district', color: colors.neons.blue.default, generator: () => getRandomFromArray(nightCityDistrictsTable) },
+            { key: 'district', color: colors.neons.blue.default, generator: () => getRandomFromArray(nightCityDistrictsTable()) },
             { key: 'hotspot', color: colors.neons.green.default, generator: wrapVenue(generateHotspot) },
             { key: 'bar', color: colors.neons.orange.default, generator: wrapVenue(generateBar) },
             { key: 'cubeHotel', color: colors.neons.yellow.default, generator: wrapPlace(generateCubeHotel) },

@@ -1049,7 +1049,7 @@ const EdgerunnersView = () => {
                                     </Stack>
                                 </CardContent>
                                 <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-                                    <Tooltip title="Export JSON">
+                                    <Tooltip title={t('edgerunners.exportJson')}>
                                         <IconButton
                                             size="small"
                                             onClick={(e) => {
@@ -1240,13 +1240,13 @@ const EdgerunnersView = () => {
                                 },
                             }}
                         >
-                            <Tab label="Overview" />
-                            <Tab label="Skills" />
-                            <Tab label="Equipment" />
-                            <Tab label="Lifepath" />
-                            <Tab label="IP" />
-                            <Tab label="Notes" />
-                            <Tab label="Combat" />
+                            <Tab label={t('edgerunners.tabs.overview')} />
+                            <Tab label={t('edgerunners.tabs.skills')} />
+                            <Tab label={t('edgerunners.tabs.equipment')} />
+                            <Tab label={t('edgerunners.tabs.lifepath')} />
+                            <Tab label={t('edgerunners.tabs.ip')} />
+                            <Tab label={t('edgerunners.tabs.notes')} />
+                            <Tab label={t('edgerunners.tabs.combat')} />
                         </Tabs>
 
                         <DialogContent sx={{ p: 0 }}>
@@ -1762,7 +1762,7 @@ const EdgerunnersView = () => {
                                                                         fontSize: '0.7rem',
                                                                     }}
                                                                 >
-                                                                    Lvl
+                                                                    {t('edgerunners.lvl')}
                                                                 </Typography>
                                                                 <Typography
                                                                     variant="caption"
@@ -1773,9 +1773,9 @@ const EdgerunnersView = () => {
                                                                         fontSize: '0.7rem',
                                                                     }}
                                                                 >
-                                                                    Total
+                                                                    {t('edgerunners.total')}
                                                                 </Typography>
-                                                                <Tooltip title="Combat action" arrow>
+                                                                <Tooltip title={t('edgerunners.combatAction')} arrow>
                                                                     <Typography
                                                                         variant="caption"
                                                                         sx={{
@@ -1785,7 +1785,7 @@ const EdgerunnersView = () => {
                                                                             fontSize: '0.6rem',
                                                                         }}
                                                                     >
-                                                                        Act
+                                                                        {t('edgerunners.act')}
                                                                     </Typography>
                                                                 </Tooltip>
                                                             </Box>
@@ -2405,7 +2405,7 @@ const EdgerunnersView = () => {
                                                                                                                 )}
                                                                                                                 {item.unique && (
                                                                                                                     <Chip
-                                                                                                                        label="Unique"
+                                                                                                                        label={t('edgerunners.unique')}
                                                                                                                         size="small"
                                                                                                                         sx={{
                                                                                                                             ml: 0.5,
@@ -2731,7 +2731,7 @@ const EdgerunnersView = () => {
                                                                                 alignItems="center"
                                                                                 spacing={0}
                                                                             >
-                                                                                <Tooltip title="Combat action" arrow>
+                                                                                <Tooltip title={t('edgerunners.combatAction')} arrow>
                                                                                     <Checkbox
                                                                                         size="small"
                                                                                         checked={!!w.isTokenAction}
@@ -3049,7 +3049,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Cultural Origin"
+                                                            label={t('characterCreator.lifepath.culturalOrigin')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3081,7 +3081,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Language"
+                                                            label={t('edgerunners.language')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3109,7 +3109,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Personality"
+                                                            label={t('characterCreator.lifepath.personality')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3135,7 +3135,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Clothing Style"
+                                                            label={t('edgerunners.clothingStyle')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3161,7 +3161,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Hairstyle"
+                                                            label={t('edgerunners.hairstyle')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3187,7 +3187,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Affectation"
+                                                            label={t('characterCreator.lifepath.affectation')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3213,7 +3213,7 @@ const EdgerunnersView = () => {
                                                         mb: 0.5,
                                                     }}
                                                 >
-                                                    Motivation
+                                                    {t('characterCreator.lifepath.motivation')}
                                                 </Typography>
                                                 <Grid container spacing={1}>
                                                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -3227,7 +3227,7 @@ const EdgerunnersView = () => {
                                                             renderInput={(params) => (
                                                                 <TextField
                                                                     {...params}
-                                                                    label="Value Most"
+                                                                    label={t('edgerunners.valueMost')}
                                                                     variant="standard"
                                                                     sx={autocompleteSx}
                                                                     slotProps={{
@@ -3256,7 +3256,7 @@ const EdgerunnersView = () => {
                                                             renderInput={(params) => (
                                                                 <TextField
                                                                     {...params}
-                                                                    label="Feel About People"
+                                                                    label={t('edgerunners.feelAboutPeople')}
                                                                     variant="standard"
                                                                     sx={autocompleteSx}
                                                                     slotProps={{
@@ -3284,7 +3284,7 @@ const EdgerunnersView = () => {
                                                             renderInput={(params) => (
                                                                 <TextField
                                                                     {...params}
-                                                                    label="Valued Person"
+                                                                    label={t('edgerunners.valuedPerson')}
                                                                     variant="standard"
                                                                     sx={autocompleteSx}
                                                                     slotProps={{
@@ -3315,7 +3315,7 @@ const EdgerunnersView = () => {
                                                             renderInput={(params) => (
                                                                 <TextField
                                                                     {...params}
-                                                                    label="Valued Possession"
+                                                                    label={t('edgerunners.valuedPossession')}
                                                                     variant="standard"
                                                                     sx={autocompleteSx}
                                                                     slotProps={{
@@ -3345,7 +3345,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Family Background"
+                                                            label={t('characterCreator.lifepath.familyBackground')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3374,7 +3374,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Childhood Environment"
+                                                            label={t('characterCreator.lifepath.childhoodEnvironment')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3400,7 +3400,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Family Crisis"
+                                                            label={t('characterCreator.lifepath.familyCrisis')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -3426,7 +3426,7 @@ const EdgerunnersView = () => {
                                                     renderInput={(params) => (
                                                         <TextField
                                                             {...params}
-                                                            label="Life Goal"
+                                                            label={t('characterCreator.lifepath.lifeGoal')}
                                                             variant="standard"
                                                             sx={autocompleteSx}
                                                             slotProps={{
@@ -4128,7 +4128,7 @@ const EdgerunnersView = () => {
                                                                             },
                                                                         }}
                                                                     >
-                                                                        Apply Changes
+                                                                        {t('edgerunners.applyChanges')}
                                                                     </Button>
                                                                 </Stack>
                                                             </>
@@ -4145,7 +4145,7 @@ const EdgerunnersView = () => {
                                             <TextField
                                                 value={editedEdgerunner.notes || ''}
                                                 onChange={(e) => updateEditedField('notes', e.target.value)}
-                                                placeholder="Add notes..."
+                                                placeholder={t('edgerunners.addNotesPlaceholder')}
                                                 fullWidth
                                                 multiline
                                                 minRows={6}
@@ -4220,7 +4220,7 @@ const EdgerunnersView = () => {
 
                                             {/* Custom color hex input */}
                                             <TextField
-                                                label="Custom hex"
+                                                label={t('edgerunners.customHex')}
                                                 size="small"
                                                 value={`#${(editedEdgerunner.tokenColor ?? 0x00ff8b).toString(16).padStart(6, '0')}`}
                                                 onChange={(e) => {

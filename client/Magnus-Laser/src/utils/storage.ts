@@ -42,6 +42,7 @@ const DEFAULT_PREFERENCES: AppPreferences = {
     readerMode: false,
     animationsEnabled: true,
     loaderEnabled: true,
+    language: 'en',
     huggingFaceApiKey: '',
     openAIApiKey: '',
     geminiApiKey: '',
@@ -548,6 +549,7 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
                 readerMode: prefs.readerMode,
                 animationsEnabled: prefs.animationsEnabled,
                 loaderEnabled: prefs.loaderEnabled,
+                language: prefs.language || 'en',
                 huggingFaceApiKey: prefs.huggingFaceApiKey,
                 openAIApiKey: prefs.openAIApiKey,
                 geminiApiKey: prefs.geminiApiKey,
@@ -631,6 +633,14 @@ export const loadLoaderEnabled = async (): Promise<boolean> => (await loadPrefer
 export const saveLoaderEnabled = async (on: boolean): Promise<void> => {
     const prefs = await loadPreferences()
     prefs.loaderEnabled = on
+    await savePreferences(prefs)
+}
+
+export const loadLanguage = async (): Promise<string> => (await loadPreferences()).language || 'en'
+
+export const saveLanguage = async (lang: string): Promise<void> => {
+    const prefs = await loadPreferences()
+    prefs.language = lang
     await savePreferences(prefs)
 }
 

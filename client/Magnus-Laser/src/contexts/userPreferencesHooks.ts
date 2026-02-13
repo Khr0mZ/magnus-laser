@@ -19,6 +19,10 @@ export interface UserPreferencesContextType {
     loaderEnabled: boolean
     toggleLoader: () => Promise<void>
 
+    // Language
+    language: string
+    changeLanguage: (lang: string) => Promise<void>
+
     // Status
     isLoadingPreferences: boolean
 }
@@ -36,6 +40,9 @@ export const UserPreferencesContext = createContext<UserPreferencesContextType>(
 
     loaderEnabled: true,
     toggleLoader: async () => {},
+
+    language: 'en',
+    changeLanguage: async () => {},
 
     isLoadingPreferences: true,
 })

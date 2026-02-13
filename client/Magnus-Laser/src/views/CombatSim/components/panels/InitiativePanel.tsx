@@ -405,7 +405,7 @@ const InitiativePanel = ({
                                                             lineHeight: 1,
                                                             ml: 0.5,
                                                         }}
-                                                        title="Seriously Wounded (-2 to hit/skill rolls)"
+                                                        title={t('combatSim.seriouslyWoundedTooltip')}
                                                     >
                                                         🩸
                                                     </Typography>

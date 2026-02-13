@@ -325,8 +325,8 @@ const EdgerunnerDetailDialog = () => {
                     },
                 }}
             >
-                <Tab label="Overview" />
-                <Tab label="Combat" />
+                <Tab label={t('edgerunners.tabs.overview')} />
+                <Tab label={t('edgerunners.tabs.combat')} />
             </Tabs>
 
             <DialogContent sx={{ p: 0 }}>
@@ -486,7 +486,7 @@ const EdgerunnerDetailDialog = () => {
                                                     {w.name} — {w.damage} ({w.type})
                                                     {w.isTokenAction && (
                                                         <Chip
-                                                            label="Action"
+                                                            label={t('edgerunners.action')}
                                                             size="small"
                                                             sx={{
                                                                 ml: 1,
@@ -575,7 +575,7 @@ const EdgerunnerDetailDialog = () => {
                                     ))}
                                 </Stack>
                                 <TextField
-                                    label="Custom hex"
+                                    label={t('edgerunners.customHex')}
                                     size="small"
                                     value={hexColor}
                                     onChange={(e) => {
@@ -809,7 +809,7 @@ const EdgerunnerDetailDialog = () => {
                                         <Stack spacing={0.5} mb={2}>
                                             {edited.weapons.map((w, i) => (
                                                 <Stack key={i} direction="row" alignItems="center" spacing={1}>
-                                                    <Tooltip title="Combat action" arrow>
+                                                    <Tooltip title={t('edgerunners.combatAction')} arrow>
                                                         <Checkbox
                                                             size="small"
                                                             checked={w.isTokenAction ?? false}
@@ -864,7 +864,7 @@ const EdgerunnerDetailDialog = () => {
                                                         alignItems="center"
                                                         spacing={1}
                                                     >
-                                                        <Tooltip title="Combat action" arrow>
+                                                        <Tooltip title={t('edgerunners.combatAction')} arrow>
                                                             <Checkbox
                                                                 size="small"
                                                                 checked={s.isTokenAction ?? false}

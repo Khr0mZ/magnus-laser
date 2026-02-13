@@ -622,17 +622,16 @@ const CharacterCreatorView = () => {
                                 STREETRAT
                             </Typography>
                             <Typography variant="body2" sx={{ color: colors.grays.gray500, mb: 2 }}>
-                                Template-based
+                                {t('characterCreator.templateBased')}
                             </Typography>
                             <Typography
                                 variant="body2"
                                 sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
                             >
-                                The fastest way to create a character. Roll 1d10 and get a pre-generated stat array and
-                                skill set. Perfect for new players or quick sessions.
+                                {t('characterCreator.streetratDescription')}
                             </Typography>
                             <Chip
-                                label="Beginner Friendly"
+                                label={t('characterCreator.beginnerFriendly')}
                                 size="small"
                                 sx={{ mt: 2, backgroundColor: colors.neons.green.default }}
                             />
@@ -656,17 +655,16 @@ const CharacterCreatorView = () => {
                                 EDGERUNNER
                             </Typography>
                             <Typography variant="body2" sx={{ color: colors.grays.gray500, mb: 2 }}>
-                                Fast and Dirty
+                                {t('characterCreator.fastAndDirty')}
                             </Typography>
                             <Typography
                                 variant="body2"
                                 sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
                             >
-                                Get a stat template but distribute 86 skill points yourself. A balance between speed and
-                                customization.
+                                {t('characterCreator.edgerunnerDescription')}
                             </Typography>
                             <Chip
-                                label="Recommended"
+                                label={t('characterCreator.recommended')}
                                 size="small"
                                 sx={{ mt: 2, backgroundColor: colors.neons.cyan.default }}
                             />
@@ -694,17 +692,16 @@ const CharacterCreatorView = () => {
                                 COMPLETE PACKAGE
                             </Typography>
                             <Typography variant="body2" sx={{ color: colors.grays.gray500, mb: 2 }}>
-                                Calculated
+                                {t('characterCreator.calculated')}
                             </Typography>
                             <Typography
                                 variant="body2"
                                 sx={{ color: readerMode ? colors.grays.gray100 : colors.grays.gray800 }}
                             >
-                                Full control: 62 points for stats, 86 for skills, 2,550eb for gear. Build exactly the
-                                character you want.
+                                {t('characterCreator.completePackageDescription')}
                             </Typography>
                             <Chip
-                                label="Advanced"
+                                label={t('characterCreator.advanced')}
                                 size="small"
                                 sx={{ mt: 2, backgroundColor: colors.neons.purple.default }}
                             />
@@ -726,7 +723,7 @@ const CharacterCreatorView = () => {
                     mb: 4,
                 }}
             >
-                Choose Your Role
+                {t('characterCreator.chooseYourRole')}
             </Typography>
             <Grid container spacing={2}>
                 {ROLES.map((r) => (
@@ -782,7 +779,7 @@ const CharacterCreatorView = () => {
                                                 {ROLE_ABILITIES[r.value].name}
                                             </Typography>
                                             <Chip
-                                                label="Role Ability"
+                                                label={t('characterCreator.roleAbility')}
                                                 size="small"
                                                 sx={{
                                                     height: 16,
@@ -1710,7 +1707,7 @@ const CharacterCreatorView = () => {
                                                                                 {item.slotsUsed === 0 &&
                                                                                     item.prerequisite && (
                                                                                         <Chip
-                                                                                            label="0 slots"
+                                                                                            label={t('characterCreator.zeroSlots')}
                                                                                             size="small"
                                                                                             sx={{
                                                                                                 ml: 0.5,
@@ -1726,7 +1723,7 @@ const CharacterCreatorView = () => {
                                                                                     )}
                                                                                 {item.unique && (
                                                                                     <Chip
-                                                                                        label="Unique"
+                                                                                        label={t('characterCreator.unique')}
                                                                                         size="small"
                                                                                         sx={{
                                                                                             ml: 0.5,
@@ -2430,7 +2427,7 @@ const CharacterCreatorView = () => {
                         mb: 4,
                     }}
                 >
-                    Finishing Touches
+                    {t('characterCreator.finishingTouches')}
                 </Typography>
 
                 <Grid container spacing={3}>
@@ -2438,7 +2435,7 @@ const CharacterCreatorView = () => {
                     <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
-                            label="Character Name"
+                            label={t('characterCreator.characterName')}
                             value={characterName}
                             onChange={(e) => setCharacterName(e.target.value)}
                             sx={{
@@ -2458,7 +2455,7 @@ const CharacterCreatorView = () => {
                         />
                         <TextField
                             fullWidth
-                            label="Handle (Street Name)"
+                            label={t('characterCreator.handleStreetName')}
                             value={characterHandle}
                             onChange={(e) => setCharacterHandle(e.target.value)}
                             sx={{

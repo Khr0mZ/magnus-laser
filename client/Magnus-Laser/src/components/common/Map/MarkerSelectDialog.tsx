@@ -13,6 +13,7 @@ import 'leaflet-draw'
 import 'leaflet-draw/dist/leaflet.draw.css'
 import 'leaflet/dist/leaflet.css'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import { Building, Character, Gang } from '../../../graphql/types'
 import colors from '../../../utils/colors'
@@ -31,6 +32,7 @@ type MaerkerSelectDialogProps = {
 
 const MarkerSelectDialog = (props: MaerkerSelectDialogProps) => {
     const { open, onClose, onSelect, buildings, gangs, contacts, existingMarkers } = props
+    const { t } = useTranslation()
     const [selectedMarkerType, setSelectedMarkerType] = useState<'building' | 'gang' | 'contact'>('building')
     const [selectedEntity, setSelectedEntity] = useState<Building | Gang | Character | null>(null)
     const { readerMode } = useUserPreferences()
@@ -140,26 +142,26 @@ const MarkerSelectDialog = (props: MaerkerSelectDialogProps) => {
                     variant="h3"
                     component="div"
                     className="glitch-text"
-                    data-text={'Select Marker'}
+                    data-text={t('map.selectMarker')}
                     sx={{
                         color: readerMode ? '#2e7d32' : '#0097a7',
                         textShadow: `0 0 10px ${'#2e7d32'}`,
                     }}
                 >
-                    Select Marker
+                    {t('map.selectMarker')}
                 </Typography>
             </DialogTitle>
             <DialogContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                    <CyberpunkFormControl readerMode={readerMode} label="Marker Type">
+                    <CyberpunkFormControl readerMode={readerMode} label={t('map.markerType')}>
                         <Select
                             value={selectedMarkerType}
                             onChange={(e) => handleMarkerTypeChange(e.target.value as 'building' | 'gang' | 'contact')}
-                            label="Marker Type"
+                            label={t('map.markerType')}
                         >
-                            <MenuItem value="building">Building</MenuItem>
-                            <MenuItem value="gang">Gang</MenuItem>
-                            <MenuItem value="contact">Contact</MenuItem>
+                            <MenuItem value="building">{t('map.building')}</MenuItem>
+                            <MenuItem value="gang">{t('map.gang')}</MenuItem>
+                            <MenuItem value="contact">{t('map.contact')}</MenuItem>
                         </Select>
                     </CyberpunkFormControl>
                     <CyberpunkFormControl readerMode={readerMode} label={getEntityLabel()}>

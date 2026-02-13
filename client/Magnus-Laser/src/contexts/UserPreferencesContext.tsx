@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import { ModuleTypes } from '../utils/constants'
+import i18n from '../i18n'
 import {
     DATA_IMPORT_EVENT,
     PREFERENCES_CHANGED_EVENT,
     loadAllViewPreferences,
     loadAnimationsEnabled,
+    loadLanguage,
     loadLoaderEnabled,
     loadReaderMode,
     saveAnimationsEnabled,
+    saveLanguage,
     saveLoaderEnabled,
     saveReaderMode,
 } from '../utils/storage'
@@ -25,23 +28,30 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
     const [viewPrefsLoaded, setViewPrefsLoaded] = useState(false)
     const [animationsEnabled, setAnimationsEnabled] = useState(true)
     const [loaderEnabled, setLoaderEnabled] = useState(true)
+    const [language, setLanguage] = useState('en')
     const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
 
     // Load all preferences from storage on init
     useEffect(() => {
         const loadPreferences = async () => {
             try {
-                const [dbReaderMode, allViewPrefs, dbAnimationsEnabled, dbLoaderEnabled] = await Promise.all([
-                    loadReaderMode(),
-                    loadAllViewPreferences(),
-                    loadAnimationsEnabled(),
-                    loadLoaderEnabled(),
-                ])
+                const [dbReaderMode, allViewPrefs, dbAnimationsEnabled, dbLoaderEnabled, dbLanguage] =
+                    await Promise.all([
+                        loadReaderMode(),
+                        loadAllViewPreferences(),
+                        loadAnimationsEnabled(),
+                        loadLoaderEnabled(),
+                        loadLanguage(),
+                    ])
 
                 setReaderMode(dbReaderMode)
                 setViewPreferences(allViewPrefs)
                 setAnimationsEnabled(dbAnimationsEnabled)
                 setLoaderEnabled(dbLoaderEnabled)
+                setLanguage(dbLanguage)
+                if (dbLanguage !== i18n.language) {
+                    await i18n.changeLanguage(dbLanguage)
+                }
                 setViewPrefsLoaded(true)
             } catch (error) {
                 console.warn('Error loading preferences:', error)
@@ -74,18 +84,23 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
     useEffect(() => {
         const handlePreferencesChanged = async () => {
             try {
-                const [updatedReaderMode, updatedViewPrefs, updatedAnimationsEnabled, updatedLoaderEnabled] =
+                const [updatedReaderMode, updatedViewPrefs, updatedAnimationsEnabled, updatedLoaderEnabled, updatedLanguage] =
                     await Promise.all([
                         loadReaderMode(),
                         loadAllViewPreferences(),
                         loadAnimationsEnabled(),
                         loadLoaderEnabled(),
+                        loadLanguage(),
                     ])
 
                 setReaderMode(updatedReaderMode)
                 setViewPreferences(updatedViewPrefs)
                 setAnimationsEnabled(updatedAnimationsEnabled)
                 setLoaderEnabled(updatedLoaderEnabled)
+                setLanguage(updatedLanguage)
+                if (updatedLanguage !== i18n.language) {
+                    await i18n.changeLanguage(updatedLanguage)
+                }
             } catch (error) {
                 console.warn('Error reloading preferences after change:', error)
             }
@@ -120,6 +135,12 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
         await saveLoaderEnabled(newLoaderEnabled)
     }
 
+    const changeLanguage = async (lang: string) => {
+        setLanguage(lang)
+        await i18n.changeLanguage(lang)
+        await saveLanguage(lang)
+    }
+
     const updateViewPreference = (moduleType: ModuleTypes, isTableView: boolean) => {
         setViewPreferences((prev) => ({
             ...prev,
@@ -141,6 +162,9 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
 
         loaderEnabled,
         toggleLoader,
+
+        language,
+        changeLanguage,
 
         isLoadingPreferences,
     }

@@ -393,7 +393,7 @@ const NPCFormsTool = () => {
                             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap mb={1}>
                                 {(npc as NPCFormComplex).hp !== undefined && (
                                     <Chip
-                                        label={`HP: ${(npc as NPCFormComplex).hp}`}
+                                        label={`${t('soloPlay.npcForms.hpLabel')}: ${(npc as NPCFormComplex).hp}`}
                                         size="small"
                                         sx={{
                                             backgroundColor: `${colors.neons.red.default}30`,
@@ -404,7 +404,7 @@ const NPCFormsTool = () => {
                                 )}
                                 {(npc as NPCFormComplex).initiative !== undefined && (
                                     <Chip
-                                        label={`INIT: ${(npc as NPCFormComplex).initiative}`}
+                                        label={`${t('soloPlay.npcForms.initLabel')}: ${(npc as NPCFormComplex).initiative}`}
                                         size="small"
                                         sx={{
                                             backgroundColor: `${colors.neons.yellow.default}30`,
@@ -415,7 +415,7 @@ const NPCFormsTool = () => {
                                 )}
                                 {(npc as NPCFormComplex).reputation !== undefined && (
                                     <Chip
-                                        label={`REP: ${(npc as NPCFormComplex).reputation}`}
+                                        label={`${t('soloPlay.npcForms.repLabel')}: ${(npc as NPCFormComplex).reputation}`}
                                         size="small"
                                         sx={{
                                             backgroundColor: `${colors.neons.green.default}30`,
@@ -440,9 +440,9 @@ const NPCFormsTool = () => {
                             {((npc as NPCFormComplex).armorHead || (npc as NPCFormComplex).armorBody) && (
                                 <Typography variant="caption" sx={{ color: colors.grays.gray500, display: 'block' }}>
                                     <strong>{t('soloPlay.npcForms.armor')}:</strong>{' '}
-                                    {(npc as NPCFormComplex).armorHead && `Head: ${(npc as NPCFormComplex).armorHead}`}
+                                    {(npc as NPCFormComplex).armorHead && `${t('soloPlay.npcForms.headPrefix')}: ${(npc as NPCFormComplex).armorHead}`}
                                     {(npc as NPCFormComplex).armorHead && (npc as NPCFormComplex).armorBody && ' | '}
-                                    {(npc as NPCFormComplex).armorBody && `Body: ${(npc as NPCFormComplex).armorBody}`}
+                                    {(npc as NPCFormComplex).armorBody && `${t('soloPlay.npcForms.bodyPrefix')}: ${(npc as NPCFormComplex).armorBody}`}
                                 </Typography>
                             )}
                             {(npc as NPCFormComplex).gear && (
@@ -506,7 +506,7 @@ const NPCFormsTool = () => {
                     label={t('soloPlay.npcForms.name')}
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder="Johnny Silverhand"
+                    placeholder={t('soloPlay.npcForms.namePlaceholder')}
                     sx={tfStyle}
                 />
                 <Tooltip title={t('soloPlay.npcForms.randomName')}>
@@ -534,7 +534,7 @@ const NPCFormsTool = () => {
                     label={t('soloPlay.npcForms.handle')}
                     value={formHandle}
                     onChange={(e) => setFormHandle(e.target.value)}
-                    placeholder="Rockerboy"
+                    placeholder={t('soloPlay.npcForms.handlePlaceholder')}
                     sx={tfStyle}
                 />
                 <Tooltip title={t('soloPlay.npcForms.randomHandle')}>
@@ -559,7 +559,7 @@ const NPCFormsTool = () => {
                     label={t('soloPlay.npcForms.role')}
                     value={formRole}
                     onChange={(e) => setFormRole(e.target.value)}
-                    placeholder="Solo, Netrunner, Fixer..."
+                    placeholder={t('soloPlay.npcForms.rolePlaceholder')}
                     sx={tfStyle}
                 />
                 <Tooltip title={t('soloPlay.npcForms.randomRole')}>
@@ -586,7 +586,7 @@ const NPCFormsTool = () => {
                 label={t('soloPlay.npcForms.look')}
                 value={formLook}
                 onChange={(e) => setFormLook(e.target.value)}
-                placeholder="What do they look like?"
+                placeholder={t('soloPlay.npcForms.lookPlaceholder')}
                 sx={tfStyle}
             />
 
@@ -596,7 +596,7 @@ const NPCFormsTool = () => {
                 label={t('soloPlay.npcForms.do')}
                 value={formDo}
                 onChange={(e) => setFormDo(e.target.value)}
-                placeholder="What do they do?"
+                placeholder={t('soloPlay.npcForms.doPlaceholder')}
                 sx={tfStyle}
             />
 
@@ -606,7 +606,7 @@ const NPCFormsTool = () => {
                 label={t('soloPlay.npcForms.quirk')}
                 value={formQuirk}
                 onChange={(e) => setFormQuirk(e.target.value)}
-                placeholder="What makes them distinct?"
+                placeholder={t('soloPlay.npcForms.quirkPlaceholder')}
                 sx={tfStyle}
             />
 
@@ -617,7 +617,7 @@ const NPCFormsTool = () => {
                     label={t('soloPlay.npcForms.mood')}
                     value={formMood}
                     onChange={(e) => setFormMood(e.target.value)}
-                    placeholder="Hostile, Friendly, Suspicious..."
+                    placeholder={t('soloPlay.npcForms.moodPlaceholder')}
                     sx={tfStyle}
                 />
                 <Tooltip title={t('soloPlay.npcForms.randomMood')}>
@@ -641,7 +641,7 @@ const NPCFormsTool = () => {
                 label={t('soloPlay.npcForms.notes')}
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
-                placeholder="Additional notes..."
+                placeholder={t('soloPlay.npcForms.notesPlaceholder')}
                 multiline
                 rows={2}
                 sx={tfStyle}
@@ -788,7 +788,7 @@ const NPCFormsTool = () => {
 
                                 <Stack direction="row" spacing={1}>
                                     <TextField
-                                        label="HP"
+                                        label={t('soloPlay.npcForms.hpLabel')}
                                         type="number"
                                         value={hp}
                                         onChange={(e) => setHp(e.target.value === '' ? '' : parseInt(e.target.value))}
@@ -796,7 +796,7 @@ const NPCFormsTool = () => {
                                         sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)}
                                     />
                                     <TextField
-                                        label="INIT"
+                                        label={t('soloPlay.npcForms.initLabel')}
                                         type="number"
                                         value={initiative}
                                         onChange={(e) => setInitiative(e.target.value === '' ? '' : parseInt(e.target.value))}
@@ -804,7 +804,7 @@ const NPCFormsTool = () => {
                                         sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.yellow.default)}
                                     />
                                     <TextField
-                                        label="REP"
+                                        label={t('soloPlay.npcForms.repLabel')}
                                         type="number"
                                         value={reputation}
                                         onChange={(e) => setReputation(e.target.value === '' ? '' : parseInt(e.target.value))}
@@ -818,7 +818,7 @@ const NPCFormsTool = () => {
                                     label={t('soloPlay.npcForms.skills')}
                                     value={importantSkills}
                                     onChange={(e) => setImportantSkills(e.target.value)}
-                                    placeholder="Evasion 14, Handgun 14..."
+                                    placeholder={t('soloPlay.npcForms.skillsPlaceholder')}
                                     multiline
                                     rows={2}
                                     sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.purple.default)}
@@ -828,7 +828,7 @@ const NPCFormsTool = () => {
                                     label={t('soloPlay.npcForms.attacks')}
                                     value={attacks}
                                     onChange={(e) => setAttacks(e.target.value)}
-                                    placeholder="VH Pistol 2d6 (ROF 2)..."
+                                    placeholder={t('soloPlay.npcForms.weaponsPlaceholder')}
                                     multiline
                                     rows={2}
                                     sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)}
@@ -839,7 +839,7 @@ const NPCFormsTool = () => {
                                         label={t('soloPlay.npcForms.armorHead')}
                                         value={armorHead}
                                         onChange={(e) => setArmorHead(e.target.value)}
-                                        placeholder="SP 11"
+                                        placeholder={t('soloPlay.npcForms.armorHeadPlaceholder')}
                                         size="small"
                                         sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.yellow.default)}
                                     />
@@ -848,7 +848,7 @@ const NPCFormsTool = () => {
                                         label={t('soloPlay.npcForms.armorBody')}
                                         value={armorBody}
                                         onChange={(e) => setArmorBody(e.target.value)}
-                                        placeholder="SP 11"
+                                        placeholder={t('soloPlay.npcForms.armorBodyPlaceholder')}
                                         size="small"
                                         sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.yellow.default)}
                                     />
@@ -858,7 +858,7 @@ const NPCFormsTool = () => {
                                     label={t('soloPlay.npcForms.gear')}
                                     value={gear}
                                     onChange={(e) => setGear(e.target.value)}
-                                    placeholder="Agent, flashlight, grapple gun..."
+                                    placeholder={t('soloPlay.npcForms.gearPlaceholder')}
                                     sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)}
                                 />
                                 <TextField
@@ -866,7 +866,7 @@ const NPCFormsTool = () => {
                                     label={t('soloPlay.npcForms.cyberware')}
                                     value={cyberware}
                                     onChange={(e) => setCyberware(e.target.value)}
-                                    placeholder="Cyberoptics, neural link..."
+                                    placeholder={t('soloPlay.npcForms.cyberwarePlaceholder')}
                                     sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.cyan.default)}
                                 />
                             </>
@@ -975,7 +975,7 @@ const NPCFormsTool = () => {
                                     </Grid>
                                     <Stack direction="row" spacing={1}>
                                         <TextField
-                                            label="HP"
+                                            label={t('soloPlay.npcForms.hpLabel')}
                                             type="number"
                                             value={(editingNpc as NPCFormComplex).hp ?? ''}
                                             onChange={(e) =>
@@ -988,7 +988,7 @@ const NPCFormsTool = () => {
                                             sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)}
                                         />
                                         <TextField
-                                            label="INIT"
+                                            label={t('soloPlay.npcForms.initLabel')}
                                             type="number"
                                             value={(editingNpc as NPCFormComplex).initiative ?? ''}
                                             onChange={(e) =>
@@ -1001,7 +1001,7 @@ const NPCFormsTool = () => {
                                             sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.yellow.default)}
                                         />
                                         <TextField
-                                            label="REP"
+                                            label={t('soloPlay.npcForms.repLabel')}
                                             type="number"
                                             value={(editingNpc as NPCFormComplex).reputation ?? ''}
                                             onChange={(e) =>

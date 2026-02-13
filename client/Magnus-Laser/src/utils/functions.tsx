@@ -7,7 +7,6 @@ import {
     Groups,
     Groups3,
     Hub,
-    Nightlife,
     PersonAdd,
     Psychology,
     SatelliteAlt,
@@ -62,8 +61,6 @@ export const getModuleIcon = (module: ModuleTypes, isNavigation?: boolean, isDas
         return <Hub sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.BOUNTY)
         return <GpsFixed sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
-    if (module === ModuleTypes.CLUB)
-        return <Nightlife sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.ITEM)
         return <Warehouse sx={isNavigation ? navigationSx : isDashboard ? dashboardSx : smallerBackgroundSx} />
     if (module === ModuleTypes.SETTINGS)

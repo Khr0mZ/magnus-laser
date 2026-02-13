@@ -592,7 +592,7 @@ const ClocksTool = () => {
                             label={t('soloPlay.clocks.clockName')}
                             value={clockName}
                             onChange={(e) => setClockName(e.target.value)}
-                            placeholder="Bomb Timer / NCPD Arrival / Strike Team"
+                            placeholder={t('soloPlay.clocks.namePlaceholder')}
                             sx={textFieldStyle}
                         />
                         <TextField
@@ -600,7 +600,7 @@ const ClocksTool = () => {
                             label={t('soloPlay.clocks.trigger')}
                             value={clockTrigger}
                             onChange={(e) => setClockTrigger(e.target.value)}
-                            placeholder="Every round / When a check fails / Every in-game hour"
+                            placeholder={t('soloPlay.clocks.triggerPlaceholder')}
                             sx={textFieldStyle}
                         />
                         <TextField
@@ -608,7 +608,7 @@ const ClocksTool = () => {
                             label={t('soloPlay.clocks.event')}
                             value={clockEvent}
                             onChange={(e) => setClockEvent(e.target.value)}
-                            placeholder="The bomb explodes! / NCPD arrives / Strike team attacks"
+                            placeholder={t('soloPlay.clocks.eventPlaceholder')}
                             sx={textFieldStyle}
                         />
                         <Box>

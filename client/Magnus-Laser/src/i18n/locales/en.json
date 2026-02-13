@@ -75,8 +75,6 @@
         "SETTINGS_DESCRIPTION": "System prefs for your rig and session management.",
         "BOUNTY": "Bounty",
         "BOUNTY_DESCRIPTION": "Bounties are jobs your edgerunners can pull off for eddies.",
-        "CLUB": "Club",
-        "CLUB_DESCRIPTION": "Clubs are buildings your edgerunners can visit for fun.",
         "ITEM": "Item",
         "ITEM_DESCRIPTION": "Items are objects your edgerunners can use.",
         "MAP": "Map",
@@ -920,7 +918,12 @@
         }
     },
     "map": {
-        "title": "City Grid Satellite Uplink"
+        "title": "City Grid Satellite Uplink",
+        "selectMarker": "Select Marker",
+        "markerType": "Marker Type",
+        "building": "Building",
+        "gang": "Gang",
+        "contact": "Contact"
     },
     "combatSim": {
         "sph": "SPH",
@@ -935,6 +938,7 @@
         "replaceMap": "Replace Map",
         "noImage": "No Optics",
         "selectImage": "Optics",
+        "selectModel": "Model",
         "tokensPanel": "Tokens Panel",
         "closePanel": "Close Panel",
         "openPanel": "Open Panel",
@@ -966,6 +970,7 @@
         "melee": "Melee",
         "ranged": "Ranged",
         "npcType": "NPC Type",
+        "tokenModel": "3D Model",
         "tokenImage": "Token Optics",
         "tokenContextMenu": {
             "duplicate": "Duplicate",
@@ -1044,7 +1049,9 @@
         "luck": "Luck",
         "currentLuck": "Current Luck",
         "name": "Name",
-        "myTokens": "My Tokens"
+        "myTokens": "My Tokens",
+        "blastsPanelTitle": "Blasts",
+        "seriouslyWoundedTooltip": "Seriously Wounded (-2 to hit/skill rolls)"
     },
     "settings": {
         "title": "System Kernel Prefs",
@@ -1063,7 +1070,20 @@
         "display": "Display",
         "readerMode": "Cyberpunk Mode",
         "enableAnimations": "Visual FX",
-        "enableLoader": "App Loader"
+        "enableLoader": "App Loader",
+        "language": "Language",
+        "apiKeysSaved": "API keys saved successfully",
+        "exportSuccess": "Exported {{count}} collections successfully",
+        "exportFailed": "Failed to export data",
+        "importSuccess": "Imported {{registries}} registries in {{collections}} collections successfully",
+        "importNoCollections": "No collections found in import file",
+        "importParseFailed": "Failed to parse import file",
+        "importFailed": "Failed to import data",
+        "nukeSuccess": "All data has been completely cleared",
+        "nukeFailed": "Failed to clear data",
+        "nukeAllData": "Nuke All Data",
+        "nukeAllDataMessage": "This will permanently delete ALL your data including gangs, buildings, characters, items, bounties, fixer jobs, map markers, and combat simulator data. This action cannot be undone. Are you sure you want to proceed?",
+        "nukeAllDataConfirm": "NUKE ALL DATA"
     },
     "loader": {
         "title": "Magnus Laser HQ v2.0.77",
@@ -1143,7 +1163,10 @@
             "complete": "CLOCK COMPLETE - EVENT TRIGGERED!",
             "editClock": "Edit Clock",
             "devilsLuck": "Devil's Luck (remove a d6 to refresh Luck Pool)",
-            "devilsLuckUsed": "Devil's Luck Used"
+            "devilsLuckUsed": "Devil's Luck Used",
+            "namePlaceholder": "Bomb Timer / NCPD Arrival / Strike Team",
+            "triggerPlaceholder": "Every round / When a check fails / Every in-game hour",
+            "eventPlaceholder": "The bomb explodes! / NCPD arrives / Strike team attacks"
         },
         "combat": {
             "title": "Quick & Dirty Combat",
@@ -1238,6 +1261,15 @@
                 "ESCAPE": "TACTICAL RETREAT",
                 "ENEMY_FLED": "ENEMIES FLED!",
                 "ENEMY_SURRENDERED": "ENEMIES SURRENDERED!"
+            },
+            "hardened": {
+                "refEvasion": "REF 8 + Evasion 6+",
+                "attack15": "Attack 15+",
+                "willBody": "WILL+BODY 16+",
+                "luxuryWeapon": "Luxury+ Weapon",
+                "dexMov": "DEX 8 + MOV 8",
+                "autofireMartial": "Autofire/Martial 6+",
+                "soloRank4": "Solo Rank 4+"
             }
         },
         "netrun": {
@@ -1286,7 +1318,8 @@
             "blackIceWarning": "⚠️ Failing against Black ICE means you take a hit! If the entire Netrun fails, you take an additional hit from unsafe jackout.",
             "blackIceHits": "Black ICE Hits",
             "blackIceHit": "Hit by Black ICE!",
-            "unsafeJackout": "+1 from unsafe jackout"
+            "unsafeJackout": "+1 from unsafe jackout",
+            "checkDescriptionPlaceholder": "DV6 Password / Asp Black ICE / Important File"
         },
         "mission": {
             "title": "Mission Builder",
@@ -1478,7 +1511,16 @@
             "successes": "Successes",
             "failures": "Failures",
             "success": "INVESTIGATION SUCCESSFUL!",
-            "failure": "INVESTIGATION FAILED - Fail Forward!"
+            "failure": "INVESTIGATION FAILED - Fail Forward!",
+            "namePlaceholder": "Tracking the smuggler ring",
+            "goalPlaceholder": "Find the location of the hidden warehouse",
+            "skillPlaceholder": "Streetwise, Library Search, Human Perception...",
+            "descriptionPlaceholder": "Ask around the local bars for information",
+            "rollPlaceholder": "Leave empty for random d10",
+            "totalPlaceholder": "STAT + Skill",
+            "nChecks": "{{done}}/{{total}} checks",
+            "rollDetail": "Roll: {{roll}} + Skill: {{skill}} = {{sum}} vs DV {{dv}}",
+            "complexityChecks": "({{n}} checks)"
         },
         "social": {
             "title": "Social Challenge",
@@ -1508,7 +1550,18 @@
             "npcWins": "NPC Wins",
             "success": "SOCIAL CHALLENGE WON!",
             "failure": "SOCIAL CHALLENGE LOST!",
-            "backgroundNote": "Background NPCs don't require skill checks. Just narrate the interaction."
+            "backgroundNote": "Background NPCs don't require skill checks. Just narrate the interaction.",
+            "tie": "TIE",
+            "sessionNamePlaceholder": "Negotiate with fixer",
+            "npcNamePlaceholder": "Rogue Amendiares",
+            "goalPlaceholder": "Get a better deal on the gig",
+            "edgerunnerSkillPlaceholder": "Persuasion, Trading, etc.",
+            "edgerunnerTotalPlaceholder": "Roll + Skill",
+            "npcSkillPlaceholder": "Human Perception, etc.",
+            "npcTotalPlaceholder": "Roll + Skill",
+            "nChecks": "{{done}}/{{total}} checks",
+            "edgerunnerVsNpc": "Edgerunner: {{eTotal}} vs NPC: {{nTotal}}",
+            "checksOption": "{{n}} checks"
         },
         "npcTracker": {
             "title": "NPC Tracker",
@@ -1532,7 +1585,13 @@
                 "DEAD": "Dead",
                 "MISSING": "Missing",
                 "UNKNOWN": "Unknown"
-            }
+            },
+            "namePlaceholder": "Enter or generate a name",
+            "rolePlaceholder": "Solo, Fixer, Netrunner...",
+            "firstEncounterPlaceholder": "Session 3, at Afterlife bar",
+            "relationshipPlaceholder": "Ally, rival, informant...",
+            "moodPlaceholder": "Hostile, friendly...",
+            "unknownDefault": "Unknown"
         },
         "ipTracker": {
             "title": "IP Tracker",
@@ -1548,7 +1607,11 @@
             "amount": "IP Amount",
             "spentOnLabel": "Spent On",
             "date": "Date",
-            "history": "IP History"
+            "history": "IP History",
+            "namePlaceholder": "V, Johnny, Jackie...",
+            "spentOnPlaceholder": "Handgun +1, Athletics +1...",
+            "earnedDefault": "Earned",
+            "unspecifiedDefault": "Unspecified"
         },
         "sceneTracker": {
             "title": "Scene Tracker",
@@ -1566,7 +1629,13 @@
             "addCheck": "Add Check",
             "checkDescription": "Check Description",
             "passed": "passed",
-            "outcome": "Outcome"
+            "outcome": "Outcome",
+            "locationPlaceholder": "Downtown nightclub, rooftop...",
+            "participantsPlaceholder": "V, Johnny, Rogue (comma separated)",
+            "goalPlaceholder": "Get info from the fixer about the heist",
+            "notesPlaceholder": "Optional notes...",
+            "checkPlaceholder": "Persuasion check to convince the fixer...",
+            "outcomePlaceholder": "What happened in this scene?"
         },
         "npcForms": {
             "title": "NPC Forms",
@@ -1595,7 +1664,26 @@
             "armorHead": "Armor (Head)",
             "armorBody": "Armor (Body)",
             "gear": "Gear",
-            "cyberware": "Cyberware"
+            "cyberware": "Cyberware",
+            "namePlaceholder": "Johnny Silverhand",
+            "handlePlaceholder": "Rockerboy",
+            "rolePlaceholder": "Solo, Netrunner, Fixer...",
+            "lookPlaceholder": "What do they look like?",
+            "doPlaceholder": "What do they do?",
+            "quirkPlaceholder": "What makes them distinct?",
+            "moodPlaceholder": "Hostile, Friendly, Suspicious...",
+            "notesPlaceholder": "Additional notes...",
+            "skillsPlaceholder": "Evasion 14, Handgun 14...",
+            "weaponsPlaceholder": "VH Pistol 2d6 (ROF 2)...",
+            "armorHeadPlaceholder": "SP 11",
+            "armorBodyPlaceholder": "SP 11",
+            "gearPlaceholder": "Agent, flashlight, grapple gun...",
+            "cyberwarePlaceholder": "Cyberoptics, neural link...",
+            "hpLabel": "HP",
+            "initLabel": "INIT",
+            "repLabel": "REP",
+            "headPrefix": "Head",
+            "bodyPrefix": "Body"
         },
         "randomThings": {
             "title": "Random Things (3-20)",
@@ -1607,7 +1695,9 @@
             "tableSize": "Table Size",
             "items": "items",
             "roll": "Roll on Table",
-            "emptyItem": "(empty)"
+            "emptyItem": "(empty)",
+            "namePlaceholder": "Random NPC Reactions, Loot Table...",
+            "itemPlaceholder": "Item {{n}}..."
         }
     },
     "gmTools": {
@@ -1684,7 +1774,33 @@
         "createNew": "Create Edgerunner",
         "noEdgerunners": "No Edgerunners Yet",
         "createFirstHint": "Click 'Create Edgerunner' to build your first character",
-        "viewEdgerunners": "View Edgerunners"
+        "viewEdgerunners": "View Edgerunners",
+        "tabs": {
+            "overview": "Overview",
+            "skills": "Skills",
+            "equipment": "Equipment",
+            "lifepath": "Lifepath",
+            "ip": "IP",
+            "notes": "Notes",
+            "combat": "Combat"
+        },
+        "exportJson": "Export JSON",
+        "lvl": "Lvl",
+        "total": "Total",
+        "combatAction": "Combat action",
+        "act": "Act",
+        "unique": "Unique",
+        "language": "Language",
+        "clothingStyle": "Clothing Style",
+        "hairstyle": "Hairstyle",
+        "valueMost": "Value Most",
+        "feelAboutPeople": "Feel About People",
+        "valuedPerson": "Valued Person",
+        "valuedPossession": "Valued Possession",
+        "applyChanges": "Apply Changes",
+        "addNotesPlaceholder": "Add notes...",
+        "customHex": "Custom hex",
+        "action": "Action"
     },
     "characterCreator": {
         "title": "Character Creator",
@@ -1735,6 +1851,22 @@
         "rerollLifepath": "Reroll Lifepath",
         "saveCharacter": "Save Character",
         "savedMessage": "Your character \"{{name}}\" has been created successfully!",
-        "createAnother": "Create Another"
+        "createAnother": "Create Another",
+        "templateBased": "Template-based",
+        "streetratDescription": "The fastest way to create a character. Roll 1d10 and get a pre-generated stat array and skill set. Perfect for new players or quick sessions.",
+        "beginnerFriendly": "Beginner Friendly",
+        "fastAndDirty": "Fast and Dirty",
+        "edgerunnerDescription": "Get a stat template but distribute 86 skill points yourself. A balance between speed and customization.",
+        "recommended": "Recommended",
+        "calculated": "Calculated",
+        "completePackageDescription": "Full control: 62 points for stats, 86 for skills, 2,550eb for gear. Build exactly the character you want.",
+        "advanced": "Advanced",
+        "chooseYourRole": "Choose Your Role",
+        "roleAbility": "Role Ability",
+        "zeroSlots": "0 slots",
+        "unique": "Unique",
+        "finishingTouches": "Finishing Touches",
+        "characterName": "Character Name",
+        "handleStreetName": "Handle (Street Name)"
     }
 }

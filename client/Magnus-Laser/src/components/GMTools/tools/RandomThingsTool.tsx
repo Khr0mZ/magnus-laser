@@ -152,7 +152,7 @@ const RandomThingsTool = () => {
                             label={`${i + 1}`}
                             value={item}
                             onChange={(e) => onItemChange(i, e.target.value)}
-                            placeholder={`Item ${i + 1}...`}
+                            placeholder={t('soloPlay.randomThings.itemPlaceholder', { n: i + 1 })}
                             sx={tfStyle}
                         />
                     </Stack>
@@ -402,7 +402,7 @@ const RandomThingsTool = () => {
                             label={t('soloPlay.randomThings.tableName')}
                             value={tableName}
                             onChange={(e) => setTableName(e.target.value)}
-                            placeholder="Random NPC Reactions, Loot Table..."
+                            placeholder={t('soloPlay.randomThings.namePlaceholder')}
                             sx={textFieldStyle}
                         />
 

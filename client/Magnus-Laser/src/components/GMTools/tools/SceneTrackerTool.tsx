@@ -483,7 +483,7 @@ const SceneTrackerTool = () => {
                                 label={t('soloPlay.sceneTracker.location')}
                                 value={location}
                                 onChange={(e) => setLocation(e.target.value)}
-                                placeholder="Downtown nightclub, rooftop..."
+                                placeholder={t('soloPlay.sceneTracker.locationPlaceholder')}
                                 sx={textFieldStyle}
                             />
                             <Tooltip title={t('soloPlay.sceneTracker.randomLocation')}>
@@ -505,7 +505,7 @@ const SceneTrackerTool = () => {
                             label={t('soloPlay.sceneTracker.participants')}
                             value={participants}
                             onChange={(e) => setParticipants(e.target.value)}
-                            placeholder="V, Johnny, Rogue (comma separated)"
+                            placeholder={t('soloPlay.sceneTracker.participantsPlaceholder')}
                             helperText={t('soloPlay.sceneTracker.participantsHelp')}
                             sx={textFieldStyle}
                         />
@@ -514,7 +514,7 @@ const SceneTrackerTool = () => {
                             label={t('soloPlay.sceneTracker.goal')}
                             value={goal}
                             onChange={(e) => setGoal(e.target.value)}
-                            placeholder="Get info from the fixer about the heist"
+                            placeholder={t('soloPlay.sceneTracker.goalPlaceholder')}
                             sx={textFieldStyle}
                         />
                         <TextField
@@ -522,7 +522,7 @@ const SceneTrackerTool = () => {
                             label={t('soloPlay.sceneTracker.notes')}
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Optional notes..."
+                            placeholder={t('soloPlay.sceneTracker.notesPlaceholder')}
                             multiline
                             rows={2}
                             sx={textFieldStyle}
@@ -578,7 +578,7 @@ const SceneTrackerTool = () => {
                         label={t('soloPlay.sceneTracker.checkDescription')}
                         value={checkDescription}
                         onChange={(e) => setCheckDescription(e.target.value)}
-                        placeholder="Persuasion check to convince the fixer..."
+                        placeholder={t('soloPlay.sceneTracker.checkPlaceholder')}
                         multiline
                         rows={2}
                         sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)}
@@ -673,7 +673,7 @@ const SceneTrackerTool = () => {
                                         outcome: e.target.value || undefined,
                                     })
                                 }
-                                placeholder="What happened in this scene?"
+                                placeholder={t('soloPlay.sceneTracker.outcomePlaceholder')}
                                 multiline
                                 rows={2}
                                 sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.purple.default)}

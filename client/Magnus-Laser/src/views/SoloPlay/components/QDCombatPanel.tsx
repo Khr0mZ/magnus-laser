@@ -936,7 +936,7 @@ const QDCombatPanel = () => {
                                                         />
                                                     }
                                                     label={
-                                                        <Typography variant="caption">REF 8 + Evasion 6+</Typography>
+                                                        <Typography variant="caption">{t('soloPlay.combat.hardened.refEvasion')}</Typography>
                                                     }
                                                 />
                                                 <FormControlLabel
@@ -951,7 +951,7 @@ const QDCombatPanel = () => {
                                                             }
                                                         />
                                                     }
-                                                    label={<Typography variant="caption">Attack 15+</Typography>}
+                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.attack15')}</Typography>}
                                                 />
                                                 <FormControlLabel
                                                     control={
@@ -965,7 +965,7 @@ const QDCombatPanel = () => {
                                                             }
                                                         />
                                                     }
-                                                    label={<Typography variant="caption">WILL+BODY 16+</Typography>}
+                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.willBody')}</Typography>}
                                                 />
                                                 <FormControlLabel
                                                     control={
@@ -979,7 +979,7 @@ const QDCombatPanel = () => {
                                                             }
                                                         />
                                                     }
-                                                    label={<Typography variant="caption">Luxury+ Weapon</Typography>}
+                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.luxuryWeapon')}</Typography>}
                                                 />
                                                 <FormControlLabel
                                                     control={
@@ -993,7 +993,7 @@ const QDCombatPanel = () => {
                                                             }
                                                         />
                                                     }
-                                                    label={<Typography variant="caption">DEX 8 + MOV 8</Typography>}
+                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.dexMov')}</Typography>}
                                                 />
                                                 <FormControlLabel
                                                     control={
@@ -1008,7 +1008,7 @@ const QDCombatPanel = () => {
                                                         />
                                                     }
                                                     label={
-                                                        <Typography variant="caption">Autofire/Martial 6+</Typography>
+                                                        <Typography variant="caption">{t('soloPlay.combat.hardened.autofireMartial')}</Typography>
                                                     }
                                                 />
                                                 <FormControlLabel
@@ -1023,7 +1023,7 @@ const QDCombatPanel = () => {
                                                             }
                                                         />
                                                     }
-                                                    label={<Typography variant="caption">Solo Rank 4+</Typography>}
+                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.soloRank4')}</Typography>}
                                                 />
                                             </Stack>
 
