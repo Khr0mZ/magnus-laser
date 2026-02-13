@@ -15,12 +15,14 @@ import {
 import { drawGrid, endpointFromAngleLength, snapToNinePoints } from '../utils/gridUtils'
 import { applyBackgroundTexture } from '../utils/pixiUtils'
 import type { Blast, BlastType, Image as ImageData, PixiDisplayObject, Token, Wall, WallShape } from '../utils/types'
+import { computeVisibilityPolygon, doesMultiSegmentPathCrossWall, isPointInPolygon, wallsToSegments } from '../utils/visibilityUtils'
 import {
     calculateConePoints,
     clearBlastRendererCaches,
     drawBlastPreview,
     preloadBlastTextures,
     renderBlasts,
+    setFogHiddenBlastIds,
 } from './blastRenderer'
 import { usePixiCallbackRefs } from './hooks/usePixiCallbackRefs'
 import { usePixiClipboard } from './hooks/usePixiClipboard'
@@ -33,6 +35,7 @@ import {
     preloadTextures,
     renderTokens,
     renderTokensWithPending,
+    setFogHiddenTokenIds,
     setTexturesReadyCallback,
     spriteCache,
 } from './tokenRenderer'
@@ -107,6 +110,7 @@ type PixiBoardProps = {
     pixiSetHostReady: (ready: boolean) => void
     pixiSetTokenContextMenuAnchor: (anchor: HTMLElement | null) => void
     pixiSetMapContextMenuAnchor: (anchor: HTMLElement | null) => void
+    pixiSelectedTokenId: string | null
     pixiSetSelectedTokenId: (id: string | null) => void
     pixiSetBlastContextMenuAnchor: (anchor: HTMLElement | null) => void
     pixiSetSelectedBlastId: (id: string | null) => void
@@ -172,6 +176,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         pixiSetHostReady,
         pixiSetTokenContextMenuAnchor,
         pixiSetMapContextMenuAnchor,
+        pixiSelectedTokenId,
         pixiSetSelectedTokenId,
         pixiSetBlastContextMenuAnchor,
         pixiSetSelectedBlastId,
@@ -333,6 +338,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                         if (newLastPoint) {
                             // Only update the indicator's end position (ghost position), not the actual token position
                             ind.updatePosition(newLastPoint.x, newLastPoint.y)
+                            ind.setWallCollision(doesMultiSegmentPathCrossWall(ind.points, wallsRef.current))
 
                             // Send update to synchronize with other players
                             // DM always sends when in session, players only send for their own actions
@@ -355,7 +361,8 @@ const PixiBoard = (props: PixiBoardProps) => {
                                 tokenLayerRef.current,
                                 tokensRef.current,
                                 gridSizeRef.current,
-                                pendingMap
+                                pendingMap,
+                                pixiSelectedTokenIdRef.current
                             )
                         }
                     }
@@ -486,10 +493,15 @@ const PixiBoard = (props: PixiBoardProps) => {
     const dragStartRef = useRef<{ id: string; x: number; y: number } | null>(null)
     const dragPreviewRef = useRef<{ id: string; x: number; y: number } | null>(null)
     const clickCandidateRef = useRef<{ id: string; x: number; y: number } | null>(null)
+    const lastTokenClickRef = useRef<{ id: string; time: number } | null>(null)
+
+    const pixiSelectedTokenIdRef = useRef<string | null>(pixiSelectedTokenId)
+    pixiSelectedTokenIdRef.current = pixiSelectedTokenId
 
     // Active token ref for crosshair
     const activeTokenIdRef = useRef<string | null>(activeTokenId)
     const crosshairLayerRef = useRef<Graphics | null>(null)
+    const fogLayerRef = useRef<Graphics | null>(null)
 
     // Refs to store canvas event handlers for proper cleanup
     const globalCtxBlockerRef = useRef<((e: globalThis.MouseEvent) => void) | null>(null)
@@ -538,7 +550,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         pixiPendingIndicatorsRef.current.clear()
 
         // Redraw tokens at their updated positions
-        renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current)
+        renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pixiSelectedTokenIdRef.current)
         onPendingCountChange(pixiPendingIndicatorsRef.current.size)
     }
 
@@ -602,7 +614,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         })
         pixiPendingIndicatorsRef.current.clear()
         // After committing, redraw tokens (parent will also update tokens prop shortly)
-        renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current)
+        renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pixiSelectedTokenIdRef.current)
         onPendingCountChange(pixiPendingIndicatorsRef.current.size)
     }
 
@@ -711,7 +723,8 @@ const PixiBoard = (props: PixiBoardProps) => {
                             tokenLayerRef.current,
                             tokensRef.current,
                             gridSizeRef.current,
-                            pendingMap
+                            pendingMap,
+                            pixiSelectedTokenIdRef.current
                         )
                         return
                     }
@@ -722,7 +735,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                     pendingMovementPointsRef.current.set(tokenId, points)
                     // Redraw to show updated indicator and ghost position
                     const pendingMap = buildPendingMap(pixiPendingIndicatorsRef.current)
-                    renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
+                    renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap, pixiSelectedTokenIdRef.current)
                     return
                 }
 
@@ -745,7 +758,7 @@ const PixiBoard = (props: PixiBoardProps) => {
 
                 // Redraw to show the indicator and ghost position
                 const pendingMap = buildPendingMap(pixiPendingIndicatorsRef.current)
-                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap, pixiSelectedTokenIdRef.current)
 
                 // If player receives PENDING_MOVEMENT from DM, start the animation
                 // For circular movements (start=end with distance > 0), trigger animation immediately
@@ -826,13 +839,14 @@ const PixiBoard = (props: PixiBoardProps) => {
             if (indicator) {
                 // Update the points and reposition the indicator
                 indicator.updatePoints(points)
+                indicator.setWallCollision(doesMultiSegmentPathCrossWall(indicator.points, wallsRef.current))
 
                 // Update stored movement points for animation
                 pendingMovementPointsRef.current.set(tokenId, points)
 
                 // Redraw to show updated ghost position (token stays at original position, ghost moves to new end)
                 const pendingMap = buildPendingMap(pixiPendingIndicatorsRef.current)
-                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap, pixiSelectedTokenIdRef.current)
             }
         }
 
@@ -889,6 +903,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                     if (newLastPoint) {
                         // Only update the indicator's end position (ghost position), not the actual token position
                         ind.updatePosition(newLastPoint.x, newLastPoint.y)
+                        ind.setWallCollision(doesMultiSegmentPathCrossWall(ind.points, wallsRef.current))
 
                         // Send update to synchronize with other players
                         const inSession = !!session
@@ -910,7 +925,8 @@ const PixiBoard = (props: PixiBoardProps) => {
                             tokenLayerRef.current,
                             tokensRef.current,
                             gridSizeRef.current,
-                            pendingMap
+                            pendingMap,
+                            pixiSelectedTokenIdRef.current
                         )
                     }
                 }
@@ -991,7 +1007,7 @@ const PixiBoard = (props: PixiBoardProps) => {
             wallLayerRef.current.clear()
             drawWallsOnGraphics(wallLayerRef.current, wallsRef.current)
         }
-    }, [walls])
+    }, [walls, pixiReady])
     // Keep latest mapKey
     useEffect(() => {
         mapKeyRef.current = mapKey
@@ -1274,6 +1290,13 @@ const PixiBoard = (props: PixiBoardProps) => {
             crosshairLayer.visible = true
             viewport.addChild(crosshairLayer)
 
+            // Fog of war layer (above tokens, below measure/UI)
+            const fogLayer = new Graphics()
+            fogLayerRef.current = fogLayer
+            fogLayer.zIndex = 2.5
+            fogLayer.eventMode = 'none'
+            viewport.addChild(fogLayer)
+
             // Ticker to drive token movement animations
             const ease = (t: number) => {
                 // Blend mostly-linear with a softer ease to avoid very slow starts/ends
@@ -1344,6 +1367,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                     tokensRef.current,
                     gridSizeRef.current,
                     merged,
+                    pixiSelectedTokenIdRef.current,
                     live?.id,
                     live?.x,
                     live?.y
@@ -1567,7 +1591,8 @@ const PixiBoard = (props: PixiBoardProps) => {
                                 tokenLayerRef.current,
                                 tokensRef.current,
                                 gridSizeRef.current,
-                                pendingMapAfter
+                                pendingMapAfter,
+                                pixiSelectedTokenIdRef.current
                             )
                         },
                         onCancel: () => {
@@ -1595,7 +1620,8 @@ const PixiBoard = (props: PixiBoardProps) => {
                                         tokenLayerRef.current,
                                         tokensRef.current,
                                         gridSizeRef.current,
-                                        pendingMap
+                                        pendingMap,
+                                        pixiSelectedTokenIdRef.current
                                     )
                                 }
                             }
@@ -1814,6 +1840,11 @@ const PixiBoard = (props: PixiBoardProps) => {
                         contextMenus.openMapContextMenu(x, y)
                         return
                     }
+                }
+
+                // Left click on empty space: deselect token
+                if (btn === 0 && !hit && !clickedBlast) {
+                    pixiSetSelectedTokenId(null)
                 }
 
                 // Blast drawing mode: only start with left button
@@ -2200,16 +2231,28 @@ const PixiBoard = (props: PixiBoardProps) => {
                         // dragged -> not a click
                         clickCandidateRef.current = null
                     } else {
-                        // treat as click (no drag preview)
+                        // treat as click (no drag preview) — select token, double-click to open dialog
                         const cand = clickCandidateRef.current
                         if (
                             cand &&
                             cand.id === endedId &&
                             !isWallModeRef.current &&
-                            !isMeasuringRef.current &&
-                            typeof onOpenTokenDialog === 'function'
+                            !isMeasuringRef.current
                         ) {
-                            onOpenTokenDialog(cand.id)
+                            // Select token on single click
+                            pixiSetSelectedTokenId(cand.id)
+
+                            // Double-click to open dialog
+                            if (typeof onOpenTokenDialog === 'function') {
+                                const now = Date.now()
+                                const last = lastTokenClickRef.current
+                                if (last && last.id === cand.id && now - last.time < 300) {
+                                    onOpenTokenDialog(cand.id)
+                                    lastTokenClickRef.current = null
+                                } else {
+                                    lastTokenClickRef.current = { id: cand.id, time: now }
+                                }
+                            }
                         }
                     }
                     dragPreviewRef.current = null
@@ -2614,6 +2657,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                     tokensRef.current,
                     gridSizeRef.current,
                     buildPendingMap(pixiPendingIndicatorsRef.current),
+                    pixiSelectedTokenIdRef.current,
                     draggingRef.current.id,
                     nx,
                     ny
@@ -2623,6 +2667,17 @@ const PixiBoard = (props: PixiBoardProps) => {
                 const start = dragStartRef.current
                 if (start) {
                     upsertPendingOverlay(draggingRef.current.id, start.x, start.y, nx, ny)
+
+                    // Check wall collision for visual warning
+                    const indicator = pixiPendingIndicatorsRef.current.get(draggingRef.current.id)
+                    if (indicator) {
+                        const pathPts = [...indicator.points]
+                        const last = pathPts[pathPts.length - 1]
+                        if (!last || last.x !== nx || last.y !== ny) {
+                            pathPts.push({ x: nx, y: ny })
+                        }
+                        indicator.setWallCollision(doesMultiSegmentPathCrossWall(pathPts, wallsRef.current))
+                    }
                 }
 
                 // Measurement move
@@ -2737,7 +2792,7 @@ const PixiBoard = (props: PixiBoardProps) => {
         appRef.current.renderer.resize(width, height)
         viewportRef.current.resize(width, height, worldDims.worldWidth, worldDims.worldHeight)
         // redraw tokens after resize
-        renderTokens(tokenLayerRef.current, tokens, gridSize)
+        renderTokens(tokenLayerRef.current, tokens, gridSize, pixiSelectedTokenIdRef.current)
     }, [width, height, worldDims, gridSize])
     // Keep measuring ref in sync so event handlers see latest value
     useEffect(() => {
@@ -2916,6 +2971,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                 tokensRef.current,
                 gridSizeRef.current,
                 override,
+                pixiSelectedTokenIdRef.current,
                 live?.id,
                 live?.x,
                 live?.y
@@ -2925,14 +2981,130 @@ const PixiBoard = (props: PixiBoardProps) => {
             if (pixiPendingIndicatorsRef.current.size > 0) {
                 const pendingMap = buildPendingMap(pixiPendingIndicatorsRef.current)
                 // Always use tokensRef.current for immediate updates
-                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap)
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap, pixiSelectedTokenIdRef.current)
             } else {
                 // No pending moves, just render tokens normally
                 // Always use tokensRef.current for immediate updates
-                renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current)
+                renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pixiSelectedTokenIdRef.current)
             }
         }
-    }, [tokens, images, pixiReady, tokenRenderTrigger])
+    }, [tokens, images, pixiReady, tokenRenderTrigger, pixiSelectedTokenId])
+
+    // Fog of war: darken areas the selected token can't see
+    useEffect(() => {
+        const fog = fogLayerRef.current
+        if (!fog) return
+        fog.clear()
+        while (fog.children.length > 0) {
+            const child = fog.removeChildAt(0)
+            if (child instanceof Sprite && child.texture) child.texture.destroy(true)
+            if ('destroy' in child) child.destroy()
+        }
+
+        // Helper to clear fog hiding and re-render so previously hidden items reappear
+        const clearFogHiding = () => {
+            setFogHiddenTokenIds(null)
+            setFogHiddenBlastIds(null)
+            const pendingMap = buildPendingMap(pixiPendingIndicatorsRef.current)
+            if (pendingMap.size > 0) {
+                renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap, pixiSelectedTokenIdRef.current)
+            } else {
+                renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pixiSelectedTokenIdRef.current)
+            }
+            renderBlasts(blastLayerRef.current, blastsRef.current, gridSizeRef.current)
+        }
+
+        if (!pixiSelectedTokenId || !pixiReady) {
+            clearFogHiding()
+            return
+        }
+
+        // Find the selected token's position (use pending indicator override if one exists)
+        const pending = pixiPendingIndicatorsRef.current.get(pixiSelectedTokenId)
+        const token = tokensRef.current.find((t) => t.id === pixiSelectedTokenId)
+        if (!token) return
+
+        const originX = pending ? pending.endX : token.x
+        const originY = pending ? pending.endY : token.y
+
+        // Board bounds
+        const { w: bw, h: bh } = getTargetSize(backgroundRef.current, worldDims)
+
+        // Build segments from walls
+        const segments = wallsToSegments(wallsRef.current)
+        if (segments.length === 0) {
+            clearFogHiding()
+            return
+        }
+
+        const polygon = computeVisibilityPolygon(
+            { x: originX, y: originY },
+            segments,
+            { x: 0, y: 0, w: bw, h: bh },
+        )
+        if (polygon.length < 3) return
+
+        // Compute which tokens/blasts are hidden by fog
+        const hiddenTokenIds = new Set<string>()
+        for (const t of tokensRef.current) {
+            if (t.id === pixiSelectedTokenId) continue // Never hide the selected token
+            if (!isPointInPolygon({ x: t.x, y: t.y }, polygon)) {
+                hiddenTokenIds.add(t.id)
+            }
+        }
+        setFogHiddenTokenIds(hiddenTokenIds.size > 0 ? hiddenTokenIds : null)
+
+        const hiddenBlastIds = new Set<string>()
+        for (const b of blastsRef.current) {
+            if (!isPointInPolygon({ x: b.x, y: b.y }, polygon)) {
+                hiddenBlastIds.add(b.id)
+            }
+        }
+        setFogHiddenBlastIds(hiddenBlastIds.size > 0 ? hiddenBlastIds : null)
+
+        // Render fog via offscreen Canvas 2D (robust with any polygon complexity)
+        const cw = Math.ceil(bw)
+        const ch = Math.ceil(bh)
+        const canvas = document.createElement('canvas')
+        canvas.width = cw
+        canvas.height = ch
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'
+        ctx.fillRect(0, 0, cw, ch)
+
+        // Punch out the visibility polygon
+        ctx.globalCompositeOperation = 'destination-out'
+        ctx.fillStyle = 'white'
+        ctx.beginPath()
+        ctx.moveTo(polygon[0].x, polygon[0].y)
+        for (let i = 1; i < polygon.length; i++) {
+            ctx.lineTo(polygon[i].x, polygon[i].y)
+        }
+        ctx.closePath()
+        ctx.fill()
+
+        // Display as Pixi sprite
+        while (fog.children.length > 0) {
+            const child = fog.removeChildAt(0)
+            if (child instanceof Sprite && child.texture) child.texture.destroy(true)
+            if ('destroy' in child) child.destroy()
+        }
+        const texture = Texture.from({ resource: canvas, alphaMode: 'premultiply-alpha-on-upload' })
+        const sprite = new Sprite(texture)
+        fog.addChild(sprite)
+
+        // Re-render tokens and blasts so the hiding takes effect immediately
+        const pendingMap = buildPendingMap(pixiPendingIndicatorsRef.current)
+        if (pendingMap.size > 0) {
+            renderTokensWithPending(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pendingMap, pixiSelectedTokenIdRef.current)
+        } else {
+            renderTokens(tokenLayerRef.current, tokensRef.current, gridSizeRef.current, pixiSelectedTokenIdRef.current)
+        }
+        renderBlasts(blastLayerRef.current, blastsRef.current, gridSizeRef.current)
+    }, [pixiSelectedTokenId, walls, tokens, blasts, pixiReady, worldDims])
+
     // Render blasts when they change
     useEffect(() => {
         if (!pixiReady) return

@@ -18,6 +18,10 @@ const labelCache = new Map<string, Text>()
 export const ghostSpriteCache = new Map<string, Sprite>()
 const ghostLabelCache = new Map<string, Text>()
 
+// Fog-of-war hidden token IDs (module-level so all render calls respect it without param changes)
+let _fogHiddenIds: Set<string> | null = null
+export function setFogHiddenTokenIds(ids: Set<string> | null) { _fogHiddenIds = ids }
+
 function ensureParent(child: Sprite | Text, parent: Graphics['parent']): void {
     if (!parent) return
     if (!child.parent) {
@@ -32,13 +36,13 @@ function ensureParent(child: Sprite | Text, parent: Graphics['parent']): void {
     }
 }
 
-function upsertLabel(id: string, parent: Graphics['parent'], text: string, x: number, y: number): Text {
+function upsertLabel(id: string, parent: Graphics['parent'], text: string, x: number, y: number, color: number = 0xffffff): Text {
     let label = labelCache.get(id)
     if (!label) {
         label = new Text({
             text,
             style: {
-                fill: 0xffffff,
+                fill: color,
                 fontSize: 14,
                 fontWeight: 'bold',
                 stroke: { color: 0x000000, width: 3 },
@@ -47,8 +51,9 @@ function upsertLabel(id: string, parent: Graphics['parent'], text: string, x: nu
         label.anchor.set(0.5, 1)
         label.zIndex = 10
         labelCache.set(id, label)
-    } else if (label.text !== text) {
-        label.text = text
+    } else {
+        if (label.text !== text) label.text = text
+        if (label.style.fill !== color) label.style.fill = color
     }
     ensureParent(label, parent)
     label.x = x
@@ -172,6 +177,7 @@ export function renderTokens(
     layer: Graphics | null,
     tokens: Token[],
     gridSize: number,
+    selectedTokenId?: string | null,
     overrideId?: string,
     overrideX?: number,
     overrideY?: number
@@ -187,6 +193,17 @@ export function renderTokens(
     for (const t of tokens) {
         const x = overrideId === t.id && overrideX != null ? overrideX : t.x
         const y = overrideId === t.id && overrideY != null ? overrideY : t.y
+        const isSelected = t.id === selectedTokenId
+        const isHidden = _fogHiddenIds?.has(t.id) ?? false
+
+        if (isHidden) {
+            // Hide sprite and label if they exist, skip drawing
+            const sprite = spriteCache.get(t.id)
+            if (sprite) sprite.visible = false
+            const label = labelCache.get(t.id)
+            if (label) label.visible = false
+            continue
+        }
 
         if (t.imageId) {
             const texture = textureCache.get(t.imageId)
@@ -224,9 +241,14 @@ export function renderTokens(
             if (spriteCache.has(t.id)) destroySprite(spriteCache, t.id)
         }
 
-        // Upsert name label above the token
+        // Selection highlight ring
         const radius = t.customRadius ?? gridSize / 2
-        upsertLabel(t.id, layer.parent, t.name, x, y - radius - 4)
+        if (isSelected) {
+            layer.circle(x, y, radius + 3).stroke({ color: 0x00ffff, width: 2, alpha: 0.9 })
+        }
+
+        // Upsert name label above the token
+        upsertLabel(t.id, layer.parent, t.name, x, y - radius - 4, isSelected ? 0x00ffff : 0xffffff)
     }
 
     // Remove any sprites/labels for tokens that no longer exist
@@ -250,6 +272,7 @@ export function renderTokensWithPending(
             endY: number
         }
     >,
+    selectedTokenId?: string | null,
     liveId?: string,
     liveX?: number,
     liveY?: number
@@ -278,6 +301,16 @@ export function renderTokensWithPending(
         }
 
         desiredIds.add(t.id)
+        const isSelected = t.id === selectedTokenId
+        const isHidden = _fogHiddenIds?.has(t.id) ?? false
+
+        if (isHidden) {
+            const sprite = spriteCache.get(t.id)
+            if (sprite) sprite.visible = false
+            const label = labelCache.get(t.id)
+            if (label) label.visible = false
+            continue
+        }
 
         if (t.imageId) {
             const texture = textureCache.get(t.imageId)
@@ -312,14 +345,21 @@ export function renderTokensWithPending(
             if (spriteCache.has(t.id)) destroySprite(spriteCache, t.id)
         }
 
+        // Selection highlight ring
         const radius = t.customRadius ?? gridSize / 2
-        upsertLabel(t.id, layer.parent, t.name, x, y - radius - 4)
+        if (isSelected) {
+            layer.circle(x, y, radius + 3).stroke({ color: 0x00ffff, width: 2, alpha: 0.9 })
+        }
+
+        upsertLabel(t.id, layer.parent, t.name, x, y - radius - 4, isSelected ? 0x00ffff : 0xffffff)
     }
 
     // Draw pending overlays (ghosts at original positions)
     for (const [id] of pending) {
         const t = tokens.find((tok) => tok.id === id)
         if (!t) continue
+        // Hide ghost if the token is fog-hidden
+        if (_fogHiddenIds?.has(id)) continue
 
         const ghostKey = `${id}_ghost`
         desiredGhostIds.add(ghostKey)

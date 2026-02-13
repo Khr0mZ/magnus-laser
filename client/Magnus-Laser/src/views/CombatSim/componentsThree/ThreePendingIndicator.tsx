@@ -22,6 +22,7 @@ export interface ThreePendingIndicatorProps {
     isPreview?: boolean
     fromRemotePlayer?: boolean
     endModelTemplate?: THREE.Group
+    wallCollision?: boolean
 }
 
 /**
@@ -30,7 +31,7 @@ export interface ThreePendingIndicatorProps {
  * Returns a cleanup function to remove/dispose all artifacts.
  */
 export function createThreePendingIndicator(props: ThreePendingIndicatorProps) {
-    const { scene, points, endX, endZ, gridSize, isCombatActive, token, isPreview } = props
+    const { scene, points, endX, endZ, gridSize, isCombatActive, token, isPreview, wallCollision } = props
 
     const disposers: Array<() => void> = []
 
@@ -93,8 +94,9 @@ export function createThreePendingIndicator(props: ThreePendingIndicatorProps) {
             linePoints.push(new THREE.Vector3(labelX, 0.1, labelZ))
         }
         const geometry = new THREE.BufferGeometry().setFromPoints(linePoints)
+        const pathColor = wallCollision ? 0xff3b81 : 0xffd166
         const material = new THREE.LineBasicMaterial({
-            color: 0xffd166,
+            color: pathColor,
             transparent: true,
             opacity: 0.9,
             linewidth: 2,
@@ -347,6 +349,7 @@ export function createThreePendingIndicator(props: ThreePendingIndicatorProps) {
         endX: number
         endZ: number
         points: { x: number; z: number }[]
+        wallCollision?: boolean
     }) => {
         const { endX: nEndX, endZ: nEndZ, points: nPoints } = next
 
@@ -357,6 +360,11 @@ export function createThreePendingIndicator(props: ThreePendingIndicatorProps) {
             const oldGeom = line.geometry
             line.geometry = geom
             oldGeom.dispose()
+
+            // Update line color based on wall collision
+            if (line.material instanceof THREE.LineBasicMaterial) {
+                line.material.color.setHex(next.wallCollision ? 0xff3b81 : 0xffd166)
+            }
         }
 
         // Recompute distance text

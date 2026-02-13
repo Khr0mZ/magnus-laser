@@ -9,6 +9,10 @@ const textureCache: Record<string, Texture> = {}
 const spriteCache = new Map<string, Sprite>()
 const maskCache = new Map<string, Graphics>()
 
+// Fog-of-war hidden blast IDs
+let _fogHiddenIds: Set<string> | null = null
+export function setFogHiddenBlastIds(ids: Set<string> | null) { _fogHiddenIds = ids }
+
 // Allow external callers to fully clear caches (e.g., on unmount)
 export function clearBlastRendererCaches(): void {
     // Clear blast textures
@@ -166,6 +170,13 @@ export function renderBlasts(layer: Graphics | null, blasts: Blast[], gridSize: 
     }
 
     for (const blast of blasts) {
+        if (_fogHiddenIds?.has(blast.id)) {
+            const sprite = spriteCache.get(blast.id)
+            if (sprite) sprite.visible = false
+            const mask = maskCache.get(blast.id)
+            if (mask) mask.visible = false
+            continue
+        }
         renderBlast(layer, blast, gridSize)
     }
 }

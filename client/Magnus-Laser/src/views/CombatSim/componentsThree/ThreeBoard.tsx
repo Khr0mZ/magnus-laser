@@ -8,6 +8,7 @@ import { useSession } from '../../../state/sessionStore'
 import { segmentHitsCircleBoundary, segmentIntersectsRectangle, segmentsIntersect } from '../utils/geometryUtils'
 import { snapToNinePoints } from '../utils/gridUtils'
 import type { Blast, BlastType, Image as ImageData, Token, Wall, WallShape } from '../utils/types'
+import { computeVisibilityPolygon, doesMultiSegmentPathCrossWall, isPointInPolygon, wallsToSegments } from '../utils/visibilityUtils'
 import { useThreeCallbackRefs } from './hooks/useThreeCallbackRefs'
 import { useThreeClipboard } from './hooks/useThreeClipboard'
 import { useThreeContextMenus } from './hooks/useThreeContextMenus'
@@ -562,6 +563,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     const tokenTextureCacheRef = useRef<Map<string, THREE.Texture>>(new Map())
     const mapPlaneRef = useRef<THREE.Mesh | null>(null)
     const gridHelperRef = useRef<THREE.GridHelper | THREE.LineSegments | null>(null)
+    const fogMeshRef = useRef<THREE.Mesh | null>(null)
     const tempPixiAppRef = useRef<{ destroy: (removeView?: boolean) => void } | null>(null)
 
     // Cone rotation state
@@ -623,6 +625,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     endX: number
                     endZ: number
                     points: { x: number; z: number }[]
+                    wallCollision?: boolean
                 }) => void
             }
         >
@@ -2049,9 +2052,9 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 if (label) {
                     label.position.copy(tokenPosition)
                     label.position.y += height + 0.5
-                    // Update label text color for active
+                    // Update label text color for active/selected
                     const css2dLabel = label as CSS2DObject
-                    css2dLabel.element.style.color = isActive ? '#ffff00' : '#ffffff'
+                    css2dLabel.element.style.color = isActive ? '#ffff00' : isSelected ? '#00ffff' : '#ffffff'
                 }
             } else {
                 // Create new token with fallback model
@@ -2071,7 +2074,9 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     return
                 }
 
-                const tokenGroup = buildTokenGroup(token, radius, height, isActive)
+                const isSelected = token.id === pixiSelectedTokenId
+                const shouldUseActiveMaterial = isActive || isSelected
+                const tokenGroup = buildTokenGroup(token, radius, height, shouldUseActiveMaterial)
                 tokenGroup.position.copy(tokenPosition)
                 tokenGroup.rotation.y = (orientationDeg * Math.PI) / 180
                 tokenGroup.userData.tokenId = token.id // Mark with token ID
@@ -2090,12 +2095,17 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     tokenPosition.clone().add(new THREE.Vector3(0, height + 0.5, 0)),
                     isActive
                 )
+                // Apply selection color to label
+                if (isSelected && !isActive) {
+                    const css2dLabel = label as CSS2DObject
+                    css2dLabel.element.style.color = '#00ffff'
+                }
                 label.userData.tokenLabelId = token.id // Mark label
                 scene.add(label)
                 tokenLabels.set(token.id, label)
             }
         })
-    }, [tokens, activeTokenId, gridSize, textureVersion, pendingMovements, tokenModelsLoaded])
+    }, [tokens, activeTokenId, gridSize, textureVersion, pendingMovements, tokenModelsLoaded, pixiSelectedTokenId])
 
     // Crosshair on active token (matches Pixi: outer yellow ring + inner magenta ring + cyan cross lines)
     useEffect(() => {
@@ -2176,6 +2186,133 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             lineMat.dispose()
         }
     }, [activeTokenId, tokens, gridSize, pendingMovements])
+
+    // Fog of war: darken areas the selected token can't see
+    useEffect(() => {
+        const scene = sceneRef.current
+        // Cleanup previous fog
+        if (fogMeshRef.current) {
+            scene?.remove(fogMeshRef.current)
+            fogMeshRef.current.geometry.dispose()
+            if (fogMeshRef.current.material instanceof THREE.Material) fogMeshRef.current.material.dispose()
+            fogMeshRef.current = null
+        }
+
+        // Restore all token/blast visibility when fog clears
+        const restoreVisibility = () => {
+            for (const [, group] of tokenMeshesRef.current) group.visible = true
+            for (const [, label] of tokenLabelsRef.current) label.visible = true
+            for (const [, group] of blastMeshesRef.current) group.visible = true
+            for (const [, light] of blastLightsRef.current) light.visible = true
+        }
+
+        if (!scene || !pixiSelectedTokenId) {
+            restoreVisibility()
+            return
+        }
+
+        // Find selected token position (account for pending movements)
+        const pending = pendingMovementsRef.current.get(pixiSelectedTokenId)
+        const token = tokensRef.current.find((t) => t.id === pixiSelectedTokenId)
+        if (!token) return
+
+        // Token position in wall-data coords (x, y) where y maps to Three's z
+        const originX = pending ? pending.endX : token.x
+        const originY = pending ? pending.endZ : token.y
+
+        // Board bounds from map plane or texture
+        let bw = 1920
+        let bh = 1920
+        if (mapPlaneRef.current && mapPlaneRef.current.geometry instanceof THREE.PlaneGeometry) {
+            bw = mapPlaneRef.current.geometry.parameters.width
+            bh = mapPlaneRef.current.geometry.parameters.height
+        } else if (mapTexture) {
+            bw = mapTexture.width || 1920
+            bh = mapTexture.height || 1920
+        }
+
+        const segments = wallsToSegments(wallsRef.current)
+        if (segments.length === 0) {
+            restoreVisibility()
+            return
+        }
+
+        const polygon = computeVisibilityPolygon(
+            { x: originX, y: originY },
+            segments,
+            { x: 0, y: 0, w: bw, h: bh },
+        )
+        if (polygon.length < 3) return
+
+        // Toggle visibility of tokens/blasts based on fog
+        for (const t of tokensRef.current) {
+            if (t.id === pixiSelectedTokenId) continue // Never hide selected token
+            const visible = isPointInPolygon({ x: t.x, y: t.y }, polygon)
+            const group = tokenMeshesRef.current.get(t.id)
+            if (group) group.visible = visible
+            const label = tokenLabelsRef.current.get(t.id)
+            if (label) label.visible = visible
+        }
+
+        const allBlasts = [...blasts, ...blastsNotInMap]
+        for (const b of allBlasts) {
+            const visible = isPointInPolygon({ x: b.x, y: b.y }, polygon)
+            const group = blastMeshesRef.current.get(b.id)
+            if (group) group.visible = visible
+            const light = blastLightsRef.current.get(b.id)
+            if (light) light.visible = visible
+        }
+
+        // Render fog via offscreen Canvas 2D (robust with any polygon complexity)
+        const cw = Math.ceil(bw)
+        const ch = Math.ceil(bh)
+        const canvas = document.createElement('canvas')
+        canvas.width = cw
+        canvas.height = ch
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'
+        ctx.fillRect(0, 0, cw, ch)
+
+        ctx.globalCompositeOperation = 'destination-out'
+        ctx.fillStyle = 'white'
+        ctx.beginPath()
+        ctx.moveTo(polygon[0].x, polygon[0].y)
+        for (let i = 1; i < polygon.length; i++) {
+            ctx.lineTo(polygon[i].x, polygon[i].y)
+        }
+        ctx.closePath()
+        ctx.fill()
+
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.needsUpdate = true
+        const geo = new THREE.PlaneGeometry(bw, bh)
+        const mat = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1,
+        })
+        const mesh = new THREE.Mesh(geo, mat)
+        mesh.rotation.x = -Math.PI / 2
+        mesh.position.set(bw / 2, 0.3, bh / 2)
+        scene.add(mesh)
+        fogMeshRef.current = mesh
+
+        return () => {
+            if (fogMeshRef.current) {
+                scene.remove(fogMeshRef.current)
+                fogMeshRef.current.geometry.dispose()
+                if (fogMeshRef.current.material instanceof THREE.Material) fogMeshRef.current.material.dispose()
+                fogMeshRef.current = null
+            }
+            restoreVisibility()
+        }
+    }, [pixiSelectedTokenId, walls, tokens, blasts, blastsNotInMap, mapTexture])
 
     // Render walls
     useEffect(() => {
@@ -2789,7 +2926,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             // Remove last waypoint
             const newPoints = [...pending.points]
             newPoints.pop()
-            if (newPoints.length <= 2) {
+            if (newPoints.length <= 1) {
                 pixiOnTokenMove(tokenId, pending.startX, pending.startZ)
                 if (session) {
                     sendRejectMovementAction(tokenId)
@@ -2856,6 +2993,10 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 return
             }
 
+            // Check wall collision (convert z to y for wall-coord check)
+            const pathPts2D = pending.points.map((p) => ({ x: p.x, y: p.z }))
+            const wallCollision = doesMultiSegmentPathCrossWall(pathPts2D, wallsRef.current)
+
             // If indicator exists but data changed, try update; if no update method, rebuild
             if (existingIndicator) {
                 if (existingIndicator.update) {
@@ -2865,6 +3006,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                         endX: pending.endX,
                         endZ: pending.endZ,
                         points: pending.points,
+                        wallCollision,
                     })
                     pendingSignaturesRef.current.set(tokenId, signature)
                     return
@@ -2886,6 +3028,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 token,
                 scene: sceneRef.current,
                 camera: cameraRef.current,
+                wallCollision,
                 onAccept: () => {
                     const latest = getLatestPending()
                     if (!latest) return
@@ -3265,7 +3408,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     if (inSession && role === 'player' && tokenData.owner && tokenData.owner !== displayName) {
                         return
                     }
-                    pixiSetSelectedTokenIdRef.current(id)
                     leftClickTokenRef.current = { id, x: event.clientX, y: event.clientY }
                     isLeftClickDraggingRef.current = false
                     draggedTokenIdRef.current = id
@@ -3758,11 +3900,11 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                     }
                 }
 
-                // Only open token dialog if it wasn't a drag (no movement)
-                if (leftClickTokenRef.current && !isLeftClickDraggingRef.current && onOpenTokenDialogRef.current) {
-                    onOpenTokenDialogRef.current(leftClickTokenRef.current.id)
+                // Select token on single click (not drag)
+                if (leftClickTokenRef.current && !isLeftClickDraggingRef.current) {
+                    pixiSetSelectedTokenIdRef.current(leftClickTokenRef.current.id)
                 }
-                // Reset left-click tracking
+                // Reset left-click tracking (dialog opening is handled by dblclick)
                 leftClickTokenRef.current = null
                 isLeftClickDraggingRef.current = false
                 draggedTokenIdRef.current = null
@@ -3974,12 +4116,36 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             }
         }
 
+        const handleDoubleClick = (event: globalThis.MouseEvent) => {
+            if (!cameraRef.current || !sceneRef.current) return
+            const rect = containerRef.current?.getBoundingClientRect()
+            if (!rect) return
+            const mouse = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top,
+            }
+            const intersectionPoint = getGroundIntersection(mouse.x, mouse.y)
+            if (!intersectionPoint) return
+
+            mouseVecRef.current.set((mouse.x / width) * 2 - 1, -(mouse.y / height) * 2 + 1)
+            raycasterRef.current.setFromCamera(mouseVecRef.current, cameraRef.current)
+            const tokenData = pickTokenHybrid(raycasterRef.current, intersectionPoint)
+            if (tokenData && onOpenTokenDialogRef.current) {
+                const inSession = !!session && connected
+                if (inSession && role === 'player' && tokenData.owner && tokenData.owner !== displayName) {
+                    return
+                }
+                onOpenTokenDialogRef.current(tokenData.id)
+            }
+        }
+
         const container = containerRef.current
         if (container) {
             const handleContextMenu = (e: globalThis.MouseEvent) => e.preventDefault()
             container.addEventListener('mousedown', handleMouseDown)
             container.addEventListener('mousemove', handleMouseMove)
             container.addEventListener('mouseup', handleMouseUp)
+            container.addEventListener('dblclick', handleDoubleClick)
             container.addEventListener('contextmenu', handleContextMenu)
             container.addEventListener('wheel', handleShiftWheel, { passive: false })
             container.addEventListener('drop', handleDrop)
@@ -3992,6 +4158,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
                 container.removeEventListener('mousedown', handleMouseDown)
                 container.removeEventListener('mousemove', handleMouseMove)
                 container.removeEventListener('mouseup', handleMouseUp)
+                container.removeEventListener('dblclick', handleDoubleClick)
                 container.removeEventListener('contextmenu', handleContextMenuCleanup)
                 container.removeEventListener('wheel', handleShiftWheel)
                 container.removeEventListener('drop', handleDrop)

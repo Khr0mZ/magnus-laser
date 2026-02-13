@@ -170,6 +170,7 @@ const CombatSimView = () => {
         pixiHostReady,
         pixiSetTokenContextMenuAnchor,
         pixiSetMapContextMenuAnchor,
+        pixiSelectedTokenId,
         pixiSetSelectedTokenId,
         pixiSetBlastContextMenuAnchor,
         pixiSetSelectedBlastId,
@@ -390,6 +391,7 @@ const CombatSimView = () => {
                             pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
                             pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
                             pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
+                            pixiSelectedTokenId={pixiSelectedTokenId}
                             pixiSetSelectedTokenId={pixiSetSelectedTokenId}
                             pixiSetSelectedBlastId={pixiSetSelectedBlastId}
                             onBlastCopy={onBlastCopy}
@@ -426,6 +428,7 @@ const CombatSimView = () => {
                         pixiSetHostReady={pixiSetHostReady}
                         pixiSetTokenContextMenuAnchor={pixiSetTokenContextMenuAnchor}
                         pixiSetMapContextMenuAnchor={pixiSetMapContextMenuAnchor}
+                        pixiSelectedTokenId={pixiSelectedTokenId}
                         pixiSetSelectedTokenId={pixiSetSelectedTokenId}
                         pixiSetBlastContextMenuAnchor={pixiSetBlastContextMenuAnchor}
                         pixiSetSelectedBlastId={pixiSetSelectedBlastId}

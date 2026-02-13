@@ -35,6 +35,7 @@ export class PixiPendingIndicator extends Container {
     public startX: number
     public startY: number
     public fromRemotePlayer: boolean
+    public wallCollision: boolean = false
     private lastZoom: number = 1
     private _rafId: number | null = null
 
@@ -153,6 +154,13 @@ export class PixiPendingIndicator extends Container {
             this.props.endY = lastPoint.y
         }
         this.update()
+    }
+
+    setWallCollision(collision: boolean) {
+        if (this.wallCollision !== collision) {
+            this.wallCollision = collision
+            this.update()
+        }
     }
 
     update(newProps?: Partial<PixiPendingIndicatorProps>) {
@@ -305,8 +313,9 @@ export class PixiPendingIndicator extends Container {
         this.background.roundRect(bgLeft, bgY, bgWidth, bgHeight, 4).fill().stroke()
 
         // Draw polyline across points + optional preview
+        const pathColor = this.wallCollision ? 0xff3b81 : 0xffd166
         this.line.clear()
-        this.line.setStrokeStyle({ width: 2, color: 0xffd166, alpha: 0.9 })
+        this.line.setStrokeStyle({ width: 2, color: pathColor, alpha: 0.9 })
         if (pts.length > 0) {
             this.line.moveTo(pts[0].x, pts[0].y)
             for (let i = 1; i < pts.length; i++) {
@@ -319,9 +328,9 @@ export class PixiPendingIndicator extends Container {
         this.line.stroke()
 
         // Endpoints markers
-        if (pts.length > 0) this.line.circle(pts[0].x, pts[0].y, 3).fill({ color: 0xffd166 })
+        if (pts.length > 0) this.line.circle(pts[0].x, pts[0].y, 3).fill({ color: pathColor })
         const lastPt = isPreview ? { x: labelX, y: labelY } : pts[pts.length - 1]
-        if (lastPt) this.line.circle(lastPt.x, lastPt.y, 3).fill({ color: 0xffd166 })
+        if (lastPt) this.line.circle(lastPt.x, lastPt.y, 3).fill({ color: pathColor })
     }
 
     destroy(options?: { children?: boolean; texture?: boolean; baseTexture?: boolean }) {
