@@ -537,6 +537,9 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     wallColorRef.current = wallColor
     const wallAlphaRef = useRef(wallAlpha)
     wallAlphaRef.current = wallAlpha
+    const pixiSelectedTokenIdRef = useRef(pixiSelectedTokenId)
+    pixiSelectedTokenIdRef.current = pixiSelectedTokenId
+    const targetLinesRef = useRef<THREE.Line[]>([])
     const contextMenusRef = useRef<ReturnType<typeof useThreeContextMenus> | null>(null)
 
     const containerRef = useRef<HTMLDivElement>(null)
@@ -1097,6 +1100,33 @@ const ThreeBoard = (props: ThreeBoardProps) => {
             window.removeEventListener('keydown', handleKeyDown)
             window.removeEventListener('keyup', handleKeyUp)
         }
+    }, [])
+
+    // Toggle target on hovered token when 'T' is pressed
+    useEffect(() => {
+        const handleTargetKey = (e: globalThis.KeyboardEvent) => {
+            const target = e.target as HTMLElement
+            const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+            if (isTyping) return
+
+            if (e.key.toLowerCase() === 't') {
+                const selectedId = pixiSelectedTokenIdRef.current
+                const hovId = hoveredTokenIdRef.current
+                if (selectedId && hovId) {
+                    const selectedToken = tokensRef.current.find(t => t.id === selectedId)
+                    if (selectedToken) {
+                        const currentTargets = selectedToken.targetIds ?? []
+                        const newTargets = currentTargets.includes(hovId)
+                            ? currentTargets.filter(id => id !== hovId)
+                            : [...currentTargets, hovId]
+                        pixiOnTokenUpdateRef.current?.(selectedId, { targetIds: newTargets })
+                    }
+                }
+                e.preventDefault()
+            }
+        }
+        window.addEventListener('keydown', handleTargetKey)
+        return () => window.removeEventListener('keydown', handleTargetKey)
     }, [])
 
     // Convert hex color to Three.js color
@@ -2321,6 +2351,37 @@ const ThreeBoard = (props: ThreeBoardProps) => {
         }
     }, [pixiSelectedTokenId, walls, tokens, blasts, blastsNotInMap, mapTexture])
 
+    // Render target lines from selected token to its targets
+    useEffect(() => {
+        const scene = sceneRef.current
+        // Clean up previous target lines
+        for (const line of targetLinesRef.current) {
+            scene?.remove(line)
+            line.geometry.dispose()
+            if (line.material instanceof THREE.Material) line.material.dispose()
+        }
+        targetLinesRef.current = []
+
+        if (!scene || !pixiSelectedTokenId) return
+
+        const selectedToken = tokens.find(t => t.id === pixiSelectedTokenId)
+        if (!selectedToken?.targetIds?.length) return
+
+        for (const targetId of selectedToken.targetIds) {
+            const target = tokens.find(t => t.id === targetId)
+            if (!target) continue
+            const points = [
+                new THREE.Vector3(selectedToken.x, 0.15, selectedToken.y),
+                new THREE.Vector3(target.x, 0.15, target.y),
+            ]
+            const geometry = new THREE.BufferGeometry().setFromPoints(points)
+            const material = new THREE.LineBasicMaterial({ color: 0xff3b81, transparent: true, opacity: 0.5 })
+            const line = new THREE.Line(geometry, material)
+            scene.add(line)
+            targetLinesRef.current.push(line)
+        }
+    }, [pixiSelectedTokenId, tokens])
+
     // Render walls
     useEffect(() => {
         if (!sceneRef.current) {
@@ -3170,7 +3231,7 @@ const ThreeBoard = (props: ThreeBoardProps) => {
     )
 
     // Token tooltip on hover
-    useThreeTooltip(
+    const { hoveredTokenIdRef } = useThreeTooltip(
         containerRef.current,
         sceneRef.current,
         cameraRef.current,

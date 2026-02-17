@@ -1,3 +1,4 @@
+import type { RefObject } from 'react'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import type { StatsActions, Token } from '../utils/types'
@@ -75,7 +76,7 @@ export function useThreeTooltip(
     isWallMode: boolean,
     isMeasuring: boolean,
     blastDrawMode: string | null
-) {
+): { hoveredTokenIdRef: RefObject<string | null> } {
     const tooltipRef = useRef<HTMLDivElement | null>(null)
     const hoveredTokenIdRef = useRef<string | null>(null)
     const showTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -193,4 +194,6 @@ export function useThreeTooltip(
             }
         }
     }, [container, scene, camera, tokens, tokenMeshes, width, height, isWallMode, isMeasuring, blastDrawMode])
+
+    return { hoveredTokenIdRef }
 }

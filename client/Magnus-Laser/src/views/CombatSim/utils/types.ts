@@ -19,6 +19,7 @@ export type Token = {
     customRadius?: number
     modelId?: string
     orientationDeg?: number
+    targetIds?: string[]
 }
 
 export type Stats = {

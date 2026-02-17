@@ -14,6 +14,7 @@ import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
 import { ModuleTypes } from '../../utils/constants'
 import { db } from '../../utils/db'
+import TargetOverlay from './components/TargetOverlay'
 import TokenDetailsDialog from './components/TokenDetailsDialog'
 import PixiBoard from './componentsPixi/PixiBoard'
 import ThreeBoard from './componentsThree/ThreeBoard'
@@ -469,6 +470,7 @@ const CombatSimView = () => {
                         isPlayerConnected={isPlayerConnected}
                     />
                     )}
+                    <TargetOverlay selectedTokenId={pixiSelectedTokenId} tokens={tokens} />
                     {/* Debug info */}
                     {mapTexture && (
                         <Typography

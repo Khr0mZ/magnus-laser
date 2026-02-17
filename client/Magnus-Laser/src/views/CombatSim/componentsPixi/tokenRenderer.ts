@@ -251,6 +251,22 @@ export function renderTokens(
         upsertLabel(t.id, layer.parent, t.name, x, y - radius - 4, isSelected ? 0x00ffff : 0xffffff)
     }
 
+    // Draw target lines from selected token to its targets
+    if (selectedTokenId) {
+        const selectedToken = tokens.find(t => t.id === selectedTokenId)
+        if (selectedToken?.targetIds?.length) {
+            const sx = overrideId === selectedToken.id && overrideX != null ? overrideX : selectedToken.x
+            const sy = overrideId === selectedToken.id && overrideY != null ? overrideY : selectedToken.y
+            for (const targetId of selectedToken.targetIds) {
+                const target = tokens.find(t => t.id === targetId)
+                if (!target || (_fogHiddenIds?.has(targetId) ?? false)) continue
+                const tx = overrideId === target.id && overrideX != null ? overrideX : target.x
+                const ty = overrideId === target.id && overrideY != null ? overrideY : target.y
+                layer.moveTo(sx, sy).lineTo(tx, ty).stroke({ color: 0xff3b81, width: 1.5, alpha: 0.5 })
+            }
+        }
+    }
+
     // Remove any sprites/labels for tokens that no longer exist
     for (const id of Array.from(spriteCache.keys())) {
         if (!desiredIds.has(id)) destroySprite(spriteCache, id)
@@ -395,6 +411,36 @@ export function renderTokensWithPending(
 
         const radius = t.customRadius ?? gridSize / 2
         upsertGhostLabel(`${id}_ghost_label`, layer.parent, t.name, t.x, t.y - radius - 4)
+    }
+
+    // Draw target lines from selected token to its targets
+    if (selectedTokenId) {
+        const selectedToken = tokens.find(t => t.id === selectedTokenId)
+        if (selectedToken?.targetIds?.length) {
+            let sx = selectedToken.x
+            let sy = selectedToken.y
+            if (pending.has(selectedToken.id)) {
+                const p = pending.get(selectedToken.id)!
+                sx = p.endX; sy = p.endY
+            }
+            if (liveId === selectedToken.id && liveX != null && liveY != null) {
+                sx = liveX; sy = liveY
+            }
+            for (const targetId of selectedToken.targetIds) {
+                const target = tokens.find(t => t.id === targetId)
+                if (!target || (_fogHiddenIds?.has(targetId) ?? false)) continue
+                let tx = target.x
+                let ty = target.y
+                if (pending.has(target.id)) {
+                    const p = pending.get(target.id)!
+                    tx = p.endX; ty = p.endY
+                }
+                if (liveId === target.id && liveX != null && liveY != null) {
+                    tx = liveX; ty = liveY
+                }
+                layer.moveTo(sx, sy).lineTo(tx, ty).stroke({ color: 0xff3b81, width: 1.5, alpha: 0.5 })
+            }
+        }
     }
 
     // Cleanup caches for objects that are no longer needed

@@ -497,6 +497,7 @@ const PixiBoard = (props: PixiBoardProps) => {
 
     const pixiSelectedTokenIdRef = useRef<string | null>(pixiSelectedTokenId)
     pixiSelectedTokenIdRef.current = pixiSelectedTokenId
+    const hoveredTokenIdRef = useRef<string | null>(null)
 
     // Active token ref for crosshair
     const activeTokenIdRef = useRef<string | null>(activeTokenId)
@@ -1456,6 +1457,23 @@ const PixiBoard = (props: PixiBoardProps) => {
                         return
                     }
                 }
+                // Toggle target on hovered token
+                if (key === 't') {
+                    const selectedId = pixiSelectedTokenIdRef.current
+                    const hovId = hoveredTokenIdRef.current
+                    if (selectedId && hovId) {
+                        const selectedToken = tokensRef.current.find(tk => tk.id === selectedId)
+                        if (selectedToken) {
+                            const currentTargets = selectedToken.targetIds ?? []
+                            const newTargets = currentTargets.includes(hovId)
+                                ? currentTargets.filter(id => id !== hovId)
+                                : [...currentTargets, hovId]
+                            pixiOnTokenUpdate?.(selectedId, { targetIds: newTargets })
+                        }
+                    }
+                    e.preventDefault()
+                    return
+                }
                 if (['w', 'a', 's', 'd'].includes(key)) {
                     pressedKeys.add(key)
                     e.preventDefault()
@@ -2365,6 +2383,7 @@ const PixiBoard = (props: PixiBoardProps) => {
                             break
                         }
                     }
+                    hoveredTokenIdRef.current = hoveredTokenData?.id ?? null
 
                     // Set cursor based on whether player can interact with the hovered token
                     if (over && hoveredTokenData) {
