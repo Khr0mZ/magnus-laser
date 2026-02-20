@@ -1,6 +1,6 @@
 # Magnus Laser
 
-A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magnus Laser provides a comprehensive toolkit for Game Masters and players: world-building databases, AI-powered content generation, a full tactical combat simulator with dual 2D/3D renderers, real-time multiplayer sessions, a 7-step character creator, 18 GM solo-play tools, and much more.
+A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magnus Laser provides a comprehensive toolkit for Game Masters and players: world-building databases, AI-powered content generation, a full tactical combat simulator with dual 2D/3D renderers, real-time multiplayer sessions, a 7-step character creator, 17 GM tools, and much more.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Version](https://img.shields.io/badge/version-0.2.7-green)
@@ -18,6 +18,7 @@ A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magn
 
 - Internationalization powered by i18next and react-i18next (English and Spanish)
 - Language selector in Settings with persistent preference
+- Solo play random tables use a dedicated i18n namespace (`tables-en.json`, `tables-es.json`) for independent table content localization
 
 ### Main Navigation Modules
 
@@ -85,17 +86,16 @@ Quick resolution systems for single-player adventures:
 
 ### GM Tools
 
-18 specialized tools accessible from the GM Tools drawer:
+17 specialized tools accessible from the GM Tools drawer:
 
-#### Solo Play Tools (12)
+#### Solo Play Tools (11)
 
 | Tool                 | Description                                                                                                                                                                                                                   |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Oracle**           | Fate determination engine. Closed questions: d100 roll with 5 probability levels (Certain → Impossible) producing 5 answer types. Open questions: random verb + noun + adjective combinations. History tracking (100 results) |
+| **Oracle & Random Tables** | Fate determination engine combined with the full random table hub. Closed questions: d100 roll with 5 probability levels (Certain → Impossible) producing 5 answer types. Open questions: random verb + noun + adjective combinations. 65+ random generators across 15 categories (Core, Words, Sensory, Names, Night City, People, Things, Media, Corpse Loot, Mission, SPM Character, SPM Encounters, SPM Atmosphere, SPM Combat, SPM Medical) plus a zone/time-based encounter generator. Campaign selector: all results tagged by campaign. Oracle History side panel: unified scrollable feed of oracle results, open questions, random table rolls, and inline text notes — filterable by campaign, with per-entry reroll and delete |
 | **Clocks**           | Dice pool countdown system (3-10 d6). Removes 1s on roll, optional 6s removal (scale-up mode). Devil's Luck mechanic, add-dice-back recovery. Roll history with degree-of-consequence bonuses                                 |
 | **Mission Builder**  | Solo mission generator with employer types (Fixer/Corpo/Gang), payment, summary, focus, specifics, and twist. Per-section reroll, save/load, clipboard copy                                                                   |
 | **Beat Chart**       | Story structure tracker with 4 beat types (Hook/Development/Climax/Resolution). Multi-chart tabs, 1-10 development steps, progress bar with completion tracking                                                               |
-| **Random Tables**    | Massive generator hub with 40+ generators across 9 categories: Core, Words, Sensory, Names, Night City, People, Things, Media, and Mission Items. Zone/time-based encounter generator. 50-result history                      |
 | **Investigation**    | Research check tracker. Complexity levels (Simple=3, Average=5, Difficult=7 checks). Skill + DV rolls with success/failure counting and majority determination                                                                |
 | **Social Challenge** | NPC interaction tracker. Importance levels (Background/Supporting/Key) determine check count. Opposed skill rolls with win/tie/loss tracking                                                                                  |
 | **NPC Tracker**      | Character status monitor with status tracking (Alive/Dead/Missing/Unknown), role, first encounter, relationship, mood, and notes. Random generators for each field                                                            |
@@ -161,7 +161,7 @@ A fully implemented tactical combat system with real-time multiplayer synchroniz
 - 3D model assignment with orientation control
 - Owner assignment for multiplayer (players control their own tokens)
 - Drag-and-drop positioning, copy/cut/paste via clipboard
-- Context menus for quick actions, hover tooltips with stats
+- Context menus for quick actions, hover tooltips with stats, and right-click target assignment
 
 ### Walls & Barriers
 
@@ -196,6 +196,7 @@ A fully implemented tactical combat system with real-time multiplayer synchroniz
 - **Measurement Ruler** — Click-and-drag distance measurement
 - **Floating Buttons** — Quick access to wall drawing modes, erasing, measurement, panel toggles, and color pickers
 - **Side Panels** — Token panel, Initiative panel, Roll History panel, Blasts panel
+- **Target Overlay** — Tokens support a target list. When a token is selected, a HUD panel (bottom-left) shows all its current targets with colored dot and name. Assign or remove targets via right-click context menu in both 2D and 3D renderers
 
 ### 3D-Specific Features
 
@@ -379,7 +380,7 @@ magnus-laser/
 │   │   │   └── Settings/            # App configuration & sessions
 │   │   ├── components/              # Reusable UI components
 │   │   │   ├── common/              # Themed inputs, dialogs, scrollbars
-│   │   │   ├── GMTools/             # 18 GM solo-play tools
+│   │   │   ├── GMTools/             # 17 GM tools (11 solo play + 6 generators)
 │   │   │   │   └── tools/           # Individual tool modules
 │   │   │   ├── NavigationDrawer/    # Main navigation
 │   │   │   └── session/             # SessionLobby, SessionHUD
@@ -394,7 +395,7 @@ magnus-laser/
 │   │   │   ├── storage.ts           # Storage utilities
 │   │   │   └── colors.ts            # Cyberpunk color palette
 │   │   ├── graphql/                 # GraphQL type definitions
-│   │   └── i18n/                    # Internationalization (en.json)
+│   │   └── i18n/                    # Internationalization (en.json, es.json, tables-en.json, tables-es.json)
 │   ├── src-tauri/                   # Tauri Rust backend
 │   │   ├── src/
 │   │   │   ├── main.rs              # Tauri app entry
