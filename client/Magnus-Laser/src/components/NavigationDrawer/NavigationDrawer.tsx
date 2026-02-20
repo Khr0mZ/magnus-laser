@@ -530,7 +530,7 @@ const NavigationDrawer = () => {
                     </Stack>
 
                     {/* GM Tools Toggle Button */}
-                    <Tooltip title={t('gmTools.title')}>
+                    <Tooltip disableInteractive title={t('gmTools.title')}>
                         <IconButton
                             onClick={toggleDrawer}
                             sx={{

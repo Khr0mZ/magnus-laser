@@ -22,21 +22,21 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material'
-import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
+import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import type { BeatType } from '../../../types/soloPlay'
 import colors from '../../../utils/colors'
 import { generateBeatDescription, generateEmptyBeatChart } from '../../../utils/generators/soloPlayUtils'
 import { useGMToolsDataStore, type BeatChart } from '../GMToolsDataStore'
 import {
-    getCyberpunkTextFieldStyle,
-    getCyberpunkSelectStyle,
     getCyberpunkButtonStyle,
     getCyberpunkPaperStyle,
+    getCyberpunkSelectStyle,
     getCyberpunkTabsStyle,
+    getCyberpunkTextFieldStyle,
     getSectionTitleStyle,
 } from '../GMToolsStyles'
 
@@ -45,13 +45,7 @@ const BeatChartTool = () => {
     const { readerMode } = useUserPreferences()
 
     // Persisted state
-    const {
-        beatCharts,
-        addBeatChart,
-        updateBeatChart,
-        updateBeat,
-        deleteBeatChart,
-    } = useGMToolsDataStore()
+    const { beatCharts, addBeatChart, updateBeatChart, updateBeat, deleteBeatChart } = useGMToolsDataStore()
 
     const [activeChartIndex, setActiveChartIndex] = useState(0)
     const [newChartName, setNewChartName] = useState('')
@@ -205,7 +199,7 @@ const BeatChartTool = () => {
                             ))}
                         </Tabs>
                         {activeChart && (
-                            <Tooltip title={t('common.delete')}>
+                            <Tooltip disableInteractive title={t('common.delete')}>
                                 <IconButton
                                     size="small"
                                     onClick={() => handleDeleteChart(activeChart.id)}
@@ -257,17 +251,11 @@ const BeatChartTool = () => {
                                 sx={{
                                     height: 8,
                                     borderRadius: 0,
-                                    backgroundColor: readerMode
-                                        ? 'rgba(0,0,0,0.1)'
-                                        : 'rgba(0, 255, 136, 0.1)',
-                                    border: readerMode
-                                        ? 'none'
-                                        : `1px solid ${colors.neons.green.default}30`,
+                                    backgroundColor: readerMode ? 'rgba(0,0,0,0.1)' : 'rgba(0, 255, 136, 0.1)',
+                                    border: readerMode ? 'none' : `1px solid ${colors.neons.green.default}30`,
                                     '& .MuiLinearProgress-bar': {
                                         backgroundColor: colors.neons.green.default,
-                                        boxShadow: readerMode
-                                            ? 'none'
-                                            : `0 0 10px ${colors.neons.green.default}80`,
+                                        boxShadow: readerMode ? 'none' : `0 0 10px ${colors.neons.green.default}80`,
                                     },
                                 }}
                             />
@@ -320,9 +308,7 @@ const BeatChartTool = () => {
                                                             fontSize: '0.65rem',
                                                             letterSpacing: '2px',
                                                             textTransform: 'uppercase',
-                                                            textShadow: readerMode
-                                                                ? 'none'
-                                                                : `0 0 5px ${beatColor}60`,
+                                                            textShadow: readerMode ? 'none' : `0 0 5px ${beatColor}60`,
                                                         }}
                                                     >
                                                         {t(`soloPlay.beats.types.${beat.beatType}`)}
@@ -353,7 +339,7 @@ const BeatChartTool = () => {
                                                         }}
                                                     />
                                                 </Box>
-                                                <Tooltip title={t('soloPlay.beats.generateIdea')}>
+                                                <Tooltip disableInteractive title={t('soloPlay.beats.generateIdea')}>
                                                     <IconButton
                                                         size="small"
                                                         onClick={() =>
@@ -451,10 +437,7 @@ const BeatChartTool = () => {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button
-                        onClick={() => setIsAddingChart(false)}
-                        sx={{ color: colors.grays.gray600 }}
-                    >
+                    <Button onClick={() => setIsAddingChart(false)} sx={{ color: colors.grays.gray600 }}>
                         {t('common.cancel')}
                     </Button>
                     <Button
@@ -502,10 +485,7 @@ const BeatChartTool = () => {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button
-                        onClick={() => setEditingChartId(null)}
-                        sx={{ color: colors.grays.gray600 }}
-                    >
+                    <Button onClick={() => setEditingChartId(null)} sx={{ color: colors.grays.gray600 }}>
                         {t('common.cancel')}
                     </Button>
                     <Button

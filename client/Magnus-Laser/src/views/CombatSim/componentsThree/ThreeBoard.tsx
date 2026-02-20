@@ -1,4 +1,4 @@
-import { Texture } from 'pixi.js'
+import { Application, Sprite, Texture } from 'pixi.js'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -1742,7 +1742,6 @@ const ThreeBoard = (props: ThreeBoardProps) => {
 
                 // Render PixiJS texture to canvas using a temporary Application.
                 try {
-                    const { Application, Sprite } = await import('pixi.js')
                     const tempApp = new Application()
                     tempPixiAppRef.current = tempApp // Track it
 

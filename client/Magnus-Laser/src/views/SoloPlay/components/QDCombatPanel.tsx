@@ -1059,7 +1059,7 @@ const QDCombatPanel = () => {
                                                 />
                                                 {isEdgerunnerHardened(e as QDEdgerunner) && (
                                                     <Chip
-                                                        label={t('soloPlay.combat.hardened')}
+                                                        label={t('soloPlay.combat.hardened.label')}
                                                         size="small"
                                                         sx={{ backgroundColor: colors.neons.yellow.default }}
                                                     />
@@ -1149,7 +1149,7 @@ const QDCombatPanel = () => {
                                                         }
                                                     />
                                                 }
-                                                label={t('soloPlay.combat.hardened')}
+                                                label={t('soloPlay.combat.hardened.label')}
                                             />
                                             <FormControlLabel
                                                 control={

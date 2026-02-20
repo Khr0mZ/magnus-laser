@@ -268,7 +268,7 @@ const SocialChallengeTool = () => {
                                         )}
                                     </Stack>
                                 </Box>
-                                <Tooltip title={t('common.delete')}>
+                                <Tooltip disableInteractive title={t('common.delete')}>
                                     <IconButton
                                         size="small"
                                         onClick={() => deleteSocialChallengeSession(session.id)}

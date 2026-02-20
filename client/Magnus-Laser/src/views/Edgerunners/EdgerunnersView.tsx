@@ -981,7 +981,7 @@ const EdgerunnersView = () => {
                                         }}
                                     >
                                         {Object.entries(edgerunner.stats).map(([stat, value]) => (
-                                            <Tooltip key={stat} title={stat} arrow>
+                                            <Tooltip disableInteractive key={stat} title={stat} arrow>
                                                 <Box
                                                     sx={{
                                                         textAlign: 'center',
@@ -1049,7 +1049,7 @@ const EdgerunnersView = () => {
                                     </Stack>
                                 </CardContent>
                                 <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-                                    <Tooltip title={t('edgerunners.exportJson')}>
+                                    <Tooltip disableInteractive title={t('edgerunners.exportJson')}>
                                         <IconButton
                                             size="small"
                                             onClick={(e) => {
@@ -1061,7 +1061,7 @@ const EdgerunnersView = () => {
                                             <Download fontSize="small" />
                                         </IconButton>
                                     </Tooltip>
-                                    <Tooltip title={t('common.delete')}>
+                                    <Tooltip disableInteractive title={t('common.delete')}>
                                         <IconButton
                                             size="small"
                                             onClick={(e) => {
@@ -1775,7 +1775,7 @@ const EdgerunnersView = () => {
                                                                 >
                                                                     {t('edgerunners.total')}
                                                                 </Typography>
-                                                                <Tooltip title={t('edgerunners.combatAction')} arrow>
+                                                                <Tooltip disableInteractive title={t('edgerunners.combatAction')} arrow>
                                                                     <Typography
                                                                         variant="caption"
                                                                         sx={{
@@ -2731,7 +2731,7 @@ const EdgerunnersView = () => {
                                                                                 alignItems="center"
                                                                                 spacing={0}
                                                                             >
-                                                                                <Tooltip title={t('edgerunners.combatAction')} arrow>
+                                                                                <Tooltip disableInteractive title={t('edgerunners.combatAction')} arrow>
                                                                                     <Checkbox
                                                                                         size="small"
                                                                                         checked={!!w.isTokenAction}

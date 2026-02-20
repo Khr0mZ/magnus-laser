@@ -2,7 +2,7 @@ import CssBaseline from '@mui/material/CssBaseline'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import 'leaflet/dist/leaflet.css'
 import { SnackbarProvider } from 'notistack'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import CustomScrollbar from './components/CustomScrollbar'
 import CyberpunkLoader from './components/CyberpunkLoader'
@@ -18,14 +18,16 @@ import NavigationPaths from './navigation'
 import { useSession } from './state/sessionStore'
 import { initCombatSimSync } from './sync/combatSimSync'
 import { getDesignTokens } from './utils/theme'
-import CharacterCreatorView from './views/CharacterCreator/CharacterCreatorView'
-import CombatSimView from './views/CombatSim/CombatSimView.tsx'
 import Dashboard from './views/Dashboard/Dashboard'
-import EdgerunnerDetailDialog from './views/Edgerunners/EdgerunnerDetailDialog'
-import EdgerunnersView from './views/Edgerunners/EdgerunnersView'
-import MapView from './views/Map/MapView.tsx'
-import SettingsView from './views/Settings/SettingsView'
-import SoloPlayView from './views/SoloPlay/SoloPlayView'
+
+// Lazy-loaded components
+const CharacterCreatorView = lazy(() => import('./views/CharacterCreator/CharacterCreatorView'))
+const CombatSimView = lazy(() => import('./views/CombatSim/CombatSimView.tsx'))
+const EdgerunnersView = lazy(() => import('./views/Edgerunners/EdgerunnersView'))
+const MapView = lazy(() => import('./views/Map/MapView.tsx'))
+const SettingsView = lazy(() => import('./views/Settings/SettingsView'))
+const EdgerunnerDetailDialog = lazy(() => import('./views/Edgerunners/EdgerunnerDetailDialog'))
+const SoloPlayView = lazy(() => import('./views/SoloPlay/SoloPlayView'))
 
 const AppContent = () => {
     const { readerMode, loaderEnabled, isLoadingPreferences } = useUserPreferences()
@@ -138,7 +140,9 @@ const AppContent = () => {
                 <BrowserRouter>
                     <NavigationDrawer />
                     <GMToolsDrawer />
-                    <EdgerunnerDetailDialog />
+                    <Suspense fallback={null}>
+                        <EdgerunnerDetailDialog />
+                    </Suspense>
                     <CustomScrollbar scrollDirection="vertical">
                         <Suspense fallback={<div>🥷🥷🥷🥷</div>}>
                             <Routes>

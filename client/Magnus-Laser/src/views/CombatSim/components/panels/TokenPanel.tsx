@@ -253,6 +253,7 @@ const TokenPanel = ({
         if (!isDefault && token.stats) {
             return (
                 <Tooltip
+                    disableInteractive
                     key={token.id}
                     title={<TokenTooltip token={token} />}
                     placement="right"

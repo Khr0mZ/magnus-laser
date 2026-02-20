@@ -526,7 +526,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                                 </Typography>
                             </Box>
                             <Stack direction="row" spacing={0.5}>
-                                <Tooltip title={t('common.edit')}>
+                                <Tooltip disableInteractive title={t('common.edit')}>
                                     <IconButton
                                         size="small"
                                         onClick={() => handleEditClick(item)}
@@ -535,7 +535,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                                         <Edit fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title={t('common.copy')}>
+                                <Tooltip disableInteractive title={t('common.copy')}>
                                     <IconButton
                                         size="small"
                                         onClick={() => handleCopy(item)}
@@ -544,7 +544,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                                         <ContentCopy fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title={t('common.delete')}>
+                                <Tooltip disableInteractive title={t('common.delete')}>
                                     <IconButton
                                         size="small"
                                         onClick={() => handleDeleteClick((item as { ID: string }).ID)}

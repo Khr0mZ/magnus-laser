@@ -486,7 +486,7 @@ const QDNetrunPanel = () => {
                                                                     <Close sx={{ color: colors.neons.red.default }} />
                                                                 )}
                                                                 {check.blackIceHit && (
-                                                                    <Tooltip title={t('soloPlay.netrun.blackIceHit')}>
+                                                                    <Tooltip disableInteractive title={t('soloPlay.netrun.blackIceHit')}>
                                                                         <WarningAmber
                                                                             sx={{ color: colors.neons.orange.default }}
                                                                         />

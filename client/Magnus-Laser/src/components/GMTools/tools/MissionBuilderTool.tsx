@@ -341,7 +341,7 @@ ${currentMission.twist ? `TWIST: ${currentMission.twist}` : ''}
                                                     </Typography>
                                                 </Stack>
                                             </Box>
-                                            <Tooltip title={t('soloPlay.mission.reroll')}>
+                                            <Tooltip disableInteractive title={t('soloPlay.mission.reroll')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleReroll('whoIsHiring')}
@@ -373,7 +373,7 @@ ${currentMission.twist ? `TWIST: ${currentMission.twist}` : ''}
                                                     {currentMission.payment.description}
                                                 </Typography>
                                             </Box>
-                                            <Tooltip title={t('soloPlay.mission.reroll')}>
+                                            <Tooltip disableInteractive title={t('soloPlay.mission.reroll')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleReroll('payment')}
@@ -405,7 +405,7 @@ ${currentMission.twist ? `TWIST: ${currentMission.twist}` : ''}
                                                     {currentMission.missionSummary}
                                                 </Typography>
                                             </Box>
-                                            <Tooltip title={t('soloPlay.mission.reroll')}>
+                                            <Tooltip disableInteractive title={t('soloPlay.mission.reroll')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleReroll('missionSummary')}
@@ -437,7 +437,7 @@ ${currentMission.twist ? `TWIST: ${currentMission.twist}` : ''}
                                                     {currentMission.focusAndSpecifics}
                                                 </Typography>
                                             </Box>
-                                            <Tooltip title={t('soloPlay.mission.reroll')}>
+                                            <Tooltip disableInteractive title={t('soloPlay.mission.reroll')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleReroll('focusAndSpecifics')}
@@ -469,7 +469,7 @@ ${currentMission.twist ? `TWIST: ${currentMission.twist}` : ''}
                                                     {currentMission.twist || t('soloPlay.mission.noTwist')}
                                                 </Typography>
                                             </Box>
-                                            <Tooltip title={t('soloPlay.mission.reroll')}>
+                                            <Tooltip disableInteractive title={t('soloPlay.mission.reroll')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleReroll('twist')}

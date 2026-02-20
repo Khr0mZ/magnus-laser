@@ -437,7 +437,7 @@ const SessionHUD = ({
                                                 ? t('session.relayChannelActive')
                                                 : t('session.waitingOnTransport')
                                             return (
-                                                <Tooltip title={tooltip}>
+                                                <Tooltip disableInteractive title={tooltip}>
                                                     <Chip
                                                         size="small"
                                                         sx={{
@@ -455,7 +455,7 @@ const SessionHUD = ({
                                         })()}
                                         {/* Kick button - only show for DMs kicking players (not themselves) */}
                                         {isDM && peer.role === 'player' && peer.id !== selfId && (
-                                            <Tooltip title={t('session.kickPlayer')}>
+                                            <Tooltip disableInteractive title={t('session.kickPlayer')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={(e) => {

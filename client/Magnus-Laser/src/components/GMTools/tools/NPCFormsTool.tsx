@@ -288,7 +288,7 @@ const NPCFormsTool = () => {
                         )}
                     </Box>
                     <Stack direction="row" spacing={0.5}>
-                        <Tooltip title={t('common.edit')}>
+                        <Tooltip disableInteractive title={t('common.edit')}>
                             <IconButton
                                 size="small"
                                 onClick={() => {
@@ -305,7 +305,7 @@ const NPCFormsTool = () => {
                                 <Edit fontSize="small" />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title={t('common.delete')}>
+                        <Tooltip disableInteractive title={t('common.delete')}>
                             <IconButton
                                 size="small"
                                 onClick={() => deleteNPCForm(npc.id)}
@@ -509,7 +509,7 @@ const NPCFormsTool = () => {
                     placeholder={t('soloPlay.npcForms.namePlaceholder')}
                     sx={tfStyle}
                 />
-                <Tooltip title={t('soloPlay.npcForms.randomName')}>
+                <Tooltip disableInteractive title={t('soloPlay.npcForms.randomName')}>
                     <IconButton
                         onClick={() => {
                             const result = generateRandomName()
@@ -537,7 +537,7 @@ const NPCFormsTool = () => {
                     placeholder={t('soloPlay.npcForms.handlePlaceholder')}
                     sx={tfStyle}
                 />
-                <Tooltip title={t('soloPlay.npcForms.randomHandle')}>
+                <Tooltip disableInteractive title={t('soloPlay.npcForms.randomHandle')}>
                     <IconButton
                         onClick={() => setFormHandle(generateHandle())}
                         sx={{
@@ -562,7 +562,7 @@ const NPCFormsTool = () => {
                     placeholder={t('soloPlay.npcForms.rolePlaceholder')}
                     sx={tfStyle}
                 />
-                <Tooltip title={t('soloPlay.npcForms.randomRole')}>
+                <Tooltip disableInteractive title={t('soloPlay.npcForms.randomRole')}>
                     <IconButton
                         onClick={() => {
                             const result = generateNPCByRole()
@@ -620,7 +620,7 @@ const NPCFormsTool = () => {
                     placeholder={t('soloPlay.npcForms.moodPlaceholder')}
                     sx={tfStyle}
                 />
-                <Tooltip title={t('soloPlay.npcForms.randomMood')}>
+                <Tooltip disableInteractive title={t('soloPlay.npcForms.randomMood')}>
                     <IconButton
                         onClick={() => setFormMood(generateQuickMood())}
                         sx={{

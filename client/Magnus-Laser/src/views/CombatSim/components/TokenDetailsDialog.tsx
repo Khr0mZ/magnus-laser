@@ -961,7 +961,7 @@ const TokenDetailsDialog: React.FC<TokenDetailsDialogProps> = ({
                                             sx={selectStyle}
                                             endAdornment={
                                                 editedToken?.owner && isDMInSession ? (
-                                                    <Tooltip title={t('common.clear')}>
+                                                    <Tooltip disableInteractive title={t('common.clear')}>
                                                         <IconButton
                                                             size="small"
                                                             onClick={() => handleFieldChange('owner', undefined)}

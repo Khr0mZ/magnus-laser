@@ -1402,6 +1402,193 @@
         "Exec", "Fixer", "Lawman", "Media", "Medtech",
         "Netrunner", "Nomad", "Rockerboy", "Solo", "Tech"
     ],
+    "spmPlus": {
+        "npcCompetence": [
+            "Utterly Incompetent", "Utterly Incompetent", "Mildly Inept",
+            "Ordinarily Capable", "Ordinarily Capable", "Ordinarily Capable",
+            "Competent", "Competent", "Very Competent", "Brilliant"
+        ],
+        "npcAggression": [
+            "Very Cautious", "Very Cautious", "Cautious", "Cautious",
+            "Neutral", "Neutral", "Aggressive", "Aggressive",
+            "Very Aggressive", "Berserker"
+        ],
+        "hateOrganization": [
+            "The organization is responsible for the death of a loved one.",
+            "The organization defaulted on a deal.",
+            "The organization tried to kill the Character in the past.",
+            "They crossed the organization in the past, and the organization has been hassling them ever since.",
+            "Faulty equipment manufactured/sold/provided by the organization caused the injury or death of a loved one.",
+            "Character was affiliated with a group absorbed or destroyed by the organization."
+        ],
+        "highriderCareers": [
+            { "type": "Workganger", "weight": 25 },
+            { "type": "Support Staff", "weight": 10 },
+            { "type": "Tech/Medtech", "weight": 20 },
+            { "type": "Exec", "weight": 5 },
+            { "type": "Security", "weight": 6 },
+            { "type": "Marine", "weight": 6 },
+            { "type": "Shuttle Pilot", "weight": 6 },
+            { "type": "OTV Pilot", "weight": 6 },
+            { "type": "Military Pilot", "weight": 5 },
+            { "type": "Scavver", "weight": 1 },
+            { "type": "Entertainer", "weight": 4 },
+            { "type": "Government Official", "weight": 6 }
+        ],
+        "aiLevels": [
+            { "level": "Mindless", "description": "Executes its programming without question, and disregards any consequences of so doing." },
+            { "level": "Basic functionality", "description": "Similar to a small bird or hamster. Can recognize obvious threats and gifts." },
+            { "level": "Dog-level intelligence", "description": "Able to make simple decisions on its own." },
+            { "level": "Dog-level intelligence", "description": "Able to make simple decisions on its own." },
+            { "level": "Childlike intelligence", "description": "Short attention span. Has a problem working out difficult concepts." },
+            { "level": "Adult intelligence", "description": "Can operate effectively with a minimum of instructions and take independent actions." },
+            { "level": "Adult intelligence", "description": "Can operate effectively with a minimum of instructions and take independent actions." },
+            { "level": "Advanced intelligence", "description": "More intelligent and capable than most humans." },
+            { "level": "Advanced intelligence", "description": "More intelligent and capable than most humans." },
+            { "level": "Alien intelligence", "description": "Absolutely incapable of being understood by humans." }
+        ],
+        "encounterSubway": [
+            "Someone's pissed on the floor, making it slippery.",
+            "The crowd's particularly thick here, making it difficult to move through the train.",
+            "Someone holding a radio cranks up the volume to the ear-splitting max.",
+            "The train rounds a bend, sending the whole car swaying.",
+            "A giant of a choomba has planted themself in the middle of the train and refuses to move. There's no space to slide around.",
+            "A teenager is trying to pick a shirt to wear for an upcoming date and asks for the Crew's opinion.",
+            "A panhandler steps in front of the Edgerunner, asking for money.",
+            "The door between this car and the next is jammed.",
+            "A streetrat exhales a disorienting cloud of some sort of drug into the air just as the Edgerunner passes through.",
+            "Another passenger tries to slip their hand into an Edgerunner's pocket and steal an item."
+        ],
+        "encounterTransport": [
+            "Crew going about their business.",
+            "Passengers.",
+            "Security.",
+            "An entertainer, possibly famous.",
+            "An old enemy (from Lifepath).",
+            "An old friend (from Lifepath)."
+        ],
+        "encounterRoad": [
+            "A friendly group traveling from the opposite direction. They're willing to share camp.",
+            "A friendly group traveling in the same direction. They're willing to travel together.",
+            "An indifferent group.",
+            "An indifferent group.",
+            "A hostile group. They won't make the first move.",
+            "A hostile group that mistakes the Crew for enemies."
+        ],
+        "encounterCorpBuilding": [
+            "Empty room.",
+            "Service/support staff (custodian, secretary, etc).",
+            "Executive (Exec, paper pusher, etc.).",
+            "Technical staff (lab tech, researcher, etc).",
+            "Security.",
+            "Drone/turret."
+        ],
+        "weatherHighSeas": [
+            "High winds. Keeping the ship on course is difficult.",
+            "Waves and winds. Moving on deck is difficult.",
+            "Flash flood. Chances of being swept overboard.",
+            "High water. Water is flooding the hold.",
+            "Waterspout! The crew needs to steer away. The ship might take damage.",
+            "Clear waters."
+        ],
+        "randomJunk": [
+            "A small TV with the screen smashed in.",
+            "A half-eaten bag of Kibble.",
+            "A soda can.",
+            "Used drug paraphernalia.",
+            "A corpse.",
+            "A discarded Screamsheet.",
+            "A few old cartridge casings.",
+            "A fast food wrapper.",
+            "A wad of chewing gum.",
+            "A burnt-out Memory Chip."
+        ],
+        "listeningDeviceLocation": [
+            "Behind a picture.",
+            "Under a decorative object.",
+            "In an electrical outlet.",
+            "Under a piece of furniture.",
+            "Attached to the bed.",
+            "Behind the toilet.",
+            "On a door frame.",
+            "Under the sink.",
+            "In a shower head.",
+            "Inside a light fitting."
+        ],
+        "cyberpunkElements": [
+            "Neon. In Cyberpunk, you can't have too many neon lights.",
+            "Solar panels. On every roof and windowsill, even on car roofs.",
+            "Steam. Billowing from rooftop vents and rising from grates in the street.",
+            "Video Screens. Advertising boards, and computer screens everywhere.",
+            "Claustrophobia. Taking the form of crowds, sleeping coffins, and traffic.",
+            "Internationalism. Everything comes from somewhere; why not somewhere else?",
+            "Brand Names. It's a corporate world, and everything is trademarked.",
+            "Squalor. From dirt to grease, rust, or garbage. Cyberpunk ain't tidy.",
+            "Hyperactivity. Focused and unfocused energy formed from desperation, always one nanosecond away from lashing out.",
+            "Technology. \"It's the technology, stupid!\""
+        ],
+        "hotNightInCity": [
+            "Riots, protests, or rants.",
+            "Bad weather. Monsoon? Dust storm?",
+            "Big fires.",
+            "Parades (Corporate Appreciation Day?).",
+            "Power outages and public tech failures.",
+            "Spontaneous concerts or demonstrations.",
+            "Drag races. Usually at night.",
+            "Gang recruitment drives and raves.",
+            "Corporation-sponsored events. Demos of new products or sneak previews.",
+            "Buskers, barkers, and soap-box orators."
+        ],
+        "soundsInNight": [
+            "Vroom!!! An AV passed overhead.",
+            "Honk! HONK!!! Screech! Crash! A nearby traffic accident.",
+            "Chitter! Clatter! Alley rats foraging around in some trash cans.",
+            "Bang! Bang! Bang! A drive-by shooting.",
+            "Aaaaaa!!! Someone falling off a building. Pushed? Or did they jump off?",
+            "Eeek! Help! Help! Someone in distress.",
+            "@$*%#&!!! An argument between two street vendors.",
+            "Boom-shaka-laka-boom! A nearby chromer with a suitcase-sized boom box.",
+            "Ahwooo Ahwooo! A police car whizzes by.",
+            "LINK YOUR DRINK! TRITI-FIZZ! A vendit loudly advertises its selection of drinks."
+        ],
+        "scatterTable": [
+            "Landed short of the target.", "Landed short of the target.",
+            "Landed behind the target.", "Landed behind the target.",
+            "Landed to the right of the target.",
+            "Landed to the left of the target."
+        ],
+        "hollywoodOveracting": [
+            "Target screams, windmills arms, and falls.",
+            "Target crumples like a rag doll.",
+            "Target spins around in place and falls.",
+            "Target clutches wound, staggers, and falls.",
+            "Target stares stupidly at wound, then falls.",
+            "Target slumps to the ground, moaning."
+        ],
+        "attackerAimPerson": [
+            "Head", "Body", "Body", "Body", "Hand", "Leg"
+        ],
+        "attackerAimVehicle": [
+            "Vehicle Weak Point", "Main Vehicle Body", "Main Vehicle Body",
+            "Main Vehicle Body", "Driver", "Passenger"
+        ],
+        "surgicalComplications": [
+            "None.", "None.", "None.", "None.", "None.",
+            "Infection. Recovery requires 1 day of rest.",
+            "Scarring on the body.",
+            "In a coma for 1d6 days.",
+            "Damage. Reduce a STAT by 1 for 1d6 days.",
+            "Potential drug addiction. Pick a drug."
+        ],
+        "medicalSymptoms": [
+            "Headache/Dizziness",
+            "Fever/Chills",
+            "Sore Throat/Coughing",
+            "Diarrhea",
+            "Nausea/Vomiting",
+            "Rash"
+        ]
+    },
     "generator": {
         "placeTypes": {
             "cubeHotel": "Cube Hotel",

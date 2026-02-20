@@ -1,7 +1,7 @@
 import AccountBalance from '@mui/icons-material/AccountBalance'
 import Assignment from '@mui/icons-material/Assignment'
-import AutoFixHigh from '@mui/icons-material/AutoFixHigh'
-import Casino from '@mui/icons-material/Casino'
+import ChevronLeft from '@mui/icons-material/ChevronLeft'
+import ChevronRight from '@mui/icons-material/ChevronRight'
 import ContactPage from '@mui/icons-material/ContactPage'
 import FormatListNumbered from '@mui/icons-material/FormatListNumbered'
 import Forum from '@mui/icons-material/Forum'
@@ -9,23 +9,24 @@ import Groups from '@mui/icons-material/Groups'
 import Inventory from '@mui/icons-material/Inventory'
 import Person from '@mui/icons-material/Person'
 import Psychology from '@mui/icons-material/Psychology'
+import RecentActors from '@mui/icons-material/RecentActors'
 import Search from '@mui/icons-material/Search'
 import Stars from '@mui/icons-material/Stars'
 import Theaters from '@mui/icons-material/Theaters'
 import Timeline from '@mui/icons-material/Timeline'
 import TrendingUp from '@mui/icons-material/TrendingUp'
-import RecentActors from '@mui/icons-material/RecentActors'
 import Work from '@mui/icons-material/Work'
 import WorkOutline from '@mui/icons-material/WorkOutline'
 import {
     Box,
     Divider,
     Drawer,
+    IconButton,
     List,
     ListItemButton,
-    ListItemIcon,
     ListItemText,
     Stack,
+    Tooltip,
     Typography,
 } from '@mui/material'
 import { useTranslation } from 'react-i18next'
@@ -35,7 +36,7 @@ import CustomScrollbar from '../CustomScrollbar'
 import GMToolsContent from './GMToolsContent'
 import { type GMToolType, useGMToolsStore } from './GMToolsStore'
 
-const MENU_WIDTH = 280
+const MENU_WIDTH = 200
 const CONTENT_WIDTH = 750
 const APPBAR_HEIGHT = 80
 
@@ -70,12 +71,6 @@ const soloPlayTools: ToolItem[] = [
         icon: <TrendingUp />,
         labelKey: 'gmTools.beatChart',
         color: colors.neons.pink.default,
-    },
-    {
-        id: 'randomTables',
-        icon: <Casino />,
-        labelKey: 'gmTools.randomTables',
-        color: colors.neons.green.default,
     },
     {
         id: 'investigation',
@@ -125,37 +120,37 @@ const generatorTools: ToolItem[] = [
     {
         id: 'gangGenerator',
         icon: <Groups />,
-        labelKey: 'gmTools.gangGenerator',
+        labelKey: 'modules.GANG',
         color: colors.neons.red.default,
     },
     {
         id: 'buildingGenerator',
         icon: <AccountBalance />,
-        labelKey: 'gmTools.buildingGenerator',
+        labelKey: 'modules.BUILDING',
         color: colors.neons.blue.default,
     },
     {
         id: 'gigGenerator',
         icon: <Work />,
-        labelKey: 'gmTools.gigGenerator',
+        labelKey: 'modules.FIXER_JOB',
         color: colors.neons.orange.default,
     },
     {
         id: 'bountyGenerator',
         icon: <WorkOutline />,
-        labelKey: 'gmTools.bountyGenerator',
+        labelKey: 'modules.BOUNTY',
         color: colors.neons.yellow.default,
     },
     {
         id: 'itemGenerator',
         icon: <Inventory />,
-        labelKey: 'gmTools.itemGenerator',
+        labelKey: 'modules.ITEM',
         color: colors.neons.cyan.default,
     },
     {
         id: 'contactGenerator',
         icon: <Person />,
-        labelKey: 'gmTools.contactGenerator',
+        labelKey: 'modules.CHARACTER',
         color: colors.neons.purple.default,
     },
 ]
@@ -163,7 +158,8 @@ const generatorTools: ToolItem[] = [
 const GMToolsDrawer = () => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
-    const { isDrawerOpen, activeTool, setActiveTool } = useGMToolsStore()
+    const { isDrawerOpen, activeTool, setActiveTool, isMenuCollapsed, toggleMenuCollapsed } = useGMToolsStore()
+    const menuWidth = isMenuCollapsed ? 0 : MENU_WIDTH
 
     const handleToolClick = (toolId: GMToolType) => {
         setActiveTool(toolId)
@@ -185,7 +181,6 @@ const GMToolsDrawer = () => {
                             position: 'relative',
                             overflow: 'hidden',
                             border: isSelected ? `1px solid ${tool.color}60` : '1px solid transparent',
-                            transition: 'all 0.3s ease',
                             '&::before': readerMode
                                 ? {}
                                 : {
@@ -197,7 +192,6 @@ const GMToolsDrawer = () => {
                                       width: isSelected ? '3px' : '0px',
                                       backgroundColor: tool.color,
                                       boxShadow: isSelected ? `0 0 10px ${tool.color}` : 'none',
-                                      transition: 'width 0.3s ease',
                                   },
                             '&.Mui-selected': {
                                 backgroundColor: readerMode ? 'rgba(0, 0, 0, 0.08)' : `${tool.color}15`,
@@ -213,20 +207,6 @@ const GMToolsDrawer = () => {
                             },
                         }}
                     >
-                        <ListItemIcon
-                            sx={{
-                                color: isSelected
-                                    ? tool.color
-                                    : readerMode
-                                    ? colors.grays.gray400
-                                    : colors.grays.gray600,
-                                minWidth: 36,
-                                transition: 'all 0.3s ease',
-                                filter: isSelected && !readerMode ? `drop-shadow(0 0 5px ${tool.color})` : 'none',
-                            }}
-                        >
-                            {tool.icon}
-                        </ListItemIcon>
                         <ListItemText
                             primary={t(tool.labelKey)}
                             slotProps={{
@@ -238,10 +218,9 @@ const GMToolsDrawer = () => {
                                         color: isSelected
                                             ? tool.color
                                             : readerMode
-                                            ? colors.grays.gray200
-                                            : colors.grays.gray700,
+                                              ? colors.grays.gray200
+                                              : colors.grays.gray700,
                                         textShadow: isSelected && !readerMode ? `0 0 8px ${tool.color}60` : 'none',
-                                        transition: 'all 0.3s ease',
                                     },
                                 },
                             }}
@@ -259,7 +238,7 @@ const GMToolsDrawer = () => {
             variant="persistent"
             sx={{
                 '& .MuiDrawer-paper': {
-                    width: activeTool ? MENU_WIDTH + CONTENT_WIDTH : MENU_WIDTH,
+                    width: menuWidth + CONTENT_WIDTH,
                     top: `${APPBAR_HEIGHT}px`,
                     height: `calc(100% - ${APPBAR_HEIGHT}px)`,
                     backgroundColor: readerMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(5, 10, 20, 0.98)',
@@ -267,7 +246,6 @@ const GMToolsDrawer = () => {
                         ? `1px solid ${colors.grays.gray300}`
                         : `1px solid ${colors.neons.cyan.default}40`,
                     backdropFilter: 'blur(15px)',
-                    transition: 'width 0.3s ease-in-out',
                     boxShadow: readerMode
                         ? '-5px 0 20px rgba(0, 0, 0, 0.1)'
                         : `-5px 0 30px rgba(0, 255, 255, 0.1), inset 1px 0 30px rgba(0, 255, 255, 0.05)`,
@@ -319,13 +297,15 @@ const GMToolsDrawer = () => {
                 {/* Tool Menu */}
                 <Box
                     sx={{
-                        width: MENU_WIDTH,
+                        width: menuWidth,
+                        minWidth: menuWidth,
                         flexShrink: 0,
-                        borderRight: activeTool
-                            ? readerMode
-                                ? `1px solid ${colors.grays.gray300}`
-                                : `1px solid ${colors.neons.cyan.default}30`
-                            : 'none',
+                        borderRight:
+                            activeTool && !isMenuCollapsed
+                                ? readerMode
+                                    ? `1px solid ${colors.grays.gray300}`
+                                    : `1px solid ${colors.neons.cyan.default}30`
+                                : 'none',
                         height: '100%',
                         overflow: 'hidden',
                         position: 'relative',
@@ -357,37 +337,16 @@ const GMToolsDrawer = () => {
                                       },
                             }}
                         >
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <AutoFixHigh
-                                    sx={{
-                                        color: readerMode ? colors.grays.gray600 : colors.neons.purple.default,
-                                        filter: readerMode
-                                            ? 'none'
-                                            : `drop-shadow(0 0 5px ${colors.neons.purple.default})`,
-                                    }}
-                                />
-                                <Typography
-                                    variant="h6"
-                                    sx={{
-                                        fontWeight: 'bold',
-                                        letterSpacing: '2px',
-                                        color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
-                                        textShadow: readerMode ? 'none' : `0 0 15px ${colors.neons.cyan.default}80`,
-                                    }}
-                                >
-                                    {t('gmTools.title')}
-                                </Typography>
-                            </Stack>
                             <Typography
-                                variant="caption"
+                                variant="h6"
                                 sx={{
-                                    color: readerMode ? colors.grays.gray500 : colors.grays.gray600,
-                                    display: 'block',
-                                    mt: 0.5,
-                                    letterSpacing: '0.5px',
+                                    fontWeight: 'bold',
+                                    letterSpacing: '2px',
+                                    color: readerMode ? colors.grays.gray000 : colors.neons.cyan.default,
+                                    textShadow: readerMode ? 'none' : `0 0 15px ${colors.neons.cyan.default}80`,
                                 }}
                             >
-                                {t('gmTools.subtitle')}
+                                {t('gmTools.title')}
                             </Typography>
                         </Box>
 
@@ -418,6 +377,39 @@ const GMToolsDrawer = () => {
                         {renderToolList(generatorTools)}
                     </CustomScrollbar>
                 </Box>
+
+                {/* Menu Toggle */}
+                {activeTool && (
+                    <Tooltip disableInteractive title={t(isMenuCollapsed ? 'gmTools.showMenu' : 'gmTools.hideMenu')}>
+                        <IconButton
+                            onClick={toggleMenuCollapsed}
+                            sx={{
+                                alignSelf: 'center',
+                                width: 20,
+                                height: 'calc(100%)',
+                                borderRadius: 0,
+                                color: readerMode ? colors.grays.gray400 : colors.neons.cyan.default,
+                                borderRight: readerMode
+                                    ? `1px solid ${colors.grays.gray300}`
+                                    : `1px solid ${colors.neons.cyan.default}30`,
+                                borderLeft: isMenuCollapsed
+                                    ? readerMode
+                                        ? `1px solid ${colors.grays.gray300}`
+                                        : `1px solid ${colors.neons.cyan.default}30`
+                                    : 'none',
+                                '&:hover': {
+                                    backgroundColor: readerMode ? 'rgba(0,0,0,0.04)' : `${colors.neons.cyan.default}15`,
+                                },
+                            }}
+                        >
+                            {isMenuCollapsed ? (
+                                <ChevronLeft sx={{ fontSize: 16 }} />
+                            ) : (
+                                <ChevronRight sx={{ fontSize: 16 }} />
+                            )}
+                        </IconButton>
+                    </Tooltip>
+                )}
 
                 {/* Tool Content */}
                 {activeTool && (

@@ -181,7 +181,7 @@ const IPTrackingTool = () => {
                                         </Stack>
                                     </Box>
                                     <Stack direction="row" spacing={0.5}>
-                                        <Tooltip title={t('soloPlay.ipTracker.earnIP')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.ipTracker.earnIP')}>
                                             <Button
                                                 size="small"
                                                 variant="outlined"
@@ -196,7 +196,7 @@ const IPTrackingTool = () => {
                                                 +IP
                                             </Button>
                                         </Tooltip>
-                                        <Tooltip title={t('soloPlay.ipTracker.spendIP')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.ipTracker.spendIP')}>
                                             <Button
                                                 size="small"
                                                 variant="outlined"
@@ -211,7 +211,7 @@ const IPTrackingTool = () => {
                                                 -IP
                                             </Button>
                                         </Tooltip>
-                                        <Tooltip title={t('common.delete')}>
+                                        <Tooltip disableInteractive title={t('common.delete')}>
                                             <IconButton size="small" onClick={() => deleteIPTracker(tracker.id)} sx={{ color: colors.neons.red.default, border: `1px solid ${colors.neons.red.default}40`, borderRadius: 0, '&:hover': { backgroundColor: `${colors.neons.red.default}20` } }}>
                                                 <DeleteOutline fontSize="small" />
                                             </IconButton>

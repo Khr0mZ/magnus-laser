@@ -235,7 +235,7 @@ const RandomThingsTool = () => {
                                     </Box>
                                     <Stack direction="row" spacing={0.5}>
                                         {/* Roll */}
-                                        <Tooltip title={t('soloPlay.randomThings.roll')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.randomThings.roll')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handleRoll(table)}
@@ -253,7 +253,7 @@ const RandomThingsTool = () => {
                                             </IconButton>
                                         </Tooltip>
                                         {/* Edit */}
-                                        <Tooltip title={t('common.edit')}>
+                                        <Tooltip disableInteractive title={t('common.edit')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handleOpenEdit(table)}
@@ -268,7 +268,7 @@ const RandomThingsTool = () => {
                                             </IconButton>
                                         </Tooltip>
                                         {/* Delete */}
-                                        <Tooltip title={t('common.delete')}>
+                                        <Tooltip disableInteractive title={t('common.delete')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => deleteCustomTable(table.id)}

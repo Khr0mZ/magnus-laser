@@ -6,7 +6,7 @@
 // ============================================
 
 import i18n from '../../i18n'
-import { getRandomFromArray, rollD6 } from './soloPlayTables'
+import { getRandomFromArray, getRandomFromWeightedArray, rollD6 } from './soloPlayTables'
 
 // Helper to get table data from the 'tables' namespace
 const tt = <T = string[]>(key: string): T =>
@@ -348,3 +348,61 @@ export const generateTritiFizz = (): FlavorItem => getRandomFromArray(tritiFizzT
 
 /** Roll a random advertisement */
 export const generateAdvertisement = (): { product: string; ad: string } => getRandomFromArray(advertisementsTable())
+
+// ============================================
+// SPM+ TABLES (Single Player Mode Plus)
+// ============================================
+
+// --- Table accessors ---
+
+export const spmNpcCompetenceTable = () => tt('spmPlus.npcCompetence')
+export const spmNpcAggressionTable = () => tt('spmPlus.npcAggression')
+export const spmHateOrganizationTable = () => tt('spmPlus.hateOrganization')
+export const spmHighriderCareersTable = () => tt<{ type: string; weight: number }[]>('spmPlus.highriderCareers')
+
+export interface AILevel {
+    level: string
+    description: string
+}
+
+export const spmAiLevelsTable = () => tt<AILevel[]>('spmPlus.aiLevels')
+export const spmEncounterSubwayTable = () => tt('spmPlus.encounterSubway')
+export const spmEncounterTransportTable = () => tt('spmPlus.encounterTransport')
+export const spmEncounterRoadTable = () => tt('spmPlus.encounterRoad')
+export const spmEncounterCorpBuildingTable = () => tt('spmPlus.encounterCorpBuilding')
+export const spmWeatherHighSeasTable = () => tt('spmPlus.weatherHighSeas')
+export const spmRandomJunkTable = () => tt('spmPlus.randomJunk')
+export const spmListeningDeviceTable = () => tt('spmPlus.listeningDeviceLocation')
+export const spmCyberpunkElementsTable = () => tt('spmPlus.cyberpunkElements')
+export const spmHotNightInCityTable = () => tt('spmPlus.hotNightInCity')
+export const spmSoundsInNightTable = () => tt('spmPlus.soundsInNight')
+export const spmScatterTable = () => tt('spmPlus.scatterTable')
+export const spmHollywoodOveractingTable = () => tt('spmPlus.hollywoodOveracting')
+export const spmAttackerAimPersonTable = () => tt('spmPlus.attackerAimPerson')
+export const spmAttackerAimVehicleTable = () => tt('spmPlus.attackerAimVehicle')
+export const spmSurgicalComplicationsTable = () => tt('spmPlus.surgicalComplications')
+export const spmMedicalSymptomsTable = () => tt('spmPlus.medicalSymptoms')
+
+// --- Generator functions ---
+
+export const generateNpcCompetence = (): string => getRandomFromArray(spmNpcCompetenceTable())
+export const generateNpcAggression = (): string => getRandomFromArray(spmNpcAggressionTable())
+export const generateHateOrganization = (): string => getRandomFromArray(spmHateOrganizationTable())
+export const generateHighriderCareer = (): string => getRandomFromWeightedArray(spmHighriderCareersTable())
+export const generateAiLevel = (): AILevel => getRandomFromArray(spmAiLevelsTable())
+export const generateEncounterSubway = (): string => getRandomFromArray(spmEncounterSubwayTable())
+export const generateEncounterTransport = (): string => getRandomFromArray(spmEncounterTransportTable())
+export const generateEncounterRoad = (): string => getRandomFromArray(spmEncounterRoadTable())
+export const generateEncounterCorpBuilding = (): string => getRandomFromArray(spmEncounterCorpBuildingTable())
+export const generateWeatherHighSeas = (): string => getRandomFromArray(spmWeatherHighSeasTable())
+export const generateRandomJunk = (): string => getRandomFromArray(spmRandomJunkTable())
+export const generateListeningDevice = (): string => getRandomFromArray(spmListeningDeviceTable())
+export const generateCyberpunkElement = (): string => getRandomFromArray(spmCyberpunkElementsTable())
+export const generateHotNightInCity = (): string => getRandomFromArray(spmHotNightInCityTable())
+export const generateSoundsInNight = (): string => getRandomFromArray(spmSoundsInNightTable())
+export const generateScatter = (): string => getRandomFromArray(spmScatterTable())
+export const generateHollywoodOveracting = (): string => getRandomFromArray(spmHollywoodOveractingTable())
+export const generateAttackerAimPerson = (): string => getRandomFromArray(spmAttackerAimPersonTable())
+export const generateAttackerAimVehicle = (): string => getRandomFromArray(spmAttackerAimVehicleTable())
+export const generateSurgicalComplication = (): string => getRandomFromArray(spmSurgicalComplicationsTable())
+export const generateMedicalSymptom = (): string => getRandomFromArray(spmMedicalSymptomsTable())

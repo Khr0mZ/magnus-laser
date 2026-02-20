@@ -34,12 +34,21 @@ export interface RandomTableResult {
     timestamp: number
 }
 
+// History Note (text notes inserted between history cards)
+export interface HistoryNote {
+    id: string
+    timestamp: number
+    content: string
+}
+
 interface GMToolsDataState {
     // Oracle
     oracleHistory: OracleResult[]
     openQuestionHistory: OpenQuestionResult[]
     addOracleResult: (result: OracleResult) => void
     addOpenQuestionResult: (result: OpenQuestionResult) => void
+    updateOracleResult: (id: string, updates: Partial<OracleResult>) => void
+    updateOpenQuestionResult: (id: string, updates: Partial<OpenQuestionResult>) => void
     deleteOracleResult: (id: string) => void
     deleteOpenQuestionResult: (id: string) => void
     clearOracleHistory: () => void
@@ -78,6 +87,13 @@ interface GMToolsDataState {
     updateRandomTableResult: (id: string, updates: Partial<RandomTableResult>) => void
     deleteRandomTableResult: (id: string) => void
     clearRandomTableResults: () => void
+
+    // History Notes
+    historyNotes: HistoryNote[]
+    addHistoryNote: (note: HistoryNote) => void
+    updateHistoryNote: (id: string, updates: Partial<HistoryNote>) => void
+    deleteHistoryNote: (id: string) => void
+    clearHistoryNotes: () => void
 
     // Edgerunners (Characters)
     edgerunners: Character[]
@@ -146,6 +162,18 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
             addOpenQuestionResult: (result) =>
                 set((state) => ({
                     openQuestionHistory: [result, ...state.openQuestionHistory].slice(0, 100),
+                })),
+            updateOracleResult: (id, updates) =>
+                set((state) => ({
+                    oracleHistory: state.oracleHistory.map((r) =>
+                        r.id === id ? { ...r, ...updates } : r
+                    ),
+                })),
+            updateOpenQuestionResult: (id, updates) =>
+                set((state) => ({
+                    openQuestionHistory: state.openQuestionHistory.map((r) =>
+                        r.id === id ? { ...r, ...updates } : r
+                    ),
                 })),
             deleteOracleResult: (id) =>
                 set((state) => ({
@@ -329,6 +357,24 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                 })),
             clearRandomTableResults: () => set({ randomTableResults: [] }),
 
+            // History Notes
+            historyNotes: [],
+            addHistoryNote: (note) =>
+                set((state) => ({
+                    historyNotes: [note, ...state.historyNotes].slice(0, 30),
+                })),
+            updateHistoryNote: (id, updates) =>
+                set((state) => ({
+                    historyNotes: state.historyNotes.map((n) =>
+                        n.id === id ? { ...n, ...updates } : n
+                    ),
+                })),
+            deleteHistoryNote: (id) =>
+                set((state) => ({
+                    historyNotes: state.historyNotes.filter((n) => n.id !== id),
+                })),
+            clearHistoryNotes: () => set({ historyNotes: [] }),
+
             // Edgerunners (Characters)
             edgerunners: [],
             addEdgerunner: (character) =>
@@ -454,7 +500,7 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
         }),
         {
             name: 'gm-tools-data',
-            version: 3,
+            version: 4,
             migrate: (persistedState: unknown, version: number) => {
                 const state = persistedState as Record<string, unknown>
                 if (version === 0) {
@@ -522,6 +568,9 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                             devilsLuckUsed: clock.devilsLuckUsed ?? false,
                         }))
                     }
+                }
+                if (version < 4) {
+                    state.historyNotes = state.historyNotes ?? []
                 }
                 return state as unknown as GMToolsDataState
             },

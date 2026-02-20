@@ -1402,6 +1402,193 @@
         "Exec", "Fixer", "Lawman", "Media", "Medtech",
         "Netrunner", "Nomad", "Rockerboy", "Solo", "Tech"
     ],
+    "spmPlus": {
+        "npcCompetence": [
+            "Totalmente Incompetente", "Totalmente Incompetente", "Ligeramente Inepto",
+            "Ordinariamente Capaz", "Ordinariamente Capaz", "Ordinariamente Capaz",
+            "Competente", "Competente", "Muy Competente", "Brillante"
+        ],
+        "npcAggression": [
+            "Muy Cauteloso", "Muy Cauteloso", "Cauteloso", "Cauteloso",
+            "Neutral", "Neutral", "Agresivo", "Agresivo",
+            "Muy Agresivo", "Berserker"
+        ],
+        "hateOrganization": [
+            "La organización es responsable de la muerte de un ser querido.",
+            "La organización incumplió un trato.",
+            "La organización intentó matar al Personaje en el pasado.",
+            "Se cruzaron con la organización en el pasado, y esta ha estado acosándolos desde entonces.",
+            "Equipo defectuoso fabricado/vendido/proporcionado por la organización causó la herida o muerte de un ser querido.",
+            "El Personaje estaba afiliado a un grupo absorbido o destruido por la organización."
+        ],
+        "highriderCareers": [
+            { "type": "Obrero Espacial", "weight": 25 },
+            { "type": "Personal de Apoyo", "weight": 10 },
+            { "type": "Tech/Medtech", "weight": 20 },
+            { "type": "Exec", "weight": 5 },
+            { "type": "Seguridad", "weight": 6 },
+            { "type": "Marine", "weight": 6 },
+            { "type": "Piloto de Lanzadera", "weight": 6 },
+            { "type": "Piloto de OTV", "weight": 6 },
+            { "type": "Piloto Militar", "weight": 5 },
+            { "type": "Carroñero", "weight": 1 },
+            { "type": "Artista", "weight": 4 },
+            { "type": "Oficial del Gobierno", "weight": 6 }
+        ],
+        "aiLevels": [
+            { "level": "Sin mente", "description": "Ejecuta su programación sin cuestionar y sin considerar las consecuencias." },
+            { "level": "Funcionalidad básica", "description": "Similar a un pájaro pequeño o un hámster. Puede reconocer amenazas y regalos obvios." },
+            { "level": "Inteligencia de perro", "description": "Capaz de tomar decisiones simples por sí mismo." },
+            { "level": "Inteligencia de perro", "description": "Capaz de tomar decisiones simples por sí mismo." },
+            { "level": "Inteligencia infantil", "description": "Poca capacidad de atención. Tiene problemas con conceptos difíciles." },
+            { "level": "Inteligencia adulta", "description": "Puede operar eficazmente con un mínimo de instrucciones y tomar acciones independientes." },
+            { "level": "Inteligencia adulta", "description": "Puede operar eficazmente con un mínimo de instrucciones y tomar acciones independientes." },
+            { "level": "Inteligencia avanzada", "description": "Más inteligente y capaz que la mayoría de los humanos." },
+            { "level": "Inteligencia avanzada", "description": "Más inteligente y capaz que la mayoría de los humanos." },
+            { "level": "Inteligencia alienígena", "description": "Absolutamente incapaz de ser comprendida por humanos." }
+        ],
+        "encounterSubway": [
+            "Alguien se ha meado en el suelo, haciéndolo resbaladizo.",
+            "La multitud es particularmente densa aquí, dificultando moverse por el tren.",
+            "Alguien con una radio sube el volumen al máximo ensordecedor.",
+            "El tren toma una curva, haciendo que todo el vagón se balancee.",
+            "Un choomba gigante se ha plantado en medio del tren y se niega a moverse. No hay espacio para pasar.",
+            "Un adolescente intenta elegir una camiseta para una cita y pide la opinión del Equipo.",
+            "Un mendigo se pone delante del Edgerunner, pidiendo dinero.",
+            "La puerta entre este vagón y el siguiente está atascada.",
+            "Un streetrat exhala una nube desorientadora de algún tipo de droga justo cuando el Edgerunner pasa.",
+            "Otro pasajero intenta meter la mano en el bolsillo de un Edgerunner para robar algo."
+        ],
+        "encounterTransport": [
+            "Tripulación ocupada con sus tareas.",
+            "Pasajeros.",
+            "Seguridad.",
+            "Un artista, posiblemente famoso.",
+            "Un viejo enemigo (del Lifepath).",
+            "Un viejo amigo (del Lifepath)."
+        ],
+        "encounterRoad": [
+            "Un grupo amistoso viajando en dirección opuesta. Están dispuestos a compartir campamento.",
+            "Un grupo amistoso viajando en la misma dirección. Están dispuestos a viajar juntos.",
+            "Un grupo indiferente.",
+            "Un grupo indiferente.",
+            "Un grupo hostil. No darán el primer paso.",
+            "Un grupo hostil que confunde al Equipo con enemigos."
+        ],
+        "encounterCorpBuilding": [
+            "Habitación vacía.",
+            "Personal de servicio/apoyo (conserje, secretaria, etc).",
+            "Ejecutivo (Exec, burócrata, etc.).",
+            "Personal técnico (técnico de laboratorio, investigador, etc).",
+            "Seguridad.",
+            "Dron/torreta."
+        ],
+        "weatherHighSeas": [
+            "Vientos fuertes. Mantener el rumbo del barco es difícil.",
+            "Olas y vientos. Moverse en cubierta es difícil.",
+            "Inundación repentina. Posibilidad de ser arrastrado por la borda.",
+            "Marea alta. El agua está inundando la bodega.",
+            "¡Tromba marina! La tripulación necesita virar. El barco podría sufrir daños.",
+            "Aguas tranquilas."
+        ],
+        "randomJunk": [
+            "Una TV pequeña con la pantalla destrozada.",
+            "Una bolsa de Kibble a medio comer.",
+            "Una lata de refresco.",
+            "Parafernalia de drogas usada.",
+            "Un cadáver.",
+            "Un Screamsheet descartado.",
+            "Unos cuantos casquillos de cartuchos viejos.",
+            "Un envoltorio de comida rápida.",
+            "Un chicle mascado.",
+            "Un Chip de Memoria quemado."
+        ],
+        "listeningDeviceLocation": [
+            "Detrás de un cuadro.",
+            "Debajo de un objeto decorativo.",
+            "En un enchufe eléctrico.",
+            "Debajo de un mueble.",
+            "Pegado a la cama.",
+            "Detrás del inodoro.",
+            "En el marco de una puerta.",
+            "Debajo del lavabo.",
+            "En la alcachofa de la ducha.",
+            "Dentro de una lámpara."
+        ],
+        "cyberpunkElements": [
+            "Neón. En Cyberpunk, nunca hay demasiadas luces de neón.",
+            "Paneles solares. En cada tejado y alféizar, incluso en los techos de los coches.",
+            "Vapor. Saliendo de las ventilaciones del tejado y subiendo de las rejillas de la calle.",
+            "Pantallas de vídeo. Carteles publicitarios y pantallas de ordenador por todas partes.",
+            "Claustrofobia. En forma de multitudes, cápsulas para dormir y tráfico.",
+            "Internacionalismo. Todo viene de algún sitio; ¿por qué no de otro?",
+            "Marcas comerciales. Es un mundo corporativo, y todo está registrado.",
+            "Miseria. Desde suciedad hasta grasa, óxido o basura. Cyberpunk no es limpio.",
+            "Hiperactividad. Energía enfocada y desenfocada formada por la desesperación, siempre a un nanosegundo de estallar.",
+            "Tecnología. \"¡Es la tecnología, estúpido!\""
+        ],
+        "hotNightInCity": [
+            "Disturbios, protestas o discursos.",
+            "Mal tiempo. ¿Monzón? ¿Tormenta de polvo?",
+            "Grandes incendios.",
+            "Desfiles (¿Día de Agradecimiento Corporativo?).",
+            "Apagones y fallos tecnológicos públicos.",
+            "Conciertos o manifestaciones espontáneas.",
+            "Carreras de arrastre. Generalmente de noche.",
+            "Campañas de reclutamiento de bandas y raves.",
+            "Eventos patrocinados por corporaciones. Demos de nuevos productos o avances.",
+            "Artistas callejeros, pregoneros y oradores improvisados."
+        ],
+        "soundsInNight": [
+            "¡¡¡Vroom!!! Un AV pasó por encima.",
+            "¡Honk! ¡¡¡HONK!!! ¡Screech! ¡Crash! Un accidente de tráfico cercano.",
+            "¡Chitter! ¡Clatter! Ratas de callejón rebuscando en cubos de basura.",
+            "¡Bang! ¡Bang! ¡Bang! Un tiroteo desde un vehículo.",
+            "¡¡¡Aaaaaa!!! Alguien cayendo de un edificio. ¿Empujado? ¿O saltó?",
+            "¡¡Eeek! ¡Socorro! ¡Socorro!! Alguien en apuros.",
+            "¡¡¡@$*%#&!!! Una discusión entre dos vendedores callejeros.",
+            "¡Boom-shaka-laka-boom! Un chromer cercano con un altavoz del tamaño de una maleta.",
+            "¡Ahwooo Ahwooo! Un coche de policía pasa a toda velocidad.",
+            "¡CONECTA TU BEBIDA! ¡TRITI-FIZZ! Un vendit anuncia a gritos su selección de bebidas."
+        ],
+        "scatterTable": [
+            "Cayó corto del objetivo.", "Cayó corto del objetivo.",
+            "Cayó detrás del objetivo.", "Cayó detrás del objetivo.",
+            "Cayó a la derecha del objetivo.",
+            "Cayó a la izquierda del objetivo."
+        ],
+        "hollywoodOveracting": [
+            "El objetivo grita, mueve los brazos como molinos, y cae.",
+            "El objetivo se desploma como un muñeco de trapo.",
+            "El objetivo gira sobre sí mismo y cae.",
+            "El objetivo se agarra la herida, tambalea, y cae.",
+            "El objetivo mira estúpidamente la herida, luego cae.",
+            "El objetivo se desploma al suelo, gimiendo."
+        ],
+        "attackerAimPerson": [
+            "Cabeza", "Cuerpo", "Cuerpo", "Cuerpo", "Mano", "Pierna"
+        ],
+        "attackerAimVehicle": [
+            "Punto Débil del Vehículo", "Cuerpo Principal del Vehículo", "Cuerpo Principal del Vehículo",
+            "Cuerpo Principal del Vehículo", "Conductor", "Pasajero"
+        ],
+        "surgicalComplications": [
+            "Ninguna.", "Ninguna.", "Ninguna.", "Ninguna.", "Ninguna.",
+            "Infección. La recuperación requiere 1 día de descanso.",
+            "Cicatrices en el cuerpo.",
+            "En coma durante 1d6 días.",
+            "Daño. Reduce una STAT en 1 durante 1d6 días.",
+            "Posible adicción a drogas. Elige una droga."
+        ],
+        "medicalSymptoms": [
+            "Dolor de cabeza/Mareos",
+            "Fiebre/Escalofríos",
+            "Dolor de garganta/Tos",
+            "Diarrea",
+            "Náuseas/Vómitos",
+            "Sarpullido"
+        ]
+    },
     "generator": {
         "placeTypes": {
             "cubeHotel": "Hotel Cúbico",

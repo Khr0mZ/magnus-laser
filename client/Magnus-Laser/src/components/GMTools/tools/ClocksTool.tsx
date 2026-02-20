@@ -1,10 +1,10 @@
 import Add from '@mui/icons-material/Add'
+import AddCircleOutline from '@mui/icons-material/AddCircleOutline'
 import AutoFixHigh from '@mui/icons-material/AutoFixHigh'
 import Casino from '@mui/icons-material/Casino'
 import DeleteOutline from '@mui/icons-material/DeleteOutline'
 import Edit from '@mui/icons-material/Edit'
 import RestartAlt from '@mui/icons-material/RestartAlt'
-import AddCircleOutline from '@mui/icons-material/AddCircleOutline'
 import {
     Box,
     Button,
@@ -13,6 +13,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    FormControlLabel,
     IconButton,
     Paper,
     Slider,
@@ -21,7 +22,6 @@ import {
     TextField,
     Tooltip,
     Typography,
-    FormControlLabel,
 } from '@mui/material'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -31,9 +31,9 @@ import type { SoloPlayClock } from '../../../types/soloPlay'
 import colors from '../../../utils/colors'
 import { useGMToolsDataStore } from '../GMToolsDataStore'
 import {
-    getCyberpunkTextFieldStyle,
     getCyberpunkButtonStyle,
     getCyberpunkPaperStyle,
+    getCyberpunkTextFieldStyle,
     getSectionTitleStyle,
 } from '../GMToolsStyles'
 
@@ -202,7 +202,7 @@ const ClocksTool = () => {
                 </Typography>
                 <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap alignItems="center">
                     {rollResult.diceRolled.map((die, i) => {
-                        const isRemoved = die === 1 || (clocks.find(c => c.id === clockId)?.scaleUp && die === 6)
+                        const isRemoved = die === 1 || (clocks.find((c) => c.id === clockId)?.scaleUp && die === 6)
                         return (
                             <Chip
                                 key={i}
@@ -211,14 +211,10 @@ const ClocksTool = () => {
                                 sx={{
                                     fontFamily: '"Orbitron", sans-serif',
                                     fontWeight: 'bold',
-                                    backgroundColor: isRemoved
-                                        ? colors.neons.red.default
-                                        : colors.grays.gray800,
+                                    backgroundColor: isRemoved ? colors.neons.red.default : colors.grays.gray800,
                                     color: '#fff',
                                     border: isRemoved ? `2px solid ${colors.neons.red.default}` : 'none',
-                                    boxShadow: isRemoved
-                                        ? `0 0 10px ${colors.neons.red.default}`
-                                        : 'none',
+                                    boxShadow: isRemoved ? `0 0 10px ${colors.neons.red.default}` : 'none',
                                     animation: isRemoved ? 'pulse 0.5s ease-in-out' : 'none',
                                 }}
                             />
@@ -228,9 +224,7 @@ const ClocksTool = () => {
                         variant="body2"
                         sx={{
                             ml: 1,
-                            color: rollResult.diceRemoved > 0
-                                ? colors.neons.red.default
-                                : colors.neons.green.default,
+                            color: rollResult.diceRemoved > 0 ? colors.neons.red.default : colors.neons.green.default,
                             fontFamily: '"Lexend", sans-serif',
                             fontWeight: 'bold',
                         }}
@@ -374,7 +368,7 @@ const ClocksTool = () => {
                                     </Box>
                                     <Stack direction="row" spacing={0.5}>
                                         {/* Roll Dice Button */}
-                                        <Tooltip title={t('soloPlay.clocks.rollDice')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.clocks.rollDice')}>
                                             <span>
                                                 <IconButton
                                                     size="small"
@@ -398,14 +392,13 @@ const ClocksTool = () => {
                                             </span>
                                         </Tooltip>
                                         {/* Add Dice Back (Reclaiming Time) */}
-                                        <Tooltip title={t('soloPlay.clocks.addDiceBack')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.clocks.addDiceBack')}>
                                             <span>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => addDiceBack(clock.id)}
                                                     disabled={
-                                                        clock.remainingDice >= clock.initialDicePool ||
-                                                        clock.isComplete
+                                                        clock.remainingDice >= clock.initialDicePool || clock.isComplete
                                                     }
                                                     sx={{
                                                         color: colors.neons.green.default,
@@ -425,7 +418,7 @@ const ClocksTool = () => {
                                             </span>
                                         </Tooltip>
                                         {/* Devil's Luck: remove a d6 to refresh Luck Pool (once per clock) */}
-                                        <Tooltip title={t('soloPlay.clocks.devilsLuck')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.clocks.devilsLuck')}>
                                             <span>
                                                 <IconButton
                                                     size="small"
@@ -453,7 +446,7 @@ const ClocksTool = () => {
                                             </span>
                                         </Tooltip>
                                         {/* Reset Clock */}
-                                        <Tooltip title={t('soloPlay.clocks.reset')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.clocks.reset')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => resetClock(clock.id)}
@@ -471,7 +464,7 @@ const ClocksTool = () => {
                                             </IconButton>
                                         </Tooltip>
                                         {/* Edit */}
-                                        <Tooltip title={t('common.edit')}>
+                                        <Tooltip disableInteractive title={t('common.edit')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handleOpenEdit(clock)}
@@ -489,7 +482,7 @@ const ClocksTool = () => {
                                             </IconButton>
                                         </Tooltip>
                                         {/* Delete */}
-                                        <Tooltip title={t('common.delete')}>
+                                        <Tooltip disableInteractive title={t('common.delete')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => deleteClock(clock.id)}
@@ -700,12 +693,7 @@ const ClocksTool = () => {
                     >
                         {t('common.cancel')}
                     </Button>
-                    <Button
-                        onClick={handleAddClock}
-                        variant="outlined"
-                        disabled={!clockName.trim()}
-                        sx={buttonStyle}
-                    >
+                    <Button onClick={handleAddClock} variant="outlined" disabled={!clockName.trim()} sx={buttonStyle}>
                         {t('soloPlay.clocks.create')}
                     </Button>
                 </DialogActions>
@@ -743,27 +731,21 @@ const ClocksTool = () => {
                                 fullWidth
                                 label={t('soloPlay.clocks.clockName')}
                                 value={editingClock.name}
-                                onChange={(e) =>
-                                    setEditingClock({ ...editingClock, name: e.target.value })
-                                }
+                                onChange={(e) => setEditingClock({ ...editingClock, name: e.target.value })}
                                 sx={textFieldStyle}
                             />
                             <TextField
                                 fullWidth
                                 label={t('soloPlay.clocks.trigger')}
                                 value={editingClock.trigger}
-                                onChange={(e) =>
-                                    setEditingClock({ ...editingClock, trigger: e.target.value })
-                                }
+                                onChange={(e) => setEditingClock({ ...editingClock, trigger: e.target.value })}
                                 sx={textFieldStyle}
                             />
                             <TextField
                                 fullWidth
                                 label={t('soloPlay.clocks.event')}
                                 value={editingClock.event}
-                                onChange={(e) =>
-                                    setEditingClock({ ...editingClock, event: e.target.value })
-                                }
+                                onChange={(e) => setEditingClock({ ...editingClock, event: e.target.value })}
                                 sx={textFieldStyle}
                             />
                             <FormControlLabel

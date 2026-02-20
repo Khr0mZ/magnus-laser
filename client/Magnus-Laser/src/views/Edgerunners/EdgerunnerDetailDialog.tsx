@@ -809,7 +809,7 @@ const EdgerunnerDetailDialog = () => {
                                         <Stack spacing={0.5} mb={2}>
                                             {edited.weapons.map((w, i) => (
                                                 <Stack key={i} direction="row" alignItems="center" spacing={1}>
-                                                    <Tooltip title={t('edgerunners.combatAction')} arrow>
+                                                    <Tooltip disableInteractive title={t('edgerunners.combatAction')} arrow>
                                                         <Checkbox
                                                             size="small"
                                                             checked={w.isTokenAction ?? false}
@@ -864,7 +864,7 @@ const EdgerunnerDetailDialog = () => {
                                                         alignItems="center"
                                                         spacing={1}
                                                     >
-                                                        <Tooltip title={t('edgerunners.combatAction')} arrow>
+                                                        <Tooltip disableInteractive title={t('edgerunners.combatAction')} arrow>
                                                             <Checkbox
                                                                 size="small"
                                                                 checked={s.isTokenAction ?? false}

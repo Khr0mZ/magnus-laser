@@ -267,7 +267,7 @@ const InvestigationTool = () => {
                                 </Box>
                                 <Stack direction="row" spacing={0.5}>
                                     {!session.isComplete && session.checks.length < session.numberOfChecks && (
-                                        <Tooltip title={t('soloPlay.investigation.addCheck')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.investigation.addCheck')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => {
@@ -285,7 +285,7 @@ const InvestigationTool = () => {
                                             </IconButton>
                                         </Tooltip>
                                     )}
-                                    <Tooltip title={t('common.delete')}>
+                                    <Tooltip disableInteractive title={t('common.delete')}>
                                         <IconButton
                                             size="small"
                                             onClick={() => deleteInvestigationSession(session.id)}

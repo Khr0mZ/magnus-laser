@@ -1,20 +1,23 @@
 import { Box, Typography } from '@mui/material'
+import { Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
 import colors from '../../utils/colors'
 import type { GMToolType } from './GMToolsStore'
-import BeatChartTool from './tools/BeatChartTool'
-import ClocksTool from './tools/ClocksTool'
-import GeneratorTool from './tools/GeneratorTool'
-import InvestigationTool from './tools/InvestigationTool'
-import IPTrackingTool from './tools/IPTrackingTool'
-import MissionBuilderTool from './tools/MissionBuilderTool'
-import NPCFormsTool from './tools/NPCFormsTool'
-import NPCTrackerTool from './tools/NPCTrackerTool'
-import OracleTool from './tools/OracleTool'
-import RandomTablesTool from './tools/RandomTablesTool'
-import RandomThingsTool from './tools/RandomThingsTool'
-import SceneTrackerTool from './tools/SceneTrackerTool'
-import SocialChallengeTool from './tools/SocialChallengeTool'
+
+// Lazy-loaded tool components
+const BeatChartTool = lazy(() => import('./tools/BeatChartTool'))
+const ClocksTool = lazy(() => import('./tools/ClocksTool'))
+const GeneratorTool = lazy(() => import('./tools/GeneratorTool'))
+const InvestigationTool = lazy(() => import('./tools/InvestigationTool'))
+const IPTrackingTool = lazy(() => import('./tools/IPTrackingTool'))
+const MissionBuilderTool = lazy(() => import('./tools/MissionBuilderTool'))
+const NPCFormsTool = lazy(() => import('./tools/NPCFormsTool'))
+const NPCTrackerTool = lazy(() => import('./tools/NPCTrackerTool'))
+const OracleTool = lazy(() => import('./tools/OracleTool'))
+const RandomTablesTool = lazy(() => import('./tools/RandomTablesTool'))
+const RandomThingsTool = lazy(() => import('./tools/RandomThingsTool'))
+const SceneTrackerTool = lazy(() => import('./tools/SceneTrackerTool'))
+const SocialChallengeTool = lazy(() => import('./tools/SocialChallengeTool'))
 
 interface GMToolsContentProps {
     activeTool: GMToolType
@@ -85,7 +88,11 @@ const GMToolsContent = ({ activeTool }: GMToolsContentProps) => {
         }
     }
 
-    return <Box>{renderContent()}</Box>
+    return (
+        <Box>
+            <Suspense fallback={null}>{renderContent()}</Suspense>
+        </Box>
+    )
 }
 
 export default GMToolsContent

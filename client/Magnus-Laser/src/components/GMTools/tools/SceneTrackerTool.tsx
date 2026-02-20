@@ -257,7 +257,7 @@ const SceneTrackerTool = () => {
                                     </Box>
                                     <Stack direction="row" spacing={0.5}>
                                         {/* Add Check */}
-                                        <Tooltip title={t('soloPlay.sceneTracker.addCheck')}>
+                                        <Tooltip disableInteractive title={t('soloPlay.sceneTracker.addCheck')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => {
@@ -275,7 +275,7 @@ const SceneTrackerTool = () => {
                                             </IconButton>
                                         </Tooltip>
                                         {/* Edit */}
-                                        <Tooltip title={t('common.edit')}>
+                                        <Tooltip disableInteractive title={t('common.edit')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => setEditingScene({ ...scene })}
@@ -290,7 +290,7 @@ const SceneTrackerTool = () => {
                                             </IconButton>
                                         </Tooltip>
                                         {/* Delete */}
-                                        <Tooltip title={t('common.delete')}>
+                                        <Tooltip disableInteractive title={t('common.delete')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => deleteScene(scene.id)}
@@ -486,7 +486,7 @@ const SceneTrackerTool = () => {
                                 placeholder={t('soloPlay.sceneTracker.locationPlaceholder')}
                                 sx={textFieldStyle}
                             />
-                            <Tooltip title={t('soloPlay.sceneTracker.randomLocation')}>
+                            <Tooltip disableInteractive title={t('soloPlay.sceneTracker.randomLocation')}>
                                 <IconButton
                                     onClick={handleRandomLocation}
                                     sx={{
