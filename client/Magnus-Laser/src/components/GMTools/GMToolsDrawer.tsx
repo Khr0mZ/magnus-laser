@@ -29,6 +29,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material'
+import { Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUserPreferences } from '../../contexts/userPreferencesHooks'
 import colors from '../../utils/colors'
@@ -36,8 +37,11 @@ import CustomScrollbar from '../CustomScrollbar'
 import GMToolsContent from './GMToolsContent'
 import { type GMToolType, useGMToolsStore } from './GMToolsStore'
 
+const OracleHistory = lazy(() => import('./tools/OracleHistory'))
+
 const MENU_WIDTH = 200
 const CONTENT_WIDTH = 750
+const HISTORY_WIDTH = 350
 const APPBAR_HEIGHT = 80
 
 interface ToolItem {
@@ -160,6 +164,8 @@ const GMToolsDrawer = () => {
     const { readerMode } = useUserPreferences()
     const { isDrawerOpen, activeTool, setActiveTool, isMenuCollapsed, toggleMenuCollapsed } = useGMToolsStore()
     const menuWidth = isMenuCollapsed ? 0 : MENU_WIDTH
+    const showHistory = activeTool === 'oracle'
+    const historyWidth = showHistory ? HISTORY_WIDTH : 0
 
     const handleToolClick = (toolId: GMToolType) => {
         setActiveTool(toolId)
@@ -238,7 +244,7 @@ const GMToolsDrawer = () => {
             variant="persistent"
             sx={{
                 '& .MuiDrawer-paper': {
-                    width: menuWidth + CONTENT_WIDTH,
+                    width: menuWidth + CONTENT_WIDTH + historyWidth,
                     top: `${APPBAR_HEIGHT}px`,
                     height: `calc(100% - ${APPBAR_HEIGHT}px)`,
                     backgroundColor: readerMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(5, 10, 20, 0.98)',
@@ -415,7 +421,7 @@ const GMToolsDrawer = () => {
                 {activeTool && (
                     <Box
                         sx={{
-                            width: CONTENT_WIDTH,
+                            width: CONTENT_WIDTH - 24,
                             flexShrink: 0,
                             overflow: 'hidden',
                             height: '100%',
@@ -428,6 +434,31 @@ const GMToolsDrawer = () => {
                             <Box sx={{ p: 2 }}>
                                 <GMToolsContent activeTool={activeTool} />
                             </Box>
+                        </CustomScrollbar>
+                    </Box>
+                )}
+
+                {/* Oracle History Panel */}
+                {showHistory && (
+                    <Box
+                        sx={{
+                            width: HISTORY_WIDTH,
+                            minWidth: HISTORY_WIDTH,
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                            height: '100%',
+                            borderLeft: readerMode
+                                ? `1px solid ${colors.grays.gray300}`
+                                : `1px solid ${colors.neons.cyan.default}30`,
+                            background: readerMode
+                                ? 'transparent'
+                                : 'linear-gradient(180deg, rgba(0, 15, 25, 0.4) 0%, rgba(5, 10, 20, 0.3) 100%)',
+                        }}
+                    >
+                        <CustomScrollbar scrollDirection="vertical">
+                            <Suspense fallback={null}>
+                                <OracleHistory />
+                            </Suspense>
                         </CustomScrollbar>
                     </Box>
                 )}

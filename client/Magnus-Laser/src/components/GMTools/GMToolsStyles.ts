@@ -45,6 +45,7 @@ export const getCyberpunkTextFieldStyle = (
         },
     },
     '& .MuiInputLabel-root': {
+        fontSize: '0.7rem',
         color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
         borderRadius: '4px',
         bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',

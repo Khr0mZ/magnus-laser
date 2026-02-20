@@ -32,6 +32,7 @@ export interface RandomTableResult {
     type: string
     content: string
     timestamp: number
+    campaignId?: string
 }
 
 // History Note (text notes inserted between history cards)
@@ -39,6 +40,7 @@ export interface HistoryNote {
     id: string
     timestamp: number
     content: string
+    campaignId?: string
 }
 
 interface GMToolsDataState {
@@ -147,6 +149,14 @@ interface GMToolsDataState {
     // Edgerunner dialog (opened from CombatSim TokenPanel)
     openEdgerunnerId: string | null
     setOpenEdgerunnerId: (id: string | null) => void
+
+    // Campaigns
+    campaigns: string[]
+    selectedCampaign: string | null
+    addCampaign: (name: string) => void
+    removeCampaign: (name: string) => void
+    setSelectedCampaign: (campaign: string | null) => void
+    clearHistoryByCampaign: (campaignId: string) => void
 }
 
 export const useGMToolsDataStore = create<GMToolsDataState>()(
@@ -497,10 +507,33 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
             // Edgerunner dialog
             openEdgerunnerId: null,
             setOpenEdgerunnerId: (id) => set({ openEdgerunnerId: id }),
+
+            // Campaigns
+            campaigns: [],
+            selectedCampaign: null,
+            addCampaign: (name) =>
+                set((state) => ({
+                    campaigns: state.campaigns.includes(name)
+                        ? state.campaigns
+                        : [...state.campaigns, name].sort(),
+                })),
+            removeCampaign: (name) =>
+                set((state) => ({
+                    campaigns: state.campaigns.filter((c) => c !== name),
+                    selectedCampaign: state.selectedCampaign === name ? null : state.selectedCampaign,
+                })),
+            setSelectedCampaign: (campaign) => set({ selectedCampaign: campaign }),
+            clearHistoryByCampaign: (campaignId) =>
+                set((state) => ({
+                    oracleHistory: state.oracleHistory.filter((r) => r.campaignId !== campaignId),
+                    openQuestionHistory: state.openQuestionHistory.filter((r) => r.campaignId !== campaignId),
+                    randomTableResults: state.randomTableResults.filter((r) => r.campaignId !== campaignId),
+                    historyNotes: state.historyNotes.filter((n) => n.campaignId !== campaignId),
+                })),
         }),
         {
             name: 'gm-tools-data',
-            version: 4,
+            version: 5,
             migrate: (persistedState: unknown, version: number) => {
                 const state = persistedState as Record<string, unknown>
                 if (version === 0) {
@@ -571,6 +604,10 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                 }
                 if (version < 4) {
                     state.historyNotes = state.historyNotes ?? []
+                }
+                if (version < 5) {
+                    state.campaigns = state.campaigns ?? []
+                    state.selectedCampaign = state.selectedCampaign ?? null
                 }
                 return state as unknown as GMToolsDataState
             },

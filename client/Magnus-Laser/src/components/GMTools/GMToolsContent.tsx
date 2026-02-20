@@ -14,7 +14,6 @@ const MissionBuilderTool = lazy(() => import('./tools/MissionBuilderTool'))
 const NPCFormsTool = lazy(() => import('./tools/NPCFormsTool'))
 const NPCTrackerTool = lazy(() => import('./tools/NPCTrackerTool'))
 const OracleTool = lazy(() => import('./tools/OracleTool'))
-const RandomTablesTool = lazy(() => import('./tools/RandomTablesTool'))
 const RandomThingsTool = lazy(() => import('./tools/RandomThingsTool'))
 const SceneTrackerTool = lazy(() => import('./tools/SceneTrackerTool'))
 const SocialChallengeTool = lazy(() => import('./tools/SocialChallengeTool'))
@@ -36,8 +35,6 @@ const GMToolsContent = ({ activeTool }: GMToolsContentProps) => {
                 return <MissionBuilderTool />
             case 'beatChart':
                 return <BeatChartTool />
-            case 'randomTables':
-                return <RandomTablesTool />
             case 'investigation':
                 return <InvestigationTool />
             case 'socialChallenge':

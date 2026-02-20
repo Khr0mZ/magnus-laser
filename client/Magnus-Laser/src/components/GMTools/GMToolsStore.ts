@@ -5,7 +5,6 @@ export type GMToolType =
     | 'clocks'
     | 'missionBuilder'
     | 'beatChart'
-    | 'randomTables'
     | 'investigation'
     | 'socialChallenge'
     | 'npcTracker'

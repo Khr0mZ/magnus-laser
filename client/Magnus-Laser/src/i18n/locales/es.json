@@ -1106,9 +1106,9 @@
             "tables": "Tablas Aleatorias"
         },
         "oracle": {
-            "closedQuestion": "Oraculo de Pregunta Cerrada",
+            "closedQuestion": "Pregunta Cerrada",
             "closedQuestionHelp": "Haz preguntas de Si/No. Tira d100 con rangos basados en probabilidad.",
-            "openQuestion": "Oraculo de Pregunta Abierta",
+            "openQuestion": "Pregunta Abierta",
             "openQuestionHelp": "Obtén indicaciones narrativas combinando Accion + Detalle de tablas aleatorias.",
             "askQuestion": "Preguntar al Oraculo",
             "askOpenQuestion": "Que quieres saber?",
@@ -1127,12 +1127,14 @@
                 "UNLIKELY": "Improbable",
                 "IMPOSSIBLE": "Imposible"
             },
-            "roll": "Preguntar al Oraculo",
+            "roll": "Lanzar",
             "generate": "Generar",
             "history": "Historial",
             "randomTables": "Tablas Aleatorias",
             "noHistory": "Sin resultados aun. Haz una pregunta o genera desde una tabla!",
+            "campaign": "Todas las campañas",
             "clearAllWarning": "Esto eliminara permanentemente los {{count}} resultados del historial. Esta accion no se puede deshacer.",
+            "clearCampaignWarning": "Esto eliminara permanentemente los {{count}} resultados de la campaña \"{{campaign}}\". Esta accion no se puede deshacer.",
             "notes": {
                 "note": "Nota",
                 "addNote": "Agregar nota",

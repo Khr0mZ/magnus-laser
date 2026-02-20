@@ -1106,9 +1106,9 @@
             "tables": "Random Tables"
         },
         "oracle": {
-            "closedQuestion": "Closed Question Oracle",
+            "closedQuestion": "Closed Question",
             "closedQuestionHelp": "Ask Yes/No questions. Roll d100 with probability-based ranges.",
-            "openQuestion": "Open Question Oracle",
+            "openQuestion": "Open Question",
             "openQuestionHelp": "Get narrative prompts by combining Action + Detail from random tables.",
             "askQuestion": "Ask the Oracle",
             "askOpenQuestion": "What do you want to know?",
@@ -1127,12 +1127,14 @@
                 "UNLIKELY": "Unlikely",
                 "IMPOSSIBLE": "Impossible"
             },
-            "roll": "Ask Oracle",
+            "roll": "Roll",
             "generate": "Generate",
             "history": "History",
             "randomTables": "Random Tables",
             "noHistory": "No results yet. Ask a question or generate from a table!",
+            "campaign": "All campaigns",
             "clearAllWarning": "This will permanently delete all {{count}} results from the history. This action cannot be undone.",
+            "clearCampaignWarning": "This will permanently delete all {{count}} results from campaign \"{{campaign}}\". This action cannot be undone.",
             "notes": {
                 "note": "Note",
                 "addNote": "Add note",

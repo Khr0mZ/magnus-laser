@@ -30,6 +30,7 @@ export interface OracleResult {
     roll: number // d100 result
     answer: OracleAnswer
     notes?: string
+    campaignId?: string
 }
 
 export interface OpenQuestionResult {
@@ -40,6 +41,7 @@ export interface OpenQuestionResult {
     noun: string
     adjective: string
     notes?: string
+    campaignId?: string
 }
 
 // === SOLO PLAY CLOCK TYPES ===
