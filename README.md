@@ -3,7 +3,7 @@
 A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magnus Laser provides a comprehensive toolkit for Game Masters and players: world-building databases, AI-powered content generation, a full tactical combat simulator with dual 2D/3D renderers, real-time multiplayer sessions, a 7-step character creator, 17 GM tools, and much more.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Version](https://img.shields.io/badge/version-1.0.1-green)
 
 ## Features
 
@@ -412,32 +412,32 @@ Click the hamburger menu icon (top-right of the navigation bar) to open the GM T
 
 #### Solo Play Tools
 
-| Tool | What it does |
-| --- | --- |
+| Tool                       | What it does                                                                                                                                                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Oracle & Random Tables** | Ask yes/no questions to a virtual oracle (with adjustable probability), generate random word combos for story inspiration, and roll on 65+ random tables across 15 categories. All results are saved to a campaign-tagged history panel |
-| **Clocks** | Track countdown-style challenges using a pool of dice (3–10 d6). Roll to remove dice — when the pool is empty, the clock is done. Great for looming threats and time pressure |
-| **Mission Builder** | Generate a random solo mission with an employer, payment, summary, focus, specifics, and a plot twist. Reroll any individual section you don't like |
-| **Beat Chart** | Outline your story structure with beats (Hook, Development, Climax, Resolution). Track progress through each act with a visual progress bar |
-| **Investigation** | Run a research challenge. Pick a complexity level (Simple, Average, Difficult), then make skill rolls — the majority of successes or failures determines the outcome |
-| **Social Challenge** | Resolve a conversation or negotiation with an NPC. The NPC's importance (Background, Supporting, Key) determines how many checks you need |
-| **NPC Tracker** | Keep tabs on important NPCs: their status (alive, dead, missing), role, mood, relationship to the party, and notes. Random generators for quick NPC creation |
-| **IP Tracker** | Log Improvement Points earned and spent by each edgerunner, with dates and descriptions. Automatically calculates available IP |
-| **Scene Tracker** | Track scenes during a session: location, participants, goal, outcome, and notes. Attach checks to scenes and mark them complete. Includes a random location generator |
-| **NPC Forms** | Create NPC stat blocks in two modes: Simple (name, handle, role, look, quirk) or Complex (full stats, combat values, equipment, cyberware) |
-| **Random Things** | Build your own custom random tables with 3–20 entries and weighted probabilities. Roll on them anytime you need a quick random result |
+| **Clocks**                 | Track countdown-style challenges using a pool of dice (3–10 d6). Roll to remove dice — when the pool is empty, the clock is done. Great for looming threats and time pressure                                                           |
+| **Mission Builder**        | Generate a random solo mission with an employer, payment, summary, focus, specifics, and a plot twist. Reroll any individual section you don't like                                                                                     |
+| **Beat Chart**             | Outline your story structure with beats (Hook, Development, Climax, Resolution). Track progress through each act with a visual progress bar                                                                                             |
+| **Investigation**          | Run a research challenge. Pick a complexity level (Simple, Average, Difficult), then make skill rolls — the majority of successes or failures determines the outcome                                                                    |
+| **Social Challenge**       | Resolve a conversation or negotiation with an NPC. The NPC's importance (Background, Supporting, Key) determines how many checks you need                                                                                               |
+| **NPC Tracker**            | Keep tabs on important NPCs: their status (alive, dead, missing), role, mood, relationship to the party, and notes. Random generators for quick NPC creation                                                                            |
+| **IP Tracker**             | Log Improvement Points earned and spent by each edgerunner, with dates and descriptions. Automatically calculates available IP                                                                                                          |
+| **Scene Tracker**          | Track scenes during a session: location, participants, goal, outcome, and notes. Attach checks to scenes and mark them complete. Includes a random location generator                                                                   |
+| **NPC Forms**              | Create NPC stat blocks in two modes: Simple (name, handle, role, look, quirk) or Complex (full stats, combat values, equipment, cyberware)                                                                                              |
+| **Random Things**          | Build your own custom random tables with 3–20 entries and weighted probabilities. Roll on them anytime you need a quick random result                                                                                                   |
 
 #### Content Generators
 
 AI-powered generators that create content and save it directly to your database. Requires at least one API key configured in [Settings](#settings). Without API keys, a local fallback generates basic content.
 
-| Generator | What it does |
-| --- | --- |
-| **Gang Generator** | Creates a complete gang profile: name, description, cyberware, weapons, reputation, and an AI-generated image |
-| **Building Generator** | Creates a location with type, ownership, security, style, secrets, and more |
-| **Gig Generator** | Creates a full fixer job plus all related entities (gangs, buildings, characters, items) in one go — the most powerful generator |
-| **Bounty Generator** | Creates a bounty target with a crime, specialty, reward, and an auto-generated character profile |
-| **Item Generator** | Creates an equipment item with type, condition, and stats |
-| **Contact Generator** | Creates a standalone NPC with name, description, appearance, and an AI-generated portrait |
+| Generator              | What it does                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Gang Generator**     | Creates a complete gang profile: name, description, cyberware, weapons, reputation, and an AI-generated image                    |
+| **Building Generator** | Creates a location with type, ownership, security, style, secrets, and more                                                      |
+| **Gig Generator**      | Creates a full fixer job plus all related entities (gangs, buildings, characters, items) in one go — the most powerful generator |
+| **Bounty Generator**   | Creates a bounty target with a crime, specialty, reward, and an auto-generated character profile                                 |
+| **Item Generator**     | Creates an equipment item with type, condition, and stats                                                                        |
+| **Contact Generator**  | Creates a standalone NPC with name, description, appearance, and an AI-generated portrait                                        |
 
 ---
 
