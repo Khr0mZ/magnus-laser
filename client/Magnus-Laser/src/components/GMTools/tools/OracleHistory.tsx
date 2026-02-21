@@ -115,7 +115,7 @@ const OracleHistory = () => {
 
     const unifiedHistory = useMemo(() => {
         const filterByCampaign = <T extends { campaignId?: string }>(items: T[]): T[] => {
-            if (selectedCampaign === null) return items
+            if (selectedCampaign === null) return []
             return items.filter((item) => item.campaignId === selectedCampaign)
         }
 

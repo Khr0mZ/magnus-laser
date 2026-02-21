@@ -1135,6 +1135,8 @@
             "campaign": "Todas las campañas",
             "clearAllWarning": "Esto eliminara permanentemente los {{count}} resultados del historial. Esta accion no se puede deshacer.",
             "clearCampaignWarning": "Esto eliminara permanentemente los {{count}} resultados de la campaña \"{{campaign}}\". Esta accion no se puede deshacer.",
+            "deleteCampaign": "Eliminar Campaña",
+            "deleteCampaignWarning": "Esto eliminara permanentemente la campaña \"{{campaign}}\" y todo su historial. Esta accion no se puede deshacer.",
             "notes": {
                 "note": "Nota",
                 "addNote": "Agregar nota",

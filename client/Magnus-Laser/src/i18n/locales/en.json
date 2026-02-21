@@ -1135,6 +1135,8 @@
             "campaign": "All campaigns",
             "clearAllWarning": "This will permanently delete all {{count}} results from the history. This action cannot be undone.",
             "clearCampaignWarning": "This will permanently delete all {{count}} results from campaign \"{{campaign}}\". This action cannot be undone.",
+            "deleteCampaign": "Delete Campaign",
+            "deleteCampaignWarning": "This will permanently delete campaign \"{{campaign}}\" and all its history. This action cannot be undone.",
             "notes": {
                 "note": "Note",
                 "addNote": "Add note",

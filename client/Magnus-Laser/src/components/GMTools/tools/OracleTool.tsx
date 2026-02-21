@@ -1,7 +1,9 @@
 import Casino from '@mui/icons-material/Casino'
-import { Autocomplete, Box, Button, MenuItem, Select, Stack, TextField, Typography } from '@mui/material'
+import DeleteOutline from '@mui/icons-material/DeleteOutline'
+import { Autocomplete, Box, Button, IconButton, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { WarningDialog } from '../../common/WarningDialog'
 import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import type { OracleProbability } from '../../../types/soloPlay'
@@ -20,24 +22,44 @@ const OracleTool = () => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
 
-    const { addOracleResult, addOpenQuestionResult, selectedCampaign, campaigns, addCampaign, setSelectedCampaign } =
-        useGMToolsDataStore()
+    const {
+        addOracleResult,
+        addOpenQuestionResult,
+        selectedCampaign,
+        campaigns,
+        addCampaign,
+        setSelectedCampaign,
+        removeCampaign,
+        clearHistoryByCampaign,
+    } = useGMToolsDataStore()
+
+    const DEFAULT_CAMPAIGN = 'Default'
+
+    const ensureCampaign = (): string => {
+        if (selectedCampaign) return selectedCampaign
+        addCampaign(DEFAULT_CAMPAIGN)
+        setSelectedCampaign(DEFAULT_CAMPAIGN)
+        return DEFAULT_CAMPAIGN
+    }
 
     const [closedQuestion, setClosedQuestion] = useState('')
     const [probability, setProbability] = useState<OracleProbability>('FIFTY_FIFTY')
     const [openQuestion, setOpenQuestion] = useState('')
+    const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null)
 
     const handleAskOracle = () => {
         if (!closedQuestion.trim()) return
+        const campaign = ensureCampaign()
         const result = rollOracle(closedQuestion, probability)
-        addOracleResult({ ...result, campaignId: selectedCampaign ?? undefined })
+        addOracleResult({ ...result, campaignId: campaign })
         setClosedQuestion('')
     }
 
     const handleAskOpenQuestion = () => {
         if (!openQuestion.trim()) return
+        const campaign = ensureCampaign()
         const result = rollOpenQuestion(openQuestion)
-        addOpenQuestionResult({ ...result, campaignId: selectedCampaign ?? undefined })
+        addOpenQuestionResult({ ...result, campaignId: campaign })
         setOpenQuestion('')
     }
 
@@ -84,6 +106,45 @@ const OracleTool = () => {
                         } else {
                             setSelectedCampaign(newValue as string | null)
                         }
+                    }}
+                    renderOption={(props, option) => {
+                        const { key, ...rest } = props
+                        return (
+                            <li
+                                key={key}
+                                {...rest}
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    paddingRight: 4,
+                                }}
+                            >
+                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {option}
+                                </span>
+                                <Tooltip title={t('soloPlay.oracle.deleteCampaign')} arrow>
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setCampaignToDelete(option)
+                                        }}
+                                        sx={{
+                                            ml: 0.5,
+                                            p: 0.25,
+                                            color: readerMode ? colors.grays.gray400 : colors.neons.red.default,
+                                            '&:hover': {
+                                                color: readerMode ? '#d32f2f' : colors.neons.red.light,
+                                                backgroundColor: `${colors.neons.red.default}20`,
+                                            },
+                                        }}
+                                    >
+                                        <DeleteOutline sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
+                            </li>
+                        )
                     }}
                     renderInput={(params) => (
                         <TextField
@@ -226,6 +287,22 @@ const OracleTool = () => {
 
             {/* Random Tables */}
             <RandomTablesTool />
+
+            <WarningDialog
+                open={campaignToDelete !== null}
+                onClose={() => setCampaignToDelete(null)}
+                onConfirm={() => {
+                    if (campaignToDelete) {
+                        clearHistoryByCampaign(campaignToDelete)
+                        removeCampaign(campaignToDelete)
+                    }
+                    setCampaignToDelete(null)
+                }}
+                title={t('soloPlay.oracle.deleteCampaign')}
+                message={t('soloPlay.oracle.deleteCampaignWarning', { campaign: campaignToDelete })}
+                confirmText={t('common.delete')}
+                confirmColor="red"
+            />
         </Box>
     )
 }

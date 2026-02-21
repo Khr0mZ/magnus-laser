@@ -32,24 +32,35 @@ const RandomTablesTool = () => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
 
-    const { addRandomTableResult, selectedCampaign } = useGMToolsDataStore()
+    const { addRandomTableResult, selectedCampaign, addCampaign, setSelectedCampaign } = useGMToolsDataStore()
+
+    const DEFAULT_CAMPAIGN = 'Default'
+
+    const ensureCampaign = (): string => {
+        if (selectedCampaign) return selectedCampaign
+        addCampaign(DEFAULT_CAMPAIGN)
+        setSelectedCampaign(DEFAULT_CAMPAIGN)
+        return DEFAULT_CAMPAIGN
+    }
 
     // Encounter selector state
     const [encounterZone, setEncounterZone] = useState<EncounterZone>('moderate')
     const [encounterTime, setEncounterTime] = useState<EncounterTime>('day')
 
     const handleGenerate = (type: string, generator: () => unknown) => {
+        const campaign = ensureCampaign()
         const newResult: RandomTableResult = {
             id: uuidv4(),
             type,
             content: formatResult(generator()),
             timestamp: Date.now(),
-            campaignId: selectedCampaign ?? undefined,
+            campaignId: campaign,
         }
         addRandomTableResult(newResult)
     }
 
     const handleGenerateEncounter = () => {
+        const campaign = ensureCampaign()
         const encounter = generateRandomEncounter(encounterZone, encounterTime)
         const zoneLabel = t(`soloPlay.tables.zones.${encounterZone}`)
         const timeLabel = t(`soloPlay.tables.times.${encounterTime}`)
@@ -58,7 +69,7 @@ const RandomTablesTool = () => {
             type: 'encounter',
             content: `Zone: ${zoneLabel}\nTime: ${timeLabel}\nEncounter: ${encounter}`,
             timestamp: Date.now(),
-            campaignId: selectedCampaign ?? undefined,
+            campaignId: campaign,
         }
         addRandomTableResult(newResult)
     }
@@ -101,7 +112,7 @@ const RandomTablesTool = () => {
     return (
         <Box>
             <Typography variant="subtitle2" sx={sectionSubtitleSx(colors.neons.green.default)} mb={1}>
-                {t('soloPlay.oracle.openQuestion')}
+                {t('soloPlay.tabs.tables')}
             </Typography>
 
             {/* Generator Categories */}
