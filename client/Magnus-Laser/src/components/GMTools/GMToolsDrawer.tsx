@@ -245,6 +245,7 @@ const GMToolsDrawer = () => {
             sx={{
                 '& .MuiDrawer-paper': {
                     width: menuWidth + CONTENT_WIDTH + historyWidth,
+                    maxWidth: '100vw',
                     top: `${APPBAR_HEIGHT}px`,
                     height: `calc(100% - ${APPBAR_HEIGHT}px)`,
                     backgroundColor: readerMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(5, 10, 20, 0.98)',
@@ -421,8 +422,9 @@ const GMToolsDrawer = () => {
                 {activeTool && (
                     <Box
                         sx={{
-                            width: CONTENT_WIDTH - 24,
-                            flexShrink: 0,
+                            flex: 1,
+                            minWidth: 0,
+                            maxWidth: CONTENT_WIDTH - 24,
                             overflow: 'hidden',
                             height: '100%',
                             background: readerMode

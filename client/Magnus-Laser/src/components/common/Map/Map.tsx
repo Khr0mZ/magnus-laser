@@ -6,8 +6,8 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
-import { memo, useCallback, useEffect, useState } from 'react'
-import { GeoJSON, ImageOverlay, MapContainer } from 'react-leaflet'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { GeoJSON, ImageOverlay, MapContainer, TileLayer } from 'react-leaflet'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import { Building, Character, Gang } from '../../../graphql/types'
 import colors from '../../../utils/colors'
@@ -19,6 +19,7 @@ import {
     loadMapMarkers,
     saveMapMarkers,
 } from '../../../utils/storage'
+import { MapMode } from '../../../views/Map/MapView'
 import { glitch } from '../Animations'
 import { WarningDialog } from '../WarningDialog'
 import CustomMarkerComponent from './CustomMarker'
@@ -42,19 +43,48 @@ export type MapProps = {
     style?: React.CSSProperties
     setIsSaving?: (saving: boolean) => void
     t: TFunction
+    mapMode?: MapMode
 }
 
-const MAP_MAX_BOUNDS: [[number, number], [number, number]] = [
-    [-3000, -3000],
-    [13200, 9600],
-]
+const MAP_CONFIGS = {
+    red: {
+        bounds: [
+            [0, 0],
+            [10200, 6600],
+        ] as [[number, number], [number, number]],
+        maxBounds: [
+            [-3000, -3000],
+            [13200, 9600],
+        ] as [[number, number], [number, number]],
+        crs: L.CRS.Simple,
+        minZoom: -4,
+        maxZoom: 1,
+        zoomSnap: 0,
+        zoomDelta: 0.25,
+    },
+    '2077': {
+        bounds: [
+            [-0.1, -0.1],
+            [0.1, 0.1],
+        ] as [[number, number], [number, number]],
+        maxBounds: [
+            [-0.15, -0.15],
+            [0.15, 0.15],
+        ] as [[number, number], [number, number]],
+        crs: L.CRS.EPSG3857,
+        minZoom: 11,
+        maxZoom: 17,
+        zoomSnap: 1,
+        zoomDelta: 1,
+    },
+}
 
-const MAP_BOUNDS: [[number, number], [number, number]] = [
-    [0, 0],
-    [10200, 6600],
-]
+const NCN_TILE_URL = 'https://tile.nightcitynavigator.com/nightcity/{z}/{x}/{y}.png'
+const NCN_ATTRIBUTION =
+    'Game data &copy; CDProjektRed, Map &copy; <a href="https://nightcitynavigator.com">Night City Mapping Project</a> and contributors'
 
-const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t }: MapProps) => {
+const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t, mapMode = 'red' }: MapProps) => {
+    const config = useMemo(() => MAP_CONFIGS[mapMode], [mapMode])
     const [externalGeoJSON, setExternalGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null)
     const [customMarkers, setCustomMarkers] = useState<CustomMarker[]>([])
     const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
@@ -107,8 +137,10 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
         (map: L.Map | null) => {
             setMapInstance(map)
             if (map) {
-                // Remove attribution control
-                map.attributionControl.remove()
+                // Remove attribution control only in RED mode (2077 needs NCN attribution)
+                if (mapMode === 'red') {
+                    map.attributionControl.remove()
+                }
 
                 // Style the zoom control
                 const zoomControl = map.zoomControl
@@ -208,19 +240,19 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
                 homeButton.appendChild(homeGlitchEffect)
 
                 L.DomEvent.on(homeButton, 'click', L.DomEvent.stop)
-                    .on(homeButton, 'click', () => map.fitBounds(MAP_BOUNDS))
+                    .on(homeButton, 'click', () => map.fitBounds(config.bounds))
                     .on(homeButton, 'dblclick', L.DomEvent.stop)
 
                 // Add mousemove handler for cursor
                 map.on('mousemove', (e: L.LeafletMouseEvent) => {
                     const { lat, lng } = e.latlng
-                    const [sw, ne] = MAP_BOUNDS
+                    const [sw, ne] = config.maxBounds
                     const isOutOfBounds = lat < sw[0] || lat > ne[0] || lng < sw[1] || lng > ne[1]
                     map.getContainer().style.cursor = isOutOfBounds ? 'not-allowed' : 'grab'
                 })
             }
         },
-        [readerMode]
+        [readerMode, config, mapMode]
     )
 
     const handleMarkerDelete = useCallback(
@@ -238,8 +270,8 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
 
     const handleMarkerDragEnd = useCallback(
         (id: string, newPosition: [number, number]) => {
-            // Check if the new position is within bounds
-            const [sw, ne] = MAP_BOUNDS
+            // Check if the new position is within max bounds
+            const [sw, ne] = config.maxBounds
             if (newPosition[0] < sw[0] || newPosition[0] > ne[0] || newPosition[1] < sw[1] || newPosition[1] > ne[1]) {
                 return
             }
@@ -253,21 +285,24 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
                 return newMarkers
             })
         },
-        [setIsSaving]
+        [setIsSaving, config]
     )
 
-    const handleContextMenu = useCallback((e: L.LeafletMouseEvent) => {
-        const { lat, lng } = e.latlng
+    const handleContextMenu = useCallback(
+        (e: L.LeafletMouseEvent) => {
+            const { lat, lng } = e.latlng
 
-        // Check if the click is within MAP_BOUNDS
-        const [sw, ne] = MAP_BOUNDS
-        if (lat < sw[0] || lat > ne[0] || lng < sw[1] || lng > ne[1]) {
-            return
-        }
+            // Check if the click is within max bounds
+            const [sw, ne] = config.maxBounds
+            if (lat < sw[0] || lat > ne[0] || lng < sw[1] || lng > ne[1]) {
+                return
+            }
 
-        setSelectedPosition([lat, lng])
-        setShowBuildingSelect(true)
-    }, [])
+            setSelectedPosition([lat, lng])
+            setShowBuildingSelect(true)
+        },
+        [config]
+    )
 
     const handleBuildingSelect = useCallback(
         (entity: Building | Gang | Character, markerType: 'building' | 'gang' | 'contact') => {
@@ -278,6 +313,7 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
                 buildingId: entity.ID,
                 id: Date.now().toString(),
                 markerType: markerType,
+                mapMode: mapMode,
             }
             setCustomMarkers((prev) => {
                 const newMarkers = [...prev, newMarker]
@@ -387,8 +423,8 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
                                 readerMode ? colors.neons.yellow.default : colors.grays.gray000
                             }, 2px -2px 0 ${readerMode ? colors.neons.yellow.default : colors.grays.gray000},
                             -2px 2px 0 ${readerMode ? colors.neons.yellow.default : colors.grays.gray000}, 2px 2px 0 ${
-            readerMode ? colors.neons.yellow.default : colors.grays.gray000
-        };
+                                readerMode ? colors.neons.yellow.default : colors.grays.gray000
+                            };
             }
             .district-tooltip:before {
                 display: none;
@@ -413,13 +449,11 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
         }
     }, [currentZoom, readerMode])
 
-    // Handle map size and bounds
+    // Handle map size and bounds — only runs when mapInstance changes (on remount via key)
     useEffect(() => {
         if (mapInstance) {
-            // Force map to update its size
             mapInstance.invalidateSize()
-            // Set max bounds to prevent panning outside the image
-            mapInstance.setMaxBounds(MAP_MAX_BOUNDS)
+            mapInstance.setMaxBounds(config.maxBounds)
         }
     }, [mapInstance])
 
@@ -446,6 +480,7 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
     return (
         <div style={{ height: '100%', width: '100%', position: 'relative' }}>
             <MapContainer
+                key={mapMode}
                 ref={handleMapRef}
                 center={center}
                 zoom={zoom}
@@ -457,47 +492,56 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
                     ...style,
                 }}
                 scrollWheelZoom={true}
-                maxBounds={MAP_MAX_BOUNDS}
-                minZoom={-4}
-                maxZoom={1}
-                zoomSnap={0}
-                zoomDelta={0.25}
-                crs={L.CRS.Simple}
+                maxBounds={config.maxBounds}
+                minZoom={config.minZoom}
+                maxZoom={config.maxZoom}
+                zoomSnap={config.zoomSnap}
+                zoomDelta={config.zoomDelta}
+                crs={config.crs}
                 doubleClickZoom={false}
                 boxZoom={false}
             >
-                <ImageOverlay
-                    url={currentZoom >= -1 ? '/map/StreetNames.jpg' : '/map/DistrictNames.jpg'}
-                    bounds={MAP_BOUNDS}
-                    opacity={1}
-                    className={readerMode ? 'inverted-map' : ''}
-                />
-                {externalGeoJSON && (
-                    <GeoJSON
-                        data={externalGeoJSON}
-                        style={{
-                            weight: 0,
-                            color: readerMode ? colors.neons.cyan.dark : colors.neons.pink.default,
-                            fillColor: 'transparent',
-                            fillOpacity: 1,
-                        }}
-                        interactive={true}
-                        onEachFeature={onEachFeature}
-                        bubblingMouseEvents={true}
-                    />
+                {mapMode === 'red' ? (
+                    <>
+                        <ImageOverlay
+                            url={currentZoom >= -1 ? '/map/StreetNames.jpg' : '/map/DistrictNames.jpg'}
+                            bounds={config.bounds}
+                            opacity={1}
+                            className={readerMode ? 'inverted-map' : ''}
+                        />
+                        {externalGeoJSON && (
+                            <GeoJSON
+                                data={externalGeoJSON}
+                                style={{
+                                    weight: 0,
+                                    color: readerMode ? colors.neons.cyan.dark : colors.neons.pink.default,
+                                    fillColor: 'transparent',
+                                    fillOpacity: 1,
+                                }}
+                                interactive={true}
+                                onEachFeature={onEachFeature}
+                                bubblingMouseEvents={true}
+                            />
+                        )}
+                    </>
+                ) : (
+                    <TileLayer url={NCN_TILE_URL} attribution={NCN_ATTRIBUTION} />
                 )}
-                {customMarkers.map((marker) => (
-                    <CustomMarkerComponent
-                        key={marker.id}
-                        marker={marker}
-                        onDelete={(markerId) => setDeleteDialogOpen(markerId)}
-                        onDragEnd={handleMarkerDragEnd}
-                        buildings={buildings}
-                        gangs={gangs}
-                        contacts={contacts}
-                        t={t}
-                    />
-                ))}
+                {customMarkers
+                    .filter((m) => !m.mapMode || m.mapMode === mapMode)
+                    .map((marker) => (
+                        <CustomMarkerComponent
+                            key={marker.id}
+                            marker={marker}
+                            onDelete={(markerId) => setDeleteDialogOpen(markerId)}
+                            onDragEnd={handleMarkerDragEnd}
+                            buildings={buildings}
+                            gangs={gangs}
+                            contacts={contacts}
+                            t={t}
+                            mapBounds={config.maxBounds}
+                        />
+                    ))}
                 {showBuildingSelect && selectedPosition && (
                     <MarkerSelectDialog
                         open={showBuildingSelect}
@@ -509,7 +553,7 @@ const Map = memo(({ center, zoom = 13, markers = [], style = {}, setIsSaving, t 
                         buildings={buildings}
                         gangs={gangs}
                         contacts={contacts}
-                        existingMarkers={customMarkers}
+                        existingMarkers={customMarkers.filter((m) => !m.mapMode || m.mapMode === mapMode)}
                     />
                 )}
                 {deleteDialogOpen && (

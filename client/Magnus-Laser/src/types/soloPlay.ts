@@ -124,6 +124,8 @@ export interface QDEdgerunner {
     weaponName: string
     weaponDamage: string // e.g., "3d6" for damage roll
     attackSkillTotal: number // STAT + Skill + Mod for attack rolls
+    armorSP: number // Armor SP (e.g., 11 for Light Armorjack)
+    currentHP: number // Current Hit Points
     notes?: string
 }
 
@@ -159,8 +161,29 @@ export interface QDComparison {
     enemyAttack: QDAttackCheck | null
     winner: 'EDGERUNNER' | 'ENEMY' | 'TIE' | 'UNOPPOSED_EDGERUNNER' | 'UNOPPOSED_ENEMY'
     dodged: boolean // If edgerunner used bullet dodge
-    damageDealt?: number
-    criticalInjury?: boolean
+}
+
+// Critical Injury result from rolling on the Body table (2d6)
+export interface CriticalInjuryResult {
+    roll: number // 2d6 result (2-12)
+    nameKey: string // Translation key (e.g., 'brokenLeg')
+}
+
+// Damage result for a hit against an Edgerunner (Step 6)
+export interface QDDamageResult {
+    targetId: string
+    targetName: string
+    attackerName: string
+    weaponName: string
+    weaponDamage: string // e.g., "3d6"
+    diceResults: number[] // Individual dice results e.g., [3, 5, 6]
+    totalDamage: number // Sum of dice + modifier
+    armorSP: number // SP before this hit
+    damageAfterArmor: number // max(0, totalDamage - armorSP)
+    armorReduced: boolean // SP drops 1 if damage penetrated
+    hasCritical: boolean // True if two or more 6s on damage dice (CPR core rule)
+    criticalInjury?: CriticalInjuryResult // Specific injury from Body table
+    bonusDamage: number // +5 if critical injury — applies regardless of armor (CPR p.187)
 }
 
 // Full combat session
@@ -184,8 +207,8 @@ export interface QDCombatSession {
     // Results
     edgerunnerHits: number
     enemyHits: number
-    // Morale
-    morale: MoraleConfig
+    // Damage (Step 6)
+    damageResults: QDDamageResult[]
     // Session state
     phase: QDCombatPhase
     isComplete: boolean
@@ -202,6 +225,7 @@ export type QDCombatPhase =
     | 'ATTACKING' // Making attack checks
     | 'COMPARING' // Comparing results
     | 'OUTCOME' // Determining outcome
+    | 'DAMAGE' // Rolling damage for hits against crew (Step 6)
     | 'COMPLETE' // Combat finished
 
 // === QUICK AND DIRTY NETRUN TYPES ===
@@ -217,7 +241,6 @@ export type NetArchitectureSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type NetrunCheckType =
     | 'PASSWORD' // DV check to Backdoor
     | 'FILE' // DV check to Eye-Dee
-    | 'CONTROL_NODE' // DV check to take control
     | 'BLACK_ICE' // Opposed check (Slide vs Perception or Attack vs Attack)
 
 export interface QDNetrunCheck {
@@ -254,8 +277,9 @@ export interface QDNetrunSession {
     // Black ICE consequences
     blackIceHits: number // Number of times hit by Black ICE
     unsafeJackout: boolean // True if failed and jacked out unsafely
-    // Programs that might be destroyed
-    programsLost: string[]
+    // Netrunner's programs
+    programs: string[] // List of netrunner's active programs
+    programsLost: string[] // Programs destroyed by Black ICE hits
     // State
     createdAt: number
     completedAt?: number

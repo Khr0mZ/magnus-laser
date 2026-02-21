@@ -585,7 +585,10 @@ export const loadMapMarkers = async (): Promise<CustomMarker[]> => {
 
 export const saveMapMarkers = async (markers: CustomMarker[]): Promise<void> => {
     try {
-        await db.mapMarkers.bulkPut(markers)
+        await db.transaction('rw', db.mapMarkers, async () => {
+            await db.mapMarkers.clear()
+            await db.mapMarkers.bulkPut(markers)
+        })
     } catch (error) {
         console.warn('Error saving map markers:', error)
     }

@@ -15,7 +15,7 @@ const buildingMarkerUrl = '/map/building-marker.svg'
 const gangMarkerUrl = '/map/gang-marker.svg'
 const contactMarkerUrl = '/map/contact-marker.svg'
 
-const MAP_BOUNDS: [[number, number], [number, number]] = [
+const DEFAULT_MAP_BOUNDS: [[number, number], [number, number]] = [
     [0, 0],
     [10200, 6600],
 ]
@@ -96,6 +96,7 @@ const CustomMarker = memo(
         contacts,
         t,
         onDragEnd,
+        mapBounds = DEFAULT_MAP_BOUNDS,
     }: {
         marker: MarkerData
         onDelete: (id: string) => void
@@ -104,11 +105,12 @@ const CustomMarker = memo(
         contacts: Character[]
         t: TFunction
         onDragEnd?: (id: string, position: [number, number]) => void
+        mapBounds?: [[number, number], [number, number]]
     }) => {
         const handleDrag = useCallback((e: L.LeafletEvent) => {
             const marker = e.target as L.Marker
             const newPos = marker.getLatLng()
-            const [sw, ne] = MAP_BOUNDS
+            const [sw, ne] = mapBounds
 
             // Constrain position to bounds
             const lat = Math.max(sw[0], Math.min(ne[0], newPos.lat))
@@ -118,7 +120,7 @@ const CustomMarker = memo(
             if (lat !== newPos.lat || lng !== newPos.lng) {
                 marker.setLatLng([lat, lng])
             }
-        }, [])
+        }, [mapBounds])
 
         const throttledDragEnd = useCallback(
             (e: L.DragEndEvent) => {

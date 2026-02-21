@@ -7,6 +7,8 @@ A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magn
 
 ## Features
 
+> Looking for a non-technical walkthrough? See the [User Guide](#user-guide) section below.
+
 ### Cyberpunk UI
 
 - Immersive interface with glitch effects, scanlines, neon glow, and Matrix rain background
@@ -71,18 +73,21 @@ Full character sheet management for player characters:
 
 Quick resolution systems for single-player adventures:
 
-- **Quick & Dirty Combat** — 6-phase streamlined combat system:
+- **Quick & Dirty Combat** — 7-phase streamlined combat system:
   1. _Setup_: Configure edgerunners (with hardened criteria) and enemies (Mook/Lieutenant/Mini-Boss/Boss levels)
   2. _Tactics_: Contested roll to determine attack distribution
   3. _Counting_: Calculate total attacks per side
   4. _Attacking_: Generate individual attack checks with fumble tracking
-  5. _Comparing_: Match attacks, calculate damage, track critical injuries and bullet dodge
-  6. _Outcome_: Determine winner with optional morale checks (Lost to Violence/Experienced/Trained/Inexperienced/Unsure)
+  5. _Comparing_: Match attacks and determine which hits land, tracking critical injuries and bullet dodge
+  6. _Outcome_: Determine winner by comparing total hits per side
+  7. _Damage_: Roll damage for enemy hits against edgerunners with armor penetration and critical injury tracking
+  - Session data persists across page navigation (stored in IndexedDB) until manually reset
 
 - **Quick & Dirty Netrunning** — Floor-based hacking system:
   - Architecture sizes: Small (3-6 floors, 3 checks), Medium (7-12 floors, 5 checks), Large (13+ floors, 7 checks)
-  - Check types: Password, File, Control Node, Black ICE (opposed)
+  - Check types: Password, File, Black ICE (opposed)
   - Majority-based success/failure with Black ICE hit accumulation and unsafe jackout consequences
+  - Session data persists across page navigation (stored in IndexedDB) until manually reset
 
 ### GM Tools
 
@@ -168,7 +173,7 @@ A fully implemented tactical combat system with real-time multiplayer synchroniz
 - Draw walls in three shapes: line, rectangle, and circle
 - Custom wall colors and alpha
 - Wall erasing tool
-- Walls serve as barriers for fog of war and line-of-sight calculations
+- Walls serve as barriers for line-of-sight calculations
 
 ### Blast & Area-of-Effect
 
@@ -177,7 +182,7 @@ A fully implemented tactical combat system with real-time multiplayer synchroniz
 - Lock/unlock blasts on the board
 - Drag-and-drop placement
 
-### Fog of War & Line of Sight
+### Line of Sight
 
 - Visibility polygon calculation using 360 regular 1-degree rays plus endpoint-targeted rays
 - Canvas 2D offscreen rendering with `destination-out` compositing to punch visibility holes
@@ -241,6 +246,200 @@ Magnus Laser ships with a free click-to-host relay for your tabletop sessions. E
 - **Companion server** — Standalone Rust server (Axum + tokio-tungstenite) at `server/` for headless hosting
 
 All persistent state lives in Dexie/IndexedDB on each client. The relay layer handles presence, signaling, and message forwarding without storing game data on any third-party servers.
+
+## User Guide
+
+This section walks you through every screen in Magnus Laser, explaining what you can do and how things work. No technical knowledge required — just open the app and follow along.
+
+> For a detailed technical feature list, see the [Features](#features) section above.
+
+---
+
+### Dashboard
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+The Dashboard is the first screen you see when you open Magnus Laser. It shows a grid of clickable cards, one for each module in the app: Map, Combat Simulator, Solo Play, Edgerunners, and Settings. Click any card to jump straight into that module.
+
+If the cyberpunk animations are too intense, you can turn on **Reader Mode** in Settings for a clean, calm light theme.
+
+---
+
+### Map
+
+![Map](docs/screenshots/map.png)
+
+An interactive world map for your campaign. Place custom markers to track locations, gangs, contacts, and anything else you want to remember on the map.
+
+- **Two map modes** — Use the toggle at the top to switch between **RED** (the Cyberpunk RED city map) and **2077** (a real-world style map)
+- **Add markers** — Click the map to drop a marker, then fill in a name and description
+- **Edit and move markers** — Click an existing marker to edit its details, or drag it to a new position
+- **Save and load** — Markers are saved automatically. Use the buttons to clear all markers if you want to start fresh
+- **Drawing tools** — Sketch zones and areas directly on the map using the built-in drawing tools
+
+---
+
+### Combat Simulator
+
+The tactical battle system — the heart of Magnus Laser. Here you can create battle maps, place tokens for characters and enemies, draw walls and obstacles, drop area-of-effect blasts, and run full initiative-based combat with dice rolling. It supports a top-down 2D view and an optional 3D perspective, and the GM can host multiplayer sessions so everyone sees the same board in real time.
+
+#### Board, Walls & Environment
+
+![Board & Environment](docs/screenshots/combat-board.png)
+
+- **Maps** — Upload your own background images or pick from saved maps using the dropdown at the top. You can manage multiple maps and switch between them during a session
+- **Grid** — Customize the grid cell size, color, and opacity from the floating controls. Toggle snap-to-grid so tokens and walls align neatly to the grid
+- **Zoom & pan** — Scroll to zoom in/out, click and drag the background to pan around the board
+- **Walls** — Draw walls in three shapes (line, rectangle, circle) using the wall tool buttons. Pick a custom color for each wall. Use the eraser tool to remove walls. Walls block line of sight
+- **Blasts & area effects** — Drop area-of-effect shapes on the board: grenade, circle, square, or cone. Adjust their size, drag them to reposition, and lock them in place so they don't move accidentally
+- **Line of Sight** — When a token is selected, areas behind walls are hidden from that token's perspective. Walls block vision realistically and visibility updates automatically as tokens move
+
+#### Tokens & Combat
+
+![Tokens & Combat](docs/screenshots/combat-tokens.png)
+
+- **Create tokens** — Open the Token panel (left side) and create tokens with a name, color, and size. Assign a full stat block: HP, head and body armor, movement, initiative modifier, and combat actions (melee, ranged, grenade, skill) with damage dice
+- **Place and move** — Drag tokens from the panel onto the board. Once placed, drag them to reposition. Right-click a token for quick actions (duplicate, delete, target, etc.)
+- **Custom images** — Assign a custom image to any token from your asset library for easy identification
+- **Targeting** — Right-click a token and assign targets. A HUD panel at the bottom-left shows all current targets for the selected token
+- **Initiative** — Open the Initiative panel to start combat. Roll initiative for all tokens, see the turn order, and advance through turns. The active token is highlighted on the board. A round counter tracks how many rounds have passed
+- **Dice rolling** — Roll attacks and damage from the Initiative panel. The system uses D10 dice with modifiers, handles critical successes and fumbles, and logs every roll in the Roll History panel. The GM can choose when to reveal damage results to players
+- **Measurement** — Use the ruler tool to click-and-drag between two points to measure distance on the board
+- **Copy & paste** — Cut, copy, and paste tokens between maps using standard clipboard shortcuts
+
+#### 2D & 3D Modes
+
+![3D Mode](docs/screenshots/combat-3d.png)
+
+- **2D Mode** — The default top-down view, optimized for performance. Pan by dragging the background, zoom with the scroll wheel
+- **3D Mode** — Toggle the switch at the top of the board to switch to a full 3D perspective. Camera presets let you pick different viewing angles, and the board uses cyberpunk-themed materials and lighting with 3D models for tokens, walls, and blasts. Everything works the same as in 2D — it's just a different way to see the board
+
+#### Multiplayer
+
+![Multiplayer](docs/screenshots/combat-multiplayer.png)
+
+- The GM creates a session in Settings, then shares a session code with players. Players join using that code, and from that moment everything syncs in real time: maps, tokens, walls, blasts, initiative, and dice rolls
+- Players can only move tokens they own, and the GM approves or rejects movements
+- See the [Settings](#settings) section for setup instructions
+
+---
+
+### Solo Play
+
+Two quick-resolution systems for playing solo without a Game Master. Switch between them using the tabs at the top. Both systems persist your active session data across page navigation — you can leave and come back without losing progress. Data is only cleared when you click the Reset button.
+
+#### Quick & Dirty Combat
+
+![QD Combat](docs/screenshots/solo-qd-combat.png)
+
+A streamlined 7-phase combat system that resolves an entire fight in minutes:
+
+1. **Setup** — Add your edgerunners and configure enemies. Choose enemy difficulty levels: Mook (easy), Lieutenant, Mini-Boss, or Boss (hardest). Enable special abilities like Speedware or High Reflexes for your characters
+2. **Tactics** — A contested roll determines which side has the upper hand and how attacks are distributed
+3. **Counting** — The system calculates how many total attacks each side gets
+4. **Attacking** — Individual attack checks are rolled for each combatant, tracking fumbles and hits
+5. **Comparing** — Attacks are matched up and hits are determined, tracking critical injuries and bullet dodges
+6. **Outcome** — The winner is determined by comparing total hits per side
+7. **Damage** — Roll damage for enemy hits against edgerunners with armor penetration and critical injury tracking
+
+#### Quick & Dirty Netrunning
+
+![QD Netrunning](docs/screenshots/solo-qd-netrunning.png)
+
+A floor-by-floor hacking simulation for Netrunners:
+
+- **Pick an architecture** — Small (3–6 floors, 3 checks), Medium (7–12 floors, 5 checks), or Large (13+ floors, 7 checks)
+- **Work through the floors** — Each floor presents a random check: Password, File, or Black ICE. Roll against each one
+- **Black ICE is dangerous** — Failed Black ICE checks deal damage to your Netrunner and can cost you programs
+- **Outcome** — If the majority of your checks succeed, the run is a success. If not, it fails — and if your Netrunner took too much damage, you may have to perform an unsafe jackout with consequences
+
+---
+
+### Edgerunners
+
+![Edgerunners](docs/screenshots/edgerunners.png)
+
+Your character library — a place to manage all your player characters (Edgerunners) with full character sheets.
+
+- **Stats** — Each character has 10 base stats (INT, REF, DEX, TECH, COOL, WILL, LUCK, MOVE, BODY, EMP) plus derived stats like HP, Seriously Wounded threshold, Death Save, and Humanity
+- **Skills** — 9 skill categories with individual skill levels. Color-coded proficiency levels make it easy to see at a glance what your character is good at
+- **Equipment shop** — Buy and sell weapons, armor, gear, cyberware, and fashion from a built-in shop. Eurobucks are tracked in real time with a 50% refund when you sell items back. Cyberware has slot requirements, stat prerequisites, and humanity loss tracking
+- **Lifepath** — A backstory section with cultural origin, personality, style, motivation, family background, and life events
+- **IP tracking** — Track Improvement Points earned and spent to level up skills and role ranks. The system previews costs and shows you staged improvements before you commit
+- **Combat sync** — Changes to an edgerunner's stats automatically sync to any linked token in the Combat Simulator
+- **Export** — Download any individual character's data as a JSON file for backup or sharing
+
+---
+
+### Character Creator
+
+![Character Creator](docs/screenshots/character-creator.png)
+
+A guided 7-step wizard for building a new Edgerunner from scratch. The wizard validates your choices at each step so you can't accidentally create an invalid character.
+
+1. **Method** — Choose how much control you want: _Streetrat_ (beginner, pre-built stats), _Edgerunner_ (recommended, distribute skill points), or _Complete Package_ (advanced, full control over stats, skills, and gear)
+2. **Role** — Pick from 10 roles (Rockerboy, Solo, Netrunner, Tech, Medtech, Media, Lawman, Exec, Fixer, Nomad). Each has a unique Role Ability that scales with rank
+3. **Stats** — Allocate points across your 10 base stats. Derived stats (HP, Humanity, Death Save) are calculated automatically
+4. **Skills** — Distribute 86 skill points across all available skills. Some skills cost double (x2). A free cultural language is included
+5. **Gear** — _(Complete Package only)_ Shop for weapons, armor, gear, cyberware, and fashion in a Night Market interface. Cyberware is organized by 8 color-coded categories with slot management, prerequisite tracking, and humanity loss warnings
+6. **Lifepath** — Generate a random backstory with cultural origin, personality, style, motivation, family, and life events (color-coded as good, bad, friend, enemy, or rival). Reroll anything you don't like
+7. **Finish** — Enter a name and handle, review the summary card, and save your new Edgerunner to the library
+
+---
+
+### Settings
+
+![Settings](docs/screenshots/settings.png)
+
+All your preferences and configuration in one place.
+
+- **Display** — Toggle **Reader Mode** for a clean, accessible light theme with no animations. Turn the startup loader animation on or off. Enable or disable all cyberpunk visual effects
+- **Language** — Switch between English and Spanish. The setting is saved and applies immediately
+- **Session management** — Create or join multiplayer sessions:
+  - As **Game Master**: pick a display name, click Create Session, and share the generated session code with your players
+  - As **Player**: enter the host's URL and session code, then click Join
+  - The GM can see connected players, kick someone if needed, and end the session at any time
+- **API keys** — Enter API keys for **Google Gemini**, **Hugging Face**, or **OpenAI** to enable AI-powered content generation (character portraits, gang profiles, building descriptions, etc.). Without API keys, the app falls back to local procedural generation
+- **Data management** — **Export** all your data as a JSON file for backup. **Import** data from a previously exported file. **Nuke Database** wipes everything and gives you a fresh start (use with caution!)
+
+---
+
+### GM Tools
+
+![GM Tools](docs/screenshots/gm-tools.png)
+
+Click the hamburger menu icon (top-right of the navigation bar) to open the GM Tools drawer. It contains 17 specialized tools organized in two categories. Each tool opens directly in the drawer without leaving your current page.
+
+#### Solo Play Tools
+
+| Tool | What it does |
+| --- | --- |
+| **Oracle & Random Tables** | Ask yes/no questions to a virtual oracle (with adjustable probability), generate random word combos for story inspiration, and roll on 65+ random tables across 15 categories. All results are saved to a campaign-tagged history panel |
+| **Clocks** | Track countdown-style challenges using a pool of dice (3–10 d6). Roll to remove dice — when the pool is empty, the clock is done. Great for looming threats and time pressure |
+| **Mission Builder** | Generate a random solo mission with an employer, payment, summary, focus, specifics, and a plot twist. Reroll any individual section you don't like |
+| **Beat Chart** | Outline your story structure with beats (Hook, Development, Climax, Resolution). Track progress through each act with a visual progress bar |
+| **Investigation** | Run a research challenge. Pick a complexity level (Simple, Average, Difficult), then make skill rolls — the majority of successes or failures determines the outcome |
+| **Social Challenge** | Resolve a conversation or negotiation with an NPC. The NPC's importance (Background, Supporting, Key) determines how many checks you need |
+| **NPC Tracker** | Keep tabs on important NPCs: their status (alive, dead, missing), role, mood, relationship to the party, and notes. Random generators for quick NPC creation |
+| **IP Tracker** | Log Improvement Points earned and spent by each edgerunner, with dates and descriptions. Automatically calculates available IP |
+| **Scene Tracker** | Track scenes during a session: location, participants, goal, outcome, and notes. Attach checks to scenes and mark them complete. Includes a random location generator |
+| **NPC Forms** | Create NPC stat blocks in two modes: Simple (name, handle, role, look, quirk) or Complex (full stats, combat values, equipment, cyberware) |
+| **Random Things** | Build your own custom random tables with 3–20 entries and weighted probabilities. Roll on them anytime you need a quick random result |
+
+#### Content Generators
+
+AI-powered generators that create content and save it directly to your database. Requires at least one API key configured in [Settings](#settings). Without API keys, a local fallback generates basic content.
+
+| Generator | What it does |
+| --- | --- |
+| **Gang Generator** | Creates a complete gang profile: name, description, cyberware, weapons, reputation, and an AI-generated image |
+| **Building Generator** | Creates a location with type, ownership, security, style, secrets, and more |
+| **Gig Generator** | Creates a full fixer job plus all related entities (gangs, buildings, characters, items) in one go — the most powerful generator |
+| **Bounty Generator** | Creates a bounty target with a crime, specialty, reward, and an auto-generated character profile |
+| **Item Generator** | Creates an equipment item with type, condition, and stats |
+| **Contact Generator** | Creates a standalone NPC with name, description, appearance, and an AI-generated portrait |
+
+---
 
 ## Technologies Used
 

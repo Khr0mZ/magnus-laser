@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import type { Role, WireMsg } from '@/types/session'
 
 export type MessageListener = (msg: WireMsg) => void

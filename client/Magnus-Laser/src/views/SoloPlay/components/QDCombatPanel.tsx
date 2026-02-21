@@ -14,18 +14,14 @@ import {
     Button,
     Card,
     CardContent,
-    Checkbox,
     Chip,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
     Divider,
-    FormControl,
-    FormControlLabel,
     Grid,
     IconButton,
-    InputLabel,
     MenuItem,
     Paper,
     Select,
@@ -41,19 +37,25 @@ import {
     TextField,
     Typography,
 } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import CustomScrollbar from '../../../components/CustomScrollbar'
+import CyberpunkCheckbox from '../../../components/CyberpunkCheckbox'
+import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
+import CyberpunkFormControlLabel from '../../../components/CyberpunkFormControlLabel'
+import { pulseGlowBlue, pulseGlowCyan } from '../../../components/common/Animations'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
+import WarningAmber from '@mui/icons-material/WarningAmber'
 import type {
-    MoraleMentality,
     NPCLevel,
     QDCombatSession,
     QDEdgerunner,
     QDEnemy,
-    StressPointType,
 } from '../../../types/soloPlay'
 import colors from '../../../utils/colors'
+import { getKV, KV_KEYS, setKV } from '../../../utils/db'
 import {
+    calculateDamageForHit,
     compareAttacks,
     countEdgerunnerAttacks,
     countEnemyAttacks,
@@ -63,7 +65,6 @@ import {
     distributeEnemyAttacks,
     generateAllAttacks,
     isEdgerunnerHardened,
-    rollMoraleCheck,
     rollTacticsCheck,
 } from '../../../utils/generators/soloPlayUtils'
 
@@ -82,6 +83,8 @@ const createEmptyEdgerunner = (): Omit<QDEdgerunner, 'id'> => ({
     weaponName: '',
     weaponDamage: '2d6',
     attackSkillTotal: 10,
+    armorSP: 11,
+    currentHP: 40,
 })
 
 // Default empty Enemy
@@ -99,6 +102,42 @@ const QDCombatPanel = () => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
 
+    const textFieldOutlinedStyle = {
+        '& .MuiOutlinedInput-root': {
+            color: readerMode ? '#333' : '#fff',
+            '& fieldset': {
+                borderColor: readerMode ? 'rgba(0, 0, 0, 0.23)' : 'rgba(0, 255, 255, 0.3)',
+            },
+            '&:hover fieldset': {
+                borderColor: readerMode ? 'rgba(0, 0, 0, 0.5)' : colors.neons.cyan.default,
+            },
+        },
+        '& .MuiInputLabel-root': {
+            color: readerMode ? '#666' : 'rgba(255, 255, 255, 0.7)',
+            borderRadius: '4px',
+            bgcolor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+            p: 0.5,
+            py: 0.25,
+            border: readerMode ? '1px solid rgba(0, 0, 0, 0.23)' : `1px solid ${colors.neons.cyan.default}`,
+        },
+        '&:hover .MuiInputLabel-root': {
+            animation: `${readerMode ? pulseGlowBlue : pulseGlowCyan} 2s infinite`,
+        },
+    }
+
+    const selectStyle = {
+        color: readerMode ? '#333' : '#fff',
+        '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: readerMode ? 'rgba(0, 0, 0, 0.23)' : 'rgba(0, 255, 255, 0.3)',
+        },
+        '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: readerMode ? 'rgba(0, 0, 0, 0.5)' : colors.neons.cyan.default,
+        },
+        '& .MuiSvgIcon-root': {
+            color: readerMode ? 'rgba(0, 0, 0, 0.54)' : '#fff',
+        },
+    }
+
     // Session state
     const [session, setSession] = useState<QDCombatSession | null>(null)
 
@@ -109,14 +148,23 @@ const QDCombatPanel = () => {
         { ...createEmptyEdgerunner(), name: 'Edgerunner 1' },
     ])
     const [enemies, setEnemies] = useState<Omit<QDEnemy, 'id'>[]>([{ ...createEmptyEnemy(), name: 'Enemy 1' }])
-    const [stressPointType, setStressPointType] = useState<StressPointType>('HALF_INCAPACITATED')
-    const [customStressCondition, setCustomStressCondition] = useState('')
-    const [moraleMentality, setMoraleMentality] = useState<MoraleMentality>('TRAINED')
 
     // Tactics dialog state
     const [tacticsDialogOpen, setTacticsDialogOpen] = useState(false)
     const [edgerunnerTactics, setEdgerunnerTactics] = useState(10)
     const [enemyTactics, setEnemyTactics] = useState(10)
+
+    // Load persisted session on mount
+    useEffect(() => {
+        getKV<QDCombatSession>(KV_KEYS.qdCombatSession).then((data) => {
+            if (data) setSession(data)
+        })
+    }, [])
+
+    // Persist session to IndexedDB on change
+    useEffect(() => {
+        setKV(KV_KEYS.qdCombatSession, session)
+    }, [session])
 
     // Combat steps
     const combatSteps = [
@@ -126,6 +174,7 @@ const QDCombatPanel = () => {
         t('soloPlay.combat.steps.attacking'),
         t('soloPlay.combat.steps.comparing'),
         t('soloPlay.combat.steps.outcome'),
+        t('soloPlay.combat.steps.damage'),
     ]
 
     const getActiveStep = () => {
@@ -143,8 +192,10 @@ const QDCombatPanel = () => {
                 return 4
             case 'OUTCOME':
                 return 5
-            case 'COMPLETE':
+            case 'DAMAGE':
                 return 6
+            case 'COMPLETE':
+                return 7
             default:
                 return 0
         }
@@ -152,11 +203,7 @@ const QDCombatPanel = () => {
 
     // Handlers
     const handleStartCombat = () => {
-        const newSession = createQDCombatSession(sessionName || 'Combat Session', edgerunners, enemies, {
-            stressPointType,
-            customCondition: customStressCondition,
-            mentality: moraleMentality,
-        })
+        const newSession = createQDCombatSession(sessionName || 'Combat Session', edgerunners, enemies)
         newSession.phase = 'TACTICS'
         setSession(newSession)
         setSetupDialogOpen(false)
@@ -248,22 +295,74 @@ const QDCombatPanel = () => {
         })
     }
 
-    const handleCheckMorale = () => {
+    const handleRollDamage = () => {
         if (!session) return
 
-        const moraleResult = rollMoraleCheck(session.morale.mentality)
+        const damageResults: QDCombatSession['damageResults'] = []
+        // Track running SP/HP for each edgerunner across multiple hits
+        const edgerunnerState = new Map(
+            session.edgerunners.map(e => [e.id, { armorSP: e.armorSP, currentHP: e.currentHP }])
+        )
+        // Track existing critical injuries per target (for re-roll rule)
+        const existingInjuries = new Map<string, string[]>()
+
+        // For each enemy hit, calculate damage against the targeted edgerunner
+        let unopposedIndex = 0
+        for (const comp of session.comparisons) {
+            if (comp.winner !== 'ENEMY' && comp.winner !== 'UNOPPOSED_ENEMY') continue
+            if (!comp.enemyAttack) continue
+
+            // Determine target edgerunner
+            let targetId: string
+            let targetName: string
+            if (comp.edgerunnerAttack) {
+                targetId = comp.edgerunnerAttack.combatantId
+                targetName = comp.edgerunnerAttack.combatantName
+            } else {
+                // Unopposed: round-robin distribution
+                const edgerunner = session.edgerunners[unopposedIndex % session.edgerunners.length]
+                targetId = edgerunner.id
+                targetName = edgerunner.name
+                unopposedIndex++
+            }
+
+            const state = edgerunnerState.get(targetId) || { armorSP: 11, currentHP: 40 }
+            const targetInjuries = existingInjuries.get(targetId) || []
+            const result = calculateDamageForHit(comp.enemyAttack.weaponDamage, state.armorSP, targetInjuries)
+
+            // Track new injury for re-roll
+            if (result.criticalInjury) {
+                targetInjuries.push(result.criticalInjury.nameKey)
+                existingInjuries.set(targetId, targetInjuries)
+            }
+
+            damageResults.push({
+                ...result,
+                targetId,
+                targetName,
+                attackerName: comp.enemyAttack.combatantName,
+                weaponName: comp.enemyAttack.weaponUsed,
+            })
+
+            // Update running state for subsequent hits
+            state.currentHP -= result.damageAfterArmor
+            if (result.armorReduced) state.armorSP -= 1
+        }
+
+        // Update edgerunner HP and SP in session
+        const updatedEdgerunners = session.edgerunners.map(e => {
+            const state = edgerunnerState.get(e.id)
+            if (!state) return e
+            return { ...e, armorSP: state.armorSP, currentHP: state.currentHP }
+        })
 
         setSession((prev) => {
             if (!prev) return prev
             return {
                 ...prev,
-                morale: {
-                    ...prev.morale,
-                    triggered: true,
-                    roll: moraleResult.roll,
-                    result: moraleResult.result,
-                },
-                outcome: moraleResult.result === 'FLEE' ? 'ENEMY_FLED' : prev.outcome,
+                damageResults,
+                edgerunners: updatedEdgerunners,
+                phase: 'DAMAGE',
             }
         })
     }
@@ -315,20 +414,6 @@ const QDCombatPanel = () => {
         setEnemies((prev) => prev.map((e, i) => (i === index ? { ...e, ...updates } : e)))
     }
 
-    const getMentalityLabel = (mentality: MoraleMentality) => {
-        switch (mentality) {
-            case 'LOST_TO_VIOLENCE':
-                return t('soloPlay.combat.morale.lostToViolence')
-            case 'EXPERIENCED':
-                return t('soloPlay.combat.morale.experienced')
-            case 'TRAINED':
-                return t('soloPlay.combat.morale.trained')
-            case 'INEXPERIENCED':
-                return t('soloPlay.combat.morale.inexperienced')
-            case 'UNSURE':
-                return t('soloPlay.combat.morale.unsure')
-        }
-    }
 
     return (
         <Box>
@@ -370,17 +455,34 @@ const QDCombatPanel = () => {
             </Stack>
 
             {!session ? (
-                <Typography
-                    variant="body1"
+                <Paper
                     sx={{
-                        color: colors.grays.gray600,
-                        fontStyle: 'italic',
-                        textAlign: 'center',
-                        py: 4,
+                        p: 3,
+                        backgroundColor: readerMode ? 'rgba(255,255,255,0.9)' : 'rgba(10,15,25,0.95)',
+                        border: `1px solid ${colors.neons.red.default}30`,
                     }}
                 >
-                    {t('soloPlay.combat.noCombatYet')}
-                </Typography>
+                    <Typography
+                        variant="body1"
+                        sx={{
+                            color: colors.grays.gray600,
+                            fontStyle: 'italic',
+                            textAlign: 'center',
+                        }}
+                    >
+                        {t('soloPlay.combat.noCombatYet')}
+                    </Typography>
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            color: colors.grays.gray500,
+                            textAlign: 'center',
+                            mt: 2,
+                        }}
+                    >
+                        {t('soloPlay.combat.description')}
+                    </Typography>
+                </Paper>
             ) : (
                 <Grid container spacing={3}>
                     {/* Stepper */}
@@ -641,9 +743,9 @@ const QDCombatPanel = () => {
                                                             comp.winner === 'UNOPPOSED_EDGERUNNER'
                                                                 ? colors.neons.green.default + '20'
                                                                 : comp.winner === 'ENEMY' ||
-                                                                  comp.winner === 'UNOPPOSED_ENEMY'
-                                                                ? colors.neons.red.default + '20'
-                                                                : 'inherit',
+                                                                    comp.winner === 'UNOPPOSED_ENEMY'
+                                                                  ? colors.neons.red.default + '20'
+                                                                  : 'inherit',
                                                     }}
                                                 >
                                                     <TableCell>
@@ -664,12 +766,12 @@ const QDCombatPanel = () => {
                                                                 comp.dodged
                                                                     ? t('soloPlay.combat.dodged')
                                                                     : comp.winner === 'EDGERUNNER' ||
-                                                                      comp.winner === 'UNOPPOSED_EDGERUNNER'
-                                                                    ? t('soloPlay.combat.edgerunnerHit')
-                                                                    : comp.winner === 'ENEMY' ||
-                                                                      comp.winner === 'UNOPPOSED_ENEMY'
-                                                                    ? t('soloPlay.combat.enemyHit')
-                                                                    : t('soloPlay.combat.tie')
+                                                                        comp.winner === 'UNOPPOSED_EDGERUNNER'
+                                                                      ? t('soloPlay.combat.edgerunnerHit')
+                                                                      : comp.winner === 'ENEMY' ||
+                                                                          comp.winner === 'UNOPPOSED_ENEMY'
+                                                                        ? t('soloPlay.combat.enemyHit')
+                                                                        : t('soloPlay.combat.tie')
                                                             }
                                                             sx={{
                                                                 backgroundColor:
@@ -677,9 +779,9 @@ const QDCombatPanel = () => {
                                                                     comp.winner === 'UNOPPOSED_EDGERUNNER'
                                                                         ? colors.neons.green.default
                                                                         : comp.winner === 'ENEMY' ||
-                                                                          comp.winner === 'UNOPPOSED_ENEMY'
-                                                                        ? colors.neons.red.default
-                                                                        : colors.grays.gray600,
+                                                                            comp.winner === 'UNOPPOSED_ENEMY'
+                                                                          ? colors.neons.red.default
+                                                                          : colors.grays.gray600,
                                                                 color: colors.grays.gray000,
                                                             }}
                                                         />
@@ -694,7 +796,7 @@ const QDCombatPanel = () => {
                     )}
 
                     {/* Outcome */}
-                    {session.phase === 'OUTCOME' && (
+                    {(session.phase === 'OUTCOME' || session.phase === 'DAMAGE') && (
                         <Grid size={12}>
                             <Card
                                 sx={{
@@ -702,14 +804,14 @@ const QDCombatPanel = () => {
                                         session.outcome === 'EDGERUNNER_WIN'
                                             ? colors.neons.green.default + '30'
                                             : session.outcome === 'ENEMY_WIN'
-                                            ? colors.neons.red.default + '30'
-                                            : colors.neons.yellow.default + '30',
+                                              ? colors.neons.red.default + '30'
+                                              : colors.neons.yellow.default + '30',
                                     border: `2px solid ${
                                         session.outcome === 'EDGERUNNER_WIN'
                                             ? colors.neons.green.default
                                             : session.outcome === 'ENEMY_WIN'
-                                            ? colors.neons.red.default
-                                            : colors.neons.yellow.default
+                                              ? colors.neons.red.default
+                                              : colors.neons.yellow.default
                                     }`,
                                 }}
                             >
@@ -722,42 +824,183 @@ const QDCombatPanel = () => {
                                         {t('soloPlay.combat.enemyHits')}: {session.enemyHits}
                                     </Typography>
 
-                                    {/* Morale Check */}
-                                    {!session.morale.triggered && (
-                                        <Stack spacing={2} alignItems="center">
-                                            <Typography variant="subtitle2">
-                                                {t('soloPlay.combat.morale.checkQuestion')}
-                                            </Typography>
+                                    {/* Roll Damage Button - only in OUTCOME phase and if there are enemy hits */}
+                                    {session.phase === 'OUTCOME' && session.enemyHits > 0 && (
+                                        <Stack spacing={2} alignItems="center" sx={{ mb: 2 }}>
                                             <Button
-                                                variant="outlined"
-                                                onClick={handleCheckMorale}
-                                                sx={{ borderColor: colors.neons.yellow.default }}
+                                                variant="contained"
+                                                startIcon={<Casino />}
+                                                onClick={handleRollDamage}
+                                                sx={{
+                                                    backgroundColor: colors.neons.red.default,
+                                                    '&:hover': { backgroundColor: colors.neons.red.dark },
+                                                }}
                                             >
-                                                {t('soloPlay.combat.morale.rollMorale')} (
-                                                {getMentalityLabel(session.morale.mentality)})
+                                                {t('soloPlay.combat.rollDamage')}
                                             </Button>
                                         </Stack>
                                     )}
 
-                                    {session.morale.triggered && (
-                                        <Paper sx={{ p: 2, mt: 2, textAlign: 'center' }}>
-                                            <Typography variant="subtitle2">
-                                                {t('soloPlay.combat.morale.result')}:{' '}
-                                                <Chip
-                                                    label={`${session.morale.roll} - ${
-                                                        session.morale.result === 'FLEE'
-                                                            ? t('soloPlay.combat.morale.flee')
-                                                            : t('soloPlay.combat.morale.fight')
-                                                    }`}
-                                                    sx={{
-                                                        backgroundColor:
-                                                            session.morale.result === 'FLEE'
-                                                                ? colors.neons.yellow.default
-                                                                : colors.neons.red.default,
-                                                    }}
-                                                />
+                                    {/* No damage message */}
+                                    {session.phase === 'OUTCOME' && session.enemyHits === 0 && (
+                                        <Typography variant="body2" align="center" sx={{ mb: 2, color: colors.neons.green.default }}>
+                                            {t('soloPlay.combat.noDamageToResolve')}
+                                        </Typography>
+                                    )}
+
+                                    {/* Damage Results */}
+                                    {session.damageResults.length > 0 && (
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography
+                                                variant="subtitle1"
+                                                sx={{
+                                                    color: colors.neons.red.default,
+                                                    fontFamily: '"Orbitron", sans-serif',
+                                                    mb: 1,
+                                                }}
+                                            >
+                                                {t('soloPlay.combat.damageResults')}
                                             </Typography>
-                                        </Paper>
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell>{t('soloPlay.combat.target')}</TableCell>
+                                                        <TableCell>{t('soloPlay.combat.weapon')}</TableCell>
+                                                        <TableCell>{t('soloPlay.combat.diceRolled')}</TableCell>
+                                                        <TableCell>{t('soloPlay.combat.totalDamage')}</TableCell>
+                                                        <TableCell>{t('soloPlay.combat.armorSP')}</TableCell>
+                                                        <TableCell>{t('soloPlay.combat.damageAfterArmor')}</TableCell>
+                                                        <TableCell>{t('soloPlay.combat.criticalInjury')}</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {session.damageResults.map((dmg, idx) => (
+                                                        <TableRow
+                                                            key={idx}
+                                                            sx={{
+                                                                backgroundColor: dmg.hasCritical
+                                                                    ? colors.neons.red.default + '20'
+                                                                    : 'inherit',
+                                                            }}
+                                                        >
+                                                            <TableCell>{dmg.targetName}</TableCell>
+                                                            <TableCell>
+                                                                {dmg.attackerName} ({dmg.weaponName})
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                [{dmg.diceResults.join(', ')}]
+                                                            </TableCell>
+                                                            <TableCell>{dmg.totalDamage}</TableCell>
+                                                            <TableCell>
+                                                                {dmg.armorSP}
+                                                                {dmg.armorReduced && (
+                                                                    <Typography
+                                                                        component="span"
+                                                                        variant="caption"
+                                                                        sx={{ color: colors.neons.orange.default, ml: 0.5 }}
+                                                                    >
+                                                                        (-1)
+                                                                    </Typography>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <strong>{dmg.damageAfterArmor}</strong>
+                                                                {dmg.bonusDamage > 0 && (
+                                                                    <Typography
+                                                                        component="span"
+                                                                        variant="caption"
+                                                                        sx={{ color: colors.neons.red.default, ml: 0.5 }}
+                                                                    >
+                                                                        (+{dmg.bonusDamage} crit)
+                                                                    </Typography>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {dmg.hasCritical && dmg.criticalInjury ? (
+                                                                    <Stack spacing={0.25}>
+                                                                        <Stack direction="row" spacing={0.5} alignItems="center">
+                                                                            <WarningAmber sx={{ color: colors.neons.red.default, fontSize: 16 }} />
+                                                                            <Chip
+                                                                                size="small"
+                                                                                label={`${t(`soloPlay.combat.criticalInjuries.${dmg.criticalInjury.nameKey}.name`)} (${dmg.criticalInjury.roll})`}
+                                                                                sx={{
+                                                                                    backgroundColor: colors.neons.red.default,
+                                                                                    color: '#fff',
+                                                                                    fontWeight: 'bold',
+                                                                                }}
+                                                                            />
+                                                                        </Stack>
+                                                                        <Typography variant="caption" sx={{ color: colors.neons.orange.default, fontSize: '0.65rem' }}>
+                                                                            {t(`soloPlay.combat.criticalInjuries.${dmg.criticalInjury.nameKey}.effect`)}
+                                                                        </Typography>
+                                                                    </Stack>
+                                                                ) : (
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label={t('soloPlay.combat.noCritical')}
+                                                                        sx={{
+                                                                            backgroundColor: colors.grays.gray600,
+                                                                            color: '#fff',
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+
+                                            {/* HP Summary */}
+                                            <Paper sx={{ p: 1.5, mt: 1, backgroundColor: 'rgba(255, 0, 0, 0.05)' }}>
+                                                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                                                    {t('soloPlay.combat.hpRemaining')}
+                                                </Typography>
+                                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                    {session.edgerunners.map((e) => (
+                                                        <Chip
+                                                            key={e.id}
+                                                            label={`${e.name}: ${e.currentHP} HP (SP ${e.armorSP})`}
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor:
+                                                                    e.currentHP <= 0
+                                                                        ? colors.neons.red.default
+                                                                        : e.currentHP <= 20
+                                                                          ? colors.neons.orange.default
+                                                                          : colors.neons.green.default,
+                                                                color: '#fff',
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Stack>
+                                            </Paper>
+
+                                            {/* Critical Injury Summary */}
+                                            {session.damageResults.some(d => d.hasCritical) && (
+                                                <Paper
+                                                    sx={{
+                                                        p: 1.5,
+                                                        mt: 1,
+                                                        backgroundColor: `${colors.neons.orange.default}15`,
+                                                        border: `1px solid ${colors.neons.orange.default}`,
+                                                    }}
+                                                >
+                                                    <Stack spacing={1}>
+                                                        <Stack direction="row" spacing={1} alignItems="center">
+                                                            <WarningAmber sx={{ color: colors.neons.orange.default }} />
+                                                            <Typography variant="body2" sx={{ color: colors.neons.orange.default, fontWeight: 'bold' }}>
+                                                                {t('soloPlay.combat.criticalInjurySummary')}
+                                                            </Typography>
+                                                        </Stack>
+                                                        {session.damageResults.filter(d => d.hasCritical && d.criticalInjury).map((dmg, idx) => (
+                                                            <Typography key={idx} variant="caption" sx={{ color: colors.neons.orange.default }}>
+                                                                <strong>{dmg.targetName}</strong>: {t(`soloPlay.combat.criticalInjuries.${dmg.criticalInjury!.nameKey}.name`)} — {t(`soloPlay.combat.criticalInjuries.${dmg.criticalInjury!.nameKey}.effect`)}
+                                                            </Typography>
+                                                        ))}
+                                                    </Stack>
+                                                </Paper>
+                                            )}
+                                        </Box>
                                     )}
 
                                     <Divider sx={{ my: 2 }} />
@@ -842,409 +1085,660 @@ const QDCombatPanel = () => {
             )}
 
             {/* Setup Dialog */}
-            <Dialog open={setupDialogOpen} onClose={() => setSetupDialogOpen(false)} maxWidth="lg" fullWidth>
-                <DialogTitle sx={{ color: colors.neons.red.default }}>{t('soloPlay.combat.setupCombat')}</DialogTitle>
-                <DialogContent>
-                    <Stack spacing={3} sx={{ mt: 1 }}>
-                        <TextField
-                            fullWidth
-                            label={t('soloPlay.combat.sessionName')}
-                            value={sessionName}
-                            onChange={(e) => setSessionName(e.target.value)}
-                        />
+            <Dialog
+                open={setupDialogOpen}
+                onClose={() => setSetupDialogOpen(false)}
+                maxWidth="lg"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: readerMode
+                            ? {
+                                  bgcolor: '#ffffff',
+                                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                  color: '#333',
+                              }
+                            : {
+                                  bgcolor: 'rgba(10, 15, 30, 0.95)',
+                                  backdropFilter: 'blur(4px)',
+                                  border: `1px solid ${colors.neons.red.default}40`,
+                                  boxShadow: `0 0 20px ${colors.neons.red.default}40`,
+                                  color: '#fff',
+                                  position: 'relative',
+                                  '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      backgroundImage:
+                                          'linear-gradient(to right, rgba(255, 0, 0, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 0, 0, 0.03) 1px, transparent 1px)',
+                                      backgroundSize: '20px 20px',
+                                      pointerEvents: 'none',
+                                      opacity: 0.5,
+                                  },
+                              },
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={
+                        readerMode
+                            ? {
+                                  color: '#d32f2f',
+                                  borderBottom: '1px solid #eee',
+                              }
+                            : {
+                                  color: colors.neons.red.default,
+                                  textShadow: `0 0 5px ${colors.neons.red.default}`,
+                                  fontFamily: '"Orbitron", monospace',
+                                  borderBottom: `1px solid ${colors.neons.red.default}40`,
+                                  position: 'relative',
+                                  '&::after': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      bottom: 0,
+                                      left: '10%',
+                                      width: '80%',
+                                      height: '1px',
+                                      background: `linear-gradient(90deg, transparent, ${colors.neons.red.default}, transparent)`,
+                                  },
+                              }
+                    }
+                >
+                    <Typography
+                        variant="h3"
+                        component="div"
+                        className="glitch-text"
+                        data-text={t('soloPlay.combat.setupCombat')}
+                    >
+                        {t('soloPlay.combat.setupCombat')}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent
+                    sx={{
+                        py: 3,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: '80vh',
+                        pr: 0,
+                    }}
+                >
+                    <CustomScrollbar scrollDirection="vertical" height="100%">
+                        <Stack spacing={3} sx={{ mt: 1, pr: 3 }}>
+                            <TextField
+                                fullWidth
+                                label={t('soloPlay.combat.sessionName')}
+                                value={sessionName}
+                                onChange={(e) => setSessionName(e.target.value)}
+                                variant="outlined"
+                                sx={textFieldOutlinedStyle}
+                            />
 
-                        <Divider />
+                            <Divider />
 
-                        {/* Edgerunners Section */}
-                        <Box>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                                <Typography variant="h6" sx={{ color: colors.neons.green.default }}>
-                                    {t('soloPlay.combat.edgerunners')} ({edgerunners.length})
-                                </Typography>
-                                <IconButton onClick={addEdgerunner} sx={{ color: colors.neons.green.default }}>
-                                    <PersonAdd />
-                                </IconButton>
-                            </Stack>
-                            <Stack spacing={2}>
-                                {edgerunners.map((e, index) => (
-                                    <Paper key={index} sx={{ p: 2, backgroundColor: 'rgba(0,255,0,0.05)' }}>
-                                        <Stack spacing={2}>
-                                            <Stack direction="row" spacing={1} alignItems="center">
-                                                <TextField
-                                                    size="small"
-                                                    label={t('common.name')}
-                                                    value={e.name}
-                                                    onChange={(ev) =>
-                                                        updateEdgerunner(index, { name: ev.target.value })
-                                                    }
-                                                    sx={{ flex: 1 }}
-                                                />
-                                                <TextField
-                                                    size="small"
-                                                    type="number"
-                                                    label={t('soloPlay.combat.attackSkill')}
-                                                    value={e.attackSkillTotal}
-                                                    onChange={(ev) =>
-                                                        updateEdgerunner(index, {
-                                                            attackSkillTotal: parseInt(ev.target.value) || 10,
-                                                        })
-                                                    }
-                                                    sx={{ width: 100 }}
-                                                />
-                                                <TextField
-                                                    size="small"
-                                                    label={t('soloPlay.combat.weapon')}
-                                                    value={e.weaponName}
-                                                    onChange={(ev) =>
-                                                        updateEdgerunner(index, { weaponName: ev.target.value })
-                                                    }
-                                                    sx={{ width: 150 }}
-                                                />
-                                                <TextField
-                                                    size="small"
-                                                    label={t('soloPlay.combat.damage')}
-                                                    value={e.weaponDamage}
-                                                    onChange={(ev) =>
-                                                        updateEdgerunner(index, { weaponDamage: ev.target.value })
-                                                    }
-                                                    sx={{ width: 80 }}
-                                                />
-                                                <IconButton
-                                                    onClick={() => removeEdgerunner(index)}
-                                                    disabled={edgerunners.length === 1}
-                                                    sx={{ color: colors.neons.red.default }}
+                            {/* Edgerunners Section */}
+                            <Box>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                                    <Typography
+                                        variant="h6"
+                                        sx={{
+                                            color: readerMode ? '#2e7d32' : colors.neons.green.default,
+                                            fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                        }}
+                                    >
+                                        {t('soloPlay.combat.edgerunners')} ({edgerunners.length})
+                                    </Typography>
+                                    <IconButton onClick={addEdgerunner} sx={{ color: colors.neons.green.default }}>
+                                        <PersonAdd />
+                                    </IconButton>
+                                </Stack>
+                                <Stack spacing={2}>
+                                    {edgerunners.map((e, index) => (
+                                        <Paper
+                                            key={index}
+                                            sx={{
+                                                p: 2,
+                                                backgroundColor: readerMode
+                                                    ? 'rgba(0, 128, 0, 0.03)'
+                                                    : 'rgba(0, 255, 0, 0.05)',
+                                                border: `1px solid ${
+                                                    readerMode
+                                                        ? 'rgba(46, 125, 50, 0.3)'
+                                                        : colors.neons.green.default + '40'
+                                                }`,
+                                                borderRadius: '4px',
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    borderColor: readerMode
+                                                        ? 'rgba(46, 125, 50, 0.5)'
+                                                        : colors.neons.green.default,
+                                                    boxShadow: readerMode
+                                                        ? 'none'
+                                                        : `0 0 10px ${colors.neons.green.default}30`,
+                                                },
+                                            }}
+                                        >
+                                            <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+                                                <Grid size={{ xs: 12, md: 4 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label={t('common.name')}
+                                                        value={e.name}
+                                                        onChange={(ev) =>
+                                                            updateEdgerunner(index, { name: ev.target.value })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        type="number"
+                                                        label={t('soloPlay.combat.attackSkill')}
+                                                        value={e.attackSkillTotal}
+                                                        onChange={(ev) =>
+                                                            updateEdgerunner(index, {
+                                                                attackSkillTotal: parseInt(ev.target.value) || 10,
+                                                            })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label={t('soloPlay.combat.weapon')}
+                                                        value={e.weaponName}
+                                                        onChange={(ev) =>
+                                                            updateEdgerunner(index, { weaponName: ev.target.value })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label={t('soloPlay.combat.damage')}
+                                                        value={e.weaponDamage}
+                                                        onChange={(ev) =>
+                                                            updateEdgerunner(index, { weaponDamage: ev.target.value })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid
+                                                    size={{ xs: 6, md: 1 }}
+                                                    sx={{ display: 'flex', justifyContent: 'center' }}
                                                 >
-                                                    <DeleteOutline />
-                                                </IconButton>
-                                            </Stack>
-
-                                            {/* Hardened Criteria */}
-                                            <Typography variant="caption" sx={{ color: colors.grays.gray600 }}>
-                                                {t('soloPlay.combat.hardenedCriteria')}:
-                                            </Typography>
-                                            <Stack direction="row" flexWrap="wrap" gap={1}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasHighRefEvasion}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasHighRefEvasion: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={
-                                                        <Typography variant="caption">{t('soloPlay.combat.hardened.refEvasion')}</Typography>
-                                                    }
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasHighAttack}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasHighAttack: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.attack15')}</Typography>}
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasHighWillBody}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasHighWillBody: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.willBody')}</Typography>}
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasLuxuryWeapon}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasLuxuryWeapon: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.luxuryWeapon')}</Typography>}
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasHighDexMov}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasHighDexMov: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.dexMov')}</Typography>}
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasHighAutoMartial}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasHighAutoMartial: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={
-                                                        <Typography variant="caption">{t('soloPlay.combat.hardened.autofireMartial')}</Typography>
-                                                    }
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasSoloRank4}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasSoloRank4: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={<Typography variant="caption">{t('soloPlay.combat.hardened.soloRank4')}</Typography>}
-                                                />
-                                            </Stack>
-
-                                            {/* Special Abilities */}
-                                            <Stack direction="row" spacing={2}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.hasSpeedware}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    hasSpeedware: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={t('soloPlay.combat.hasSpeedware')}
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            size="small"
-                                                            checked={e.canDodgeBullets}
-                                                            onChange={(ev) =>
-                                                                updateEdgerunner(index, {
-                                                                    canDodgeBullets: ev.target.checked,
-                                                                })
-                                                            }
-                                                        />
-                                                    }
-                                                    label={t('soloPlay.combat.canDodgeBullets')}
-                                                />
+                                                    <IconButton
+                                                        onClick={() => removeEdgerunner(index)}
+                                                        disabled={edgerunners.length === 1}
+                                                        sx={{ color: colors.neons.red.default }}
+                                                    >
+                                                        <DeleteOutline />
+                                                    </IconButton>
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        type="number"
+                                                        label={t('soloPlay.combat.armorSP')}
+                                                        value={e.armorSP}
+                                                        onChange={(ev) =>
+                                                            updateEdgerunner(index, {
+                                                                armorSP: parseInt(ev.target.value) || 0,
+                                                            })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        type="number"
+                                                        label={t('soloPlay.combat.currentHP')}
+                                                        value={e.currentHP}
+                                                        onChange={(ev) =>
+                                                            updateEdgerunner(index, {
+                                                                currentHP: parseInt(ev.target.value) || 0,
+                                                            })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                {/* Hardened Criteria & Abilities */}
+                                                <Grid size={12}>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            color: readerMode ? '#666' : colors.grays.gray600,
+                                                            display: 'block',
+                                                            mb: 0.5,
+                                                        }}
+                                                    >
+                                                        {t('soloPlay.combat.hardenedCriteria')}:
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasHighRefEvasion}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasHighRefEvasion: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hardened.refEvasion')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasHighAttack}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasHighAttack: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hardened.attack15')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasHighWillBody}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasHighWillBody: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hardened.willBody')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasLuxuryWeapon}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasLuxuryWeapon: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hardened.luxuryWeapon')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasHighDexMov}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasHighDexMov: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hardened.dexMov')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasHighAutoMartial}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasHighAutoMartial: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hardened.autofireMartial')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasSoloRank4}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasSoloRank4: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hardened.soloRank4')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasSpeedware}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        hasSpeedware: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.hasSpeedware')}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.canDodgeBullets}
+                                                                onChange={(ev) =>
+                                                                    updateEdgerunner(index, {
+                                                                        canDodgeBullets: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
+                                                        }
+                                                        label={t('soloPlay.combat.canDodgeBullets')}
+                                                    />
+                                                </Grid>
                                                 {isEdgerunnerHardened(e as QDEdgerunner) && (
-                                                    <Chip
-                                                        label={t('soloPlay.combat.hardened.label')}
-                                                        size="small"
-                                                        sx={{ backgroundColor: colors.neons.yellow.default }}
-                                                    />
+                                                    <Grid
+                                                        size={{ xs: 6, md: 3 }}
+                                                        sx={{ display: 'flex', alignItems: 'center' }}
+                                                    >
+                                                        <Chip
+                                                            label={t('soloPlay.combat.hardened.label')}
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: readerMode
+                                                                    ? '#ed6c02'
+                                                                    : colors.neons.yellow.default,
+                                                                color: readerMode ? '#fff' : '#000',
+                                                                fontWeight: 'bold',
+                                                            }}
+                                                        />
+                                                    </Grid>
                                                 )}
-                                            </Stack>
-                                        </Stack>
-                                    </Paper>
-                                ))}
-                            </Stack>
-                        </Box>
+                                            </Grid>
+                                        </Paper>
+                                    ))}
+                                </Stack>
+                            </Box>
 
-                        <Divider />
+                            <Divider />
 
-                        {/* Enemies Section */}
-                        <Box>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                                <Typography variant="h6" sx={{ color: colors.neons.red.default }}>
-                                    {t('soloPlay.combat.enemies')} ({enemies.length})
-                                </Typography>
-                                <IconButton onClick={addEnemy} sx={{ color: colors.neons.red.default }}>
-                                    <PersonAdd />
-                                </IconButton>
-                            </Stack>
-                            <Stack spacing={2}>
-                                {enemies.map((e, index) => (
-                                    <Paper key={index} sx={{ p: 2, backgroundColor: 'rgba(255,0,0,0.05)' }}>
-                                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                                            <TextField
-                                                size="small"
-                                                label={t('common.name')}
-                                                value={e.name}
-                                                onChange={(ev) => updateEnemy(index, { name: ev.target.value })}
-                                                sx={{ flex: 1, minWidth: 150 }}
-                                            />
-                                            <FormControl size="small" sx={{ minWidth: 120 }}>
-                                                <InputLabel>{t('soloPlay.combat.level')}</InputLabel>
-                                                <Select
-                                                    value={e.level}
-                                                    onChange={(ev) =>
-                                                        updateEnemy(index, { level: ev.target.value as NPCLevel })
-                                                    }
-                                                    label={t('soloPlay.combat.level')}
+                            {/* Enemies Section */}
+                            <Box>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                                    <Typography
+                                        variant="h6"
+                                        sx={{
+                                            color: readerMode ? '#d32f2f' : colors.neons.red.default,
+                                            fontFamily: readerMode ? 'inherit' : '"Orbitron", monospace',
+                                        }}
+                                    >
+                                        {t('soloPlay.combat.enemies')} ({enemies.length})
+                                    </Typography>
+                                    <IconButton
+                                        onClick={addEnemy}
+                                        sx={{ color: readerMode ? '#d32f2f' : colors.neons.red.default }}
+                                    >
+                                        <PersonAdd />
+                                    </IconButton>
+                                </Stack>
+                                <Stack spacing={2}>
+                                    {enemies.map((e, index) => (
+                                        <Paper
+                                            key={index}
+                                            sx={{
+                                                p: 2,
+                                                backgroundColor: readerMode
+                                                    ? 'rgba(128, 0, 0, 0.03)'
+                                                    : 'rgba(255, 0, 0, 0.05)',
+                                                border: `1px solid ${
+                                                    readerMode
+                                                        ? 'rgba(211, 47, 47, 0.3)'
+                                                        : colors.neons.red.default + '40'
+                                                }`,
+                                                borderRadius: '4px',
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    borderColor: readerMode
+                                                        ? 'rgba(211, 47, 47, 0.5)'
+                                                        : colors.neons.red.default,
+                                                    boxShadow: readerMode
+                                                        ? 'none'
+                                                        : `0 0 10px ${colors.neons.red.default}30`,
+                                                },
+                                            }}
+                                        >
+                                            <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+                                                <Grid size={{ xs: 12, md: 3 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label={t('common.name')}
+                                                        value={e.name}
+                                                        onChange={(ev) => updateEnemy(index, { name: ev.target.value })}
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <CyberpunkFormControl
+                                                        readerMode={readerMode}
+                                                        label={t('soloPlay.combat.level')}
+                                                    >
+                                                        <Select
+                                                            size="small"
+                                                            value={e.level}
+                                                            onChange={(ev) =>
+                                                                updateEnemy(index, {
+                                                                    level: ev.target.value as NPCLevel,
+                                                                })
+                                                            }
+                                                            label={t('soloPlay.combat.level')}
+                                                            sx={selectStyle}
+                                                        >
+                                                            <MenuItem value="MOOK">
+                                                                {t('soloPlay.combat.levels.mook')}
+                                                            </MenuItem>
+                                                            <MenuItem value="LIEUTENANT">
+                                                                {t('soloPlay.combat.levels.lieutenant')}
+                                                            </MenuItem>
+                                                            <MenuItem value="MINI_BOSS">
+                                                                {t('soloPlay.combat.levels.miniBoss')}
+                                                            </MenuItem>
+                                                            <MenuItem value="BOSS">
+                                                                {t('soloPlay.combat.levels.boss')}
+                                                            </MenuItem>
+                                                        </Select>
+                                                    </CyberpunkFormControl>
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        type="number"
+                                                        label={t('soloPlay.combat.attackSkill')}
+                                                        value={e.attackSkillTotal}
+                                                        onChange={(ev) =>
+                                                            updateEnemy(index, {
+                                                                attackSkillTotal: parseInt(ev.target.value) || 10,
+                                                            })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label={t('soloPlay.combat.weapon')}
+                                                        value={e.weaponName}
+                                                        onChange={(ev) =>
+                                                            updateEnemy(index, {
+                                                                weaponName: ev.target.value,
+                                                            })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label={t('soloPlay.combat.damage')}
+                                                        value={e.weaponDamage}
+                                                        onChange={(ev) =>
+                                                            updateEnemy(index, {
+                                                                weaponDamage: ev.target.value,
+                                                            })
+                                                        }
+                                                        variant="outlined"
+                                                        sx={textFieldOutlinedStyle}
+                                                    />
+                                                </Grid>
+                                                <Grid
+                                                    size={{ xs: 12, md: 1 }}
+                                                    sx={{ display: 'flex', justifyContent: 'center' }}
                                                 >
-                                                    <MenuItem value="MOOK">{t('soloPlay.combat.levels.mook')}</MenuItem>
-                                                    <MenuItem value="LIEUTENANT">
-                                                        {t('soloPlay.combat.levels.lieutenant')}
-                                                    </MenuItem>
-                                                    <MenuItem value="MINI_BOSS">
-                                                        {t('soloPlay.combat.levels.miniBoss')}
-                                                    </MenuItem>
-                                                    <MenuItem value="BOSS">{t('soloPlay.combat.levels.boss')}</MenuItem>
-                                                </Select>
-                                            </FormControl>
-                                            <TextField
-                                                size="small"
-                                                type="number"
-                                                label={t('soloPlay.combat.attackSkill')}
-                                                value={e.attackSkillTotal}
-                                                onChange={(ev) =>
-                                                    updateEnemy(index, {
-                                                        attackSkillTotal: parseInt(ev.target.value) || 10,
-                                                    })
-                                                }
-                                                sx={{ width: 100 }}
-                                            />
-                                            <TextField
-                                                size="small"
-                                                label={t('soloPlay.combat.weapon')}
-                                                value={e.weaponName}
-                                                onChange={(ev) => updateEnemy(index, { weaponName: ev.target.value })}
-                                                sx={{ width: 120 }}
-                                            />
-                                            <TextField
-                                                size="small"
-                                                label={t('soloPlay.combat.damage')}
-                                                value={e.weaponDamage}
-                                                onChange={(ev) => updateEnemy(index, { weaponDamage: ev.target.value })}
-                                                sx={{ width: 80 }}
-                                            />
-                                            <FormControlLabel
-                                                control={
-                                                    <Checkbox
-                                                        size="small"
-                                                        checked={e.isHardened}
-                                                        onChange={(ev) =>
-                                                            updateEnemy(index, { isHardened: ev.target.checked })
+                                                    <IconButton
+                                                        onClick={() => removeEnemy(index)}
+                                                        disabled={enemies.length === 1}
+                                                        sx={{ color: colors.neons.red.default }}
+                                                    >
+                                                        <DeleteOutline />
+                                                    </IconButton>
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.isHardened}
+                                                                onChange={(ev) =>
+                                                                    updateEnemy(index, {
+                                                                        isHardened: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
                                                         }
+                                                        label={t('soloPlay.combat.hardened.label')}
                                                     />
-                                                }
-                                                label={t('soloPlay.combat.hardened.label')}
-                                            />
-                                            <FormControlLabel
-                                                control={
-                                                    <Checkbox
-                                                        size="small"
-                                                        checked={e.hasSpeedware}
-                                                        onChange={(ev) =>
-                                                            updateEnemy(index, { hasSpeedware: ev.target.checked })
+                                                </Grid>
+                                                <Grid size={{ xs: 6, md: 3 }}>
+                                                    <CyberpunkFormControlLabel
+                                                        readerMode={readerMode}
+                                                        control={
+                                                            <CyberpunkCheckbox
+                                                                readerMode={readerMode}
+                                                                checked={e.hasSpeedware}
+                                                                onChange={(ev) =>
+                                                                    updateEnemy(index, {
+                                                                        hasSpeedware: ev.target.checked,
+                                                                    })
+                                                                }
+                                                            />
                                                         }
+                                                        label={t('soloPlay.combat.hasSpeedware')}
                                                     />
-                                                }
-                                                label={t('soloPlay.combat.hasSpeedware')}
-                                            />
-                                            <IconButton
-                                                onClick={() => removeEnemy(index)}
-                                                disabled={enemies.length === 1}
-                                                sx={{ color: colors.neons.red.default }}
-                                            >
-                                                <DeleteOutline />
-                                            </IconButton>
-                                        </Stack>
-                                    </Paper>
-                                ))}
-                            </Stack>
-                        </Box>
+                                                </Grid>
+                                            </Grid>
+                                        </Paper>
+                                    ))}
+                                </Stack>
+                            </Box>
 
-                        <Divider />
-
-                        {/* Morale Configuration */}
-                        <Box>
-                            <Typography variant="h6" sx={{ color: colors.neons.yellow.default, mb: 2 }}>
-                                {t('soloPlay.combat.morale.title')}
-                            </Typography>
-                            <Stack direction="row" spacing={2} flexWrap="wrap">
-                                <FormControl size="small" sx={{ minWidth: 200 }}>
-                                    <InputLabel>{t('soloPlay.combat.morale.stressPoint')}</InputLabel>
-                                    <Select
-                                        value={stressPointType}
-                                        onChange={(e) => setStressPointType(e.target.value as StressPointType)}
-                                        label={t('soloPlay.combat.morale.stressPoint')}
-                                    >
-                                        <MenuItem value="HALF_INCAPACITATED">
-                                            {t('soloPlay.combat.morale.halfIncapacitated')}
-                                        </MenuItem>
-                                        <MenuItem value="SERIOUSLY_WOUNDED">
-                                            {t('soloPlay.combat.morale.seriouslyWounded')}
-                                        </MenuItem>
-                                        <MenuItem value="ROUND_5">{t('soloPlay.combat.morale.round5')}</MenuItem>
-                                        <MenuItem value="CUSTOM">{t('soloPlay.combat.morale.custom')}</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                <FormControl size="small" sx={{ minWidth: 200 }}>
-                                    <InputLabel>{t('soloPlay.combat.morale.mentality')}</InputLabel>
-                                    <Select
-                                        value={moraleMentality}
-                                        onChange={(e) => setMoraleMentality(e.target.value as MoraleMentality)}
-                                        label={t('soloPlay.combat.morale.mentality')}
-                                    >
-                                        <MenuItem value="LOST_TO_VIOLENCE">
-                                            {t('soloPlay.combat.morale.lostToViolence')}
-                                        </MenuItem>
-                                        <MenuItem value="EXPERIENCED">
-                                            {t('soloPlay.combat.morale.experienced')}
-                                        </MenuItem>
-                                        <MenuItem value="TRAINED">{t('soloPlay.combat.morale.trained')}</MenuItem>
-                                        <MenuItem value="INEXPERIENCED">
-                                            {t('soloPlay.combat.morale.inexperienced')}
-                                        </MenuItem>
-                                        <MenuItem value="UNSURE">{t('soloPlay.combat.morale.unsure')}</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Stack>
-                            {stressPointType === 'CUSTOM' && (
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label={t('soloPlay.combat.morale.customCondition')}
-                                    value={customStressCondition}
-                                    onChange={(e) => setCustomStressCondition(e.target.value)}
-                                    sx={{ mt: 2 }}
-                                />
-                            )}
-                        </Box>
-                    </Stack>
+                        </Stack>
+                    </CustomScrollbar>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setSetupDialogOpen(false)}>{t('common.cancel')}</Button>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        onClick={() => setSetupDialogOpen(false)}
+                        sx={
+                            readerMode
+                                ? { color: '#0288d1' }
+                                : {
+                                      bgcolor: 'rgba(10, 20, 30, 0.6)',
+                                      color: colors.neons.cyan.default,
+                                      border: `1px solid ${colors.neons.cyan.default}40`,
+                                      '&:hover': {
+                                          bgcolor: 'rgba(0, 30, 60, 0.8)',
+                                          boxShadow: `0 0 10px ${colors.neons.cyan.default}40`,
+                                      },
+                                  }
+                        }
+                    >
+                        {t('common.cancel')}
+                    </Button>
                     <Button
                         onClick={handleStartCombat}
-                        variant="contained"
                         startIcon={<PlayArrow />}
-                        sx={{
-                            backgroundColor: colors.neons.red.default,
-                            '&:hover': { backgroundColor: colors.neons.red.dark },
-                        }}
+                        sx={
+                            readerMode
+                                ? { color: '#d32f2f' }
+                                : {
+                                      bgcolor: 'rgba(40, 0, 0, 0.6)',
+                                      color: colors.neons.red.default,
+                                      border: `1px solid ${colors.neons.red.default}40`,
+                                      '&:hover': {
+                                          bgcolor: 'rgba(60, 0, 0, 0.8)',
+                                          color: colors.neons.red.light,
+                                          boxShadow: `0 0 10px ${colors.neons.red.default}60`,
+                                          textShadow: `0 0 5px ${colors.neons.red.default}`,
+                                          border: `1px solid ${colors.neons.red.default}70`,
+                                      },
+                                  }
+                        }
                     >
                         {t('soloPlay.combat.startCombat')}
                     </Button>
@@ -1252,35 +1746,135 @@ const QDCombatPanel = () => {
             </Dialog>
 
             {/* Tactics Dialog */}
-            <Dialog open={tacticsDialogOpen} onClose={() => {}} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ color: colors.neons.cyan.default }}>{t('soloPlay.combat.tacticsCheck')}</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" sx={{ mb: 2, color: colors.grays.gray600 }}>
-                        {t('soloPlay.combat.tacticsDescription')}
+            <Dialog
+                open={tacticsDialogOpen}
+                onClose={() => {}}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: readerMode
+                            ? {
+                                  bgcolor: '#ffffff',
+                                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                  color: '#333',
+                              }
+                            : {
+                                  bgcolor: 'rgba(10, 15, 30, 0.95)',
+                                  backdropFilter: 'blur(4px)',
+                                  border: `1px solid ${colors.neons.cyan.default}40`,
+                                  boxShadow: `0 0 20px ${colors.neons.cyan.default}40`,
+                                  color: '#fff',
+                                  position: 'relative',
+                                  '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      backgroundImage:
+                                          'linear-gradient(to right, rgba(0, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 255, 255, 0.03) 1px, transparent 1px)',
+                                      backgroundSize: '20px 20px',
+                                      pointerEvents: 'none',
+                                      opacity: 0.5,
+                                  },
+                              },
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={
+                        readerMode
+                            ? {
+                                  color: '#0097a7',
+                                  borderBottom: '1px solid #eee',
+                              }
+                            : {
+                                  color: colors.neons.cyan.default,
+                                  textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                                  fontFamily: '"Orbitron", monospace',
+                                  borderBottom: `1px solid ${colors.neons.cyan.default}40`,
+                                  position: 'relative',
+                                  '&::after': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      bottom: 0,
+                                      left: '10%',
+                                      width: '80%',
+                                      height: '1px',
+                                      background: `linear-gradient(90deg, transparent, ${colors.neons.cyan.default}, transparent)`,
+                                  },
+                              }
+                    }
+                >
+                    <Typography
+                        variant="h3"
+                        component="div"
+                        className="glitch-text"
+                        data-text={t('soloPlay.combat.tacticsCheck')}
+                    >
+                        {t('soloPlay.combat.tacticsCheck')}
                     </Typography>
-                    <Stack spacing={2}>
-                        <TextField
-                            type="number"
-                            label={t('soloPlay.combat.edgerunnerTactics')}
-                            value={edgerunnerTactics}
-                            onChange={(e) => setEdgerunnerTactics(parseInt(e.target.value) || 0)}
-                            helperText={t('soloPlay.combat.tacticsHelp')}
-                        />
-                        <TextField
-                            type="number"
-                            label={t('soloPlay.combat.enemyTactics')}
-                            value={enemyTactics}
-                            onChange={(e) => setEnemyTactics(parseInt(e.target.value) || 0)}
-                            helperText={t('soloPlay.combat.tacticsEnemyHelp')}
-                        />
-                    </Stack>
+                </DialogTitle>
+                <DialogContent
+                    sx={{
+                        py: 3,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: '80vh',
+                        pr: 0,
+                    }}
+                >
+                    <CustomScrollbar scrollDirection="vertical" height="100%">
+                        <Typography
+                            variant="body2"
+                            sx={{ mb: 2, pr: 3, color: readerMode ? '#666' : colors.grays.gray600 }}
+                        >
+                            {t('soloPlay.combat.tacticsDescription')}
+                        </Typography>
+                        <Stack spacing={2} sx={{ pr: 3 }}>
+                            <TextField
+                                type="number"
+                                label={t('soloPlay.combat.edgerunnerTactics')}
+                                value={edgerunnerTactics}
+                                onChange={(e) => setEdgerunnerTactics(parseInt(e.target.value) || 0)}
+                                helperText={t('soloPlay.combat.tacticsHelp')}
+                                variant="outlined"
+                                sx={textFieldOutlinedStyle}
+                            />
+                            <TextField
+                                type="number"
+                                label={t('soloPlay.combat.enemyTactics')}
+                                value={enemyTactics}
+                                onChange={(e) => setEnemyTactics(parseInt(e.target.value) || 0)}
+                                helperText={t('soloPlay.combat.tacticsEnemyHelp')}
+                                variant="outlined"
+                                sx={textFieldOutlinedStyle}
+                            />
+                        </Stack>
+                    </CustomScrollbar>
                 </DialogContent>
-                <DialogActions>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button
                         onClick={handleTacticsCheck}
-                        variant="contained"
                         startIcon={<Casino />}
-                        sx={{ backgroundColor: colors.neons.cyan.default }}
+                        sx={
+                            readerMode
+                                ? { color: '#0097a7' }
+                                : {
+                                      bgcolor: 'rgba(0, 40, 40, 0.6)',
+                                      color: colors.neons.cyan.default,
+                                      border: `1px solid ${colors.neons.cyan.default}40`,
+                                      '&:hover': {
+                                          bgcolor: 'rgba(0, 60, 60, 0.8)',
+                                          color: colors.neons.cyan.light,
+                                          boxShadow: `0 0 10px ${colors.neons.cyan.default}60`,
+                                          textShadow: `0 0 5px ${colors.neons.cyan.default}`,
+                                          border: `1px solid ${colors.neons.cyan.default}70`,
+                                      },
+                                  }
+                        }
                     >
                         {t('soloPlay.combat.rollTactics')}
                     </Button>

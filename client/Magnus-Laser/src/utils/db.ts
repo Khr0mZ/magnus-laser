@@ -66,6 +66,7 @@ export type CustomMarker = {
     buildingId: string
     id: string
     markerType: 'building' | 'gang' | 'contact'
+    mapMode?: 'red' | '2077'
 }
 
 export type AppPreferences = {
@@ -337,4 +338,6 @@ export const KV_KEYS = {
     lastSessionCode: 'lastSessionCode',
     lastSnapshot: 'lastSnapshot',
     publicUrl: 'publicUrl',
+    qdCombatSession: 'qdCombatSession',
+    qdNetrunSession: 'qdNetrunSession',
 } as const

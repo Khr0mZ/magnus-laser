@@ -1,4 +1,3 @@
-/* eslint-env browser */
 /* global RTCIceServer, RTCPeerConnection, RTCDataChannel, RTCSessionDescriptionInit, RTCIceCandidateInit */
 import type { PeerInfo, WireMsg } from '@/types/session'
 

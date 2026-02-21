@@ -1182,6 +1182,7 @@
             "title": "Combate Rapido",
             "startCombat": "Iniciar Combate",
             "noCombatYet": "No hay combate activo. Inicia uno para rastrear rondas de Combate Rapido.",
+            "description": "Un sistema de combate simplificado que resuelve peleas enteras en pocas tiradas. Compara los totales de ataque entre bandos y calcula el dano de los impactos enemigos.",
             "setupCombat": "Configurar Combate",
             "sessionName": "Nombre del Combate",
             "edgerunners": "Edgerunners",
@@ -1203,7 +1204,8 @@
                 "counting": "Contar Ataques",
                 "attacking": "Realizar Ataques",
                 "comparing": "Comparar Resultados",
-                "outcome": "Resultado"
+                "outcome": "Resultado",
+                "damage": "Dano"
             },
             "tacticsCheck": "Chequeo de Tacticas",
             "tacticsDescription": "Haz un Chequeo de Tacticas Enfrentado. Elige al Edgerunner con la mayor habilidad de Tacticas y comparalo contra las Tacticas o INT del enemigo.",
@@ -1236,6 +1238,32 @@
             "hardenedCriteria": "Criterios de Curtido (cualquiera hace al personaje Curtido)",
             "hasSpeedware": "Tiene Speedware",
             "canDodgeBullets": "Puede Esquivar Balas",
+            "armorSP": "SP de Armadura",
+            "currentHP": "HP",
+            "rollDamage": "Tirar Dano",
+            "noDamageToResolve": "No hay impactos enemigos que resolver — no se recibio dano!",
+            "damageResults": "Resultados de Dano",
+            "target": "Objetivo",
+            "diceRolled": "Dados",
+            "totalDamage": "Total",
+            "damageAfterArmor": "Tras Armadura",
+            "criticalInjury": "Herida Critica",
+            "noCritical": "Sin Critico",
+            "hpRemaining": "HP Restante",
+            "criticalInjurySummary": "Heridas Criticas Sufridas",
+            "criticalInjuries": {
+                "dismemberedArm": { "name": "Brazo Desmembrado", "effect": "Brazo perdido. Sueltas objetos. Tirada Muerte +1." },
+                "dismemberedHand": { "name": "Mano Desmembrada", "effect": "Mano perdida. Sueltas objetos. Tirada Muerte +1." },
+                "collapsedLung": { "name": "Pulmon Colapsado", "effect": "-2 MOV (min 1). Tirada Muerte +1." },
+                "brokenRibs": { "name": "Costillas Rotas", "effect": "Re-sufres 5 dano bonus si te mueves >4m." },
+                "brokenArm": { "name": "Brazo Roto", "effect": "Brazo inutilizable. Sueltas objetos de esa mano." },
+                "foreignObject": { "name": "Objeto Extraño", "effect": "Re-sufres 5 dano bonus si te mueves >4m." },
+                "brokenLeg": { "name": "Pierna Rota", "effect": "-4 MOV (min 1)." },
+                "tornMuscle": { "name": "Musculo Desgarrado", "effect": "-2 a Ataques Cuerpo a Cuerpo." },
+                "spinalInjury": { "name": "Lesion Espinal", "effect": "Siguiente Turno: sin Accion (solo Movimiento). Tirada Muerte +1." },
+                "crushedFingers": { "name": "Dedos Aplastados", "effect": "-4 a todas las Acciones con esa mano." },
+                "dismemberedLeg": { "name": "Pierna Desmembrada", "effect": "Pierna perdida. -6 MOV (min 1). No puedes esquivar. Tirada Muerte +1." }
+            },
             "combatComplete": "Combate Completado",
             "levels": {
                 "mook": "Matoncillo (+1 ataque)",
@@ -1315,7 +1343,6 @@
             "checkTypes": {
                 "PASSWORD": "Contrasena (Backdoor)",
                 "FILE": "Archivo (Eye-Dee)",
-                "CONTROL_NODE": "Nodo de Control",
                 "BLACK_ICE": "Black ICE (Enfrentado)"
             },
             "checkDescription": "Descripcion (opcional)",
@@ -1329,7 +1356,14 @@
             "blackIceHits": "Impactos de Black ICE",
             "blackIceHit": "Golpeado por Black ICE!",
             "unsafeJackout": "+1 por desconexion insegura",
-            "checkDescriptionPlaceholder": "DV6 Password / Asp Black ICE / Archivo Importante"
+            "checkDescriptionPlaceholder": "DV6 Password / Asp Black ICE / Archivo Importante",
+            "programs": "Programas",
+            "addProgram": "Agregar Programa",
+            "programLoss": "Perdida de Programas",
+            "hits": "impactos",
+            "rollProgramLoss": "Tirar Perdida de Programa",
+            "programsDestroyed": "Programas Destruidos",
+            "programsSurviving": "Programas Supervivientes"
         },
         "mission": {
             "title": "Constructor de Misiones",

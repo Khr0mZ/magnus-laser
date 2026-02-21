@@ -10,7 +10,6 @@ import type {
     MissionEmployer,
     MissionPayment,
     MoraleMentality,
-    MoraleConfig,
     NetArchitectureSize,
     OpenQuestionResult,
     OracleAnswer,
@@ -18,7 +17,9 @@ import type {
     OracleResult,
     QDAttackCheck,
     QDComparison,
+    CriticalInjuryResult,
     QDCombatSession,
+    QDDamageResult,
     QDEdgerunner,
     QDEnemy,
     SoloMission,
@@ -268,11 +269,13 @@ export const distributeEdgerunnerAttacks = (
         distribution.push({ combatant: e, attackCount: count })
     }
     
-    // Add +1 for Tactics winner to the first combatant (or highest skilled)
+    // Add +1 for Tactics winner to the member with fewest attacks (to balance)
     if (wonTactics && distribution.length > 0) {
-        distribution[0].attackCount += 1
+        const minAttacks = Math.min(...distribution.map(d => d.attackCount))
+        const candidate = [...distribution].reverse().find(d => d.attackCount === minAttacks)
+        if (candidate) candidate.attackCount += 1
     }
-    
+
     return distribution
 }
 
@@ -296,11 +299,13 @@ export const distributeEnemyAttacks = (
         distribution.push({ combatant: e, attackCount: count })
     }
     
-    // Add +1 for Tactics winner to the first combatant
+    // Add +1 for Tactics winner to the member with fewest attacks (to balance)
     if (wonTactics && distribution.length > 0) {
-        distribution[0].attackCount += 1
+        const minAttacks = Math.min(...distribution.map(d => d.attackCount))
+        const candidate = [...distribution].reverse().find(d => d.attackCount === minAttacks)
+        if (candidate) candidate.attackCount += 1
     }
-    
+
     return distribution
 }
 
@@ -401,8 +406,8 @@ export const compareAttacks = (
                     winner = 'ENEMY'
                 }
             } else {
-                // Tie goes to defender (enemy)
-                winner = 'ENEMY'
+                // Tie goes to defender — in simultaneous combat, neither side scores
+                winner = 'TIE'
             }
         } else if (edgerunnerAtk && !enemyAtk) {
             winner = 'UNOPPOSED_EDGERUNNER'
@@ -481,7 +486,6 @@ export const createQDCombatSession = (
     name: string,
     edgerunners: Omit<QDEdgerunner, 'id'>[],
     enemies: Omit<QDEnemy, 'id'>[],
-    morale: Omit<MoraleConfig, 'triggered' | 'result' | 'roll'>
 ): QDCombatSession => {
     return {
         id: uuidv4(),
@@ -496,10 +500,124 @@ export const createQDCombatSession = (
         comparisons: [],
         edgerunnerHits: 0,
         enemyHits: 0,
-        morale: { ...morale, triggered: false },
+        damageResults: [],
         phase: 'SETUP',
         isComplete: false,
         createdAt: Date.now(),
+    }
+}
+
+// ============================================
+// DAMAGE RESOLUTION (Step 6)
+// ============================================
+
+/**
+ * Parse a damage string like "2d6", "3d6", "4d6+2"
+ */
+export const parseDamageString = (dmg: string): { count: number; sides: number; modifier: number } => {
+    const match = dmg.trim().match(/^(\d+)d(\d+)(?:\+(\d+))?$/i)
+    if (!match) {
+        return { count: 2, sides: 6, modifier: 0 } // Default to 2d6
+    }
+    return {
+        count: parseInt(match[1]),
+        sides: parseInt(match[2]),
+        modifier: match[3] ? parseInt(match[3]) : 0,
+    }
+}
+
+/**
+ * Roll damage dice individually
+ */
+export const rollDamage = (weaponDamage: string): { diceResults: number[]; total: number } => {
+    const { count, sides, modifier } = parseDamageString(weaponDamage)
+    const diceResults: number[] = []
+
+    for (let i = 0; i < count; i++) {
+        diceResults.push(Math.floor(Math.random() * sides) + 1)
+    }
+
+    const total = diceResults.reduce((sum, d) => sum + d, 0) + modifier
+    return { diceResults, total }
+}
+
+/**
+ * Check for Critical Injury: two or more 6s on damage dice (CPR core p.187)
+ * "Whenever two or more dice rolled for damage come up 6, you've inflicted a Critical Injury!"
+ */
+export const checkCriticalInjury = (diceResults: number[]): boolean => {
+    const sixes = diceResults.filter(d => d === 6).length
+    return sixes >= 2
+}
+
+/**
+ * Critical Injuries to the Body Table (CPR core p.187)
+ * Roll 2d6 to determine specific injury. All QD Combat attacks are against the Body.
+ */
+export const CRITICAL_INJURIES_BODY: { roll: number; nameKey: string }[] = [
+    { roll: 2, nameKey: 'dismemberedArm' },
+    { roll: 3, nameKey: 'dismemberedHand' },
+    { roll: 4, nameKey: 'collapsedLung' },
+    { roll: 5, nameKey: 'brokenRibs' },
+    { roll: 6, nameKey: 'brokenArm' },
+    { roll: 7, nameKey: 'foreignObject' },
+    { roll: 8, nameKey: 'brokenLeg' },
+    { roll: 9, nameKey: 'tornMuscle' },
+    { roll: 10, nameKey: 'spinalInjury' },
+    { roll: 11, nameKey: 'crushedFingers' },
+    { roll: 12, nameKey: 'dismemberedLeg' },
+]
+
+/**
+ * Roll on Critical Injuries to the Body table (2d6)
+ * Re-rolls if the target already has that injury (CPR rule: "roll until you get one they don't have")
+ */
+export const rollCriticalInjuryBody = (existingInjuries: string[] = []): CriticalInjuryResult => {
+    const maxAttempts = 20
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const die1 = Math.floor(Math.random() * 6) + 1
+        const die2 = Math.floor(Math.random() * 6) + 1
+        const roll = die1 + die2
+        const injury = CRITICAL_INJURIES_BODY.find(i => i.roll === roll)!
+        if (!existingInjuries.includes(injury.nameKey)) {
+            return { roll, nameKey: injury.nameKey }
+        }
+    }
+    // Fallback: all injuries exhausted, return last roll anyway
+    const die1 = Math.floor(Math.random() * 6) + 1
+    const die2 = Math.floor(Math.random() * 6) + 1
+    const roll = die1 + die2
+    return { roll, nameKey: CRITICAL_INJURIES_BODY.find(i => i.roll === roll)!.nameKey }
+}
+
+/**
+ * Calculate full damage for a single hit against an Edgerunner
+ * Critical Injuries apply regardless of armor (CPR core p.187:
+ * "Critical Injuries and their Bonus Damage are inflicted regardless of
+ * if any of the attack's damage got through the target's SP.")
+ */
+export const calculateDamageForHit = (
+    weaponDamage: string,
+    armorSP: number,
+    existingInjuries: string[] = [],
+): Omit<QDDamageResult, 'targetId' | 'targetName' | 'attackerName' | 'weaponName'> => {
+    const { diceResults, total } = rollDamage(weaponDamage)
+    const hasCritical = checkCriticalInjury(diceResults)
+    const criticalInjury = hasCritical ? rollCriticalInjuryBody(existingInjuries) : undefined
+    const bonusDamage = hasCritical ? 5 : 0
+    const damageAfterArmor = Math.max(0, total - armorSP)
+    const armorReduced = damageAfterArmor > 0
+
+    return {
+        weaponDamage,
+        diceResults,
+        totalDamage: total,
+        armorSP,
+        damageAfterArmor: damageAfterArmor + bonusDamage,
+        armorReduced,
+        hasCritical,
+        criticalInjury,
+        bonusDamage,
     }
 }
 

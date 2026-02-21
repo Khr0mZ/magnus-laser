@@ -980,41 +980,48 @@ const EdgerunnersView = () => {
                                             mb: 1,
                                         }}
                                     >
-                                        {Object.entries(edgerunner.stats).map(([stat, value]) => (
-                                            <Tooltip disableInteractive key={stat} title={stat} arrow>
-                                                <Box
-                                                    sx={{
-                                                        textAlign: 'center',
-                                                        py: 0.25,
-                                                        px: 0.5,
-                                                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                                                        borderRadius: '4px',
-                                                        border: `1px solid ${getStatColor(value)}30`,
-                                                    }}
-                                                >
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{
-                                                            color: colors.grays.gray500,
-                                                            fontSize: '0.6rem',
-                                                            display: 'block',
-                                                        }}
-                                                    >
-                                                        {stat}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{
-                                                            color: getStatColor(value),
-                                                            fontWeight: 'bold',
-                                                            fontFamily: '"Orbitron", monospace',
-                                                        }}
-                                                    >
-                                                        {value}
-                                                    </Typography>
-                                                </Box>
-                                            </Tooltip>
-                                        ))}
+                                        {(() => {
+                                            const eff = getEffectiveStats(edgerunner.stats, edgerunner.cyberware)
+                                            return Object.entries(edgerunner.stats).map(([stat, base]) => {
+                                                const effective = eff[stat as keyof typeof eff]
+                                                const boosted = effective > base
+                                                return (
+                                                    <Tooltip disableInteractive key={stat} title={boosted ? `${stat}: base ${base} → ${effective}` : stat} arrow>
+                                                        <Box
+                                                            sx={{
+                                                                textAlign: 'center',
+                                                                py: 0.25,
+                                                                px: 0.5,
+                                                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                                                borderRadius: '4px',
+                                                                border: `1px solid ${boosted ? colors.neons.green.default : getStatColor(base)}30`,
+                                                            }}
+                                                        >
+                                                            <Typography
+                                                                variant="caption"
+                                                                sx={{
+                                                                    color: colors.grays.gray500,
+                                                                    fontSize: '0.6rem',
+                                                                    display: 'block',
+                                                                }}
+                                                            >
+                                                                {stat}
+                                                            </Typography>
+                                                            <Typography
+                                                                variant="body2"
+                                                                sx={{
+                                                                    color: boosted ? colors.neons.green.default : getStatColor(base),
+                                                                    fontWeight: 'bold',
+                                                                    fontFamily: '"Orbitron", monospace',
+                                                                }}
+                                                            >
+                                                                {effective}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Tooltip>
+                                                )
+                                            })
+                                        })()}
                                     </Box>
 
                                     {/* Derived Stats */}
@@ -1274,67 +1281,86 @@ const EdgerunnersView = () => {
                                                         gap: 1,
                                                     }}
                                                 >
-                                                    {Object.entries(editedEdgerunner.stats).map(([stat, value]) => (
-                                                        <Box
-                                                            key={stat}
-                                                            sx={{
-                                                                textAlign: 'center',
-                                                                py: 0.5,
-                                                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                                                                borderRadius: '4px',
-                                                                border: `1px solid ${getStatColor(value)}50`,
-                                                            }}
-                                                        >
-                                                            <Typography
-                                                                variant="caption"
-                                                                sx={{
-                                                                    color: colors.grays.gray600,
-                                                                    textAlign: 'center',
-                                                                    display: 'block',
-                                                                }}
-                                                            >
-                                                                {stat}
-                                                            </Typography>
-                                                            <TextField
-                                                                type="tel"
-                                                                value={value}
-                                                                onChange={(e) =>
-                                                                    updateEditedStat(
-                                                                        stat,
-                                                                        parseInt(e.target.value) || 0
-                                                                    )
-                                                                }
-                                                                variant="standard"
-                                                                slotProps={{
-                                                                    htmlInput: {
-                                                                        min: 1,
-                                                                        max: 10,
-                                                                        style: { textAlign: 'center', padding: 0 },
-                                                                    },
-                                                                }}
-                                                                sx={{
-                                                                    width: 40,
-                                                                    mx: 'auto',
-                                                                    display: 'block',
-                                                                    '& .MuiInput-input': {
-                                                                        color: getStatColor(value),
-                                                                        fontWeight: 'bold',
-                                                                        fontFamily: '"Orbitron", monospace',
-                                                                        fontSize: '1.15rem',
-                                                                    },
-                                                                    '& .MuiInput-underline:before': {
-                                                                        borderColor: 'transparent',
-                                                                    },
-                                                                    '& .MuiInput-underline:hover:before': {
-                                                                        borderColor: `${getStatColor(value)}40 !important`,
-                                                                    },
-                                                                    '& .MuiInput-underline:after': {
-                                                                        borderColor: getStatColor(value),
-                                                                    },
-                                                                }}
-                                                            />
-                                                        </Box>
-                                                    ))}
+                                                    {(() => {
+                                                        const eff = getEffectiveStats(editedEdgerunner.stats, editedEdgerunner.cyberware)
+                                                        return Object.entries(editedEdgerunner.stats).map(([stat, value]) => {
+                                                            const effective = eff[stat as keyof typeof eff]
+                                                            const boosted = effective > value
+                                                            return (
+                                                                <Box
+                                                                    key={stat}
+                                                                    sx={{
+                                                                        textAlign: 'center',
+                                                                        py: 0.5,
+                                                                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                                                        borderRadius: '4px',
+                                                                        border: `1px solid ${boosted ? colors.neons.green.default : getStatColor(value)}50`,
+                                                                    }}
+                                                                >
+                                                                    <Typography
+                                                                        variant="caption"
+                                                                        sx={{
+                                                                            color: colors.grays.gray600,
+                                                                            textAlign: 'center',
+                                                                            display: 'block',
+                                                                        }}
+                                                                    >
+                                                                        {stat}
+                                                                    </Typography>
+                                                                    <TextField
+                                                                        type="tel"
+                                                                        value={value}
+                                                                        onChange={(e) =>
+                                                                            updateEditedStat(
+                                                                                stat,
+                                                                                parseInt(e.target.value) || 0
+                                                                            )
+                                                                        }
+                                                                        variant="standard"
+                                                                        slotProps={{
+                                                                            htmlInput: {
+                                                                                min: 1,
+                                                                                max: 10,
+                                                                                style: { textAlign: 'center', padding: 0 },
+                                                                            },
+                                                                        }}
+                                                                        sx={{
+                                                                            width: 40,
+                                                                            mx: 'auto',
+                                                                            display: 'block',
+                                                                            '& .MuiInput-input': {
+                                                                                color: boosted ? colors.neons.green.default : getStatColor(value),
+                                                                                fontWeight: 'bold',
+                                                                                fontFamily: '"Orbitron", monospace',
+                                                                                fontSize: '1.15rem',
+                                                                            },
+                                                                            '& .MuiInput-underline:before': {
+                                                                                borderColor: 'transparent',
+                                                                            },
+                                                                            '& .MuiInput-underline:hover:before': {
+                                                                                borderColor: `${boosted ? colors.neons.green.default : getStatColor(value)}40 !important`,
+                                                                            },
+                                                                            '& .MuiInput-underline:after': {
+                                                                                borderColor: boosted ? colors.neons.green.default : getStatColor(value),
+                                                                            },
+                                                                        }}
+                                                                    />
+                                                                    {boosted && (
+                                                                        <Typography
+                                                                            variant="caption"
+                                                                            sx={{
+                                                                                color: colors.neons.green.default,
+                                                                                fontSize: '0.65rem',
+                                                                                fontWeight: 'bold',
+                                                                            }}
+                                                                        >
+                                                                            → {effective}
+                                                                        </Typography>
+                                                                    )}
+                                                                </Box>
+                                                            )
+                                                        })
+                                                    })()}
                                                 </Box>
                                             </Grid>
 
@@ -4574,11 +4600,16 @@ const EdgerunnersView = () => {
                                                     >
                                                         {editedEdgerunner.handle || editedEdgerunner.name}
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: colors.grays.gray500 }}>
-                                                        HP: {editedEdgerunner.derivedStats.HP} | MOV:{' '}
-                                                        {editedEdgerunner.stats.MOVE} | Init:{' '}
-                                                        {editedEdgerunner.stats.REF}
-                                                    </Typography>
+                                                    {(() => {
+                                                        const eff = getEffectiveStats(editedEdgerunner.stats, editedEdgerunner.cyberware)
+                                                        return (
+                                                            <Typography variant="caption" sx={{ color: colors.grays.gray500 }}>
+                                                                HP: {editedEdgerunner.derivedStats.HP} | MOV:{' '}
+                                                                {eff.MOVE} | Init:{' '}
+                                                                {eff.REF}
+                                                            </Typography>
+                                                        )
+                                                    })()}
                                                 </Box>
                                             </Stack>
                                         </Box>

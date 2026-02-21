@@ -1182,6 +1182,7 @@
             "title": "Quick & Dirty Combat",
             "startCombat": "Start Combat",
             "noCombatYet": "No active combat. Start one to track Quick & Dirty combat rounds.",
+            "description": "A simplified combat system that resolves entire fights in a few rolls. Compare attack totals between sides and calculate damage from enemy hits.",
             "setupCombat": "Setup Combat",
             "sessionName": "Combat Name",
             "edgerunners": "Edgerunners",
@@ -1203,7 +1204,8 @@
                 "counting": "Count Attacks",
                 "attacking": "Make Attacks",
                 "comparing": "Compare Results",
-                "outcome": "Outcome"
+                "outcome": "Outcome",
+                "damage": "Damage"
             },
             "tacticsCheck": "Tactics Check",
             "tacticsDescription": "Make an Opposed Tactics Check. Pick the Edgerunner with the highest Tactics skill and compare against the enemy's Tactics or INT.",
@@ -1236,6 +1238,32 @@
             "hardenedCriteria": "Hardened Criteria (any one makes character Hardened)",
             "hasSpeedware": "Has Speedware",
             "canDodgeBullets": "Can Dodge Bullets",
+            "armorSP": "Armor SP",
+            "currentHP": "HP",
+            "rollDamage": "Roll Damage",
+            "noDamageToResolve": "No enemy hits to resolve — no damage taken!",
+            "damageResults": "Damage Results",
+            "target": "Target",
+            "diceRolled": "Dice",
+            "totalDamage": "Total",
+            "damageAfterArmor": "After Armor",
+            "criticalInjury": "Critical Injury",
+            "noCritical": "No Critical",
+            "hpRemaining": "HP Remaining",
+            "criticalInjurySummary": "Critical Injuries Suffered",
+            "criticalInjuries": {
+                "dismemberedArm": { "name": "Dismembered Arm", "effect": "Arm gone. Drop items. Death Save +1." },
+                "dismemberedHand": { "name": "Dismembered Hand", "effect": "Hand gone. Drop items. Death Save +1." },
+                "collapsedLung": { "name": "Collapsed Lung", "effect": "-2 MOVE (min 1). Death Save +1." },
+                "brokenRibs": { "name": "Broken Ribs", "effect": "Re-suffer 5 bonus dmg if move >4m/yds." },
+                "brokenArm": { "name": "Broken Arm", "effect": "Arm unusable. Drop items in that hand." },
+                "foreignObject": { "name": "Foreign Object", "effect": "Re-suffer 5 bonus dmg if move >4m/yds." },
+                "brokenLeg": { "name": "Broken Leg", "effect": "-4 MOVE (min 1)." },
+                "tornMuscle": { "name": "Torn Muscle", "effect": "-2 to Melee Attacks." },
+                "spinalInjury": { "name": "Spinal Injury", "effect": "Next Turn: no Action (Move only). Death Save +1." },
+                "crushedFingers": { "name": "Crushed Fingers", "effect": "-4 to all Actions with that hand." },
+                "dismemberedLeg": { "name": "Dismembered Leg", "effect": "Leg gone. -6 MOVE (min 1). Can't dodge. Death Save +1." }
+            },
             "combatComplete": "Combat Complete",
             "levels": {
                 "mook": "Mook (+1 attack)",
@@ -1315,7 +1343,6 @@
             "checkTypes": {
                 "PASSWORD": "Password (Backdoor)",
                 "FILE": "File (Eye-Dee)",
-                "CONTROL_NODE": "Control Node",
                 "BLACK_ICE": "Black ICE (Opposed)"
             },
             "checkDescription": "Description (optional)",
@@ -1329,7 +1356,14 @@
             "blackIceHits": "Black ICE Hits",
             "blackIceHit": "Hit by Black ICE!",
             "unsafeJackout": "+1 from unsafe jackout",
-            "checkDescriptionPlaceholder": "DV6 Password / Asp Black ICE / Important File"
+            "checkDescriptionPlaceholder": "DV6 Password / Asp Black ICE / Important File",
+            "programs": "Programs",
+            "addProgram": "Add Program",
+            "programLoss": "Program Loss",
+            "hits": "hits",
+            "rollProgramLoss": "Roll Program Loss",
+            "programsDestroyed": "Programs Destroyed",
+            "programsSurviving": "Programs Surviving"
         },
         "mission": {
             "title": "Mission Builder",

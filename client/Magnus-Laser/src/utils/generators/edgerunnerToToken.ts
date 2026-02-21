@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Character, CharacterStats } from '../../types/characterCreator'
 import type { Token, StatsActions } from '../../views/CombatSim/utils/types'
 import type { Dices } from '../../graphql/types'
+import { getEffectiveStats } from './characterCreatorUtils'
 
 const WEAPON_SKILL_MAP: Record<string, string> = {
     'Melee': 'Melee Weapon',
@@ -66,6 +67,8 @@ export function characterToToken(
     x: number,
     y: number,
 ): Token {
+    const effectiveStats = getEffectiveStats(character.stats, character.cyberware)
+
     // Resolve armor: pick highest SP for each location
     const bodyArmors = character.armor.filter((a) => (a.location || inferArmorLocation(a.name)) !== 'Head')
     const headArmors = character.armor.filter((a) => (a.location || inferArmorLocation(a.name)) === 'Head')
@@ -80,7 +83,7 @@ export function characterToToken(
             const stat = SKILL_STAT_MAP[skillName] || 'REF'
             const charSkill = character.skills.find((s) => s.skill.name === skillName)
             const skillLevel = charSkill?.level || 0
-            const value = character.stats[stat] + skillLevel
+            const value = effectiveStats[stat] + skillLevel
 
             return {
                 id: uuidv4(),
@@ -96,7 +99,7 @@ export function characterToToken(
         .filter((s) => s.isTokenAction && s.level > 0)
         .map((charSkill) => {
             const stat = charSkill.skill.stat
-            const value = character.stats[stat] + charSkill.level
+            const value = effectiveStats[stat] + charSkill.level
 
             return {
                 id: uuidv4(),
@@ -122,11 +125,11 @@ export function characterToToken(
         modelId: character.tokenModelId,
         stats: {
             isPC: true,
-            initiative: character.stats.REF,
+            initiative: effectiveStats.REF,
             health: hp,
             currentHealth: hp,
-            movement: character.stats.MOVE,
-            currentMovement: character.stats.MOVE,
+            movement: effectiveStats.MOVE,
+            currentMovement: effectiveStats.MOVE,
             armor: {
                 spb,
                 currentSpb: spb,
@@ -135,8 +138,8 @@ export function characterToToken(
             },
             ignoreSeriouslyWoundedPenalty: hasPainEditor,
             actions: [...weaponActions, ...skillActions],
-            luck: character.stats.LUCK,
-            currentLuck: character.stats.LUCK,
+            luck: effectiveStats.LUCK,
+            currentLuck: effectiveStats.LUCK,
         },
     }
 }
