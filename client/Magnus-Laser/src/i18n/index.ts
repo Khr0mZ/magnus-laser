@@ -9,6 +9,10 @@ import esTranslation from './locales/es.json'
 import enTables from './locales/tables-en.json'
 import esTables from './locales/tables-es.json'
 
+// Import GM reference tables translations (separate namespace)
+import enGMTables from './locales/gmtables-en.json'
+import esGMTables from './locales/gmtables-es.json'
+
 // Configure i18next
 i18n.use(initReactI18next) // Initialize react-i18next
     .init({
@@ -16,16 +20,18 @@ i18n.use(initReactI18next) // Initialize react-i18next
             en: {
                 translation: enTranslation,
                 tables: enTables,
+                gmtables: enGMTables,
             },
             es: {
                 translation: esTranslation,
                 tables: esTables,
+                gmtables: esGMTables,
             },
         },
         lng: 'en', // Default language, will be overridden by user preference on load
         fallbackLng: 'en',
         defaultNS: 'translation',
-        ns: ['translation', 'tables'],
+        ns: ['translation', 'tables', 'gmtables'],
         //debug: process.env.NODE_ENV === 'development',
         interpolation: {
             escapeValue: false, // React already escapes values

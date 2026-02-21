@@ -35,28 +35,6 @@ import { TokenTooltip } from '../components/TokenTooltip'
 import { loadTokenModelPaths } from '../utils/modelAssets'
 import type { Image, StatsActions, Token } from '../utils/types'
 
-/* eslint-disable @typescript-eslint/no-namespace */
-declare global {
-    namespace JSX {
-        interface IntrinsicElements {
-            'model-viewer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-                src?: string
-                'camera-controls'?: boolean | ''
-                'disable-zoom'?: boolean | ''
-                'interaction-prompt'?: string
-                autoplay?: boolean | ''
-                exposure?: string
-                environmentImage?: string
-                poster?: string
-                'shadow-intensity'?: string
-                'camera-orbit'?: string
-                'auto-rotate'?: boolean | ''
-            }
-        }
-    }
-}
-/* eslint-enable @typescript-eslint/no-namespace */
-
 // Window button styles similar to WindowButtons component
 const windowButtonBaseStyle = {
     minWidth: '30px',

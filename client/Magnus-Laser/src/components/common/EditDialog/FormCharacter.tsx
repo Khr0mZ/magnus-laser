@@ -11,7 +11,7 @@ import ImageField from './ImageField.tsx'
 export type FormCharacterProps = {
     editedTarget: Character
     moduleType: ModuleTypes
-    setIsSaving: (isSaving: boolean) => void
+    setIsSaving?: (isSaving: boolean) => void
     isGeneratingImage?: boolean
     setIsGeneratingImage?: (isGenerating: boolean) => void
     setCharacters?: Dispatch<SetStateAction<Character[]>>
@@ -126,8 +126,8 @@ export const FormCharacter = (props: FormCharacterProps) => {
                                 editedTarget,
                                 readerMode,
                                 setIsGeneratingImage,
-                                setIsSaving,
                                 moduleType,
+                                setIsSaving,
                                 undefined,
                                 undefined,
                                 undefined,

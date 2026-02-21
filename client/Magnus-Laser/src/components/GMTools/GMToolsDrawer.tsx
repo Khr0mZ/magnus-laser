@@ -1,4 +1,5 @@
 import AccountBalance from '@mui/icons-material/AccountBalance'
+import TableChart from '@mui/icons-material/TableChart'
 import Assignment from '@mui/icons-material/Assignment'
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import ChevronRight from '@mui/icons-material/ChevronRight'
@@ -57,6 +58,12 @@ const soloPlayTools: ToolItem[] = [
         icon: <Psychology />,
         labelKey: 'gmTools.oracle',
         color: colors.neons.cyan.default,
+    },
+    {
+        id: 'gmTables',
+        icon: <TableChart />,
+        labelKey: 'gmTools.gmTables',
+        color: colors.neons.orange.default,
     },
     {
         id: 'clocks',

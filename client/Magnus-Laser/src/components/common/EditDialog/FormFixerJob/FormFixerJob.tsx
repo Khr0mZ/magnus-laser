@@ -30,7 +30,7 @@ import CardMainComplication from './CardMainComplication'
 export type FormFixerJobProps = {
     editedTarget: FixerJob
     moduleType: ModuleTypes
-    setIsSaving: (isSaving: boolean) => void
+    setIsSaving?: (isSaving: boolean) => void
     isGeneratingImage?: boolean
     setIsGeneratingImage?: (isGenerating: boolean) => void
     setFixerJobs?: Dispatch<SetStateAction<FixerJob[]>>
@@ -85,8 +85,8 @@ export const FormFixerJob = (props: FormFixerJobProps) => {
                     editedTarget,
                     readerMode,
                     setIsGeneratingImage,
-                    setIsSaving,
                     moduleType,
+                    setIsSaving,
                     undefined, // setBuildings
                     undefined, // setBuildingToEdit
                     undefined, // setGangs

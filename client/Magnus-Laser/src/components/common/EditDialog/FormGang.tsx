@@ -24,7 +24,7 @@ import ImageField from './ImageField'
 export type FormGangProps = {
     editedTarget: Gang
     moduleType: ModuleTypes
-    setIsSaving: (isSaving: boolean) => void
+    setIsSaving?: (isSaving: boolean) => void
     isGeneratingImage?: boolean
     setIsGeneratingImage?: (isGenerating: boolean) => void
     setGangs?: Dispatch<SetStateAction<Gang[]>>
@@ -365,8 +365,8 @@ export const FormGang = (props: FormGangProps) => {
                                 editedTarget,
                                 readerMode,
                                 setIsGeneratingImage,
-                                setIsSaving,
                                 moduleType,
+                                setIsSaving,
                                 undefined,
                                 undefined,
                                 setGangs,

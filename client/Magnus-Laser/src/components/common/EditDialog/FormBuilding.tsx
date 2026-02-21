@@ -19,7 +19,7 @@ import ImageField from './ImageField'
 export type FormBuildingProps = {
     editedTarget: Building
     moduleType: ModuleTypes
-    setIsSaving: (isSaving: boolean) => void
+    setIsSaving?: (isSaving: boolean) => void
     isGeneratingImage?: boolean
     setIsGeneratingImage?: (isGenerating: boolean) => void
     setBuildings?: Dispatch<SetStateAction<Building[]>>
@@ -297,8 +297,8 @@ export const FormBuilding = (props: FormBuildingProps) => {
                                 editedTarget,
                                 readerMode,
                                 setIsGeneratingImage,
-                                setIsSaving,
                                 moduleType,
+                                setIsSaving,
                                 setBuildings,
                                 setBuildingToEdit
                             )

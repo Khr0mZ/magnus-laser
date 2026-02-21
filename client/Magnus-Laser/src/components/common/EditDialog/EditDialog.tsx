@@ -21,7 +21,7 @@ type EditDialogProps = {
     onSave: (target: Gang | Building | FixerJob | Character | Item | Bounty) => void
     target: Gang | Building | FixerJob | Character | Item | Bounty | null
     moduleType: ModuleTypes
-    setIsSaving: (isSaving: boolean) => void
+    setIsSaving?: (isSaving: boolean) => void
     isGeneratingImage?: boolean
     setIsGeneratingImage?: (isGenerating: boolean) => void
     setBuildings?: Dispatch<SetStateAction<Building[]>>
@@ -172,7 +172,7 @@ export const EditDialog = (props: EditDialogProps) => {
     const handleSave = async () => {
         if (editedTarget && target) {
             onSave(editedTarget)
-            setIsSaving(true)
+            setIsSaving?.(true)
         }
         onClose()
     }

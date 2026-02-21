@@ -82,6 +82,7 @@ interface GeneratorToolProps {
 
 type EntityType = Gang | Building | FixerJob | Bounty | Item | Character
 
+
 const GeneratorTool = ({ type }: GeneratorToolProps) => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
@@ -109,8 +110,6 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
     // Edit dialog state
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [itemToEdit, setItemToEdit] = useState<EntityType | null>(null)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [_isSaving, setIsSaving] = useState(false)
     const [isGeneratingImage, setIsGeneratingImage] = useState(false)
 
     // Delete dialog state
@@ -125,7 +124,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                     title: t('gmTools.gangGenerator'),
                     color: colors.neons.red.default,
                     items: gangs,
-                    setItems: setGangs,
+                    setItems: (items: EntityType[]) => setGangs(items as Gang[]),
                     moduleType: ModuleTypes.GANG,
                     generator: async () => await generateRandomGang(t),
                     getItemName: (item: Gang) => item.name,
@@ -139,7 +138,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                     title: t('gmTools.buildingGenerator'),
                     color: colors.neons.blue.default,
                     items: buildings,
-                    setItems: setBuildings,
+                    setItems: (items: EntityType[]) => setBuildings(items as Building[]),
                     moduleType: ModuleTypes.BUILDING,
                     generator: async () => await generateRandomBuilding(t, 0),
                     getItemName: (item: Building) => item.name,
@@ -155,7 +154,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                     title: t('gmTools.gigGenerator'),
                     color: colors.neons.orange.default,
                     items: fixerJobs,
-                    setItems: setFixerJobs,
+                    setItems: (items: EntityType[]) => setFixerJobs(items as FixerJob[]),
                     moduleType: ModuleTypes.FIXER_JOB,
                     generator: async () => {
                         const result = await generateRandomFixerJob(
@@ -206,7 +205,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                     title: t('gmTools.bountyGenerator'),
                     color: colors.neons.yellow.default,
                     items: bounties,
-                    setItems: setBounties,
+                    setItems: (items: EntityType[]) => setBounties(items as Bounty[]),
                     moduleType: ModuleTypes.BOUNTY,
                     generator: async () => {
                         const { newBounty, newCharacter } = await generateRandomBounty(
@@ -246,7 +245,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                     title: t('gmTools.itemGenerator'),
                     color: colors.neons.cyan.default,
                     items: items,
-                    setItems: setItems,
+                    setItems: (items: EntityType[]) => setItems(items as Item[]),
                     moduleType: ModuleTypes.ITEM,
                     generator: async () => await generateRandomItem(t),
                     getItemName: (item: Item) => item.name,
@@ -260,7 +259,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                     title: t('gmTools.contactGenerator'),
                     color: colors.neons.purple.default,
                     items: characters,
-                    setItems: setCharacters,
+                    setItems: (items: EntityType[]) => setCharacters(items as Character[]),
                     moduleType: ModuleTypes.CHARACTER,
                     generator: async () => await generateRandomCharacter(),
                     getItemName: (item: Character) => item.name,
@@ -314,8 +313,7 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
         try {
             const newItem = await config.generator()
             const updatedItems = [newItem as EntityType, ...config.items]
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            config.setItems(updatedItems as any)
+            config.setItems(updatedItems)
             setSelectedItem((newItem as { ID: string }).ID)
             // Persist to storage
             await persistData(updatedItems)
@@ -341,15 +339,13 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
         let updatedItems: EntityType[] = []
         if (itemToDelete) {
             updatedItems = config.items.filter((item: EntityType) => (item as { ID: string }).ID !== itemToDelete)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            config.setItems(updatedItems as any)
+            config.setItems(updatedItems)
             if (selectedItem === itemToDelete) {
                 setSelectedItem(null)
             }
         } else if (deleteIndex !== null) {
-            updatedItems = config.items.filter((_, i) => i !== deleteIndex)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            config.setItems(updatedItems as any)
+            updatedItems = config.items.filter((_: EntityType, i: number) => i !== deleteIndex)
+            config.setItems(updatedItems)
         }
         // Persist to storage
         await persistData(updatedItems)
@@ -381,13 +377,11 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
         const updatedItems = config.items.map((item: EntityType) =>
             (item as { ID: string }).ID === (editedItem as { ID: string }).ID ? editedItem : item
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        config.setItems(updatedItems as any)
+        config.setItems(updatedItems)
         // Persist to storage
         await persistData(updatedItems)
         setEditDialogOpen(false)
         setItemToEdit(null)
-        setIsSaving(true)
     }
 
     const handleEditCancel = () => {
@@ -950,7 +944,6 @@ const GeneratorTool = ({ type }: GeneratorToolProps) => {
                 moduleType={config.moduleType}
                 isGeneratingImage={isGeneratingImage}
                 setIsGeneratingImage={setIsGeneratingImage}
-                setIsSaving={setIsSaving}
                 setGangs={type === 'gang' ? setGangs : undefined}
                 setBuildings={type === 'building' ? setBuildings : undefined}
                 setFixerJobs={type === 'gig' ? setFixerJobs : undefined}

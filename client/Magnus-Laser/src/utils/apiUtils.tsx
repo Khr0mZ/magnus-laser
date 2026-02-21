@@ -909,8 +909,8 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
  * @param itemToRegenerate - The item to regenerate the image for.
  * @param readerMode - Whether the reader mode is active.
  * @param setIsGeneratingImage - The function to set the generating image state.
- * @param setIsSaving - The function to set the saving state.
  * @param moduleType - The type of module (Building or Gang).
+ * @param setIsSaving - Optional function to set the saving state.
  * @param setBuildings - The function to set the buildings state.
  * @param setBuildingToEdit - The function to set the building to edit state.
  * @param setGangs - The function to set the gangs state.
@@ -927,8 +927,8 @@ export const handleRegenerateImage = async (
     itemToRegenerate: Building | Gang | FixerJob | Character | Item,
     readerMode: boolean,
     setIsGeneratingImage: (isGenerating: boolean) => void,
-    setIsSaving: (isSaving: boolean) => void,
     moduleType: ModuleTypes,
+    setIsSaving?: (isSaving: boolean) => void,
     setBuildings?: (value: SetStateAction<Building[]>) => void,
     setBuildingToEdit?: (value: SetStateAction<Building | null>) => void,
     setGangs?: (value: SetStateAction<Gang[]>) => void,
@@ -994,7 +994,7 @@ export const handleRegenerateImage = async (
         const updatedItem = { ...itemToRegenerate }
 
         // Set saving state to true before updating states
-        setIsSaving(true)
+        setIsSaving?.(true)
 
         // If imageFieldPath is provided, update nested property
         if (imageFieldPath) {
@@ -1143,7 +1143,7 @@ export const handleRegenerateImage = async (
         )
 
         // Reset saving state after updates complete
-        setTimeout(() => setIsSaving(false), 1000)
+        setTimeout(() => setIsSaving?.(false), 1000)
     } catch (error) {
         console.warn('Error during image regeneration:', error)
         // Show error message
@@ -1156,7 +1156,7 @@ export const handleRegenerateImage = async (
             { persist: false, autoHideDuration: 3000 }
         )
         // Reset saving state on error
-        setIsSaving(false)
+        setIsSaving?.(false)
     } finally {
         // Reset generating state
         setIsGeneratingImage(false)

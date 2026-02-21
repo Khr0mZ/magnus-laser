@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 export type GMToolType =
+    | 'gmTables'
     | 'oracle'
     | 'clocks'
     | 'missionBuilder'

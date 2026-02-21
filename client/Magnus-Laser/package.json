@@ -1,7 +1,7 @@
 {
     "name": "magnus-laser",
     "private": true,
-    "version": "1.0.1",
+    "version": "1.1.0",
     "type": "module",
     "scripts": {
         "generate": "graphql-codegen --verbose",

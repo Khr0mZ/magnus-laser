@@ -6,6 +6,7 @@ import type { GMToolType } from './GMToolsStore'
 
 // Lazy-loaded tool components
 const BeatChartTool = lazy(() => import('./tools/BeatChartTool'))
+const GMTablesTool = lazy(() => import('./tools/GMTablesTool'))
 const ClocksTool = lazy(() => import('./tools/ClocksTool'))
 const GeneratorTool = lazy(() => import('./tools/GeneratorTool'))
 const InvestigationTool = lazy(() => import('./tools/InvestigationTool'))
@@ -27,6 +28,8 @@ const GMToolsContent = ({ activeTool }: GMToolsContentProps) => {
 
     const renderContent = () => {
         switch (activeTool) {
+            case 'gmTables':
+                return <GMTablesTool />
             case 'oracle':
                 return <OracleTool />
             case 'clocks':

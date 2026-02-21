@@ -1796,6 +1796,7 @@
         "sceneTracker": "Rastreador de Escenas",
         "npcForms": "Fichas de NPC",
         "randomThings": "Cosas Aleatorias",
+        "gmTables": "Tablas del GM",
         "existingItems": "Objetos Existentes",
         "noItems": "Aun no hay objetos. Genera uno!",
         "selectOrGenerate": "Selecciona un objeto o genera uno nuevo",

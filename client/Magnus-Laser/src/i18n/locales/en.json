@@ -1796,6 +1796,7 @@
         "sceneTracker": "Scene Tracker",
         "npcForms": "NPC Forms",
         "randomThings": "Random Things",
+        "gmTables": "GM Tables",
         "existingItems": "Existing Items",
         "noItems": "No items yet. Generate one!",
         "selectOrGenerate": "Select an item or generate a new one",

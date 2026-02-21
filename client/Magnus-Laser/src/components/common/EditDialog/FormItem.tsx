@@ -11,7 +11,7 @@ import ImageField from './ImageField.tsx'
 export type FormItemProps = {
     editedTarget: Item
     moduleType: ModuleTypes
-    setIsSaving: (isSaving: boolean) => void
+    setIsSaving?: (isSaving: boolean) => void
     isGeneratingImage?: boolean
     setIsGeneratingImage?: (isGenerating: boolean) => void
     setItems?: Dispatch<SetStateAction<Item[]>>
@@ -126,8 +126,8 @@ export const FormItem = (props: FormItemProps) => {
                                 editedTarget,
                                 readerMode,
                                 setIsGeneratingImage,
-                                setIsSaving,
                                 moduleType,
+                                setIsSaving,
                                 undefined,
                                 undefined,
                                 undefined,

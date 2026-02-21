@@ -1,9 +1,9 @@
 # Magnus Laser
 
-A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magnus Laser provides a comprehensive toolkit for Game Masters and players: world-building databases, AI-powered content generation, a full tactical combat simulator with dual 2D/3D renderers, real-time multiplayer sessions, a 7-step character creator, 17 GM tools, and much more.
+A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magnus Laser provides a comprehensive toolkit for Game Masters and players: world-building databases, AI-powered content generation, a full tactical combat simulator with dual 2D/3D renderers, real-time multiplayer sessions, a 7-step character creator, 18 GM tools, and much more.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-1.0.1-green)
+![Version](https://img.shields.io/badge/version-1.1.0-green)
 
 ## Features
 
@@ -21,6 +21,7 @@ A cyberpunk-themed desktop application for managing tabletop RPG campaigns. Magn
 - Internationalization powered by i18next and react-i18next (English and Spanish)
 - Language selector in Settings with persistent preference
 - Solo play random tables use a dedicated i18n namespace (`tables-en.json`, `tables-es.json`) for independent table content localization
+- GM reference tables use a separate namespace (`gmtables-en.json`, `gmtables-es.json`) with 882 translation keys covering 65 corebook tables
 
 ### Main Navigation Modules
 
@@ -91,13 +92,14 @@ Quick resolution systems for single-player adventures:
 
 ### GM Tools
 
-17 specialized tools accessible from the GM Tools drawer:
+18 specialized tools accessible from the GM Tools drawer:
 
-#### Solo Play Tools (11)
+#### Solo Play Tools (12)
 
 | Tool                       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Oracle & Random Tables** | Fate determination engine combined with the full random table hub. Closed questions: d100 roll with 5 probability levels (Certain → Impossible) producing 5 answer types. Open questions: random verb + noun + adjective combinations. 65+ random generators across 15 categories (Core, Words, Sensory, Names, Night City, People, Things, Media, Corpse Loot, Mission, SPM Character, SPM Encounters, SPM Atmosphere, SPM Combat, SPM Medical) plus a zone/time-based encounter generator. Campaign selector: all results tagged by campaign. Oracle History side panel: unified scrollable feed of oracle results, open questions, random table rolls, and inline text notes — filterable by campaign, with per-entry reroll and delete |
+| **GM Tables**              | Quick-reference compendium of 65 corebook tables organized in 11 collapsible categories (Combat General, Ranged, Melee, Injuries, Skills & Checks, Gear & Economy, Cyberware, Netrunning, Vehicle Combat, Character & Advancement, Medical & Tech). Two-level accordion UI with search filter. Covers range DVs, critical injuries, weapon/armor/ammo stats, cyberware catalogs, netrunning programs, Black ICE, vehicle stats, role abilities, IP costs, drug effects, and more. Fully bilingual (EN/ES) via dedicated `gmtables` i18n namespace                                                                                                                                                                                          |
 | **Clocks**                 | Dice pool countdown system (3-10 d6). Removes 1s on roll, optional 6s removal (scale-up mode). Devil's Luck mechanic, add-dice-back recovery. Roll history with degree-of-consequence bonuses                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | **Mission Builder**        | Solo mission generator with employer types (Fixer/Corpo/Gang), payment, summary, focus, specifics, and twist. Per-section reroll, save/load, clipboard copy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | **Beat Chart**             | Story structure tracker with 4 beat types (Hook/Development/Climax/Resolution). Multi-chart tabs, 1-10 development steps, progress bar with completion tracking                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -408,23 +410,26 @@ All your preferences and configuration in one place.
 
 ![GM Tools](docs/screenshots/gm-tools.png)
 
-Click the hamburger menu icon (top-right of the navigation bar) to open the GM Tools drawer. It contains 17 specialized tools organized in two categories. Each tool opens directly in the drawer without leaving your current page.
+Click the hamburger menu icon (top-right of the navigation bar) to open the GM Tools drawer. It contains 18 specialized tools organized in two categories. Each tool opens directly in the drawer without leaving your current page.
+
+![GM Tables](docs/screenshots/gm-tables.png)
 
 #### Solo Play Tools
 
-| Tool                       | What it does                                                                                                                                                                                                                            |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Oracle & Random Tables** | Ask yes/no questions to a virtual oracle (with adjustable probability), generate random word combos for story inspiration, and roll on 65+ random tables across 15 categories. All results are saved to a campaign-tagged history panel |
-| **Clocks**                 | Track countdown-style challenges using a pool of dice (3–10 d6). Roll to remove dice — when the pool is empty, the clock is done. Great for looming threats and time pressure                                                           |
-| **Mission Builder**        | Generate a random solo mission with an employer, payment, summary, focus, specifics, and a plot twist. Reroll any individual section you don't like                                                                                     |
-| **Beat Chart**             | Outline your story structure with beats (Hook, Development, Climax, Resolution). Track progress through each act with a visual progress bar                                                                                             |
-| **Investigation**          | Run a research challenge. Pick a complexity level (Simple, Average, Difficult), then make skill rolls — the majority of successes or failures determines the outcome                                                                    |
-| **Social Challenge**       | Resolve a conversation or negotiation with an NPC. The NPC's importance (Background, Supporting, Key) determines how many checks you need                                                                                               |
-| **NPC Tracker**            | Keep tabs on important NPCs: their status (alive, dead, missing), role, mood, relationship to the party, and notes. Random generators for quick NPC creation                                                                            |
-| **IP Tracker**             | Log Improvement Points earned and spent by each edgerunner, with dates and descriptions. Automatically calculates available IP                                                                                                          |
-| **Scene Tracker**          | Track scenes during a session: location, participants, goal, outcome, and notes. Attach checks to scenes and mark them complete. Includes a random location generator                                                                   |
-| **NPC Forms**              | Create NPC stat blocks in two modes: Simple (name, handle, role, look, quirk) or Complex (full stats, combat values, equipment, cyberware)                                                                                              |
-| **Random Things**          | Build your own custom random tables with 3–20 entries and weighted probabilities. Roll on them anytime you need a quick random result                                                                                                   |
+| Tool                       | What it does                                                                                                                                                                                                                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Oracle & Random Tables** | Ask yes/no questions to a virtual oracle (with adjustable probability), generate random word combos for story inspiration, and roll on 65+ random tables across 15 categories. All results are saved to a campaign-tagged history panel                                                                           |
+| **GM Tables**              | A searchable reference compendium with 65 corebook tables across 11 categories. Quickly look up range DVs, critical injuries, weapon stats, armor, ammo types, cyberware, netrunning programs, Black ICE, vehicle stats, role abilities, IP costs, drug effects, and more — all without leaving your current page |
+| **Clocks**                 | Track countdown-style challenges using a pool of dice (3–10 d6). Roll to remove dice — when the pool is empty, the clock is done. Great for looming threats and time pressure                                                                                                                                     |
+| **Mission Builder**        | Generate a random solo mission with an employer, payment, summary, focus, specifics, and a plot twist. Reroll any individual section you don't like                                                                                                                                                               |
+| **Beat Chart**             | Outline your story structure with beats (Hook, Development, Climax, Resolution). Track progress through each act with a visual progress bar                                                                                                                                                                       |
+| **Investigation**          | Run a research challenge. Pick a complexity level (Simple, Average, Difficult), then make skill rolls — the majority of successes or failures determines the outcome                                                                                                                                              |
+| **Social Challenge**       | Resolve a conversation or negotiation with an NPC. The NPC's importance (Background, Supporting, Key) determines how many checks you need                                                                                                                                                                         |
+| **NPC Tracker**            | Keep tabs on important NPCs: their status (alive, dead, missing), role, mood, relationship to the party, and notes. Random generators for quick NPC creation                                                                                                                                                      |
+| **IP Tracker**             | Log Improvement Points earned and spent by each edgerunner, with dates and descriptions. Automatically calculates available IP                                                                                                                                                                                    |
+| **Scene Tracker**          | Track scenes during a session: location, participants, goal, outcome, and notes. Attach checks to scenes and mark them complete. Includes a random location generator                                                                                                                                             |
+| **NPC Forms**              | Create NPC stat blocks in two modes: Simple (name, handle, role, look, quirk) or Complex (full stats, combat values, equipment, cyberware)                                                                                                                                                                        |
+| **Random Things**          | Build your own custom random tables with 3–20 entries and weighted probabilities. Roll on them anytime you need a quick random result                                                                                                                                                                             |
 
 #### Content Generators
 
@@ -579,7 +584,7 @@ magnus-laser/
 │   │   │   └── Settings/            # App configuration & sessions
 │   │   ├── components/              # Reusable UI components
 │   │   │   ├── common/              # Themed inputs, dialogs, scrollbars
-│   │   │   ├── GMTools/             # 17 GM tools (11 solo play + 6 generators)
+│   │   │   ├── GMTools/             # 18 GM tools (12 solo play + 6 generators)
 │   │   │   │   └── tools/           # Individual tool modules
 │   │   │   ├── NavigationDrawer/    # Main navigation
 │   │   │   └── session/             # SessionLobby, SessionHUD
@@ -594,7 +599,7 @@ magnus-laser/
 │   │   │   ├── storage.ts           # Storage utilities
 │   │   │   └── colors.ts            # Cyberpunk color palette
 │   │   ├── graphql/                 # GraphQL type definitions
-│   │   └── i18n/                    # Internationalization (en.json, es.json, tables-en.json, tables-es.json)
+│   │   └── i18n/                    # Internationalization (en.json, es.json, tables-en/es.json, gmtables-en/es.json)
 │   ├── src-tauri/                   # Tauri Rust backend
 │   │   ├── src/
 │   │   │   ├── main.rs              # Tauri app entry
