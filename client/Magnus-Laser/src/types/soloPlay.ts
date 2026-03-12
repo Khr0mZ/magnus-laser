@@ -40,8 +40,20 @@ export interface OpenQuestionResult {
     verb: string
     noun: string
     adjective: string
+    tableResults?: OpenQuestionTableResult[]
     notes?: string
     campaignId?: string
+}
+
+export interface OpenQuestionTableConfig {
+    encounterZone?: string
+    encounterTime?: string
+}
+
+export interface OpenQuestionTableResult {
+    tableKey: string
+    value: string
+    config?: OpenQuestionTableConfig
 }
 
 // === SOLO PLAY CLOCK TYPES ===

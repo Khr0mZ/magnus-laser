@@ -7,6 +7,7 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
+    Autocomplete,
     Box,
     Button,
     Chip,
@@ -26,9 +27,12 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material'
-import { useState } from 'react'
+import type { PaperProps } from '@mui/material'
+import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import SmoothScrollbar from 'smooth-scrollbar'
 import { v4 as uuidv4 } from 'uuid'
+import CustomScrollbar from '../../CustomScrollbar'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import type {
     NPCImportance,
@@ -36,6 +40,7 @@ import type {
     SocialChallengeSession,
 } from '../../../types/soloPlay'
 import colors from '../../../utils/colors'
+import { ALL_SKILLS } from '../../../utils/generators/characterCreatorData'
 import { useGMToolsDataStore } from '../GMToolsDataStore'
 import {
     getCyberpunkTextFieldStyle,
@@ -50,6 +55,43 @@ const IMPORTANCE_CHECKS: Record<NPCImportance, number> = {
     SUPPORTING: 1,
     KEY: 3,
 }
+
+const SOCIAL_SKILL_OPTIONS = ALL_SKILLS.map(({ name }) => name).sort((a, b) => a.localeCompare(b))
+const SOCIAL_SKILL_MAX_LIST_HEIGHT = 320
+const SOCIAL_SKILL_SCROLLBAR_CLASS = 'social-skill-scrollbar'
+
+const SocialSkillAutocompletePaper = forwardRef<HTMLDivElement, PaperProps>(function SocialSkillAutocompletePaper(
+    { children, sx, ...paperProps },
+    ref
+) {
+    return (
+        <Paper
+            ref={ref}
+            {...paperProps}
+            sx={[
+                {
+                    overflow: 'hidden',
+                    '& .MuiAutocomplete-listbox': {
+                        maxHeight: 'none',
+                        overflow: 'visible',
+                        p: 0,
+                    },
+                    '& .MuiAutocomplete-noOptions, & .MuiAutocomplete-loading': {
+                        fontFamily: '"Lexend", sans-serif',
+                        fontSize: '0.85rem',
+                        px: 1.5,
+                        py: 1.25,
+                    },
+                },
+                ...(Array.isArray(sx) ? sx : [sx]),
+            ]}
+        >
+            <CustomScrollbar className={SOCIAL_SKILL_SCROLLBAR_CLASS} height={SOCIAL_SKILL_MAX_LIST_HEIGHT}>
+                <Box>{children}</Box>
+            </CustomScrollbar>
+        </Paper>
+    )
+})
 
 const SocialChallengeTool = () => {
     const { t } = useTranslation()
@@ -86,6 +128,38 @@ const SocialChallengeTool = () => {
     const buttonStyle = getCyberpunkButtonStyle(readerMode, accentColor)
     const titleStyle = getSectionTitleStyle(readerMode, accentColor)
     const selectStyle = getCyberpunkSelectStyle(readerMode, accentColor)
+    const edgerunnerSkillFieldStyle = getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)
+    const npcSkillFieldStyle = getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)
+
+    const edgerunnerSkillAutocompleteStyle = {
+        ...edgerunnerSkillFieldStyle,
+        '& .MuiAutocomplete-clearIndicator, & .MuiAutocomplete-popupIndicator': {
+            color: readerMode ? colors.grays.gray400 : colors.neons.green.default,
+        },
+    }
+
+    const npcSkillAutocompleteStyle = {
+        ...npcSkillFieldStyle,
+        '& .MuiAutocomplete-clearIndicator, & .MuiAutocomplete-popupIndicator': {
+            color: readerMode ? colors.grays.gray400 : colors.neons.red.default,
+        },
+    }
+
+    const getSkillAutocompletePaperSx = (borderColor: string) => ({
+        backgroundColor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+        border: readerMode ? '1px solid rgba(0,0,0,0.1)' : `1px solid ${borderColor}40`,
+        '& .MuiAutocomplete-option': {
+            color: readerMode ? colors.grays.gray000 : colors.grays.gray800,
+            fontSize: '0.85rem',
+            fontFamily: '"Lexend", sans-serif',
+            '&:hover': {
+                backgroundColor: `${borderColor}20`,
+            },
+            '&[aria-selected="true"]': {
+                backgroundColor: `${borderColor}30`,
+            },
+        },
+    })
 
     const handleCreate = () => {
         if (!name.trim() || !npcName.trim()) return
@@ -186,6 +260,32 @@ const SocialChallengeTool = () => {
     const getProgressColor = (session: SocialChallengeSession) => {
         if (session.isComplete) return session.success ? colors.neons.green.default : colors.neons.red.default
         return accentColor
+    }
+
+    const handleSkillHighlightChange = () => {
+        requestAnimationFrame(() => {
+            const scrollbarContainer = document.querySelector(`.${SOCIAL_SKILL_SCROLLBAR_CLASS}`) as HTMLElement | null
+            if (!scrollbarContainer) return
+
+            const scrollbar = SmoothScrollbar.get(scrollbarContainer)
+            const focusedOption = scrollbarContainer.querySelector('[role="option"].Mui-focused') as HTMLElement | null
+
+            if (!scrollbar || !focusedOption) return
+
+            const containerRect = scrollbar.containerEl.getBoundingClientRect()
+            const optionRect = focusedOption.getBoundingClientRect()
+            const offsetPadding = 8
+            const isAboveViewport = optionRect.top < containerRect.top + offsetPadding
+            const isBelowViewport = optionRect.bottom > containerRect.bottom - offsetPadding
+
+            if (!isAboveViewport && !isBelowViewport) return
+
+            scrollbar.scrollIntoView(focusedOption, {
+                alignToTop: isAboveViewport,
+                offsetTop: offsetPadding,
+                offsetBottom: offsetPadding,
+            })
+        })
     }
 
     return (
@@ -492,7 +592,30 @@ const SocialChallengeTool = () => {
                         <Typography variant="caption" sx={{ color: colors.grays.gray500, textTransform: 'uppercase' }}>
                             {t('soloPlay.social.edgerunnerSide')}
                         </Typography>
-                        <TextField fullWidth label={t('soloPlay.social.skillLabel')} value={edgerunnerSkill} onChange={(e) => setEdgerunnerSkill(e.target.value)} placeholder={t('soloPlay.social.edgerunnerSkillPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
+                        <Autocomplete
+                            fullWidth
+                            autoHighlight
+                            openOnFocus
+                            value={edgerunnerSkill || null}
+                            options={SOCIAL_SKILL_OPTIONS}
+                            onChange={(_, newValue) => setEdgerunnerSkill(newValue ?? '')}
+                            onHighlightChange={(_, __, reason) => {
+                                if (reason === 'keyboard') {
+                                    handleSkillHighlightChange()
+                                }
+                            }}
+                            slots={{ paper: SocialSkillAutocompletePaper }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    fullWidth
+                                    label={t('soloPlay.social.skillLabel')}
+                                    placeholder={t('soloPlay.social.edgerunnerSkillPlaceholder')}
+                                    sx={edgerunnerSkillAutocompleteStyle}
+                                />
+                            )}
+                            slotProps={{ paper: { sx: getSkillAutocompletePaperSx(colors.neons.green.default) } }}
+                        />
                         <Stack direction="row" spacing={1}>
                             <TextField fullWidth label={t('soloPlay.social.rollLabel')} type="number" value={edgerunnerRoll} onChange={(e) => setEdgerunnerRoll(e.target.value)} placeholder="d10" sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
                             <TextField fullWidth label={t('soloPlay.social.totalLabel')} type="number" value={edgerunnerTotal} onChange={(e) => setEdgerunnerTotal(e.target.value)} placeholder={t('soloPlay.social.edgerunnerTotalPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.green.default)} />
@@ -500,7 +623,30 @@ const SocialChallengeTool = () => {
                         <Typography variant="caption" sx={{ color: colors.grays.gray500, textTransform: 'uppercase' }}>
                             {t('soloPlay.social.npcSide')}
                         </Typography>
-                        <TextField fullWidth label={t('soloPlay.social.skillLabel')} value={npcSkill} onChange={(e) => setNpcSkill(e.target.value)} placeholder={t('soloPlay.social.npcSkillPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />
+                        <Autocomplete
+                            fullWidth
+                            autoHighlight
+                            openOnFocus
+                            value={npcSkill || null}
+                            options={SOCIAL_SKILL_OPTIONS}
+                            onChange={(_, newValue) => setNpcSkill(newValue ?? '')}
+                            onHighlightChange={(_, __, reason) => {
+                                if (reason === 'keyboard') {
+                                    handleSkillHighlightChange()
+                                }
+                            }}
+                            slots={{ paper: SocialSkillAutocompletePaper }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    fullWidth
+                                    label={t('soloPlay.social.skillLabel')}
+                                    placeholder={t('soloPlay.social.npcSkillPlaceholder')}
+                                    sx={npcSkillAutocompleteStyle}
+                                />
+                            )}
+                            slotProps={{ paper: { sx: getSkillAutocompletePaperSx(colors.neons.red.default) } }}
+                        />
                         <Stack direction="row" spacing={1}>
                             <TextField fullWidth label={t('soloPlay.social.rollLabel')} type="number" value={npcRoll} onChange={(e) => setNpcRoll(e.target.value)} placeholder="d10" sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />
                             <TextField fullWidth label={t('soloPlay.social.totalLabel')} type="number" value={npcTotal} onChange={(e) => setNpcTotal(e.target.value)} placeholder={t('soloPlay.social.npcTotalPlaceholder')} sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.red.default)} />

@@ -8,7 +8,7 @@ import CyberpunkFormControl from '../../../components/CyberpunkFormControl'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import type { OracleProbability } from '../../../types/soloPlay'
 import colors from '../../../utils/colors'
-import { rollOpenQuestion, rollOracle } from '../../../utils/generators/soloPlayUtils'
+import { rollOracle } from '../../../utils/generators/soloPlayUtils'
 import { useGMToolsDataStore } from '../GMToolsDataStore'
 import {
     getCyberpunkButtonStyle,
@@ -17,6 +17,7 @@ import {
     getSectionTitleStyle,
 } from '../GMToolsStyles'
 import RandomTablesTool from './RandomTablesTool'
+import { buildOpenQuestionResult, type OpenQuestionTableSelection } from './randomTablesData'
 
 const OracleTool = () => {
     const { t } = useTranslation()
@@ -45,6 +46,8 @@ const OracleTool = () => {
     const [closedQuestion, setClosedQuestion] = useState('')
     const [probability, setProbability] = useState<OracleProbability>('FIFTY_FIFTY')
     const [openQuestion, setOpenQuestion] = useState('')
+    const [isSelectingOpenQuestionTables, setIsSelectingOpenQuestionTables] = useState(false)
+    const [selectedOpenQuestionTables, setSelectedOpenQuestionTables] = useState<OpenQuestionTableSelection[]>([])
     const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null)
 
     const handleAskOracle = () => {
@@ -56,11 +59,46 @@ const OracleTool = () => {
     }
 
     const handleAskOpenQuestion = () => {
-        if (!openQuestion.trim()) return
+        if (!openQuestion.trim() || selectedOpenQuestionTables.length === 0) return
         const campaign = ensureCampaign()
-        const result = rollOpenQuestion(openQuestion)
+        const result = buildOpenQuestionResult(openQuestion, selectedOpenQuestionTables, t)
         addOpenQuestionResult({ ...result, campaignId: campaign })
         setOpenQuestion('')
+        setIsSelectingOpenQuestionTables(false)
+        setSelectedOpenQuestionTables([])
+    }
+
+    const handleToggleOpenQuestionTable = (selection: OpenQuestionTableSelection) => {
+        setSelectedOpenQuestionTables((currentSelections) => {
+            const isSelected = currentSelections.some((currentSelection) => currentSelection.key === selection.key)
+            if (isSelected) {
+                return currentSelections.filter((currentSelection) => currentSelection.key !== selection.key)
+            }
+            return [...currentSelections, selection]
+        })
+    }
+
+    const handleCancelOpenQuestionSelection = () => {
+        setIsSelectingOpenQuestionTables(false)
+        setSelectedOpenQuestionTables([])
+    }
+
+    const canRollSelectedOpenQuestion = openQuestion.trim().length > 0 && selectedOpenQuestionTables.length > 0
+
+    const handleOpenQuestionAction = () => {
+        if (!isSelectingOpenQuestionTables) {
+            if (!openQuestion.trim()) return
+            setIsSelectingOpenQuestionTables(true)
+            setSelectedOpenQuestionTables([])
+            return
+        }
+
+        if (!canRollSelectedOpenQuestion) {
+            handleCancelOpenQuestionSelection()
+            return
+        }
+
+        handleAskOpenQuestion()
     }
 
     const probabilityOptions: { value: OracleProbability; label: string }[] = [
@@ -266,27 +304,35 @@ const OracleTool = () => {
                     label={t('soloPlay.oracle.askOpenQuestion')}
                     value={openQuestion}
                     onChange={(e) => setOpenQuestion(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAskOpenQuestion()}
+                    onKeyDown={(e) => e.key === 'Enter' && canRollSelectedOpenQuestion && handleAskOpenQuestion()}
                     placeholder={t('soloPlay.oracle.openQuestionPlaceholder')}
                     sx={{ ...getCyberpunkTextFieldStyle(readerMode, colors.neons.pink.default) }}
                 />
 
                 <Button
                     variant="outlined"
-                    onClick={handleAskOpenQuestion}
-                    disabled={!openQuestion.trim()}
+                    onClick={handleOpenQuestionAction}
+                    disabled={!isSelectingOpenQuestionTables && !openQuestion.trim()}
                     size="small"
-                    startIcon={<Casino />}
+                    startIcon={canRollSelectedOpenQuestion ? <Casino /> : undefined}
                     sx={{ ...pinkButtonStyle, minWidth: 90 }}
                 >
                     <Typography sx={{ fontSize: '0.7rem', fontWeight: 'bold' }} noWrap>
-                        {t('soloPlay.oracle.roll')}
+                        {!isSelectingOpenQuestionTables
+                            ? t('common.select')
+                            : canRollSelectedOpenQuestion
+                              ? t('soloPlay.oracle.roll')
+                              : t('common.cancel')}
                     </Typography>
                 </Button>
             </Stack>
 
             {/* Random Tables */}
-            <RandomTablesTool />
+            <RandomTablesTool
+                selectionMode={isSelectingOpenQuestionTables}
+                selectedTableKeys={selectedOpenQuestionTables.map((selection) => selection.key)}
+                onToggleSelection={handleToggleOpenQuestionTable}
+            />
 
             <WarningDialog
                 open={campaignToDelete !== null}

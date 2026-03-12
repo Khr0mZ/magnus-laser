@@ -1,4 +1,6 @@
+import { v4 as uuidv4 } from 'uuid'
 import colors from '../../../utils/colors'
+import type { OpenQuestionResult, OpenQuestionTableConfig, OpenQuestionTableResult } from '../../../types/soloPlay'
 import {
     actionFocusTable,
     adjectivesTable,
@@ -52,6 +54,9 @@ import {
     generateTritiFizz,
     generateTVShow,
     generateVisitor,
+    generateRandomEncounter,
+    type EncounterTime,
+    type EncounterZone,
     generateWeatherHighSeas,
 } from '../../../utils/generators/soloPlayTablesExpanded'
 import {
@@ -79,6 +84,11 @@ export interface GeneratorCategory {
     color: string
     defaultExpanded?: boolean
     generators: GeneratorDef[]
+}
+
+export interface OpenQuestionTableSelection {
+    key: string
+    config?: OpenQuestionTableConfig
 }
 
 // === Wrapper generators for nested objects ===
@@ -324,13 +334,27 @@ export const categories: GeneratorCategory[] = [
 
 // Build flat lookup from all categories (for reroll + color)
 export const allGenerators: Record<string, GeneratorDef> = {}
+export const generatorCategoryColors: Record<string, string> = {}
 for (const category of categories) {
     for (const gen of category.generators) {
         allGenerators[gen.key] = gen
+        generatorCategoryColors[gen.key] = category.color
     }
 }
 // Add encounter as special entry (handled separately but needs color lookup)
 allGenerators['encounter'] = { key: 'encounter', color: colors.neons.red.default, generator: () => '' }
+generatorCategoryColors['encounter'] = colors.neons.pink.default
+
+export const DEFAULT_OPEN_QUESTION_TABLE_SELECTIONS: OpenQuestionTableSelection[] = [
+    { key: 'action' },
+    { key: 'noun' },
+    { key: 'adjective' },
+]
+
+const getEncounterConfig = (config?: OpenQuestionTableConfig): { encounterZone: EncounterZone; encounterTime: EncounterTime } => ({
+    encounterZone: (config?.encounterZone as EncounterZone | undefined) ?? 'moderate',
+    encounterTime: (config?.encounterTime as EncounterTime | undefined) ?? 'day',
+})
 
 // Helper to capitalize first letter
 const capitalize = (str: string): string => str.charAt(0).toUpperCase() + str.slice(1)
@@ -344,4 +368,66 @@ export const formatResult = (rawResult: unknown): string => {
             .join('\n')
     }
     return String(rawResult)
+}
+
+export const generateRandomTableContent = (selection: OpenQuestionTableSelection, t: (key: string) => string): string => {
+    if (selection.key === 'encounter') {
+        const { encounterZone, encounterTime } = getEncounterConfig(selection.config)
+        const encounter = generateRandomEncounter(encounterZone, encounterTime)
+        const zoneLabel = t(`soloPlay.tables.zones.${encounterZone}`)
+        const timeLabel = t(`soloPlay.tables.times.${encounterTime}`)
+        return `Zone: ${zoneLabel}\nTime: ${timeLabel}\nEncounter: ${encounter}`
+    }
+
+    const generator = allGenerators[selection.key]
+    if (!generator) return ''
+    return formatResult(generator.generator())
+}
+
+export const getRandomTableCategoryColor = (tableKey: string): string => {
+    return generatorCategoryColors[tableKey] ?? colors.neons.green.default
+}
+
+const getFallbackLegacyValue = (
+    tableResults: OpenQuestionTableResult[],
+    preferredKey: string,
+    fallbackIndex: number
+): string => {
+    return tableResults.find((result) => result.tableKey === preferredKey)?.value ?? tableResults[fallbackIndex]?.value ?? ''
+}
+
+export const getOpenQuestionSelections = (result: OpenQuestionResult): OpenQuestionTableSelection[] => {
+    if (result.tableResults?.length) {
+        return result.tableResults.map(({ tableKey, config }) => ({
+            key: tableKey,
+            ...(config ? { config } : {}),
+        }))
+    }
+
+    return DEFAULT_OPEN_QUESTION_TABLE_SELECTIONS
+}
+
+export const buildOpenQuestionResult = (
+    question: string,
+    selections: OpenQuestionTableSelection[],
+    t: (key: string) => string
+): OpenQuestionResult => {
+    const normalizedSelections =
+        selections.length > 0 ? selections : DEFAULT_OPEN_QUESTION_TABLE_SELECTIONS
+
+    const tableResults: OpenQuestionTableResult[] = normalizedSelections.map((selection) => ({
+        tableKey: selection.key,
+        value: generateRandomTableContent(selection, t),
+        ...(selection.config ? { config: selection.config } : {}),
+    }))
+
+    return {
+        id: uuidv4(),
+        timestamp: Date.now(),
+        question,
+        verb: getFallbackLegacyValue(tableResults, 'action', 0),
+        noun: getFallbackLegacyValue(tableResults, 'noun', 1),
+        adjective: getFallbackLegacyValue(tableResults, 'adjective', 2),
+        tableResults,
+    }
 }

@@ -13,22 +13,30 @@ import {
     Select,
     Typography,
 } from '@mui/material'
+import type { SxProps, Theme } from '@mui/material/styles'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import colors from '../../../utils/colors'
-import {
-    generateRandomEncounter,
-    type EncounterTime,
-    type EncounterZone,
-} from '../../../utils/generators/soloPlayTablesExpanded'
+import type { OpenQuestionTableConfig } from '../../../types/soloPlay'
+import { type EncounterTime, type EncounterZone } from '../../../utils/generators/soloPlayTablesExpanded'
 import { useGMToolsDataStore, type RandomTableResult } from '../GMToolsDataStore'
 import { getCyberpunkButtonStyle, getCyberpunkSelectStyle } from '../GMToolsStyles'
 
-import { categories, formatResult } from './randomTablesData'
+import { categories, generateRandomTableContent, type OpenQuestionTableSelection } from './randomTablesData'
 
-const RandomTablesTool = () => {
+interface RandomTablesToolProps {
+    selectionMode?: boolean
+    selectedTableKeys?: string[]
+    onToggleSelection?: (selection: OpenQuestionTableSelection) => void
+}
+
+const RandomTablesTool = ({
+    selectionMode = false,
+    selectedTableKeys = [],
+    onToggleSelection,
+}: RandomTablesToolProps) => {
     const { t } = useTranslation()
     const { readerMode } = useUserPreferences()
 
@@ -47,31 +55,24 @@ const RandomTablesTool = () => {
     const [encounterZone, setEncounterZone] = useState<EncounterZone>('moderate')
     const [encounterTime, setEncounterTime] = useState<EncounterTime>('day')
 
-    const handleGenerate = (type: string, generator: () => unknown) => {
+    const handleGenerate = (selection: OpenQuestionTableSelection) => {
         const campaign = ensureCampaign()
         const newResult: RandomTableResult = {
             id: uuidv4(),
-            type,
-            content: formatResult(generator()),
+            type: selection.key,
+            content: generateRandomTableContent(selection, t),
             timestamp: Date.now(),
             campaignId: campaign,
         }
         addRandomTableResult(newResult)
     }
 
-    const handleGenerateEncounter = () => {
-        const campaign = ensureCampaign()
-        const encounter = generateRandomEncounter(encounterZone, encounterTime)
-        const zoneLabel = t(`soloPlay.tables.zones.${encounterZone}`)
-        const timeLabel = t(`soloPlay.tables.times.${encounterTime}`)
-        const newResult: RandomTableResult = {
-            id: uuidv4(),
-            type: 'encounter',
-            content: `Zone: ${zoneLabel}\nTime: ${timeLabel}\nEncounter: ${encounter}`,
-            timestamp: Date.now(),
-            campaignId: campaign,
+    const handleTableAction = (selection: OpenQuestionTableSelection) => {
+        if (selectionMode) {
+            onToggleSelection?.(selection)
+            return
         }
-        addRandomTableResult(newResult)
+        handleGenerate(selection)
     }
 
     // Accordion summary style helper
@@ -109,6 +110,22 @@ const RandomTablesTool = () => {
         textShadow: readerMode ? 'none' : `0 0 8px ${color}60`,
     })
 
+    const getButtonOpacity = (key: string) => {
+        if (!selectionMode) return 1
+        return selectedTableKeys.includes(key) ? 1 : 0.5
+    }
+
+    const getButtonSx = (key: string, color: string): SxProps<Theme> => ({
+        ...(getCyberpunkButtonStyle(readerMode, color) as Record<string, unknown>),
+        textTransform: 'uppercase',
+        justifyContent: 'flex-start',
+        fontSize: '0.7rem',
+        opacity: getButtonOpacity(key),
+        transition: 'opacity 0.15s ease',
+    })
+
+    const encounterConfig: OpenQuestionTableConfig = { encounterZone, encounterTime }
+
     return (
         <Box>
             <Typography variant="subtitle2" sx={sectionSubtitleSx(colors.neons.green.default)} mb={1}>
@@ -132,19 +149,14 @@ const RandomTablesTool = () => {
                         <AccordionDetails sx={{ p: 0, pt: 1 }}>
                             <Grid container spacing={1} sx={{ mb: 1 }}>
                                 {category.generators.map((gen) => (
-                                    <Grid size={{ xs: 4 }} key={gen.key}>
+                                    <Grid size={{ xs: 6 }} key={gen.key}>
                                         <Button
                                             fullWidth
                                             size="small"
                                             variant="outlined"
                                             startIcon={<Casino />}
-                                            onClick={() => handleGenerate(gen.key, gen.generator)}
-                                            sx={{
-                                                ...getCyberpunkButtonStyle(readerMode, gen.color),
-                                                textTransform: 'uppercase',
-                                                justifyContent: 'flex-start',
-                                                fontSize: '0.7rem',
-                                            }}
+                                            onClick={() => handleTableAction({ key: gen.key })}
+                                            sx={getButtonSx(gen.key, category.color)}
                                             title={t(`soloPlay.tables.${gen.key}`)}
                                         >
                                             <Typography sx={{ fontSize: '0.7rem', fontWeight: 'bold' }} noWrap>
@@ -161,24 +173,24 @@ const RandomTablesTool = () => {
                 <Accordion defaultExpanded sx={accordionSx} disableGutters>
                     <AccordionSummary
                         expandIcon={
-                            <ExpandMore sx={{ color: readerMode ? colors.grays.gray400 : colors.neons.red.default }} />
+                            <ExpandMore sx={{ color: readerMode ? colors.grays.gray400 : colors.neons.pink.default }} />
                         }
-                        sx={accordionSummarySx(colors.neons.red.default)}
+                        sx={accordionSummarySx(colors.neons.pink.default)}
                     >
-                        <Typography variant="caption" sx={categoryLabelSx(colors.neons.red.default)}>
+                        <Typography variant="caption" sx={categoryLabelSx(colors.neons.pink.default)}>
                             {t('soloPlay.tables.categories.encounters')}
                         </Typography>
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 0, pt: 1 }}>
                         <Grid container spacing={1} sx={{ mb: 1 }}>
-                            <Grid size={{ xs: 4 }}>
+                            <Grid size={{ xs: 6 }}>
                                 <FormControl fullWidth size="small">
                                     <Select
                                         fullWidth
                                         value={encounterZone}
                                         onChange={(e) => setEncounterZone(e.target.value as EncounterZone)}
                                         sx={{
-                                            ...getCyberpunkSelectStyle(readerMode, colors.neons.red.default),
+                                            ...getCyberpunkSelectStyle(readerMode, colors.neons.pink.default),
                                             fontSize: '0.75rem',
                                             height: 28,
                                         }}
@@ -190,14 +202,14 @@ const RandomTablesTool = () => {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid size={{ xs: 4 }}>
+                            <Grid size={{ xs: 6 }}>
                                 <FormControl fullWidth size="small">
                                     <Select
                                         fullWidth
                                         value={encounterTime}
                                         onChange={(e) => setEncounterTime(e.target.value as EncounterTime)}
                                         sx={{
-                                            ...getCyberpunkSelectStyle(readerMode, colors.neons.red.default),
+                                            ...getCyberpunkSelectStyle(readerMode, colors.neons.pink.default),
                                             fontSize: '0.75rem',
                                             height: 28,
                                         }}
@@ -208,19 +220,14 @@ const RandomTablesTool = () => {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid size={{ xs: 4 }}>
+                            <Grid size={{ xs: 6 }}>
                                 <Button
                                     fullWidth
                                     size="small"
                                     variant="outlined"
                                     startIcon={<Casino />}
-                                    onClick={handleGenerateEncounter}
-                                    sx={{
-                                        ...getCyberpunkButtonStyle(readerMode, colors.neons.red.default),
-                                        textTransform: 'uppercase',
-                                        justifyContent: 'flex-start',
-                                        fontSize: '0.7rem',
-                                    }}
+                                    onClick={() => handleTableAction({ key: 'encounter', config: encounterConfig })}
+                                    sx={getButtonSx('encounter', colors.neons.pink.default)}
                                     title={t('soloPlay.tables.encounter')}
                                 >
                                     <Typography sx={{ fontSize: '0.7rem', fontWeight: 'bold' }} noWrap>

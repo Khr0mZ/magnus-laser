@@ -7,6 +7,7 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
+    Autocomplete,
     Box,
     Button,
     Chip,
@@ -26,9 +27,12 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material'
-import { useState } from 'react'
+import type { PaperProps } from '@mui/material'
+import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import SmoothScrollbar from 'smooth-scrollbar'
 import { v4 as uuidv4 } from 'uuid'
+import CustomScrollbar from '../../CustomScrollbar'
 import { useUserPreferences } from '../../../contexts/userPreferencesHooks'
 import type {
     InvestigationCheck,
@@ -36,6 +40,7 @@ import type {
     InvestigationSession,
 } from '../../../types/soloPlay'
 import colors from '../../../utils/colors'
+import { ALL_SKILLS } from '../../../utils/generators/characterCreatorData'
 import { useGMToolsDataStore } from '../GMToolsDataStore'
 import {
     getCyberpunkTextFieldStyle,
@@ -50,6 +55,43 @@ const COMPLEXITY_CHECKS: Record<InvestigationComplexity, number> = {
     AVERAGE: 5,
     DIFFICULT: 7,
 }
+
+const INVESTIGATION_SKILL_OPTIONS = ALL_SKILLS.map(({ name }) => name).sort((a, b) => a.localeCompare(b))
+const INVESTIGATION_SKILL_MAX_LIST_HEIGHT = 320
+const INVESTIGATION_SKILL_SCROLLBAR_CLASS = 'investigation-skill-scrollbar'
+
+const InvestigationSkillAutocompletePaper = forwardRef<HTMLDivElement, PaperProps>(function InvestigationSkillAutocompletePaper(
+    { children, sx, ...paperProps },
+    ref
+) {
+    return (
+        <Paper
+            ref={ref}
+            {...paperProps}
+            sx={[
+                {
+                    overflow: 'hidden',
+                    '& .MuiAutocomplete-listbox': {
+                        maxHeight: 'none',
+                        overflow: 'visible',
+                        p: 0,
+                    },
+                    '& .MuiAutocomplete-noOptions, & .MuiAutocomplete-loading': {
+                        fontFamily: '"Lexend", sans-serif',
+                        fontSize: '0.85rem',
+                        px: 1.5,
+                        py: 1.25,
+                    },
+                },
+                ...(Array.isArray(sx) ? sx : [sx]),
+            ]}
+        >
+            <CustomScrollbar className={INVESTIGATION_SKILL_SCROLLBAR_CLASS} height={INVESTIGATION_SKILL_MAX_LIST_HEIGHT}>
+                <Box>{children}</Box>
+            </CustomScrollbar>
+        </Paper>
+    )
+})
 
 const InvestigationTool = () => {
     const { t } = useTranslation()
@@ -86,6 +128,30 @@ const InvestigationTool = () => {
     const buttonStyle = getCyberpunkButtonStyle(readerMode, colors.neons.green.default)
     const titleStyle = getSectionTitleStyle(readerMode, colors.neons.green.default)
     const selectStyle = getCyberpunkSelectStyle(readerMode, colors.neons.green.default)
+    const checkFieldStyle = getCyberpunkTextFieldStyle(readerMode, colors.neons.cyan.default)
+
+    const checkAutocompleteStyle = {
+        ...checkFieldStyle,
+        '& .MuiAutocomplete-clearIndicator, & .MuiAutocomplete-popupIndicator': {
+            color: readerMode ? colors.grays.gray400 : colors.neons.cyan.default,
+        },
+    }
+
+    const checkAutocompletePaperSx = {
+        backgroundColor: readerMode ? '#fff' : 'rgba(10, 15, 30, 0.95)',
+        border: readerMode ? '1px solid rgba(0,0,0,0.1)' : `1px solid ${colors.neons.cyan.default}40`,
+        '& .MuiAutocomplete-option': {
+            color: readerMode ? colors.grays.gray000 : colors.grays.gray800,
+            fontSize: '0.85rem',
+            fontFamily: '"Lexend", sans-serif',
+            '&:hover': {
+                backgroundColor: `${colors.neons.cyan.default}20`,
+            },
+            '&[aria-selected="true"]': {
+                backgroundColor: `${colors.neons.cyan.default}30`,
+            },
+        },
+    }
 
     const handleCreate = () => {
         if (!name.trim() || !goal.trim()) return
@@ -181,6 +247,32 @@ const InvestigationTool = () => {
     const getProgressColor = (session: InvestigationSession) => {
         if (session.isComplete) return session.success ? colors.neons.green.default : colors.neons.red.default
         return colors.neons.cyan.default
+    }
+
+    const handleCheckSkillHighlightChange = () => {
+        requestAnimationFrame(() => {
+            const scrollbarContainer = document.querySelector(`.${INVESTIGATION_SKILL_SCROLLBAR_CLASS}`) as HTMLElement | null
+            if (!scrollbarContainer) return
+
+            const scrollbar = SmoothScrollbar.get(scrollbarContainer)
+            const focusedOption = scrollbarContainer.querySelector('[role="option"].Mui-focused') as HTMLElement | null
+
+            if (!scrollbar || !focusedOption) return
+
+            const containerRect = scrollbar.containerEl.getBoundingClientRect()
+            const optionRect = focusedOption.getBoundingClientRect()
+            const offsetPadding = 8
+            const isAboveViewport = optionRect.top < containerRect.top + offsetPadding
+            const isBelowViewport = optionRect.bottom > containerRect.bottom - offsetPadding
+
+            if (!isAboveViewport && !isBelowViewport) return
+
+            scrollbar.scrollIntoView(focusedOption, {
+                alignToTop: isAboveViewport,
+                offsetTop: offsetPadding,
+                offsetBottom: offsetPadding,
+            })
+        })
     }
 
     return (
@@ -528,13 +620,29 @@ const InvestigationTool = () => {
                 </DialogTitle>
                 <DialogContent sx={{ pt: 3, mt: 1 }}>
                     <Stack spacing={2.5}>
-                        <TextField
+                        <Autocomplete
                             fullWidth
-                            label={t('soloPlay.investigation.skill')}
-                            value={checkSkill}
-                            onChange={(e) => setCheckSkill(e.target.value)}
-                            placeholder={t('soloPlay.investigation.skillPlaceholder')}
-                            sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.cyan.default)}
+                            autoHighlight
+                            openOnFocus
+                            value={checkSkill || null}
+                            options={INVESTIGATION_SKILL_OPTIONS}
+                            onChange={(_, newValue) => setCheckSkill(newValue ?? '')}
+                            onHighlightChange={(_, __, reason) => {
+                                if (reason === 'keyboard') {
+                                    handleCheckSkillHighlightChange()
+                                }
+                            }}
+                            slots={{ paper: InvestigationSkillAutocompletePaper }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    fullWidth
+                                    label={t('soloPlay.investigation.skill')}
+                                    placeholder={t('soloPlay.investigation.skillPlaceholder')}
+                                    sx={checkAutocompleteStyle}
+                                />
+                            )}
+                            slotProps={{ paper: { sx: checkAutocompletePaperSx } }}
                         />
                         <TextField
                             fullWidth
@@ -542,7 +650,7 @@ const InvestigationTool = () => {
                             type="number"
                             value={checkDV}
                             onChange={(e) => setCheckDV(parseInt(e.target.value) || 13)}
-                            sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.cyan.default)}
+                            sx={checkFieldStyle}
                         />
                         <TextField
                             fullWidth
@@ -552,7 +660,7 @@ const InvestigationTool = () => {
                             placeholder={t('soloPlay.investigation.descriptionPlaceholder')}
                             multiline
                             rows={2}
-                            sx={getCyberpunkTextFieldStyle(readerMode, colors.neons.cyan.default)}
+                            sx={checkFieldStyle}
                         />
                     </Stack>
                 </DialogContent>

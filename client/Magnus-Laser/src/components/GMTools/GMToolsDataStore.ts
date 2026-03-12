@@ -533,7 +533,7 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
         }),
         {
             name: 'gm-tools-data',
-            version: 5,
+            version: 6,
             migrate: (persistedState: unknown, version: number) => {
                 const state = persistedState as Record<string, unknown>
                 if (version === 0) {
@@ -609,9 +609,35 @@ export const useGMToolsDataStore = create<GMToolsDataState>()(
                     state.campaigns = state.campaigns ?? []
                     state.selectedCampaign = state.selectedCampaign ?? null
                 }
+                if (version < 6) {
+                    const openQuestionHistory = state.openQuestionHistory as Array<Record<string, unknown>> | undefined
+                    if (openQuestionHistory) {
+                        state.openQuestionHistory = openQuestionHistory.map((result) => {
+                            if (Array.isArray(result.tableResults) && result.tableResults.length > 0) {
+                                return result
+                            }
+
+                            const tableResults = [
+                                typeof result.verb === 'string' && result.verb
+                                    ? { tableKey: 'action', value: result.verb }
+                                    : null,
+                                typeof result.noun === 'string' && result.noun
+                                    ? { tableKey: 'noun', value: result.noun }
+                                    : null,
+                                typeof result.adjective === 'string' && result.adjective
+                                    ? { tableKey: 'adjective', value: result.adjective }
+                                    : null,
+                            ].filter(Boolean)
+
+                            return {
+                                ...result,
+                                tableResults,
+                            }
+                        })
+                    }
+                }
                 return state as unknown as GMToolsDataState
             },
         }
     )
 )
-

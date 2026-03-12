@@ -13,12 +13,18 @@ import {
     type EncounterTime,
     type EncounterZone,
 } from '../../../utils/generators/soloPlayTablesExpanded'
-import { rollOpenQuestion, rollOracle } from '../../../utils/generators/soloPlayUtils'
+import { rollOracle } from '../../../utils/generators/soloPlayUtils'
 import Scrollbar from 'smooth-scrollbar'
 import { WarningDialog } from '../../common/WarningDialog'
 import { useGMToolsDataStore, type HistoryNote, type RandomTableResult } from '../GMToolsDataStore'
 import { getCyberpunkPaperStyle, getCyberpunkTextFieldStyle, getSectionTitleStyle } from '../GMToolsStyles'
-import { allGenerators, formatResult } from './randomTablesData'
+import {
+    allGenerators,
+    buildOpenQuestionResult,
+    formatResult,
+    getRandomTableCategoryColor,
+    getOpenQuestionSelections,
+} from './randomTablesData'
 
 type UnifiedHistoryItem =
     | { kind: 'oracle'; id: string; timestamp: number; data: OracleResult }
@@ -93,8 +99,9 @@ const OracleHistory = () => {
     }
 
     const handleRerollOpenQuestion = (result: OpenQuestionResult) => {
-        const newResult = rollOpenQuestion(result.question)
+        const newResult = buildOpenQuestionResult(result.question, getOpenQuestionSelections(result), t)
         updateOpenQuestionResult(result.id, {
+            tableResults: newResult.tableResults,
             verb: newResult.verb,
             noun: newResult.noun,
             adjective: newResult.adjective,
@@ -322,6 +329,15 @@ const OracleHistory = () => {
     }
 
     const renderOpenQuestionResult = (result: OpenQuestionResult) => {
+        const chipResults =
+            result.tableResults?.length
+                ? result.tableResults
+                : [
+                      { tableKey: 'action', value: result.verb },
+                      { tableKey: 'noun', value: result.noun },
+                      ...(result.adjective ? [{ tableKey: 'adjective', value: result.adjective }] : []),
+                  ]
+
         return (
             <Paper
                 key={result.id}
@@ -381,54 +397,28 @@ const OracleHistory = () => {
                     &ldquo;{result.question}&rdquo;
                 </Typography>
                 <Stack direction="row" spacing={0.5} mt={0.5} flexWrap="wrap">
-                    <Chip
-                        label={result.verb}
-                        size="small"
-                        sx={{
-                            backgroundColor: readerMode
-                                ? colors.neons.green.default
-                                : `${colors.neons.green.default}30`,
-                            color: readerMode ? '#fff' : colors.neons.green.default,
-                            border: readerMode ? 'none' : `1px solid ${colors.neons.green.default}`,
-                            height: 22,
-                            fontSize: '0.7rem',
-                            fontFamily: '"Lexend", sans-serif',
-                            fontWeight: 'bold',
-                            boxShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.green.default}40`,
-                        }}
-                    />
-                    <Chip
-                        label={result.noun}
-                        size="small"
-                        sx={{
-                            backgroundColor: readerMode ? colors.neons.blue.default : `${colors.neons.blue.default}30`,
-                            color: readerMode ? '#fff' : colors.neons.blue.default,
-                            border: readerMode ? 'none' : `1px solid ${colors.neons.blue.default}`,
-                            height: 22,
-                            fontSize: '0.7rem',
-                            fontFamily: '"Lexend", sans-serif',
-                            fontWeight: 'bold',
-                            boxShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.blue.default}40`,
-                        }}
-                    />
-                    {result.adjective && (
-                        <Chip
-                            label={result.adjective}
-                            size="small"
-                            sx={{
-                                backgroundColor: readerMode
-                                    ? colors.neons.purple.default
-                                    : `${colors.neons.purple.default}30`,
-                                color: readerMode ? '#fff' : colors.neons.purple.default,
-                                border: readerMode ? 'none' : `1px solid ${colors.neons.purple.default}`,
-                                height: 22,
-                                fontSize: '0.7rem',
-                                fontFamily: '"Lexend", sans-serif',
-                                fontWeight: 'bold',
-                                boxShadow: readerMode ? 'none' : `0 0 5px ${colors.neons.purple.default}40`,
-                            }}
-                        />
-                    )}
+                    {chipResults.map((chipResult, index) => {
+                        const chipColor = getRandomTableCategoryColor(chipResult.tableKey)
+
+                        return (
+                            <Chip
+                                key={`${result.id}-${chipResult.tableKey}-${index}`}
+                                label={chipResult.value}
+                                size="small"
+                                title={t(`soloPlay.tables.${chipResult.tableKey}`)}
+                                sx={{
+                                    backgroundColor: readerMode ? chipColor : `${chipColor}30`,
+                                    color: readerMode ? '#fff' : chipColor,
+                                    border: readerMode ? 'none' : `1px solid ${chipColor}`,
+                                    height: 22,
+                                    fontSize: '0.7rem',
+                                    fontFamily: '"Lexend", sans-serif',
+                                    fontWeight: 'bold',
+                                    boxShadow: readerMode ? 'none' : `0 0 5px ${chipColor}40`,
+                                }}
+                            />
+                        )
+                    })}
                 </Stack>
             </Paper>
         )
@@ -499,7 +489,7 @@ const OracleHistory = () => {
     }
 
     const renderRandomTableResult = (result: RandomTableResult) => {
-        const resultColor = allGenerators[result.type]?.color || colors.neons.green.default
+        const resultColor = getRandomTableCategoryColor(result.type)
 
         return (
             <Paper
@@ -516,10 +506,10 @@ const OracleHistory = () => {
                             size="small"
                             sx={{
                                 backgroundColor: readerMode
-                                    ? colors.neons.green.default
-                                    : `${colors.neons.green.default}20`,
-                                color: readerMode ? '#fff' : colors.neons.green.default,
-                                border: readerMode ? 'none' : `1px solid ${colors.neons.green.default}60`,
+                                    ? resultColor
+                                    : `${resultColor}20`,
+                                color: readerMode ? '#fff' : resultColor,
+                                border: readerMode ? 'none' : `1px solid ${resultColor}60`,
                                 height: 18,
                                 fontSize: '0.55rem',
                                 fontFamily: '"Orbitron", sans-serif',
